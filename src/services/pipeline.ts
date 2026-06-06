@@ -13,6 +13,8 @@ import type { StageOutputFor } from "./claude-client.js";
 import { sseManager } from "../lib/sse.js";
 import { cloneRepo, getFileCount, extractCommitSummary, cleanup, parseRepoUrl } from "../lib/repo.js";
 import { config } from "../config.js";
+import { getDb } from "../db/index.js";
+import * as cacheRepo from "../db/repositories/analysis-cache.js";
 import fs from "node:fs";
 
 // ========== Pipeline 上下文 & 类型 ==========
@@ -56,6 +58,23 @@ export async function executePipeline(ctx: PipelineContext): Promise<PipelineRes
 
     const { localPath: lp, commitHash } = await cloneRepo(ctx.repoUrl, taskDir);
     localPath = lp;
+
+    // 缓存检查（clone 后、Explorer 前）
+    const { owner: cacheOwner, repo: cacheRepoName } = parseRepoUrl(ctx.repoUrl);
+    const db = getDb();
+    const cached = cacheRepo.findByCommit(db, cacheOwner, cacheRepoName, ctx.branch, commitHash);
+
+    if (cached) {
+      const cachedResult = JSON.parse(cached.result) as AnalysisResult;
+      sseManager.emit(ctx.taskId, {
+        type: "task:completed",
+        taskId: ctx.taskId,
+        summary: cachedResult.explorer.projectSummary,
+      });
+      await cleanup(localPath);
+      return { result: cachedResult, cached: true };
+    }
+
     const fileCount = await getFileCount(localPath);
 
     // 标记进入 analyzing
@@ -110,6 +129,17 @@ export async function executePipeline(ctx: PipelineContext): Promise<PipelineRes
       mentor: mentorOutput,
       contributor: contributorOutput,
     };
+
+    // 保存缓存
+    cacheRepo.save(getDb(), {
+      owner: cacheOwner,
+      repo: cacheRepoName,
+      branch: ctx.branch,
+      commitHash,
+      result: analysisResult,
+      projectTypePrimary: analysisResult.explorer.projectType.primary,
+      framework: analysisResult.explorer.techStack.framework,
+    });
 
     return { result: analysisResult, cached: false };
   } finally {
