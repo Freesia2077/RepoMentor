@@ -1,4 +1,4 @@
-import simpleGit, { type SimpleGit } from "simple-git";
+import { simpleGit, type SimpleGit } from "simple-git";
 import fs from "node:fs/promises";
 import type { CommitSummary } from "../types/index.js";
 
@@ -92,15 +92,29 @@ export async function extractCommitSummary(localPath: string): Promise<CommitSum
 
   try {
     const log = await git.log({ maxCount: 50 });
+    const logEntries = log.all;
+
+    const themes = logEntries
+      .map((c: { message: string }) => c.message.split("\n")[0] ?? "")
+      .filter(Boolean)
+      .slice(0, 50);
+
+    const contributors = new Set(
+      logEntries.map((c: { author_email: string }) => c.author_email)
+    );
 
     const fileFrequency = new Map<string, number>();
-    for (const commit of log.all) {
-      if (commit.diff) {
-        const files = commit.diff.files?.map(f => f.file) ?? [];
-        for (const file of files) {
-          fileFrequency.set(file, (fileFrequency.get(file) ?? 0) + 1);
-        }
+    try {
+      const diffOutput = await git.raw([
+        "diff-tree", "--no-commit-id", "--name-only", "-r",
+        `HEAD~${Math.min(50, logEntries.length)}..HEAD`,
+      ]);
+      const changedFiles = diffOutput.split("\n").filter(Boolean);
+      for (const file of changedFiles) {
+        fileFrequency.set(file, (fileFrequency.get(file) ?? 0) + 1);
       }
+    } catch {
+      // diff-tree 失败时降级为空
     }
 
     const frequentFiles = Array.from(fileFrequency.entries())
@@ -108,18 +122,7 @@ export async function extractCommitSummary(localPath: string): Promise<CommitSum
       .slice(0, 20)
       .map(([file, commits]) => ({ file, commits, recent: true }));
 
-    const themes = log.all
-      .map(c => c.message.split("\n")[0] ?? "")
-      .filter(Boolean)
-      .slice(0, 50);
-
-    const contributors = new Set(log.all.map(c => c.author_email));
-
-    return {
-      frequentFiles,
-      recentThemes: themes,
-      contributorCount: contributors.size,
-    };
+    return { frequentFiles, recentThemes: themes, contributorCount: contributors.size };
   } catch {
     return { frequentFiles: [], recentThemes: [], contributorCount: 0 };
   }
