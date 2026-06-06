@@ -86,9 +86,8 @@ export async function executePipeline(ctx: PipelineContext): Promise<PipelineRes
 
     // 1. Explorer
     const explorerOutput = await runStageWithRetry("explorer", {
-      localPath,
       fileCount,
-    }, ctx);
+    }, ctx, localPath);
 
     // 交互点：项目类型确认
     await askUser(ctx, "q_type", "explorer",
@@ -107,7 +106,7 @@ export async function executePipeline(ctx: PipelineContext): Promise<PipelineRes
       explorerOutput,
       skillContent,
       experiences: "",
-    }, ctx);
+    }, ctx, localPath);
 
     // 交互点：依赖图反馈
     const deps = Object.entries(mentorOutput.dependencyGraph);
@@ -122,7 +121,7 @@ export async function executePipeline(ctx: PipelineContext): Promise<PipelineRes
       explorerOutput,
       mentorOutput,
       commitSummary,
-    }, ctx);
+    }, ctx, localPath);
 
     const analysisResult: AnalysisResult = {
       explorer: explorerOutput,
@@ -155,12 +154,13 @@ async function runStageWithRetry<S extends StageName>(
   stage: S,
   input: Record<string, unknown>,
   ctx: PipelineContext,
+  localPath: string,
 ): Promise<StageOutputFor<S>> {
   const maxRetries = 1;
 
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
     try {
-      return await runStageWithSSE(stage, input, ctx);
+      return await runStageWithSSE(stage, input, ctx, localPath);
     } catch (err) {
       if (err instanceof ParseError) {
         if (attempt < maxRetries) {
@@ -210,6 +210,7 @@ async function runStageWithSSE<S extends StageName>(
   stage: S,
   input: Record<string, unknown>,
   ctx: PipelineContext,
+  localPath: string,
 ): Promise<StageOutputFor<S>> {
   ctx.callbacks.onStageStart(stage);
   sseManager.emit(ctx.taskId, { type: "stage:start", stage });
@@ -221,7 +222,7 @@ async function runStageWithSSE<S extends StageName>(
     onField: (field: string, value: unknown) => {
       sseManager.emit(ctx.taskId, { type: "stage:field", stage, field, value });
     },
-  });
+  }, localPath);
 
   ctx.callbacks.onStageDone(stage);
   sseManager.emit(ctx.taskId, { type: "stage:done", stage, output: result });

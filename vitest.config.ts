@@ -4,8 +4,9 @@ export default defineConfig({
   test: {
     globals: true,
     env: {
-      DEEPSEEK_API_KEY: "test-key",
-      DEEPSEEK_BASE_URL: "https://api.deepseek.com",
+      ANTHROPIC_AUTH_TOKEN: "test-token",
+      ANTHROPIC_BASE_URL: "https://api.deepseek.com/anthropic",
+      ANTHROPIC_MODEL: "deepseek-v4-pro",
     },
   },
 });

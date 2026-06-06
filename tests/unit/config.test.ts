@@ -3,8 +3,9 @@ import { describe, it, expect, beforeEach, vi } from "vitest";
 describe("config", () => {
   beforeEach(() => {
     vi.resetModules();
-    delete process.env.DEEPSEEK_API_KEY;
-    delete process.env.DEEPSEEK_BASE_URL;
+    delete process.env.ANTHROPIC_AUTH_TOKEN;
+    delete process.env.ANTHROPIC_BASE_URL;
+    delete process.env.ANTHROPIC_MODEL;
     delete process.env.PORT;
     delete process.env.HOST;
     delete process.env.CLONE_TIMEOUT_MS;
@@ -16,22 +17,23 @@ describe("config", () => {
     delete process.env.LOG_LEVEL;
   });
 
-  it("throws when DEEPSEEK_API_KEY is missing", async () => {
+  it("throws when ANTHROPIC_AUTH_TOKEN is missing", async () => {
     await expect(() => import("../../src/config.js")).rejects.toThrow();
   });
 
   it("parses valid environment with defaults", async () => {
-    process.env.DEEPSEEK_API_KEY = "sk-test";
+    process.env.ANTHROPIC_AUTH_TOKEN = "sk-test";
     const { config } = await import("../../src/config.js");
     expect(config.PORT).toBe(3000);
     expect(config.HOST).toBe("0.0.0.0");
     expect(config.CLONE_DEPTH).toBe(1);
-    expect(config.DEEPSEEK_BASE_URL).toBe("https://api.deepseek.com");
+    expect(config.ANTHROPIC_BASE_URL).toBe("https://api.deepseek.com/anthropic");
+    expect(config.ANTHROPIC_MODEL).toBe("deepseek-v4-pro");
     expect(config.LOG_LEVEL).toBe("info");
   });
 
   it("parses custom values", async () => {
-    process.env.DEEPSEEK_API_KEY = "sk-test";
+    process.env.ANTHROPIC_AUTH_TOKEN = "sk-test";
     process.env.PORT = "8080";
     process.env.MAX_REPO_SIZE_MB = "500";
     process.env.LOG_LEVEL = "debug";
@@ -42,7 +44,7 @@ describe("config", () => {
   });
 
   it("rejects invalid LOG_LEVEL", async () => {
-    process.env.DEEPSEEK_API_KEY = "sk-test";
+    process.env.ANTHROPIC_AUTH_TOKEN = "sk-test";
     process.env.LOG_LEVEL = "verbose";
     await expect(() => import("../../src/config.js")).rejects.toThrow();
   });

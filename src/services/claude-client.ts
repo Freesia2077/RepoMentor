@@ -1,6 +1,8 @@
 import type { StageName, ExplorerOutput, MentorOutput, ContributorOutput } from "../types/index.js";
 import { validateExplorerOutput, validateMentorOutput, validateContributorOutput } from "../lib/schema.js";
 import { config } from "../config.js";
+import { query } from "@anthropic-ai/claude-agent-sdk";
+import fs from "node:fs";
 
 // ========== 超时配置 ==========
 
@@ -8,6 +10,14 @@ const STAGE_TIMEOUT_MS: Record<StageName, number> = {
   explorer: 120_000,
   mentor: 300_000,
   contributor: 180_000,
+};
+
+// ========== 工具白名单 ==========
+
+const ALLOWED_TOOLS: Record<StageName, string[]> = {
+  explorer: ["Read", "Glob", "Grep"],
+  mentor: ["Read", "Grep"],
+  contributor: ["Read", "Grep"],
 };
 
 // ========== 类型 ==========
@@ -62,21 +72,21 @@ const VALIDATORS = {
 /**
  * 运行一个 Pipeline 阶段。
  *
- * 通过 Claude Agent SDK 调用指定 Subagent，
- * 流式监听输出，逐字段推送给 callbacks，
- * 解析完成 JSON 后经 Zod Schema 校验返回。
+ * 通过 Claude Agent SDK 的 query() 调用 Subagent，
+ * localPath 作为 cwd 限制 Agent 的文件系统访问范围。
  */
 export async function runStage<S extends StageName>(
   stage: S,
   input: Record<string, unknown>,
   callbacks: StageCallbacks,
+  localPath: string,
 ): Promise<StageOutputFor<S>> {
   const validator = VALIDATORS[stage];
 
   callbacks.onProgress(`正在启动 ${stage} 阶段...`);
 
   // 1. 调用 Agent
-  const rawOutput = await invokeAgent(stage, input, callbacks);
+  const rawOutput = await invokeAgent(stage, input, callbacks, localPath);
 
   // 2. 解析 JSON
   let parsed: unknown;
@@ -95,55 +105,126 @@ export async function runStage<S extends StageName>(
   return result as StageOutputFor<S>;
 }
 
-// ========== Agent 调用（骨架实现） ==========
+// ========== Agent 调用（SDK 接线） ==========
 
 /**
- * 调用 Claude Agent SDK 运行 Subagent。
+ * 调用 Claude Agent SDK 的 query() 运行 Subagent。
  *
- * SKELETON — 需要根据 @anthropic-ai/claude-agent-sdk 的实际 API 调整。
- *
- * 预期调用模式:
- *   import { ClaudeSDK } from "@anthropic-ai/claude-agent-sdk";
- *   const sdk = new ClaudeSDK({ apiKey: config.DEEPSEEK_API_KEY, baseURL: config.DEEPSEEK_BASE_URL });
- *   const result = await sdk.agent({ definition: AGENT_PATHS[stage], prompt, model: "deepseek-v4-pro", ... });
+ * - 读取 agents/<stage>/agent.md 作为 systemPrompt（去掉 YAML frontmatter）
+ * - 通过 options.cwd 限定 Agent 文件系统访问范围为克隆仓库目录
+ * - 通过 options.env 注入 ANTHROPIC_* 环境变量，SDK 子进程自动路由到 DeepSeek
+ * - 通过 AbortController + setTimeout 实现超时
  */
 async function invokeAgent(
   stage: StageName,
   input: Record<string, unknown>,
   callbacks: StageCallbacks,
+  localPath: string,
 ): Promise<string> {
+  // 1. 加载 Agent 定义（去掉 YAML frontmatter）
+  const systemPrompt = loadAgentDefinition(stage);
   const inputStr = JSON.stringify(input, null, 2);
   const prompt = buildPromptForStage(stage, inputStr);
 
-  // ========== SDK 调用骨架 ==========
-  //
-  // 实际代码应类似:
-  //
-  // const { ClaudeSDK } = await import("@anthropic-ai/claude-agent-sdk");
-  // const sdk = new ClaudeSDK({
-  //   apiKey: config.DEEPSEEK_API_KEY,
-  //   baseURL: config.DEEPSEEK_BASE_URL,
-  // });
-  //
-  // const result = await sdk.agent({
-  //   model: "deepseek-v4-pro",
-  //   definition: AGENT_PATHS[stage],
-  //   prompt,
-  //   maxTokens: stage === "mentor" ? 16000 : 8000,
-  //   timeout: STAGE_TIMEOUT_MS[stage],
-  // });
-  //
-  // return result.content;
-  //
-  // ==========================================
+  // 2. 超时控制
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), STAGE_TIMEOUT_MS[stage]);
 
-  throw new Error(
-    `Claude Agent SDK 调用尚未实现。请根据 @anthropic-ai/claude-agent-sdk 实际 API 调整 invokeAgent 函数。` +
-    `\n  Stage: ${stage}` +
-    `\n  Agent definition: ${AGENT_PATHS[stage]}` +
-    `\n  Input keys: ${Object.keys(input).join(", ")}` +
-    `\n  Token budget: ${stage === "mentor" ? 16000 : 8000}`,
-  );
+  // 3. 流式调用 SDK
+  const messages: string[] = [];
+
+  try {
+    for await (const message of query({
+      prompt,
+      options: {
+        systemPrompt,
+        model: config.ANTHROPIC_MODEL,
+        allowedTools: ALLOWED_TOOLS[stage],
+        cwd: localPath,
+        env: {
+          ANTHROPIC_BASE_URL: config.ANTHROPIC_BASE_URL,
+          ANTHROPIC_AUTH_TOKEN: config.ANTHROPIC_AUTH_TOKEN,
+          ANTHROPIC_MODEL: config.ANTHROPIC_MODEL,
+        },
+      },
+    })) {
+      // 收集 Agent 的文本输出
+      if (message.type === "assistant") {
+        const content = extractTextContent(message);
+        if (content) {
+          messages.push(content);
+          callbacks.onProgress(`Agent (${stage}) 输出中...`);
+        }
+      }
+
+      // 工具调用事件 → 进度通知
+      if (message.type === "tool_progress") {
+        callbacks.onProgress(`Agent (${stage}) 正在使用工具分析仓库...`);
+      }
+    }
+  } finally {
+    clearTimeout(timeoutId);
+  }
+
+  const rawOutput = messages.join("\n");
+
+  if (!rawOutput.trim()) {
+    throw new LLMError(`Agent (${stage}) 返回了空输出`, true);
+  }
+
+  return rawOutput;
+}
+
+/**
+ * 从 SDK message 的各种可能格式中提取文本内容
+ */
+function extractTextContent(message: Record<string, unknown>): string {
+  // content 可能是 string | Array<{type: "text", text: string}>
+  const content = message.content;
+  if (typeof content === "string") return content;
+  if (Array.isArray(content)) {
+    return content
+      .filter((block: unknown) => {
+        if (typeof block === "string") return true;
+        if (block && typeof block === "object" && "text" in (block as Record<string, unknown>)) return true;
+        return false;
+      })
+      .map((block: unknown) => {
+        if (typeof block === "string") return block;
+        if (block && typeof block === "object") return (block as { text: string }).text;
+        return "";
+      })
+      .join("\n");
+  }
+  return "";
+}
+
+/**
+ * 加载 Agent 定义文件，去掉 YAML frontmatter（--- ... ---），
+ * 剩余内容作为 systemPrompt 传给 SDK。
+ */
+function loadAgentDefinition(stage: StageName): string {
+  const filePath = AGENT_PATHS[stage];
+  try {
+    const raw = fs.readFileSync(filePath, "utf-8");
+    return stripFrontmatter(raw);
+  } catch {
+    return `You are the ${stage} agent for RepoMentor, a repository analysis pipeline.`;
+  }
+}
+
+/**
+ * 去掉 YAML frontmatter（以 --- 开头和结尾的元数据块）
+ */
+function stripFrontmatter(text: string): string {
+  const lines = text.split("\n");
+  if (lines[0]?.trim() === "---") {
+    const endIdx = lines.findIndex((line, i) => i > 0 && line.trim() === "---");
+    if (endIdx !== -1) {
+      return lines.slice(endIdx + 1).join("\n").trim();
+    }
+  }
+  return text.trim();
 }
 
 // ========== Prompt 构建 ==========

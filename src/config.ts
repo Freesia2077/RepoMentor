@@ -1,8 +1,9 @@
 import { z } from "zod";
 
 const envSchema = z.object({
-  DEEPSEEK_API_KEY: z.string(),
-  DEEPSEEK_BASE_URL: z.string().default("https://api.deepseek.com"),
+  ANTHROPIC_AUTH_TOKEN: z.string(),
+  ANTHROPIC_BASE_URL: z.string().default("https://api.deepseek.com/anthropic"),
+  ANTHROPIC_MODEL: z.string().default("deepseek-v4-pro"),
   PORT: z.coerce.number().int().positive().default(3000),
   HOST: z.string().default("0.0.0.0"),
   CLONE_TIMEOUT_MS: z.coerce.number().int().positive().default(60000),
