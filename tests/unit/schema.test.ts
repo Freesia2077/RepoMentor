@@ -55,26 +55,13 @@ describe("validateExplorerOutput", () => {
     expect(() => validateExplorerOutput(bad)).toThrow();
   });
 
-  it("rejects module responsibility exceeding 100 chars", () => {
+  it("rejects module responsibility exceeding 300 chars", () => {
     const bad = {
       ...validExplorer,
       moduleMap: [{
         path: "src/core/",
-        responsibility: "x".repeat(101),
+        responsibility: "x".repeat(301),
         importance: "core" as const,
-        justification: "x",
-      }],
-    };
-    expect(() => validateExplorerOutput(bad)).toThrow();
-  });
-
-  it("rejects invalid importance value", () => {
-    const bad = {
-      ...validExplorer,
-      moduleMap: [{
-        path: "src/core/",
-        responsibility: "核心",
-        importance: "critical",
         justification: "x",
       }],
     };
@@ -103,15 +90,15 @@ describe("validateMentorOutput", () => {
     expect(() => validateMentorOutput(validMentor)).not.toThrow();
   });
 
-  it("rejects architectureOverview exceeding 800 chars", () => {
-    const bad = { ...validMentor, architectureOverview: "x".repeat(801) };
+  it("rejects architectureOverview exceeding 3000 chars", () => {
+    const bad = { ...validMentor, architectureOverview: "x".repeat(3001) };
     expect(() => validateMentorOutput(bad)).toThrow();
   });
 
-  it("rejects readingPath exceeding 5 steps", () => {
+  it("rejects readingPath exceeding 10 steps", () => {
     const bad = {
       ...validMentor,
-      readingPath: Array.from({ length: 6 }, (_, i) => ({
+      readingPath: Array.from({ length: 11 }, (_, i) => ({
         step: i + 1,
         file: `src/file${i}.ts`,
         why: "reason",
@@ -133,11 +120,24 @@ describe("validateContributorOutput", () => {
     expect(() => validateContributorOutput(validContributor)).not.toThrow();
   });
 
-  it("rejects invalid difficulty", () => {
-    const bad = {
+  it("accepts any difficulty string", () => {
+    const ok = {
       ...validContributor,
       goodFirstIssues: [{ area: "文档", difficulty: "extreme", description: "补充 JSDoc" }],
     };
-    expect(() => validateContributorOutput(bad)).toThrow();
+    expect(() => validateContributorOutput(ok)).not.toThrow();
+  });
+
+  it("accepts any importance string in moduleMap", () => {
+    const ok = {
+      ...validExplorer,
+      moduleMap: [{
+        path: "src/core/",
+        responsibility: "核心",
+        importance: "critical",
+        justification: "x",
+      }],
+    };
+    expect(() => validateExplorerOutput(ok)).not.toThrow();
   });
 });

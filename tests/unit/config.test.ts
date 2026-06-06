@@ -1,5 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 
+vi.mock("dotenv/config", () => ({}));
+
 describe("config", () => {
   beforeEach(() => {
     vi.resetModules();

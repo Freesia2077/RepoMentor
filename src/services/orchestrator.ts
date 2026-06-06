@@ -69,6 +69,10 @@ export async function createTask(repoUrl: string, branch = "main"): Promise<Task
         const rec = tasks.get(taskId);
         if (rec) rec.stageProgress[stage] = "done";
       },
+      onStatusChange: (status) => {
+        const rec = tasks.get(taskId);
+        if (rec) rec.status = status;
+      },
     },
     pendingQuestion: null,
   };

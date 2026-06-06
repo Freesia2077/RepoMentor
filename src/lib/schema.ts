@@ -20,8 +20,8 @@ const entryPointSchema = z.object({
 
 const moduleInfoSchema = z.object({
   path: z.string(),
-  responsibility: z.string().max(100),
-  importance: z.enum(["core", "support", "utility"]),
+  responsibility: z.string().max(300),
+  importance: z.string(),
   justification: z.string(),
 });
 
@@ -31,8 +31,8 @@ export const explorerOutputSchema = z.object({
   fileCount: z.number().int().nonnegative(),
   entryPoints: z.array(entryPointSchema).max(10),
   moduleMap: z.array(moduleInfoSchema).max(20),
-  directorySummary: z.string().max(500),
-  projectSummary: z.string().max(300),
+  directorySummary: z.string().max(1500),
+  projectSummary: z.string().max(800),
 });
 
 export function validateExplorerOutput(data: unknown) {
@@ -59,9 +59,9 @@ const codeConventionSchema = z.object({
 });
 
 export const mentorOutputSchema = z.object({
-  architectureOverview: z.string().max(800),
+  architectureOverview: z.string().max(3000),
   dependencyGraph: z.record(z.string(), z.array(z.string())),
-  readingPath: z.array(readingStepSchema).max(5),
+  readingPath: z.array(readingStepSchema).max(10),
   keyPatterns: z.array(keyPatternSchema),
   codeConventions: z.array(codeConventionSchema),
 });
@@ -74,7 +74,7 @@ export function validateMentorOutput(data: unknown) {
 
 const goodFirstIssueSchema = z.object({
   area: z.string(),
-  difficulty: z.enum(["easy", "medium", "hard"]),
+  difficulty: z.string(),
   description: z.string(),
 });
 

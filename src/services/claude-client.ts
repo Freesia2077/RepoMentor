@@ -12,6 +12,12 @@ const STAGE_TIMEOUT_MS: Record<StageName, number> = {
   contributor: 180_000,
 };
 
+const MAX_TURNS: Record<StageName, number> = {
+  explorer: 30,
+  mentor: 40,
+  contributor: 30,
+};
+
 // ========== 工具白名单 ==========
 
 const ALLOWED_TOOLS: Record<StageName, string[]> = {
@@ -130,8 +136,8 @@ async function invokeAgent(
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), STAGE_TIMEOUT_MS[stage]);
 
-  // 3. 流式调用 SDK
-  const messages: string[] = [];
+  // 3. 收集 assistant 消息中的文本输出
+  const assistantChunks: string[] = [];
 
   try {
     for await (const message of query({
@@ -141,32 +147,66 @@ async function invokeAgent(
         model: config.ANTHROPIC_MODEL,
         allowedTools: ALLOWED_TOOLS[stage],
         cwd: localPath,
+        maxTurns: MAX_TURNS[stage],
         env: {
+          ...process.env,
+          CLAUDE_CODE_GIT_BASH_PATH: process.env.CLAUDE_CODE_GIT_BASH_PATH || "D:\\Git\\usr\\bin\\bash.exe",
           ANTHROPIC_BASE_URL: config.ANTHROPIC_BASE_URL,
           ANTHROPIC_AUTH_TOKEN: config.ANTHROPIC_AUTH_TOKEN,
           ANTHROPIC_MODEL: config.ANTHROPIC_MODEL,
         },
       },
     })) {
-      // 收集 Agent 的文本输出
-      if (message.type === "assistant") {
-        const content = extractTextContent(message);
-        if (content) {
-          messages.push(content);
-          callbacks.onProgress(`Agent (${stage}) 输出中...`);
-        }
-      }
+      const msg = message as Record<string, unknown>;
+      const type = msg.type as string;
 
-      // 工具调用事件 → 进度通知
-      if (message.type === "tool_progress") {
-        callbacks.onProgress(`Agent (${stage}) 正在使用工具分析仓库...`);
+      switch (type) {
+        case "assistant": {
+          // SDK assistant 消息: 内容在 msg.message 字段
+          // msg.message 是 Anthropic Messages API 的 response 对象
+          // 结构: { role: "assistant", content: [{type: "text", text: "..."}, {type: "tool_use", ...}] }
+          const apiMessage = msg.message as Record<string, unknown> | undefined;
+          if (apiMessage) {
+            const text = extractFromContent(apiMessage.content);
+            if (text) {
+              // 每次 assistant 消息都可能包含文本，保留最后一条（最终 JSON 输出）
+              assistantChunks.push(text);
+            }
+          }
+          callbacks.onProgress(`Agent (${stage}) 输出中...`);
+          break;
+        }
+
+        case "result": {
+          // result 是元数据消息（duration, cost, usage 等），不包含文本输出
+          callbacks.onProgress(`Agent (${stage}) 完成`);
+          break;
+        }
+
+        case "user": {
+          // user 消息包含工具调用结果（tool_use_result）
+          // 可以用来跟踪工具使用进度
+          const toolResult = msg.tool_use_result as Record<string, unknown> | undefined;
+          if (toolResult) {
+            callbacks.onProgress(`Agent (${stage}) 工具调用完成`);
+          }
+          break;
+        }
+
+        // system 等类型忽略
       }
     }
   } finally {
     clearTimeout(timeoutId);
   }
-
-  const rawOutput = messages.join("\n");
+  // Agent 的文本输出在 assistant 消息的 message.content 中
+  // 最终的 JSON 输出通常在最后一条包含文本的 assistant 消息中
+  let rawOutput = "";
+  if (assistantChunks.length > 0) {
+    // 优先使用最后一条 assistant 文本（通常是最终 JSON 输出）
+    // 但有时 JSON 分散在多条 assistant 消息中，所以全部拼接
+    rawOutput = assistantChunks.join("\n");
+  }
 
   if (!rawOutput.trim()) {
     throw new LLMError(`Agent (${stage}) 返回了空输出`, true);
@@ -175,28 +215,33 @@ async function invokeAgent(
   return rawOutput;
 }
 
+// ========== 消息内容提取辅助 ==========
+
 /**
- * 从 SDK message 的各种可能格式中提取文本内容
+ * 从 content 字段提取文本。
+ * content 可能是 string | Array<{type: "text", text: string} | string>
  */
-function extractTextContent(message: Record<string, unknown>): string {
-  // content 可能是 string | Array<{type: "text", text: string}>
-  const content = message.content;
+function extractFromContent(content: unknown): string {
   if (typeof content === "string") return content;
-  if (Array.isArray(content)) {
-    return content
-      .filter((block: unknown) => {
-        if (typeof block === "string") return true;
-        if (block && typeof block === "object" && "text" in (block as Record<string, unknown>)) return true;
-        return false;
-      })
-      .map((block: unknown) => {
-        if (typeof block === "string") return block;
-        if (block && typeof block === "object") return (block as { text: string }).text;
-        return "";
-      })
-      .join("\n");
-  }
+  if (Array.isArray(content)) return extractContentArray(content);
   return "";
+}
+
+/**
+ * 从 content array 中提取所有 text block 的文本
+ */
+function extractContentArray(arr: unknown[]): string {
+  return arr
+    .map((block: unknown) => {
+      if (typeof block === "string") return block;
+      if (block && typeof block === "object") {
+        const b = block as Record<string, unknown>;
+        if (b.type === "text" && typeof b.text === "string") return b.text;
+      }
+      return "";
+    })
+    .filter(Boolean)
+    .join("\n");
 }
 
 /**

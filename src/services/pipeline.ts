@@ -22,6 +22,7 @@ import fs from "node:fs";
 export interface PipelineLifecycleCallbacks {
   onStageStart: (stage: StageName) => void;
   onStageDone: (stage: StageName) => void;
+  onStatusChange: (status: import("../types/index.js").TaskStatus) => void;
 }
 
 export interface PipelineContext {
@@ -78,6 +79,7 @@ export async function executePipeline(ctx: PipelineContext): Promise<PipelineRes
     const fileCount = await getFileCount(localPath);
 
     // 标记进入 analyzing
+    ctx.callbacks.onStatusChange("analyzing");
     sseManager.emit(ctx.taskId, {
       type: "task:created",
       taskId: ctx.taskId,
