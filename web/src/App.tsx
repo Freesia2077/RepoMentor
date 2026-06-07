@@ -7,15 +7,18 @@ import { ProgressUI } from './components/ProgressUI';
 export default function App() {
   const [taskId, setTaskId] = useState<string | null>(null);
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const [interactionError, setInteractionError] = useState<string | null>(null);
   const { state: streamState, clearInteraction } = useAnalysisStream(taskId);
 
   const handleAnswer = async (id: string, answer: string) => {
     if (!taskId) return;
+    setInteractionError(null);
     try {
       await answerInteraction(taskId, id, answer);
       clearInteraction(); // Optimistically clear interaction after successful send
     } catch (err) {
       console.error(err);
+      setInteractionError(err instanceof Error ? err.message : 'Failed to send answer');
     }
   };
 
@@ -49,6 +52,7 @@ export default function App() {
           logs={streamState.logs}
           interaction={streamState.interaction}
           onAnswer={handleAnswer}
+          interactionError={interactionError}
         />
       )}
 

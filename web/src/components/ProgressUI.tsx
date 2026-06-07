@@ -7,16 +7,17 @@ interface ProgressProps {
   logs: string[];
   interaction: { id: string; question: string; options: string[] } | null;
   onAnswer: (id: string, answer: string) => Promise<void>;
+  interactionError?: string | null;
 }
 
-export function ProgressUI({ stages, logs, interaction, onAnswer }: ProgressProps) {
-  const [submitting, setSubmitting] = useState(false);
+export function ProgressUI({ stages, logs, interaction, onAnswer, interactionError }: ProgressProps) {
+  const [submittingOption, setSubmittingOption] = useState<string | null>(null);
   const stageList: (keyof StageProgress)[] = ['explorer', 'mentor', 'contributor'];
   
   const handleAnswer = async (id: string, answer: string) => {
-    setSubmitting(true);
+    setSubmittingOption(answer);
     await onAnswer(id, answer);
-    setSubmitting(false);
+    setSubmittingOption(null);
   };
 
   return (
@@ -33,10 +34,11 @@ export function ProgressUI({ stages, logs, interaction, onAnswer }: ProgressProp
       {interaction && (
         <div className="interaction-box">
           <p><strong>Question:</strong> {interaction.question}</p>
+          {interactionError && <p style={{color: 'red'}}>{interactionError}</p>}
           <div className="interaction-options">
             {interaction.options.map(opt => (
-              <button key={opt} disabled={submitting} className="btn-primary" onClick={() => handleAnswer(interaction.id, opt)}>
-                {submitting ? 'Sending...' : opt}
+              <button key={opt} disabled={!!submittingOption} className="btn-primary" onClick={() => handleAnswer(interaction.id, opt)}>
+                {submittingOption === opt ? 'Sending...' : opt}
               </button>
             ))}
           </div>
@@ -49,7 +51,7 @@ export function ProgressUI({ stages, logs, interaction, onAnswer }: ProgressProp
             Detailed Logs ({logs.length})
           </summary>
           <div className="log-panel">
-            {logs.slice(-50).map((log, i) => <div key={i}>{log}</div>)}
+            {logs.slice(-50).map((log, i) => <div key={`${i}-${log.substring(0, 10)}`}>{log}</div>)}
           </div>
         </details>
       )}
