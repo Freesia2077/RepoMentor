@@ -24,7 +24,7 @@ class MockEventSource {
 
 let mockEventSourceInstance: MockEventSource;
 
-global.EventSource = class {
+(globalThis as any).EventSource = class {
   constructor() {
     mockEventSourceInstance = new MockEventSource();
     return mockEventSourceInstance;

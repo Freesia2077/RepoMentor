@@ -3,6 +3,7 @@ import { InputView } from './components/InputView';
 import { createAnalysis, answerInteraction } from './api';
 import { useAnalysisStream } from './hooks/useAnalysisStream';
 import { ProgressUI } from './components/ProgressUI';
+import { AnchorNav, ExplorerSection, MentorSection, ContributorSection } from './components/ReportSections';
 
 export default function App() {
   const [taskId, setTaskId] = useState<string | null>(null);
@@ -58,7 +59,10 @@ export default function App() {
 
       {streamState.status === 'completed' && (
         <div style={{marginTop: '3rem'}}>
-          <h3>Analysis Complete</h3>
+          <AnchorNav />
+          <ExplorerSection data={streamState.result?.explorer} />
+          <MentorSection data={streamState.result?.mentor} />
+          <ContributorSection data={streamState.result?.contributor} />
         </div>
       )}
     </div>

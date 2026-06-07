@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import type { TaskStatus, StageProgress, SSEEvent, TaskError, AnalysisResult } from '@backend-types/index';
+import type { TaskStatus, StageProgress, SSEEvent, AnalysisResult } from '@backend-types/index';
 
 export interface StreamState {
   status: TaskStatus;
@@ -34,12 +34,12 @@ export function useAnalysisStream(taskId: string | null) {
         const messageEvent = e as MessageEvent;
         const event = JSON.parse(messageEvent.data) as SSEEvent;
         
-        switch (messageEvent.type) {
+        switch (event.type) {
           case 'task:created':
             setState(s => ({ ...s, status: event.status }));
             break;
           case 'task:error':
-            setState(s => ({ ...s, error: (event as any).error.message }));
+            setState(s => ({ ...s, error: event.error.message }));
             eventSource.close();
             break;
           case 'stage:progress':
