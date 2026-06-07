@@ -1,12 +1,24 @@
 import { useState } from 'react';
 import { InputView } from './components/InputView';
-import { createAnalysis } from './api';
+import { createAnalysis, answerInteraction } from './api';
 import { useAnalysisStream } from './hooks/useAnalysisStream';
+import { ProgressUI } from './components/ProgressUI';
 
 export default function App() {
   const [taskId, setTaskId] = useState<string | null>(null);
   const [submitError, setSubmitError] = useState<string | null>(null);
-  const { state: streamState } = useAnalysisStream(taskId);
+  const { state: streamState, clearInteraction } = useAnalysisStream(taskId);
+
+  const handleAnswer = async (id: string, answer: string) => {
+    if (!taskId) return;
+    try {
+      await answerInteraction(taskId, id, answer);
+      clearInteraction(); // Optimistically clear interaction after successful send
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
 
   const handleAnalyze = async (url: string, branch: string) => {
     setSubmitError(null);
@@ -29,9 +41,22 @@ export default function App() {
   return (
     <div className="container">
       <h2>Analysis Task: {taskId}</h2>
-      <p>Status: {streamState.status}</p>
       {streamState.error && <div style={{color: 'red'}}>{streamState.error}</div>}
-      <pre>{JSON.stringify(streamState.stageProgress, null, 2)}</pre>
+      
+      {streamState.status !== 'completed' && (
+        <ProgressUI 
+          stages={streamState.stageProgress}
+          logs={streamState.logs}
+          interaction={streamState.interaction}
+          onAnswer={handleAnswer}
+        />
+      )}
+
+      {streamState.status === 'completed' && (
+        <div style={{marginTop: '3rem'}}>
+          <h3>Analysis Complete</h3>
+        </div>
+      )}
     </div>
   );
 }
