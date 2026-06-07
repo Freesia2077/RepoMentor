@@ -29,16 +29,17 @@ export function useAnalysisStream(taskId: string | null) {
 
     const eventSource = new EventSource(`/analysis/${taskId}/stream`);
 
-    const handleEvent = (e: MessageEvent) => {
+    const handleEvent = (e: Event) => {
       try {
-        const event = JSON.parse(e.data) as SSEEvent;
+        const messageEvent = e as MessageEvent;
+        const event = JSON.parse(messageEvent.data) as SSEEvent;
         
-        switch (event.type) {
+        switch (messageEvent.type) {
           case 'task:created':
             setState(s => ({ ...s, status: event.status }));
             break;
           case 'task:error':
-            setState(s => ({ ...s, error: event.error.message }));
+            setState(s => ({ ...s, error: (event as any).error.message }));
             eventSource.close();
             break;
           case 'stage:progress':
@@ -72,7 +73,12 @@ export function useAnalysisStream(taskId: string | null) {
 
     // The backend only sends named events. We bind to specific event names.
     const eventTypes = ['task:created', 'task:error', 'stage:progress', 'stage:start', 'stage:done', 'interact:ask', 'interact:timeout', 'task:completed'];
-    eventTypes.forEach(type => eventSource.addEventListener(type, handleEvent));
+    eventTypes.forEach(type => eventSource.addEventListener(type, handleEvent as EventListener));
+
+    eventSource.addEventListener('error', () => {
+      setState(s => ({ ...s, error: 'Connection lost' }));
+      eventSource.close();
+    });
 
     return () => eventSource.close();
   }, [taskId]);
