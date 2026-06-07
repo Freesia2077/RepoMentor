@@ -1,57 +1,81 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
+import type { TaskStatus, StageProgress, SSEEvent, TaskError, AnalysisResult } from '@backend-types/index';
 
-export type AnalysisStatus = 'cloning' | 'analyzing' | 'interaction_required' | 'completed' | 'error';
-
-export interface AnalysisState {
-  status: AnalysisStatus;
+export interface StreamState {
+  status: TaskStatus;
+  stageProgress: StageProgress;
   logs: string[];
-  question?: { id: string; text: string };
-  error?: string;
-  result?: any;
+  interaction: { id: string; question: string; options: string[] } | null;
+  result: Partial<AnalysisResult>;
+  error: string | null;
 }
 
 export function useAnalysisStream(taskId: string | null) {
-  const [state, setState] = useState<AnalysisState>({ status: 'cloning', logs: [] });
+  const [state, setState] = useState<StreamState>({
+    status: 'cloning',
+    stageProgress: { explorer: 'pending', mentor: 'pending', contributor: 'pending' },
+    logs: [],
+    interaction: null,
+    result: {},
+    error: null
+  });
+
+  const clearInteraction = useCallback(() => {
+    setState(s => ({ ...s, interaction: null }));
+  }, []);
 
   useEffect(() => {
     if (!taskId) return;
-    
-    // Reset state when taskId changes
-    setState({ status: 'cloning', logs: [] });
-    
+
     const eventSource = new EventSource(`/analysis/${taskId}/stream`);
 
-    eventSource.addEventListener('task:created', (e: any) => {
-      const data = JSON.parse(e.data);
-      setState(s => ({ ...s, status: data.status }));
-    });
-
-    eventSource.addEventListener('task:log', (e: any) => {
-      const data = JSON.parse(e.data);
-      setState(s => ({ ...s, logs: [...s.logs, data.message] }));
-    });
-
-    eventSource.addEventListener('task:interaction_required', (e: any) => {
-      const data = JSON.parse(e.data);
-      setState(s => ({ ...s, status: 'interaction_required', question: { id: data.questionId, text: data.question } }));
-    });
-
-    eventSource.addEventListener('task:completed', (e: any) => {
-      const data = JSON.parse(e.data);
-      setState(s => ({ ...s, status: 'completed', result: data.result }));
-      eventSource.close();
-    });
-
-    eventSource.addEventListener('task:error', (e: any) => {
-      const data = JSON.parse(e.data);
-      setState(s => ({ ...s, status: 'error', error: data.error }));
-      eventSource.close();
-    });
-
-    return () => {
-      eventSource.close();
+    const handleEvent = (e: MessageEvent) => {
+      try {
+        const event = JSON.parse(e.data) as SSEEvent;
+        
+        switch (event.type) {
+          case 'task:created':
+            setState(s => ({ ...s, status: event.status }));
+            break;
+          case 'task:error':
+            setState(s => ({ ...s, error: event.error.message }));
+            eventSource.close();
+            break;
+          case 'stage:progress':
+            setState(s => ({ ...s, logs: [...s.logs, event.message] }));
+            break;
+          case 'stage:start':
+            setState(s => ({ ...s, stageProgress: { ...s.stageProgress, [event.stage]: 'running' } }));
+            break;
+          case 'stage:done':
+            setState(s => ({ 
+              ...s, 
+              stageProgress: { ...s.stageProgress, [event.stage]: 'done' },
+              result: { ...s.result, [event.stage]: event.output }
+            }));
+            break;
+          case 'interact:ask':
+            setState(s => ({ ...s, interaction: { id: event.questionId, question: event.question, options: event.options || [] } }));
+            break;
+          case 'interact:timeout':
+            setState(s => ({ ...s, interaction: null }));
+            break;
+          case 'task:completed':
+            setState(s => ({ ...s, status: 'completed' }));
+            eventSource.close();
+            break;
+        }
+      } catch (err) {
+        console.error('SSE parse error:', err);
+      }
     };
+
+    // The backend only sends named events. We bind to specific event names.
+    const eventTypes = ['task:created', 'task:error', 'stage:progress', 'stage:start', 'stage:done', 'interact:ask', 'interact:timeout', 'task:completed'];
+    eventTypes.forEach(type => eventSource.addEventListener(type, handleEvent));
+
+    return () => eventSource.close();
   }, [taskId]);
 
-  return state;
+  return { state, clearInteraction };
 }
