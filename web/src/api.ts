@@ -6,13 +6,19 @@ export async function createAnalysis(repoUrl: string, branch: string = 'main'): 
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ repoUrl, branch })
   });
-  if (!res.ok) throw new Error('Failed to create analysis');
+  if (!res.ok) {
+    const errText = await res.text();
+    throw new Error(errText || 'Failed to create analysis');
+  }
   return res.json();
 }
 
 export async function getAnalysis(taskId: string): Promise<GetAnalysisResponse> {
   const res = await fetch(`/analysis/${taskId}`);
-  if (!res.ok) throw new Error('Failed to get analysis');
+  if (!res.ok) {
+    const errText = await res.text();
+    throw new Error(errText || 'Failed to get analysis');
+  }
   return res.json();
 }
 
@@ -22,6 +28,9 @@ export async function answerInteraction(taskId: string, questionId: string, answ
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ questionId, answer })
   });
-  if (!res.ok) throw new Error('Failed to answer interaction');
+  if (!res.ok) {
+    const errText = await res.text();
+    throw new Error(errText || 'Failed to answer interaction');
+  }
   return res.json();
 }
