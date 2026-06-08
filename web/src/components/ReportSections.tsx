@@ -1,13 +1,16 @@
+import { useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import type { ExplorerOutput, MentorOutput, ContributorOutput } from '@backend-types/index';
 import './ReportSections.css';
 
 export function AnchorNav() {
+  const [active, setActive] = useState('overview');
+
   return (
     <nav className="anchor-nav">
-      <a href="#overview">Overview</a>
-      <a href="#architecture">Architecture</a>
-      <a href="#contribute">Contribute</a>
+      <a href="#overview" className={active === 'overview' ? 'active' : ''} onClick={() => setActive('overview')}>Overview</a>
+      <a href="#architecture" className={active === 'architecture' ? 'active' : ''} onClick={() => setActive('architecture')}>Architecture</a>
+      <a href="#contribute" className={active === 'contribute' ? 'active' : ''} onClick={() => setActive('contribute')}>Contribute</a>
     </nav>
   );
 }
@@ -15,22 +18,24 @@ export function AnchorNav() {
 export function ExplorerSection({ data }: { data?: ExplorerOutput }) {
   if (!data) return null;
   return (
-    <section className="report-section" id="overview">
-      <h2>Overview</h2>
-      <p style={{fontSize: '1.2rem'}}>{data.projectSummary}</p>
-      
-      <div style={{margin: '2rem 0'}}>
-        <span className="badge">{data.projectType.primary}</span>
-        <span className="badge">{data.techStack.language}</span>
-        {data.techStack.framework && <span className="badge">{data.techStack.framework}</span>}
+    <section className="report-section" id="overview" style={{paddingTop: '0.5rem'}}>
+      <div style={{display: 'flex', gap: '0.5rem', marginBottom: '1rem'}}>
+        <span className="tag tag-tech">{data.projectType.primary}</span>
+        <span className="tag tag-tech">{data.techStack.language}</span>
+        {data.techStack.framework && <span className="tag tag-tech">{data.techStack.framework}</span>}
       </div>
+      
+      <p style={{fontSize: '1.15rem', marginBottom: '2.5rem'}}>{data.projectSummary}</p>
 
       <h3>Module Map</h3>
       <div className="grid-cards">
         {data.moduleMap.map((mod, i) => (
           <div key={i} className="card">
-            <h4>{mod.path} <span className="badge">{mod.importance}</span></h4>
-            <p>{mod.responsibility}</p>
+            <h4 style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
+              {mod.path} 
+              <span className="tag tag-status">{mod.importance}</span>
+            </h4>
+            <p className="text-secondary">{mod.responsibility}</p>
           </div>
         ))}
       </div>
@@ -42,14 +47,16 @@ export function MentorSection({ data }: { data?: MentorOutput }) {
   if (!data) return null;
   return (
     <section className="report-section" id="architecture">
-      <h2>Architecture & Design</h2>
       <div className="markdown-body">
         <ReactMarkdown>{data.architectureOverview}</ReactMarkdown>
       </div>
-      <h3>Reading Path</h3>
-      <ol>
+      <h3 style={{marginTop: '2rem'}}>Reading Path</h3>
+      <ol className="reading-path">
         {data.readingPath.map((step, i) => (
-          <li key={i}><strong>{step.file}</strong>: {step.why}</li>
+          <li key={i}>
+            <strong>{step.file}</strong>
+            <p className="text-secondary">{step.why}</p>
+          </li>
         ))}
       </ol>
     </section>
@@ -61,18 +68,21 @@ export function ContributorSection({ data }: { data?: ContributorOutput }) {
   return (
     <section className="report-section" id="contribute">
       <h2>Contribution Guide</h2>
-      <div className="grid-cards" style={{marginBottom: '2rem'}}>
+      <div className="grid-cards" style={{marginBottom: '3rem'}}>
         <div className="card">
-          <div className="badge">Build</div>
+          <div className="tag tag-default" style={{marginBottom: '1rem'}}>Build</div>
+          <br />
           <code>{data.contributionSetup.build}</code>
         </div>
         <div className="card">
-          <div className="badge">Test</div>
+          <div className="tag tag-default" style={{marginBottom: '1rem'}}>Test</div>
+          <br />
           <code>{data.contributionSetup.test}</code>
         </div>
         {data.contributionSetup.lint && (
           <div className="card">
-            <div className="badge">Lint</div>
+            <div className="tag tag-default" style={{marginBottom: '1rem'}}>Lint</div>
+            <br />
             <code>{data.contributionSetup.lint}</code>
           </div>
         )}
@@ -82,8 +92,11 @@ export function ContributorSection({ data }: { data?: ContributorOutput }) {
       <div className="grid-cards">
         {data.goodFirstIssues.map((issue, i) => (
           <div key={i} className="card">
-            <h4>{issue.area} <span className="badge">{issue.difficulty}</span></h4>
-            <p>{issue.description}</p>
+            <h4 style={{display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start'}}>
+              {issue.area} 
+              <span className={`tag tag-difficulty-${issue.difficulty}`}>{issue.difficulty}</span>
+            </h4>
+            <p className="text-secondary">{issue.description}</p>
           </div>
         ))}
       </div>
