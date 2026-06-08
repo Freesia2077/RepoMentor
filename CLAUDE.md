@@ -111,3 +111,10 @@
 - 保持模块化
 - 保持可扩展
 - 优先可用，再追求复杂能力
+
+## 目录结构说明
+
+这是一个前后端合并部署的 Monorepo：
+- `/src`: Fastify 后端与 AI 编排逻辑（API 入口）。
+- `/web`: React + Vite 前端应用。
+- `/docs`: Superpowers 设计文档与执行计划。
