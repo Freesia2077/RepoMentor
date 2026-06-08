@@ -10,7 +10,7 @@ describe('API Client', () => {
     vi.unstubAllGlobals();
   });
 
-  it('createAnalysis posts to /analysis', async () => {
+  it('createAnalysis posts to /api/analysis', async () => {
     vi.mocked(fetch).mockResolvedValueOnce({
       ok: true,
       json: async () => ({ taskId: '123' })
@@ -18,7 +18,7 @@ describe('API Client', () => {
     
     const res = await createAnalysis('https://github.com/foo/bar', 'main');
     expect(res.taskId).toBe('123');
-    expect(fetch).toHaveBeenCalledWith('/analysis', expect.objectContaining({
+    expect(fetch).toHaveBeenCalledWith('/api/analysis', expect.objectContaining({
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ repoUrl: 'https://github.com/foo/bar', branch: 'main' })
@@ -43,7 +43,7 @@ describe('API Client', () => {
     await expect(createAnalysis('https://github.com/foo/bar', 'main')).rejects.toThrow('Failed to create analysis');
   });
 
-  it('getAnalysis gets from /analysis/:taskId', async () => {
+  it('getAnalysis gets from /api/analysis/:taskId', async () => {
     vi.mocked(fetch).mockResolvedValueOnce({
       ok: true,
       json: async () => ({ status: 'pending' })
@@ -51,7 +51,7 @@ describe('API Client', () => {
     
     const res = await getAnalysis('123');
     expect((res as any).status).toBe('pending');
-    expect(fetch).toHaveBeenCalledWith('/analysis/123');
+    expect(fetch).toHaveBeenCalledWith('/api/analysis/123');
   });
 
   it('getAnalysis throws error on failure', async () => {
@@ -72,7 +72,7 @@ describe('API Client', () => {
     await expect(getAnalysis('123')).rejects.toThrow('Failed to get analysis');
   });
 
-  it('answerInteraction posts to /analysis/:taskId/ask', async () => {
+  it('answerInteraction posts to /api/analysis/:taskId/ask', async () => {
     vi.mocked(fetch).mockResolvedValueOnce({
       ok: true,
       json: async () => ({ success: true })
@@ -80,7 +80,7 @@ describe('API Client', () => {
     
     const res = await answerInteraction('123', 'q1', 'my answer');
     expect((res as any).success).toBe(true);
-    expect(fetch).toHaveBeenCalledWith('/analysis/123/ask', expect.objectContaining({
+    expect(fetch).toHaveBeenCalledWith('/api/analysis/123/ask', expect.objectContaining({
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ questionId: 'q1', answer: 'my answer' })
