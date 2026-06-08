@@ -69,20 +69,17 @@ export function ContributorSection({ data }: { data?: ContributorOutput }) {
     <section className="report-section" id="contribute">
       <h2>Contribution Guide</h2>
       <div className="grid-cards" style={{marginBottom: '3rem'}}>
-        <div className="card">
-          <div className="tag tag-default" style={{marginBottom: '1rem'}}>Build</div>
-          <br />
+        <div className="card" style={{ display: 'flex', alignItems: 'center' }}>
+          <span className="tag tag-default" style={{marginRight: '1.5rem'}}>Build</span>
           <code>{data.contributionSetup.build}</code>
         </div>
-        <div className="card">
-          <div className="tag tag-default" style={{marginBottom: '1rem'}}>Test</div>
-          <br />
+        <div className="card" style={{ display: 'flex', alignItems: 'center' }}>
+          <span className="tag tag-default" style={{marginRight: '1.5rem'}}>Test</span>
           <code>{data.contributionSetup.test}</code>
         </div>
         {data.contributionSetup.lint && (
-          <div className="card">
-            <div className="tag tag-default" style={{marginBottom: '1rem'}}>Lint</div>
-            <br />
+          <div className="card" style={{ display: 'flex', alignItems: 'center' }}>
+            <span className="tag tag-default" style={{marginRight: '1.5rem'}}>Lint</span>
             <code>{data.contributionSetup.lint}</code>
           </div>
         )}
