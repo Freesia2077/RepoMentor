@@ -3,6 +3,7 @@ import { config } from "./config.js";
 import { analysisRoutes } from "./routes/analysis.js";
 import { streamRoutes } from "./routes/stream.js";
 import { getDb } from "./db/index.js";
+import fastifyStatic from "@fastify/static";
 import fs from "node:fs";
 import path from "node:path";
 
@@ -41,9 +42,25 @@ async function start(): Promise<void> {
     process.exit(1);
   }
 
-  // 注册路由
-  await app.register(analysisRoutes);
-  await app.register(streamRoutes);
+  // 注册路由 (加上 /api 前缀)
+  await app.register(analysisRoutes, { prefix: "/api" });
+  await app.register(streamRoutes, { prefix: "/api" });
+
+  // 静态资源托管与 SPA 兜底 (仅生产环境)
+  if (process.env.NODE_ENV === "production") {
+    await app.register(fastifyStatic, {
+      root: path.resolve(process.cwd(), "web/dist"),
+      wildcard: false, // 防治与 SPA 兜底冲突
+    });
+
+    app.setNotFoundHandler((request, reply) => {
+      if (request.url.startsWith("/api")) {
+        reply.status(404).send({ error: "not_found" });
+      } else {
+        reply.sendFile("index.html");
+      }
+    });
+  }
 
   // 健康检查
   app.get("/health", async () => ({ status: "ok" }));
