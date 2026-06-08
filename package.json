@@ -4,14 +4,18 @@
   "description": "AI-powered open-source repository learning assistant",
   "type": "module",
   "scripts": {
-    "dev": "tsx watch src/index.ts",
-    "build": "tsc",
+    "dev": "concurrently \"node --watch --import tsx src/index.ts\" \"npm run dev -w web\"",
+    "build": "npm run build -w web && tsc",
     "start": "node dist/index.js",
-    "test": "vitest run",
+    "test": "vitest run tests",
     "test:watch": "vitest"
   },
+  "workspaces": [
+    "web"
+  ],
   "dependencies": {
     "@anthropic-ai/claude-agent-sdk": "^0.1.0",
+    "@fastify/static": "^8.0.4",
     "better-sqlite3": "^11.7.0",
     "dotenv": "^17.4.2",
     "fastify": "^5.1.0",
@@ -21,6 +25,7 @@
   "devDependencies": {
     "@types/better-sqlite3": "^7.6.0",
     "@types/node": "^22.0.0",
+    "concurrently": "^9.1.0",
     "tsx": "^4.19.0",
     "typescript": "^5.7.0",
     "vitest": "^2.1.0"

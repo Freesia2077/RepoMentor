@@ -1,7 +1,7 @@
 import type { CreateAnalysisResponse, GetAnalysisResponse, AskResponse } from '@backend-types/index';
 
 export async function createAnalysis(repoUrl: string, branch: string = 'main'): Promise<CreateAnalysisResponse> {
-  const res = await fetch('/analysis', {
+  const res = await fetch('/api/analysis', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ repoUrl, branch })
@@ -14,7 +14,7 @@ export async function createAnalysis(repoUrl: string, branch: string = 'main'): 
 }
 
 export async function getAnalysis(taskId: string): Promise<GetAnalysisResponse> {
-  const res = await fetch(`/analysis/${taskId}`);
+  const res = await fetch(`/api/analysis/${taskId}`);
   if (!res.ok) {
     const errText = await res.text();
     throw new Error(errText || 'Failed to get analysis');
@@ -23,7 +23,7 @@ export async function getAnalysis(taskId: string): Promise<GetAnalysisResponse> 
 }
 
 export async function answerInteraction(taskId: string, questionId: string, answer: string): Promise<AskResponse> {
-  const res = await fetch(`/analysis/${taskId}/ask`, {
+  const res = await fetch(`/api/analysis/${taskId}/ask`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ questionId, answer })

@@ -47,6 +47,7 @@ export function MentorSection({ data }: { data?: MentorOutput }) {
   if (!data) return null;
   return (
     <section className="report-section" id="architecture">
+      <h2>Architecture</h2>
       <div className="markdown-body">
         <ReactMarkdown>{data.architectureOverview}</ReactMarkdown>
       </div>

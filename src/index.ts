@@ -1,15 +1,33 @@
 import Fastify from "fastify";
+import fastifyStatic from "@fastify/static";
 import { config } from "./config.js";
 import { analysisRoutes } from "./routes/analysis.js";
 import { streamRoutes } from "./routes/stream.js";
 import { getDb } from "./db/index.js";
 import fs from "node:fs";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const app = Fastify({
   logger: {
     level: config.LOG_LEVEL,
   },
+});
+
+app.register(fastifyStatic, {
+  root: path.join(__dirname, "../web/dist"),
+  wildcard: false,
+});
+
+app.setNotFoundHandler((request, reply) => {
+  if (request.url.startsWith("/api")) {
+    reply.status(404).send({ error: "not_found" });
+  } else {
+    reply.sendFile("index.html");
+  }
 });
 
 async function start(): Promise<void> {

@@ -3,8 +3,8 @@ import { createTask, getTask, answerQuestion, OrchestratorError } from "../servi
 import type { CreateAnalysisRequest, AskRequest } from "../types/index.js";
 
 export async function analysisRoutes(app: FastifyInstance): Promise<void> {
-  // POST /analysis
-  app.post<{ Body: CreateAnalysisRequest }>("/analysis", async (request, reply) => {
+  // POST /api/analysis
+  app.post<{ Body: CreateAnalysisRequest }>("/api/analysis", async (request, reply) => {
     const { repoUrl, branch } = request.body;
 
     try {
@@ -25,8 +25,8 @@ export async function analysisRoutes(app: FastifyInstance): Promise<void> {
     }
   });
 
-  // GET /analysis/:id
-  app.get<{ Params: { id: string } }>("/analysis/:id", async (request, reply) => {
+  // GET /api/analysis/:id
+  app.get<{ Params: { id: string } }>("/api/analysis/:id", async (request, reply) => {
     const { id } = request.params;
     const response = getTask(id);
 
@@ -37,9 +37,9 @@ export async function analysisRoutes(app: FastifyInstance): Promise<void> {
     return reply.send(response);
   });
 
-  // POST /analysis/:id/ask
+  // POST /api/analysis/:id/ask
   app.post<{ Params: { id: string }; Body: AskRequest }>(
-    "/analysis/:id/ask",
+    "/api/analysis/:id/ask",
     async (request, reply) => {
       const { id } = request.params;
       const { questionId, answer } = request.body;

@@ -27,7 +27,7 @@ export function useAnalysisStream(taskId: string | null) {
   useEffect(() => {
     if (!taskId) return;
 
-    const eventSource = new EventSource(`/analysis/${taskId}/stream`);
+    const eventSource = new EventSource(`/api/analysis/${taskId}/stream`);
 
     const handleEvent = (e: Event) => {
       try {

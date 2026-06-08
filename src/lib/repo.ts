@@ -62,7 +62,27 @@ export async function fetchRepoSize(owner: string, repo: string): Promise<number
 export async function cloneRepo(
   url: string,
   taskDir: string,
-): Promise<{ localPath: string; git: SimpleGit; commitHash: string }> {
+): Promise<{ localPath: string; git: SimpleGit; commitHash: string; cached: boolean }> {
+  // Check if cache directory exists
+  try {
+    const stat = await fs.stat(taskDir);
+    if (stat.isDirectory()) {
+      const taskGit = simpleGit(taskDir);
+      // Fetch latest changes and reset
+      await taskGit.fetch();
+      const currentBranch = (await taskGit.branch()).current || "main";
+      try {
+        await taskGit.reset(["--hard", `origin/${currentBranch}`]);
+      } catch {
+        // If reset fails, maybe no origin/main, just fallback to whatever is there
+      }
+      const commitHash = await taskGit.revparse(["HEAD"]);
+      return { localPath: taskDir, git: taskGit, commitHash, cached: true };
+    }
+  } catch {
+    // Directory does not exist, proceed with cloning
+  }
+
   await fs.mkdir(taskDir, { recursive: true });
   const git = simpleGit();
 
@@ -74,7 +94,7 @@ export async function cloneRepo(
   const taskGit = simpleGit(taskDir);
   const commitHash = await taskGit.revparse(["HEAD"]);
 
-  return { localPath: taskDir, git: taskGit, commitHash };
+  return { localPath: taskDir, git: taskGit, commitHash, cached: false };
 }
 
 export async function getFileCount(localPath: string): Promise<number> {
@@ -91,13 +111,13 @@ export async function extractCommitSummary(localPath: string): Promise<CommitSum
   const git = simpleGit(localPath);
 
   try {
-    const log = await git.log({ maxCount: 50 });
+    const log = await git.log({ maxCount: 10 });
     const logEntries = log.all;
 
     const themes = logEntries
       .map((c: { message: string }) => c.message.split("\n")[0] ?? "")
       .filter(Boolean)
-      .slice(0, 50);
+      .slice(0, 10);
 
     const contributors = new Set(
       logEntries.map((c: { author_email: string }) => c.author_email)
@@ -107,7 +127,7 @@ export async function extractCommitSummary(localPath: string): Promise<CommitSum
     try {
       const diffOutput = await git.raw([
         "diff-tree", "--no-commit-id", "--name-only", "-r",
-        `HEAD~${Math.min(50, logEntries.length)}..HEAD`,
+        `HEAD~${Math.min(10, logEntries.length)}..HEAD`,
       ]);
       const changedFiles = diffOutput.split("\n").filter(Boolean);
       for (const file of changedFiles) {
