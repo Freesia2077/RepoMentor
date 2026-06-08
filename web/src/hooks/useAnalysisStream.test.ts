@@ -46,28 +46,28 @@ describe('useAnalysisStream', () => {
     const { result } = renderHook(() => useAnalysisStream('task-123'));
     
     act(() => {
-      mockEventSourceInstance.emit('task:created', { status: 'running' });
+      mockEventSourceInstance.emit('task:created', { type: 'task:created', status: 'running' });
     });
     expect(result.current.state.status).toBe('running');
 
     act(() => {
-      mockEventSourceInstance.emit('stage:start', { stage: 'explorer' });
+      mockEventSourceInstance.emit('stage:start', { type: 'stage:start', stage: 'explorer' });
     });
     expect(result.current.state.stageProgress.explorer).toBe('running');
 
     act(() => {
-      mockEventSourceInstance.emit('stage:progress', { message: 'Analyzing files...' });
+      mockEventSourceInstance.emit('stage:progress', { type: 'stage:progress', message: 'Analyzing files...' });
     });
     expect(result.current.state.logs).toContain('Analyzing files...');
 
     act(() => {
-      mockEventSourceInstance.emit('stage:done', { stage: 'explorer', output: { summary: 'done' } });
+      mockEventSourceInstance.emit('stage:done', { type: 'stage:done', stage: 'explorer', output: { summary: 'done' } });
     });
     expect(result.current.state.stageProgress.explorer).toBe('done');
     expect(result.current.state.result.explorer).toEqual({ summary: 'done' });
     
     act(() => {
-      mockEventSourceInstance.emit('interact:ask', { questionId: 'q1', question: 'Continue?', options: ['Yes', 'No'] });
+      mockEventSourceInstance.emit('interact:ask', { type: 'interact:ask', questionId: 'q1', question: 'Continue?', options: ['Yes', 'No'] });
     });
     expect(result.current.state.interaction).toEqual({ id: 'q1', question: 'Continue?', options: ['Yes', 'No'] });
 
@@ -81,7 +81,7 @@ describe('useAnalysisStream', () => {
     const { result } = renderHook(() => useAnalysisStream('task-123'));
     act(() => {
       // Use the correct structure that matches the implementation's expectation
-      mockEventSourceInstance.emit('task:error', { error: { message: 'Failed to analyze' } });
+      mockEventSourceInstance.emit('task:error', { type: 'task:error', error: { message: 'Failed to analyze' } });
     });
     expect(result.current.state.error).toBe('Failed to analyze');
   });
