@@ -1,76 +1,108 @@
-# 🚀 RepoMentor
+# RepoMentor
 
-**RepoMentor** is an AI-powered open-source repository learning assistant. It integrates a powerful AI agent system with a modern web dashboard to help developers analyze, understand, and contribute to complex codebases seamlessly.
+> AI-powered repository learning assistant — from "found a repo" to "ready to contribute" in minutes.
 
-## ✨ Features
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![Node.js](https://img.shields.io/badge/Node.js-18%2B-green)](https://nodejs.org/)
 
-- **🤖 AI-Powered Analysis**: Deep-dive into repository architectures and module maps using advanced LLMs (Anthropic / DeepSeek).
-- **📊 Real-time Dashboard**: A beautiful, interactive frontend to view analysis streams, module maps, and contribution guides.
-- **⚡ Full-Stack Integration**: Built with Fastify (Node.js) on the backend and React + Vite on the frontend.
-- **📂 Local SQLite Storage**: Fast, zero-config local storage to persist analysis history.
-- **🛠 Git Native**: Leverages native Git operations for cloning and reading repositories.
+<!-- 建议在此插入一张 demo 截图或 GIF，例如：
+![RepoMentor Demo](docs/demo.gif)
+-->
 
-## 💻 Tech Stack
+RepoMentor feeds a GitHub repository URL to a three-stage AI agent pipeline and returns a structured analysis report — covering architecture, learning path, and contribution opportunities — streamed to a real-time web dashboard.
 
-- **Backend**: Node.js, TypeScript, Fastify, `better-sqlite3`, `@anthropic-ai/claude-agent-sdk`
-- **Frontend**: React, TypeScript, Vite
-- **Tooling**: `concurrently` for seamless monorepo-style dev server, Vitest for testing
+## How it works
 
-## 🚀 Getting Started
+Analysis runs through three specialized agents in sequence:
+
+| Agent | Role |
+|---|---|
+| **Explorer** | Clones the repository, maps the file tree, identifies tech stack and entry points |
+| **Mentor** | Analyzes architecture, traces module dependencies, generates a recommended reading path |
+| **Contributor** | Surfaces Good First Issues, explains the contribution workflow, highlights code conventions |
+
+Each stage streams its progress over SSE. The frontend renders results incrementally as agents complete their work.
+
+## Features
+
+- **Multi-provider LLM support** — works with both Anthropic Claude and DeepSeek
+- **Real-time streaming** — analysis progress visible as it happens via Server-Sent Events
+- **Interactive analysis** — agents can pause and ask clarifying questions mid-run
+- **Persistent history** — past analyses stored locally in SQLite, zero external dependencies
+- **Single-binary deployment** — Fastify serves both the API and the compiled frontend
+
+## Tech Stack
+
+| Layer | Technology |
+|---|---|
+| Agent framework | `@anthropic-ai/claude-agent-sdk` |
+| Backend | Node.js · TypeScript · Fastify |
+| Storage | `better-sqlite3` (local SQLite) |
+| Frontend | React · TypeScript · Vite |
+| Dev tooling | `concurrently` · Vitest |
+
+## Getting Started
 
 ### Prerequisites
 
-- [Node.js](https://nodejs.org/) (v18+ recommended)
-- [Git](https://git-scm.com/) installed on your machine
+- [Node.js](https://nodejs.org/) v18+
+- [Git](https://git-scm.com/) (used natively for cloning target repositories)
 
 ### Installation
 
-1. Clone the repository:
-   ```bash
-   git clone https://github.com/Freesia2077/RepoMentor.git
-   cd RepoMentor
-   ```
+```bash
+git clone https://github.com/Freesia2077/RepoMentor.git
+cd RepoMentor
+npm install
+```
 
-2. Install dependencies:
-   ```bash
-   npm install
-   ```
+### Configuration
 
-3. Setup environment variables:
-   ```bash
-   cp .env.example .env
-   ```
-   Open `.env` and fill in your AI provider's API key (e.g., DeepSeek / Anthropic).
+```bash
+cp .env.example .env
+```
 
-### Running the App
+Open `.env` and set your AI provider API key:
 
-Start both the backend and frontend dev servers concurrently:
+```env
+ANTHROPIC_AUTH_TOKEN=your_key_here
+# If using DeepSeek, also set:
+ANTHROPIC_BASE_URL=https://api.deepseek.com/anthropic
+ANTHROPIC_MODEL=deepseek-v4-flash
+```
+
+### Development
+
+Start the backend (port 3000) and frontend dev server (port 5173) together:
 
 ```bash
 npm run dev
 ```
 
-The application will be available at `http://localhost:5173/` (Frontend) with the backend API running on `http://127.0.0.1:3000`.
+Open `http://localhost:5173` and enter any public GitHub repository URL.
 
-### Building for Production
-
-Compile both the frontend and backend:
+### Production Build
 
 ```bash
-npm run build
+npm run build   # compiles frontend into web/dist and transpiles backend
+npm start       # serves everything from http://localhost:3000
 ```
 
-Start the production server:
+## Project Structure
 
-```bash
-npm start
 ```
-The server will now host the frontend static files directly at `http://127.0.0.1:3000`.
+RepoMentor/
+├── src/          # Fastify backend — routes, SSE, SQLite integration
+├── agents/       # Agent definitions and orchestration logic
+├── skills/       # Reusable skill prompts for the agent pipeline
+├── web/          # React + Vite frontend
+└── tests/        # Backend test suite (Vitest)
+```
 
-## 🤝 Contributing
+## Contributing
 
-We welcome contributions! Please feel free to submit a Pull Request.
+Contributions are welcome. Before opening a pull request, please:
 
-## 📝 License
-
-MIT License
+1. Fork the repository and create a feature branch from `main`
+2. Run `npm test` and ensure all tests pass
+3. For significant changes, open an issue first to discuss the approach
