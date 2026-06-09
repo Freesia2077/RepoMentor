@@ -12,7 +12,9 @@ class MockEventSource {
   
   emit(type: string, data: any) {
     const event = new Event(type) as MessageEvent;
-    (event as any).data = JSON.stringify(data);
+    // Inject type into data payload to match backend SSEEvent structure
+    const payload = { type, ...data };
+    (event as any).data = JSON.stringify(payload);
     this.listeners[type]?.forEach(cb => cb(event));
   }
 

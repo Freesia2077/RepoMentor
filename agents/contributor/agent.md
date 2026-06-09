@@ -3,8 +3,9 @@ name: contributor
 description: 基于前两阶段产出和 commit 摘要，分析贡献机会和入手路径。Pipeline Stage 3。仅在被 Orchestrator 调用时触发。
 tools:
   - Read
+  - Glob
   - Grep
-model: deepseek-v4-pro
+model: deepseek-v4-flash
 ---
 
 # Contributor - 贡献顾问
@@ -19,7 +20,7 @@ model: deepseek-v4-pro
 从 Orchestrator 接收：
 - `explorerOutput`: Stage 1 的完整 JSON 输出
 - `mentorOutput`: Stage 2 的完整 JSON 输出
-- `commitSummary`: 近 50 条 commit 的结构化摘要，格式如下：
+- `commitSummary`: 近 10 条 commit 的结构化摘要，格式如下：
 
 ```json
 {
@@ -41,7 +42,7 @@ model: deepseek-v4-pro
 
 ## 输出格式
 
-严格返回以下 JSON，不要包含 markdown 代码块标记：
+严格返回以下合法 JSON（禁止尾随逗号）。必须使用 \`\`\`json 代码块包裹输出：
 
 ```json
 {
@@ -74,4 +75,5 @@ model: deepseek-v4-pro
 ## 约束
 
 - difficulty 必须是 easy, medium, hard 之一
+- goodFirstIssues 最多输出 6 条，且必须严格按照从易到难的顺序排序（easy -> medium -> hard），并且**必须至少包含一个 hard 类型的 issue**
 - 如果没有找到特定内容（如 CONTRIBUTING.md），对应输出可以为空数组

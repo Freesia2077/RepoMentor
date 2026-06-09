@@ -68,12 +68,12 @@ describe("validateExplorerOutput", () => {
     expect(() => validateExplorerOutput(bad)).toThrow();
   });
 
-  it("rejects invalid projectType primary", () => {
-    const bad = {
+  it("accepts valid custom projectType primary", () => {
+    const custom = {
       ...validExplorer,
-      projectType: { primary: "invalid", secondary: [] },
+      projectType: { primary: "custom-game-engine", secondary: [] },
     };
-    expect(() => validateExplorerOutput(bad)).toThrow();
+    expect(() => validateExplorerOutput(custom)).not.toThrow();
   });
 });
 

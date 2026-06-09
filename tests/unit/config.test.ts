@@ -30,7 +30,7 @@ describe("config", () => {
     expect(config.HOST).toBe("0.0.0.0");
     expect(config.CLONE_DEPTH).toBe(1);
     expect(config.ANTHROPIC_BASE_URL).toBe("https://api.deepseek.com/anthropic");
-    expect(config.ANTHROPIC_MODEL).toBe("deepseek-v4-pro");
+    expect(config.ANTHROPIC_MODEL).toBe("deepseek-v4-flash");
     expect(config.LOG_LEVEL).toBe("info");
   });
 

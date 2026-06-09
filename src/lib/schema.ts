@@ -3,14 +3,14 @@ import { z } from "zod";
 // ===== Explorer Output =====
 
 const projectTypeSchema = z.object({
-  primary: z.enum(["library", "cli", "web-framework", "monorepo", "unknown"]),
-  secondary: z.array(z.enum(["library", "cli", "web-framework", "monorepo", "unknown"])),
+  primary: z.string(),
+  secondary: z.array(z.string()),
 });
 
 const techStackSchema = z.object({
-  language: z.string(),
-  framework: z.string().nullable(),
-  buildTool: z.string(),
+  language: z.string().nullish(),
+  framework: z.string().nullish(),
+  buildTool: z.string().nullish(),
 });
 
 const entryPointSchema = z.object({
@@ -30,7 +30,7 @@ export const explorerOutputSchema = z.object({
   techStack: techStackSchema,
   fileCount: z.number().int().nonnegative(),
   entryPoints: z.array(entryPointSchema).max(10),
-  moduleMap: z.array(moduleInfoSchema).max(20),
+  moduleMap: z.array(moduleInfoSchema).max(6),
   directorySummary: z.string().max(1500),
   projectSummary: z.string().max(800),
 });
@@ -79,10 +79,10 @@ const goodFirstIssueSchema = z.object({
 });
 
 const contributionSetupSchema = z.object({
-  devEnv: z.string(),
-  build: z.string(),
-  test: z.string(),
-  lint: z.string().optional(),
+  devEnv: z.string().nullish(),
+  build: z.string().nullish(),
+  test: z.string().nullish(),
+  lint: z.string().nullish(),
 });
 
 const entryFileSchema = z.object({

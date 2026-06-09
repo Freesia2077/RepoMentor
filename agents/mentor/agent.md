@@ -3,9 +3,9 @@ name: mentor
 description: 基于 Explorer 产出深入解读架构，生成学习路径。Pipeline Stage 2。仅在被 Orchestrator 调用时触发。
 tools:
   - Read
+  - Glob
   - Grep
-  - WebSearch
-model: deepseek-v4-pro
+model: deepseek-v4-flash
 ---
 
 # Mentor - 学习导师
@@ -33,11 +33,11 @@ model: deepseek-v4-pro
 
 ## 输出格式
 
-严格返回以下 JSON，不要包含 markdown 代码块标记：
+严格返回以下合法 JSON（禁止尾随逗号）。必须使用 \`\`\`json 代码块包裹输出：
 
 ```json
 {
-  "architectureOverview": "markdown 格式的架构描述，不超过 800 字",
+  "architectureOverview": "markdown 格式的架构描述，不超过 800 字（不要包含顶级标题）",
   "dependencyGraph": {
     "src/core/": ["src/utils/", "src/types/"],
     "src/cli/": ["src/core/"]

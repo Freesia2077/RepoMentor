@@ -100,13 +100,21 @@ export async function runStage<S extends StageName>(
     parsed = extractJSON(rawOutput);
   } catch (err) {
     throw new ParseError(
-      `Agent 输出不是有效的 JSON: ${err instanceof Error ? err.message : String(err)}`,
+      `输出不是有效的 JSON: ${err instanceof Error ? err.message : String(err)}`,
       rawOutput,
     );
   }
 
   // 3. Zod Schema 校验
-  const result = validator(parsed);
+  let result;
+  try {
+    result = validator(parsed);
+  } catch (err) {
+    throw new ParseError(
+      `JSON 格式错误: ${err instanceof Error ? err.message : String(err)}`,
+      rawOutput
+    );
+  }
 
   return result as StageOutputFor<S>;
 }
@@ -145,6 +153,7 @@ async function invokeAgent(
       options: {
         systemPrompt,
         model: config.ANTHROPIC_MODEL,
+        tools: ALLOWED_TOOLS[stage],
         allowedTools: ALLOWED_TOOLS[stage],
         cwd: localPath,
         maxTurns: MAX_TURNS[stage],
@@ -162,33 +171,41 @@ async function invokeAgent(
 
       switch (type) {
         case "assistant": {
-          // SDK assistant 消息: 内容在 msg.message 字段
-          // msg.message 是 Anthropic Messages API 的 response 对象
-          // 结构: { role: "assistant", content: [{type: "text", text: "..."}, {type: "tool_use", ...}] }
           const apiMessage = msg.message as Record<string, unknown> | undefined;
-          if (apiMessage) {
+          let toolNames = "";
+          if (apiMessage && Array.isArray(apiMessage.content)) {
             const text = extractFromContent(apiMessage.content);
             if (text) {
-              // 每次 assistant 消息都可能包含文本，保留最后一条（最终 JSON 输出）
               assistantChunks.push(text);
             }
+            const tools = apiMessage.content.filter((b: any) => b && b.type === "tool_use");
+            if (tools.length > 0) {
+              toolNames = tools.map((t: any) => t.name).join(", ");
+            }
           }
-          callbacks.onProgress(`Agent (${stage}) 输出中...`);
+          
+          const agentName = stage.charAt(0).toUpperCase() + stage.slice(1);
+          
+          if (toolNames) {
+            callbacks.onProgress(`${agentName} 决定调用能力: ${toolNames}...`);
+          } else {
+            callbacks.onProgress(`${agentName} 正在思考与分析...`);
+          }
           break;
         }
 
         case "result": {
-          // result 是元数据消息（duration, cost, usage 等），不包含文本输出
-          callbacks.onProgress(`Agent (${stage}) 完成`);
+          const agentName = stage.charAt(0).toUpperCase() + stage.slice(1);
+          callbacks.onProgress(`${agentName} 完成`);
           break;
         }
 
         case "user": {
-          // user 消息包含工具调用结果（tool_use_result）
-          // 可以用来跟踪工具使用进度
+          // user 消息包含工具调用结果
           const toolResult = msg.tool_use_result as Record<string, unknown> | undefined;
           if (toolResult) {
-            callbacks.onProgress(`Agent (${stage}) 工具调用完成`);
+            const agentName = stage.charAt(0).toUpperCase() + stage.slice(1);
+            callbacks.onProgress(`${agentName} 能力调用结束，分析结果中...`);
           }
           break;
         }
@@ -209,7 +226,8 @@ async function invokeAgent(
   }
 
   if (!rawOutput.trim()) {
-    throw new LLMError(`Agent (${stage}) 返回了空输出`, true);
+    const agentName = stage.charAt(0).toUpperCase() + stage.slice(1);
+    throw new LLMError(`${agentName} 返回了空输出`, true);
   }
 
   return rawOutput;
@@ -282,7 +300,7 @@ function buildPromptForStage(stage: StageName, inputStr: string): string {
 输入数据：
 ${inputStr}
 
-请严格按照你的 Agent 定义中规定的 JSON Schema 输出，不要包含 markdown 代码块标记。`;
+请严格按照你的 Agent 定义中规定的 JSON Schema 输出。必须将最终结果包裹在 \`\`\`json 和 \`\`\` 代码块中。`;
 
     case "mentor":
       return `请基于 Explorer 阶段的输出，深入分析项目架构，生成学习路径。
@@ -290,7 +308,7 @@ ${inputStr}
 输入数据：
 ${inputStr}
 
-请严格按照你的 Agent 定义中规定的 JSON Schema 输出。`;
+请严格按照你的 Agent 定义中规定的 JSON Schema 输出。必须将最终结果包裹在 \`\`\`json 和 \`\`\` 代码块中。`;
 
     case "contributor":
       return `请基于前两个阶段的分析，找到适合新手参与贡献的切入点。
@@ -298,7 +316,7 @@ ${inputStr}
 输入数据：
 ${inputStr}
 
-请严格按照你的 Agent 定义中规定的 JSON Schema 输出。`;
+请严格按照你的 Agent 定义中规定的 JSON Schema 输出。必须将最终结果包裹在 \`\`\`json 和 \`\`\` 代码块中。`;
 
     default:
       return `请输出符合 Schema 的 JSON。输入:\n${inputStr}`;
@@ -336,5 +354,6 @@ export function extractJSON(text: string): unknown {
     } catch { /* 继续 */ }
   }
 
-  throw new Error("无法从输出中提取 JSON");
+  console.error(`[PARSE ERROR] 无法提取JSON。Agent原始输出为:\n${text}`);
+  throw new Error("无法从输出中提取有效的 JSON");
 }

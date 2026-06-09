@@ -16,11 +16,11 @@ afterAll(async () => {
   await app.close();
 });
 
-describe("POST /analysis", () => {
+describe("POST /api/analysis", () => {
   it("rejects invalid URL", async () => {
     const res = await app.inject({
       method: "POST",
-      url: "/analysis",
+      url: "/api/analysis",
       payload: { repoUrl: "not-a-valid-url" },
     });
 
@@ -32,7 +32,7 @@ describe("POST /analysis", () => {
   it("accepts valid GitHub URL", async () => {
     const res = await app.inject({
       method: "POST",
-      url: "/analysis",
+      url: "/api/analysis",
       payload: { repoUrl: "https://github.com/expressjs/express" },
     });
 
@@ -44,11 +44,11 @@ describe("POST /analysis", () => {
   });
 });
 
-describe("GET /analysis/:id", () => {
+describe("GET /api/analysis/:id", () => {
   it("returns 404 for unknown task", async () => {
     const res = await app.inject({
       method: "GET",
-      url: "/analysis/unknown_task",
+      url: "/api/analysis/unknown_task",
     });
 
     expect(res.statusCode).toBe(404);
@@ -57,14 +57,14 @@ describe("GET /analysis/:id", () => {
   it("returns task status for created task", async () => {
     const createRes = await app.inject({
       method: "POST",
-      url: "/analysis",
+      url: "/api/analysis",
       payload: { repoUrl: "https://github.com/expressjs/express" },
     });
     const { taskId } = JSON.parse(createRes.payload);
 
     const getRes = await app.inject({
       method: "GET",
-      url: `/analysis/${taskId}`,
+      url: `/api/analysis/${taskId}`,
     });
 
     expect(getRes.statusCode).toBe(200);
@@ -74,11 +74,11 @@ describe("GET /analysis/:id", () => {
   });
 });
 
-describe("POST /analysis/:id/ask", () => {
+describe("POST /api/analysis/:id/ask", () => {
   it("returns 404 for unknown task", async () => {
     const res = await app.inject({
       method: "POST",
-      url: "/analysis/unknown_task/ask",
+      url: "/api/analysis/unknown_task/ask",
       payload: { questionId: "q1", answer: "是" },
     });
 
@@ -88,14 +88,14 @@ describe("POST /analysis/:id/ask", () => {
   it("returns question_expired when no pending question", async () => {
     const createRes = await app.inject({
       method: "POST",
-      url: "/analysis",
+      url: "/api/analysis",
       payload: { repoUrl: "https://github.com/expressjs/express" },
     });
     const { taskId } = JSON.parse(createRes.payload);
 
     const res = await app.inject({
       method: "POST",
-      url: `/analysis/${taskId}/ask`,
+      url: `/api/analysis/${taskId}/ask`,
       payload: { questionId: "q1", answer: "是" },
     });
 
@@ -103,11 +103,11 @@ describe("POST /analysis/:id/ask", () => {
   });
 });
 
-describe("GET /analysis/:id/stream", () => {
+describe("GET /api/analysis/:id/stream", () => {
   it("returns 404 for unknown task", async () => {
     const res = await app.inject({
       method: "GET",
-      url: "/analysis/unknown_task/stream",
+      url: "/api/analysis/unknown_task/stream",
     });
 
     expect(res.statusCode).toBe(404);

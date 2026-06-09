@@ -4,7 +4,7 @@ import { hasTask } from "../services/orchestrator.js";
 
 export async function streamRoutes(app: FastifyInstance): Promise<void> {
   app.get<{ Params: { id: string } }>(
-    "/analysis/:id/stream",
+    "/api/analysis/:id/stream",
     async (request, reply) => {
       const { id } = request.params;
 

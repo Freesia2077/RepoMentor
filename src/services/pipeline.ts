@@ -16,6 +16,7 @@ import { config } from "../config.js";
 import { getDb } from "../db/index.js";
 import * as cacheRepo from "../db/repositories/analysis-cache.js";
 import fs from "node:fs";
+import path from "node:path";
 
 // ========== Pipeline 上下文 & 类型 ==========
 
@@ -46,7 +47,6 @@ export interface PipelineResult {
 // ========== 主 Pipeline ==========
 
 export async function executePipeline(ctx: PipelineContext): Promise<PipelineResult> {
-  const taskDir = `tmp/${ctx.taskId}`;
   let localPath: string | undefined;
 
   try {
@@ -57,8 +57,17 @@ export async function executePipeline(ctx: PipelineContext): Promise<PipelineRes
       status: "cloning",
     });
 
-    const { localPath: lp, commitHash } = await cloneRepo(ctx.repoUrl, taskDir);
+    const parsedRepo = parseRepoUrl(ctx.repoUrl);
+    const repoCacheName = parsedRepo.owner && parsedRepo.repo ? `${parsedRepo.owner}_${parsedRepo.repo}` : ctx.taskId;
+    const taskDir = path.join(process.cwd(), "data/repos", repoCacheName);
+    const { localPath: lp, commitHash, cached: repoCached } = await cloneRepo(ctx.repoUrl, taskDir);
     localPath = lp;
+
+    if (repoCached) {
+      sseManager.emit(ctx.taskId, { type: "stage:progress", stage: "explorer", message: "检测到本地仓库缓存，已拉取最新代码" });
+    } else {
+      sseManager.emit(ctx.taskId, { type: "stage:progress", stage: "explorer", message: "仓库 Clone 完成" });
+    }
 
     // 缓存检查（clone 后、Explorer 前）
     const { owner: cacheOwner, repo: cacheRepoName } = parseRepoUrl(ctx.repoUrl);
@@ -72,7 +81,8 @@ export async function executePipeline(ctx: PipelineContext): Promise<PipelineRes
         taskId: ctx.taskId,
         summary: cachedResult.explorer.projectSummary,
       });
-      await cleanup(localPath);
+      // 采用全局缓存机制，保留仓库内容，不执行删除
+      // await cleanup(localPath);
       return { result: cachedResult, cached: true };
     }
 
@@ -88,23 +98,20 @@ export async function executePipeline(ctx: PipelineContext): Promise<PipelineRes
 
     // 1. Explorer
     const explorerOutput = await runStageWithRetry("explorer", {
+      localPath,
       fileCount,
     }, ctx, localPath);
 
-    // 交互点：项目类型确认
-    await askUser(ctx, "q_type", "explorer",
-      `识别为 ${explorerOutput.projectType.primary}，是否正确？`,
+    // 交互点：Explorer 结果确认
+    await askUser(ctx, "q_explorer_review", "explorer",
+      `识别项目类型为 ${explorerOutput.projectType.primary}，是否正确？`,
       ["是", "否，请纠正"]);
-
-    // 交互点：模块划分确认
-    await askUser(ctx, "q_modules", "explorer",
-      `模块划分完成：${explorerOutput.moduleMap.map(m => m.path).join(", ")}。是否合理？`,
-      ["合理，继续", "需要调整"]);
 
     // 2. Mentor
     const skillContent = loadSkillTemplate(explorerOutput.projectType.primary);
 
     const mentorOutput = await runStageWithRetry("mentor", {
+      localPath,
       explorerOutput,
       skillContent,
       experiences: "",
@@ -120,6 +127,7 @@ export async function executePipeline(ctx: PipelineContext): Promise<PipelineRes
     const commitSummary = await extractCommitSummary(localPath);
 
     const contributorOutput = await runStageWithRetry("contributor", {
+      localPath,
       explorerOutput,
       mentorOutput,
       commitSummary,
@@ -144,9 +152,10 @@ export async function executePipeline(ctx: PipelineContext): Promise<PipelineRes
 
     return { result: analysisResult, cached: false };
   } finally {
-    if (localPath) {
-      await cleanup(localPath);
-    }
+    // 全局缓存机制下，不执行清理
+    // if (localPath) {
+    //   await cleanup(localPath);
+    // }
   }
 }
 
@@ -172,9 +181,10 @@ async function runStageWithRetry<S extends StageName>(
           });
           continue;
         }
+        const agentName = stage.charAt(0).toUpperCase() + stage.slice(1);
         emitError(ctx.taskId, {
           category: "parse_failed",
-          message: `Agent 输出解析失败（已重试 ${maxRetries} 次）: ${err.message}`,
+          message: `${agentName} 输出解析失败（已重试 ${maxRetries} 次）: ${err.message}`,
           retryable: true,
         });
         throw { category: "parse_failed", message: err.message, retryable: true };
