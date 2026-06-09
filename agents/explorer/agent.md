@@ -35,9 +35,8 @@ model: deepseek-v4-flash
 
 ## 规模策略
 
-- 小型仓库 (&lt;500 files): 全量扫描，token 预算 8K
-- 中型仓库 (500-2000 files): 只扫描 2 层目录深度，token 预算 4K
-- 大型仓库 (&gt;2000 files): 仅分析元数据文件，token 预算 2K
+- 小型仓库 (≤500 files): 仅扫描顶层结构、核心配置和 package.json 等元数据，不要逐个读取源码文件，token 预算 8K
+- 大型仓库 (>500 files): 仅读取 README 和入口配置，严禁大范围搜索，token 预算 2K
 
 ## 输出格式
 

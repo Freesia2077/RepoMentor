@@ -100,7 +100,7 @@ export async function runStage<S extends StageName>(
     parsed = extractJSON(rawOutput);
   } catch (err) {
     throw new ParseError(
-      `Agent 输出不是有效的 JSON: ${err instanceof Error ? err.message : String(err)}`,
+      `输出不是有效的 JSON: ${err instanceof Error ? err.message : String(err)}`,
       rawOutput,
     );
   }
@@ -111,7 +111,7 @@ export async function runStage<S extends StageName>(
     result = validator(parsed);
   } catch (err) {
     throw new ParseError(
-      `Agent JSON 格式错误: ${err instanceof Error ? err.message : String(err)}`,
+      `JSON 格式错误: ${err instanceof Error ? err.message : String(err)}`,
       rawOutput
     );
   }
@@ -153,6 +153,7 @@ async function invokeAgent(
       options: {
         systemPrompt,
         model: config.ANTHROPIC_MODEL,
+        tools: ALLOWED_TOOLS[stage],
         allowedTools: ALLOWED_TOOLS[stage],
         cwd: localPath,
         maxTurns: MAX_TURNS[stage],
@@ -183,16 +184,19 @@ async function invokeAgent(
             }
           }
           
+          const agentName = stage.charAt(0).toUpperCase() + stage.slice(1);
+          
           if (toolNames) {
-            callbacks.onProgress(`Agent (${stage}) 决定调用工具: ${toolNames}...`);
+            callbacks.onProgress(`${agentName} 决定调用能力: ${toolNames}...`);
           } else {
-            callbacks.onProgress(`Agent (${stage}) 正在思考与分析...`);
+            callbacks.onProgress(`${agentName} 正在思考与分析...`);
           }
           break;
         }
 
         case "result": {
-          callbacks.onProgress(`Agent (${stage}) 完成`);
+          const agentName = stage.charAt(0).toUpperCase() + stage.slice(1);
+          callbacks.onProgress(`${agentName} 完成`);
           break;
         }
 
@@ -200,7 +204,8 @@ async function invokeAgent(
           // user 消息包含工具调用结果
           const toolResult = msg.tool_use_result as Record<string, unknown> | undefined;
           if (toolResult) {
-            callbacks.onProgress(`Agent (${stage}) 工具调用结束，分析结果中...`);
+            const agentName = stage.charAt(0).toUpperCase() + stage.slice(1);
+            callbacks.onProgress(`${agentName} 能力调用结束，分析结果中...`);
           }
           break;
         }
@@ -221,7 +226,8 @@ async function invokeAgent(
   }
 
   if (!rawOutput.trim()) {
-    throw new LLMError(`Agent (${stage}) 返回了空输出`, true);
+    const agentName = stage.charAt(0).toUpperCase() + stage.slice(1);
+    throw new LLMError(`${agentName} 返回了空输出`, true);
   }
 
   return rawOutput;

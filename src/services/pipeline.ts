@@ -98,6 +98,7 @@ export async function executePipeline(ctx: PipelineContext): Promise<PipelineRes
 
     // 1. Explorer
     const explorerOutput = await runStageWithRetry("explorer", {
+      localPath,
       fileCount,
     }, ctx, localPath);
 
@@ -110,6 +111,7 @@ export async function executePipeline(ctx: PipelineContext): Promise<PipelineRes
     const skillContent = loadSkillTemplate(explorerOutput.projectType.primary);
 
     const mentorOutput = await runStageWithRetry("mentor", {
+      localPath,
       explorerOutput,
       skillContent,
       experiences: "",
@@ -125,6 +127,7 @@ export async function executePipeline(ctx: PipelineContext): Promise<PipelineRes
     const commitSummary = await extractCommitSummary(localPath);
 
     const contributorOutput = await runStageWithRetry("contributor", {
+      localPath,
       explorerOutput,
       mentorOutput,
       commitSummary,
@@ -178,9 +181,10 @@ async function runStageWithRetry<S extends StageName>(
           });
           continue;
         }
+        const agentName = stage.charAt(0).toUpperCase() + stage.slice(1);
         emitError(ctx.taskId, {
           category: "parse_failed",
-          message: `Agent 输出解析失败（已重试 ${maxRetries} 次）: ${err.message}`,
+          message: `${agentName} 输出解析失败（已重试 ${maxRetries} 次）: ${err.message}`,
           retryable: true,
         });
         throw { category: "parse_failed", message: err.message, retryable: true };

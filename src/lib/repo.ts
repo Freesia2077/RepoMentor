@@ -87,7 +87,7 @@ export async function cloneRepo(
   const git = simpleGit();
 
   await git.clone(url, taskDir, {
-    "--depth": String(parseInt(process.env.CLONE_DEPTH ?? "1", 10)),
+    "--depth": String(parseInt(process.env.CLONE_DEPTH ?? "10", 10)),
     "--single-branch": null,
   });
 
@@ -127,7 +127,7 @@ export async function extractCommitSummary(localPath: string): Promise<CommitSum
     try {
       const diffOutput = await git.raw([
         "diff-tree", "--no-commit-id", "--name-only", "-r",
-        `HEAD~${Math.min(10, logEntries.length)}..HEAD`,
+        `HEAD~${Math.max(0, logEntries.length - 1)}..HEAD`,
       ]);
       const changedFiles = diffOutput.split("\n").filter(Boolean);
       for (const file of changedFiles) {

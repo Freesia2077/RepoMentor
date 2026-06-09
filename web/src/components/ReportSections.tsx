@@ -1,10 +1,32 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import ReactMarkdown from 'react-markdown';
 import type { ExplorerOutput, MentorOutput, ContributorOutput } from '@backend-types/index';
 import './ReportSections.css';
 
 export function AnchorNav() {
   const [active, setActive] = useState('overview');
+  const [forceRemountHack] = useState(Date.now()); // Forces React to remount this component and clear old observer
+
+  useEffect(() => {
+    const sections = ['overview', 'architecture', 'contribute'];
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            setActive(entry.target.id);
+          }
+        });
+      },
+      { rootMargin: '-10% 0px -85% 0px' }
+    );
+
+    sections.forEach((id) => {
+      const el = document.getElementById(id);
+      if (el) observer.observe(el);
+    });
+
+    return () => observer.disconnect();
+  }, []);
 
   return (
     <nav className="anchor-nav">

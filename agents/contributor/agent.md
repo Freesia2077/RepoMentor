@@ -75,5 +75,5 @@ model: deepseek-v4-flash
 ## 约束
 
 - difficulty 必须是 easy, medium, hard 之一
-- goodFirstIssues 最多输出 6 条，且必须严格按照从易到难的顺序排序（easy -> medium -> hard）
+- goodFirstIssues 最多输出 6 条，且必须严格按照从易到难的顺序排序（easy -> medium -> hard），并且**必须至少包含一个 hard 类型的 issue**
 - 如果没有找到特定内容（如 CONTRIBUTING.md），对应输出可以为空数组
