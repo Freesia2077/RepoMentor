@@ -19,7 +19,7 @@ RepoMentor feeds a GitHub repository URL to a three-stage AI agent pipeline and 
 
 ## How it works
 
-Analysis runs through three specialized agents in sequence:
+The heart of the system is the **Orchestrator** — a stateful engine that manages the analysis lifecycle, handles database persistence, and coordinates the AI pipeline. It sequences the work across three specialized agents:
 
 | Agent | Role |
 |---|---|
