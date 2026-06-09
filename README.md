@@ -5,17 +5,17 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Node.js](https://img.shields.io/badge/Node.js-18%2B-green)](https://nodejs.org/)
 
-<p align="center">
-  <img src="demo/1.png" width="800" alt="RepoMentor Demo 1" />
-  <br />
-  <br />
-  <img src="demo/2.png" width="800" alt="RepoMentor Demo 2" />
-  <br />
-  <br />
-  <img src="demo/3.png" width="800" alt="RepoMentor Demo 3" />
-</p>
-
 RepoMentor feeds a GitHub repository URL to a three-stage AI agent pipeline and returns a structured analysis report — covering architecture, learning path, and contribution opportunities — streamed to a real-time web dashboard.
+
+<p align="center">
+  <img src="demo/1.png" width="600" alt="RepoMentor Demo 1" />
+  <br />
+  <br />
+  <img src="demo/2.png" width="600" alt="RepoMentor Demo 2" />
+  <br />
+  <br />
+  <img src="demo/3.png" width="600" alt="RepoMentor Demo 3" />
+</p>
 
 ## How it works
 
