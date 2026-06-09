@@ -2,7 +2,6 @@
 
 > AI-powered repository learning assistant — from "found a repo" to "ready to contribute" in minutes.
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Node.js](https://img.shields.io/badge/Node.js-18%2B-green)](https://nodejs.org/)
 
 RepoMentor feeds a GitHub repository URL to a three-stage AI agent pipeline and returns a structured analysis report — covering architecture, learning path, and contribution opportunities — streamed to a real-time web dashboard.
@@ -19,7 +18,7 @@ RepoMentor feeds a GitHub repository URL to a three-stage AI agent pipeline and 
 
 ## How it works
 
-The heart of the system is the **Orchestrator** — a stateful engine that manages the analysis lifecycle, handles database persistence, and coordinates the AI pipeline. It sequences the work across three specialized agents:
+Orchestrator manages the analysis lifecycle, handles database persistence, and coordinates the AI pipeline. It sequences the work across three specialized agents:
 
 | Agent | Role |
 |---|---|
