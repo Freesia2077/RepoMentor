@@ -120,16 +120,16 @@ describe("validateContributorOutput", () => {
     expect(() => validateContributorOutput(validContributor)).not.toThrow();
   });
 
-  it("accepts any difficulty string", () => {
-    const ok = {
+  it("rejects an unsupported difficulty", () => {
+    const bad = {
       ...validContributor,
       goodFirstIssues: [{ area: "文档", difficulty: "extreme", description: "补充 JSDoc" }],
     };
-    expect(() => validateContributorOutput(ok)).not.toThrow();
+    expect(() => validateContributorOutput(bad)).toThrow();
   });
 
-  it("accepts any importance string in moduleMap", () => {
-    const ok = {
+  it("rejects an unsupported module importance", () => {
+    const bad = {
       ...validExplorer,
       moduleMap: [{
         path: "src/core/",
@@ -138,6 +138,6 @@ describe("validateContributorOutput", () => {
         justification: "x",
       }],
     };
-    expect(() => validateExplorerOutput(ok)).not.toThrow();
+    expect(() => validateExplorerOutput(bad)).toThrow();
   });
 });

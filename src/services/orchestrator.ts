@@ -1,16 +1,16 @@
 import type {
   TaskRecord,
-  TaskStatus,
   StageProgress,
-  AnalysisResult,
   TaskError,
   GetAnalysisResponse,
   StageName,
 } from "../types/index.js";
-import { executePipeline, resolveQuestion, type PipelineContext, type PipelineResult } from "./pipeline.js";
+import { executePipeline, resolveQuestion, type PipelineContext } from "./pipeline.js";
 import { sseManager } from "../lib/sse.js";
-import { parseRepoUrl, isValidGithubUrl } from "../lib/repo.js";
+import { isValidGithubUrl, normalizeGithubUrl, isValidBranchName } from "../lib/repo.js";
 import { config } from "../config.js";
+import { getDb } from "../db/index.js";
+import * as taskRepo from "../db/repositories/tasks.js";
 
 // ========== 内存任务存储 ==========
 
@@ -33,12 +33,18 @@ export async function createTask(repoUrl: string, branch = "main"): Promise<Task
   if (!isValidGithubUrl(repoUrl)) {
     throw new OrchestratorError("invalid_repo_url", "不是有效的 GitHub 仓库地址", false);
   }
+  if (!isValidBranchName(branch)) {
+    throw new OrchestratorError("invalid_branch", "分支名称无效", false);
+  }
+
+  const normalizedRepoUrl = normalizeGithubUrl(repoUrl);
+  const normalizedBranch = branch.trim();
 
   const taskId = makeTaskId();
   const task: TaskRecord = {
     taskId,
-    repoUrl,
-    branch,
+    repoUrl: normalizedRepoUrl,
+    branch: normalizedBranch,
     status: "cloning",
     currentStage: null,
     stageProgress: defaultProgress(),
@@ -51,27 +57,43 @@ export async function createTask(repoUrl: string, branch = "main"): Promise<Task
   };
 
   tasks.set(taskId, task);
+  persistTask(task);
 
   const ctx: PipelineContext = {
     taskId,
-    repoUrl,
-    branch,
+    repoUrl: normalizedRepoUrl,
+    branch: normalizedBranch,
     stageProgress: task.stageProgress,
+    abortController: new AbortController(),
     callbacks: {
       onStageStart: (stage: StageName) => {
         const rec = tasks.get(taskId);
         if (rec) {
           rec.currentStage = stage;
           rec.stageProgress[stage] = "running";
+          persistTask(rec);
         }
       },
       onStageDone: (stage: StageName) => {
         const rec = tasks.get(taskId);
-        if (rec) rec.stageProgress[stage] = "done";
+        if (rec) {
+          rec.stageProgress[stage] = "done";
+          persistTask(rec);
+        }
       },
       onStatusChange: (status) => {
         const rec = tasks.get(taskId);
-        if (rec) rec.status = status;
+        if (rec) {
+          rec.status = status;
+          persistTask(rec);
+        }
+      },
+      onCommitHash: (commitHash) => {
+        const rec = tasks.get(taskId);
+        if (rec) {
+          rec.commitHash = commitHash;
+          persistTask(rec);
+        }
       },
     },
     pendingQuestion: null,
@@ -80,14 +102,33 @@ export async function createTask(repoUrl: string, branch = "main"): Promise<Task
   pipelineContexts.set(taskId, ctx);
 
   // 异步执行 Pipeline
-  executePipelineSafe(taskId, ctx);
+  void executePipelineSafe(taskId, ctx);
 
-  return task;
+  return {
+    ...task,
+    stageProgress: { ...task.stageProgress },
+  };
 }
 
 async function executePipelineSafe(taskId: string, ctx: PipelineContext): Promise<void> {
+  let timeoutId: ReturnType<typeof setTimeout> | undefined;
   try {
-    const { result, cached } = await executePipeline(ctx);
+    const timeoutPromise = new Promise<never>((_, reject) => {
+      timeoutId = setTimeout(() => {
+        const error = {
+          category: "timeout",
+          message: `任务超过 ${Math.round(config.TASK_TOTAL_TIMEOUT_MS / 1000)} 秒总时限`,
+          retryable: true,
+        };
+        reject(error);
+        ctx.abortController.abort(new Error(error.message));
+      }, config.TASK_TOTAL_TIMEOUT_MS);
+    });
+
+    const { result, cached } = await Promise.race([
+      executePipeline(ctx),
+      timeoutPromise,
+    ]);
 
     const task = tasks.get(taskId);
     if (task) {
@@ -95,10 +136,11 @@ async function executePipelineSafe(taskId: string, ctx: PipelineContext): Promis
       task.result = result;
       task.cached = cached;
       task.completedAt = new Date().toISOString();
+      persistTask(task);
     }
 
     const summary = result.explorer.projectSummary;
-    sseManager.emit(taskId, { type: "task:completed", taskId, summary });
+    sseManager.emit(taskId, { type: "task:completed", taskId, summary, result });
   } catch (err) {
     const task = tasks.get(taskId);
     const e = err as { category?: string; message?: string; retryable?: boolean };
@@ -110,16 +152,18 @@ async function executePipelineSafe(taskId: string, ctx: PipelineContext): Promis
       task.status = "failed";
       task.error = taskError;
       task.completedAt = new Date().toISOString();
+      persistTask(task);
     }
 
     sseManager.emit(taskId, { type: "task:error", taskId, error: taskError });
   } finally {
+    if (timeoutId) clearTimeout(timeoutId);
     pipelineContexts.delete(taskId);
   }
 }
 
 export function getTask(taskId: string): GetAnalysisResponse | null {
-  const task = tasks.get(taskId);
+  const task = tasks.get(taskId) ?? taskRepo.findById(getDb(), taskId);
   if (!task) return null;
 
   return {
@@ -142,7 +186,11 @@ export function answerQuestion(taskId: string, questionId: string, answer: strin
 }
 
 export function hasTask(taskId: string): boolean {
-  return tasks.has(taskId);
+  return tasks.has(taskId) || taskRepo.findById(getDb(), taskId) !== undefined;
+}
+
+function persistTask(task: TaskRecord): void {
+  taskRepo.save(getDb(), task);
 }
 
 // ========== 错误 ==========

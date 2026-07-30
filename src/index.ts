@@ -4,6 +4,7 @@ import { config } from "./config.js";
 import { analysisRoutes } from "./routes/analysis.js";
 import { streamRoutes } from "./routes/stream.js";
 import { getDb } from "./db/index.js";
+import * as taskRepo from "./db/repositories/tasks.js";
 import fs from "node:fs";
 import path from "node:path";
 
@@ -37,8 +38,12 @@ async function start(): Promise<void> {
 
   // 初始化 DB
   try {
-    getDb();
+    const db = getDb();
+    const interruptedTasks = taskRepo.markInterruptedAsFailed(db);
     app.log.info("SQLite 数据库已初始化");
+    if (interruptedTasks > 0) {
+      app.log.warn(`已将 ${interruptedTasks} 个因服务重启中断的任务标记为失败`);
+    }
   } catch (err) {
     app.log.error(`数据库初始化失败: ${err instanceof Error ? err.message : String(err)}`);
     process.exit(1);

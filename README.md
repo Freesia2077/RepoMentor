@@ -2,7 +2,7 @@
 
 > AI-powered repository learning assistant — from "found a repo" to "ready to contribute" in minutes.
 
-[![Node.js](https://img.shields.io/badge/Node.js-18%2B-green)](https://nodejs.org/)
+[![Node.js](https://img.shields.io/badge/Node.js-20.19%2B-green)](https://nodejs.org/)
 
 RepoMentor feeds a GitHub repository URL to a three-stage AI agent pipeline and returns a structured analysis report — covering architecture, learning path, and contribution opportunities — streamed to a real-time web dashboard.
 
@@ -50,7 +50,7 @@ Each stage streams its progress over SSE. The frontend renders results increment
 
 ### Prerequisites
 
-- [Node.js](https://nodejs.org/) v18+
+- [Node.js](https://nodejs.org/) v20.19+
 - [Git](https://git-scm.com/) (used natively for cloning target repositories)
 
 ### Installation

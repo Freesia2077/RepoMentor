@@ -1,6 +1,11 @@
-import { renderHook, act } from '@testing-library/react';
+import { renderHook, act, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { useAnalysisStream } from './useAnalysisStream';
+import { getAnalysis } from '../api';
+
+vi.mock('../api', () => ({
+  getAnalysis: vi.fn()
+}));
 
 class MockEventSource {
   listeners: Record<string, Function[]> = {};
@@ -36,6 +41,7 @@ let mockEventSourceInstance: MockEventSource;
 describe('useAnalysisStream', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(getAnalysis).mockReturnValue(new Promise(() => {}));
   });
 
   it('initializes default state and exports clearInteraction', () => {
@@ -93,6 +99,29 @@ describe('useAnalysisStream', () => {
     act(() => {
       mockEventSourceInstance.emitError();
     });
-    expect(result.current.state.error).toBe('Connection lost');
+    expect(result.current.state.error).toBe('Connection lost, reconnecting…');
+    expect(mockEventSourceInstance.close).not.toHaveBeenCalled();
+  });
+
+  it('hydrates a completed task that finished before SSE connected', async () => {
+    const analysisResult = {
+      explorer: { projectSummary: 'cached result' },
+      mentor: {},
+      contributor: {}
+    };
+    vi.mocked(getAnalysis).mockResolvedValueOnce({
+      taskId: 'task-123',
+      status: 'completed',
+      stageProgress: { explorer: 'done', mentor: 'done', contributor: 'done' },
+      result: analysisResult as never,
+      createdAt: '2026-07-30T00:00:00.000Z',
+      cached: true
+    });
+
+    const { result } = renderHook(() => useAnalysisStream('task-123'));
+
+    await waitFor(() => expect(result.current.state.status).toBe('completed'));
+    expect(result.current.state.result).toEqual(analysisResult);
+    expect(mockEventSourceInstance.close).toHaveBeenCalled();
   });
 });

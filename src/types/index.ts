@@ -8,7 +8,8 @@ export type StageProgress = Record<StageName, "pending" | "running" | "done">;
 
 // ========== 项目类型 ==========
 
-export type ProjectTypePrimary = "library" | "cli" | "web-framework" | "monorepo" | "unknown";
+export type KnownProjectType = "library" | "cli" | "web-framework" | "monorepo" | "unknown";
+export type ProjectTypePrimary = string;
 
 export interface ProjectType {
   primary: ProjectTypePrimary;
@@ -16,9 +17,9 @@ export interface ProjectType {
 }
 
 export interface TechStack {
-  language: string;
+  language: string | null;
   framework: string | null;
-  buildTool: string;
+  buildTool: string | null;
 }
 
 export interface EntryPoint {
@@ -101,6 +102,7 @@ export interface ContributorInput {
   explorerOutput: ExplorerOutput;
   mentorOutput: MentorOutput;
   commitSummary: CommitSummary;
+  userFocus?: string;
 }
 
 export interface GoodFirstIssue {
@@ -110,10 +112,10 @@ export interface GoodFirstIssue {
 }
 
 export interface ContributionSetup {
-  devEnv: string;
-  build: string;
-  test: string;
-  lint?: string;
+  devEnv: string | null;
+  build: string | null;
+  test: string | null;
+  lint?: string | null;
 }
 
 export interface EntryFile {
@@ -143,7 +145,7 @@ export interface AnalysisResult {
 
 // ========== 错误 ==========
 
-export type ErrorCategory = "clone_failed" | "llm_failed" | "parse_failed" | "internal";
+export type ErrorCategory = "clone_failed" | "llm_failed" | "parse_failed" | "timeout" | "internal";
 
 export interface TaskError {
   category: ErrorCategory;
@@ -163,6 +165,7 @@ export interface SSETaskCompletedEvent {
   type: "task:completed";
   taskId: string;
   summary: string;
+  result: AnalysisResult;
 }
 
 export interface SSETaskErrorEvent {

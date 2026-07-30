@@ -3,6 +3,8 @@ import {
   parseRepoUrl,
   isValidGithubUrl,
   getMaxRepoSizeKB,
+  normalizeGithubUrl,
+  isValidBranchName,
 } from "../../src/lib/repo.js";
 
 describe("parseRepoUrl", () => {
@@ -35,6 +37,14 @@ describe("parseRepoUrl", () => {
     const result = parseRepoUrl("git@github.com:user/repo.git");
     expect(result).toEqual({ owner: "user", repo: "repo", isGitHub: true });
   });
+
+  it("parses owner/repo shorthand", () => {
+    expect(parseRepoUrl("facebook/react")).toEqual({
+      owner: "facebook",
+      repo: "react",
+      isGitHub: true,
+    });
+  });
 });
 
 describe("isValidGithubUrl", () => {
@@ -48,6 +58,32 @@ describe("isValidGithubUrl", () => {
 
   it("returns false for non-GitHub URL", () => {
     expect(isValidGithubUrl("https://gitlab.com/user/repo")).toBe(false);
+  });
+
+  it("accepts owner/repo shorthand", () => {
+    expect(isValidGithubUrl("facebook/react")).toBe(true);
+  });
+});
+
+describe("normalizeGithubUrl", () => {
+  it("normalizes supported inputs to a canonical clone URL", () => {
+    expect(normalizeGithubUrl("facebook/react")).toBe("https://github.com/facebook/react.git");
+    expect(normalizeGithubUrl("https://github.com/facebook/react/tree/main")).toBe(
+      "https://github.com/facebook/react.git",
+    );
+  });
+});
+
+describe("isValidBranchName", () => {
+  it("accepts common branch names", () => {
+    expect(isValidBranchName("main")).toBe(true);
+    expect(isValidBranchName("feature/sse-recovery")).toBe(true);
+  });
+
+  it("rejects unsafe ref names", () => {
+    expect(isValidBranchName("../main")).toBe(false);
+    expect(isValidBranchName("-danger")).toBe(false);
+    expect(isValidBranchName("bad branch")).toBe(false);
   });
 });
 

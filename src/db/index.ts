@@ -7,7 +7,7 @@ import { fileURLToPath } from "node:url";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-let db: Database.Database;
+let db: Database.Database | undefined;
 
 export function getDb(): Database.Database {
   if (!db) {
@@ -57,6 +57,6 @@ export function createMemoryDb(): Database.Database {
 export function closeDb(): void {
   if (db) {
     db.close();
-    (db as unknown) = undefined;
+    db = undefined;
   }
 }

@@ -1,5 +1,5 @@
 import type { FastifyInstance } from "fastify";
-import { sseManager } from "../lib/sse.js";
+import { sseManager, SSEManager, type StoredSSEEvent } from "../lib/sse.js";
 import { hasTask } from "../services/orchestrator.js";
 
 export async function streamRoutes(app: FastifyInstance): Promise<void> {
@@ -25,16 +25,26 @@ export async function streamRoutes(app: FastifyInstance): Promise<void> {
 
       const emitter = sseManager.subscribe(id);
 
-      const onEvent = (event: unknown) => {
-        const typed = event as { type: string };
-        reply.raw.write(`event: ${typed.type}\ndata: ${JSON.stringify(event)}\n\n`);
+      const onEvent = (stored: StoredSSEEvent) => {
+        reply.raw.write(SSEManager.serialize(stored));
       };
 
       emitter.on("event", onEvent);
 
+      const rawLastEventId = request.headers["last-event-id"];
+      const lastEventId = typeof rawLastEventId === "string"
+        ? Number.parseInt(rawLastEventId, 10) || 0
+        : 0;
+      for (const stored of sseManager.getEventsAfter(id, lastEventId)) {
+        reply.raw.write(SSEManager.serialize(stored));
+      }
+
       // 连接关闭时清理
       request.raw.on("close", () => {
         emitter.off("event", onEvent);
+        if (!sseManager.hasSubscribers(id)) {
+          sseManager.unsubscribe(id);
+        }
       });
 
       // 等待连接关闭（SSE 长连接）

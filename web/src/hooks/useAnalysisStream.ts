@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import type { TaskStatus, StageProgress, SSEEvent, AnalysisResult } from '@backend-types/index';
+import { getAnalysis } from '../api';
 
 export interface StreamState {
   status: TaskStatus;
@@ -10,15 +11,17 @@ export interface StreamState {
   error: string | null;
 }
 
+const initialState: StreamState = {
+  status: 'cloning',
+  stageProgress: { explorer: 'pending', mentor: 'pending', contributor: 'pending' },
+  logs: [],
+  interaction: null,
+  result: {},
+  error: null
+};
+
 export function useAnalysisStream(taskId: string | null) {
-  const [state, setState] = useState<StreamState>({
-    status: 'cloning',
-    stageProgress: { explorer: 'pending', mentor: 'pending', contributor: 'pending' },
-    logs: [],
-    interaction: null,
-    result: {},
-    error: null
-  });
+  const [state, setState] = useState<StreamState>(initialState);
 
   const clearInteraction = useCallback(() => {
     setState(s => ({ ...s, interaction: null }));
@@ -27,7 +30,35 @@ export function useAnalysisStream(taskId: string | null) {
   useEffect(() => {
     if (!taskId) return;
 
+    let disposed = false;
+    setState(initialState);
     const eventSource = new EventSource(`/api/analysis/${taskId}/stream`);
+
+    const hydrateFromSnapshot = async () => {
+      try {
+        const snapshot = await getAnalysis(taskId);
+        if (disposed) return;
+
+        setState(s => ({
+          ...s,
+          status: mergeStatus(s.status, snapshot.status),
+          stageProgress: mergeStageProgress(s.stageProgress, snapshot.stageProgress),
+          result: snapshot.result ? { ...s.result, ...snapshot.result } : s.result,
+          error: snapshot.error?.message ?? (s.error === 'Connection lost, reconnecting…' ? null : s.error)
+        }));
+
+        if (snapshot.status === 'completed' || snapshot.status === 'failed') {
+          eventSource.close();
+        }
+      } catch (err) {
+        if (!disposed) {
+          setState(s => ({
+            ...s,
+            error: err instanceof Error ? err.message : 'Failed to restore task state'
+          }));
+        }
+      }
+    };
 
     const handleEvent = (e: Event) => {
       try {
@@ -39,7 +70,7 @@ export function useAnalysisStream(taskId: string | null) {
             setState(s => ({ ...s, status: event.status }));
             break;
           case 'task:error':
-            setState(s => ({ ...s, error: event.error.message }));
+            setState(s => ({ ...s, status: 'failed', error: event.error.message }));
             eventSource.close();
             break;
           case 'stage:progress':
@@ -62,7 +93,7 @@ export function useAnalysisStream(taskId: string | null) {
             setState(s => ({ ...s, interaction: null }));
             break;
           case 'task:completed':
-            setState(s => ({ ...s, status: 'completed' }));
+            setState(s => ({ ...s, status: 'completed', result: event.result }));
             eventSource.close();
             break;
         }
@@ -75,13 +106,44 @@ export function useAnalysisStream(taskId: string | null) {
     const eventTypes = ['task:created', 'task:error', 'stage:progress', 'stage:start', 'stage:done', 'interact:ask', 'interact:timeout', 'task:completed'];
     eventTypes.forEach(type => eventSource.addEventListener(type, handleEvent as EventListener));
 
-    eventSource.addEventListener('error', () => {
-      setState(s => ({ ...s, error: 'Connection lost' }));
-      eventSource.close();
+    eventSource.addEventListener('open', () => {
+      setState(s => ({
+        ...s,
+        error: s.error === 'Connection lost, reconnecting…' ? null : s.error
+      }));
     });
 
-    return () => eventSource.close();
+    eventSource.addEventListener('error', () => {
+      setState(s => ({ ...s, error: 'Connection lost, reconnecting…' }));
+      void hydrateFromSnapshot();
+    });
+
+    void hydrateFromSnapshot();
+
+    return () => {
+      disposed = true;
+      eventSource.close();
+    };
   }, [taskId]);
 
   return { state, clearInteraction };
+}
+
+const stageRank = { pending: 0, running: 1, done: 2 } as const;
+
+function mergeStageProgress(
+  current: StageProgress,
+  snapshot: StageProgress | undefined,
+): StageProgress {
+  if (!snapshot) return current;
+  return {
+    explorer: stageRank[snapshot.explorer] > stageRank[current.explorer] ? snapshot.explorer : current.explorer,
+    mentor: stageRank[snapshot.mentor] > stageRank[current.mentor] ? snapshot.mentor : current.mentor,
+    contributor: stageRank[snapshot.contributor] > stageRank[current.contributor] ? snapshot.contributor : current.contributor,
+  };
+}
+
+function mergeStatus(current: TaskStatus, snapshot: TaskStatus): TaskStatus {
+  if (current === 'completed' || current === 'failed') return current;
+  return snapshot;
 }

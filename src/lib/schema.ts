@@ -3,14 +3,14 @@ import { z } from "zod";
 // ===== Explorer Output =====
 
 const projectTypeSchema = z.object({
-  primary: z.string(),
+  primary: z.string().min(1),
   secondary: z.array(z.string()),
 });
 
 const techStackSchema = z.object({
-  language: z.string().nullish(),
-  framework: z.string().nullish(),
-  buildTool: z.string().nullish(),
+  language: z.string().nullable(),
+  framework: z.string().nullable(),
+  buildTool: z.string().nullable(),
 });
 
 const entryPointSchema = z.object({
@@ -21,7 +21,7 @@ const entryPointSchema = z.object({
 const moduleInfoSchema = z.object({
   path: z.string(),
   responsibility: z.string().max(300),
-  importance: z.string(),
+  importance: z.enum(["core", "support", "utility"]),
   justification: z.string(),
 });
 
@@ -74,15 +74,15 @@ export function validateMentorOutput(data: unknown) {
 
 const goodFirstIssueSchema = z.object({
   area: z.string(),
-  difficulty: z.string(),
+  difficulty: z.enum(["easy", "medium", "hard"]),
   description: z.string(),
 });
 
 const contributionSetupSchema = z.object({
-  devEnv: z.string().nullish(),
-  build: z.string().nullish(),
-  test: z.string().nullish(),
-  lint: z.string().nullish(),
+  devEnv: z.string().nullable(),
+  build: z.string().nullable(),
+  test: z.string().nullable(),
+  lint: z.string().nullable().optional(),
 });
 
 const entryFileSchema = z.object({

@@ -21,6 +21,7 @@ model: deepseek-v4-flash
 - `explorerOutput`: Stage 1 的完整 JSON 输出
 - `mentorOutput`: Stage 2 的完整 JSON 输出
 - `commitSummary`: 近 10 条 commit 的结构化摘要，格式如下：
+- `userFocus?`: 用户在依赖图交互中选择或输入的关注模块
 
 ```json
 {
@@ -39,6 +40,7 @@ model: deepseek-v4-flash
 3. 如果存在 CONTRIBUTING.md，阅读它
 4. 根据前两阶段的分析，识别结构独立、功能内聚、有测试覆盖的模块 → goodFirstIssues
 5. 从 package.json 的 scripts 字段推断开发环境搭建步骤
+6. 如果提供了 userFocus，优先围绕该模块给出贡献切入点
 
 ## 输出格式
 

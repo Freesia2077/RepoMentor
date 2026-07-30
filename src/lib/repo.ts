@@ -1,5 +1,6 @@
 import { simpleGit, type SimpleGit } from "simple-git";
 import fs from "node:fs/promises";
+import path from "node:path";
 import type { CommitSummary } from "../types/index.js";
 
 // Lazy: read env directly, don't import config (avoids test failures when DEEPSEEK_API_KEY not set)
@@ -15,8 +16,20 @@ interface ParsedRepo {
 }
 
 export function parseRepoUrl(url: string): ParsedRepo {
+  const trimmed = url.trim();
+
+  // 简写格式: owner/repo
+  const shorthandMatch = trimmed.match(/^([A-Za-z0-9_.-]+)\/([A-Za-z0-9_.-]+?)(?:\.git)?$/);
+  if (shorthandMatch) {
+    return {
+      owner: shorthandMatch[1]!,
+      repo: shorthandMatch[2]!,
+      isGitHub: true,
+    };
+  }
+
   // SSH 格式: git@github.com:owner/repo.git
-  const sshMatch = url.match(/^git@([^:]+):(.+?)(?:\.git)?$/);
+  const sshMatch = trimmed.match(/^git@([^:]+):(.+?)(?:\.git)?$/);
   if (sshMatch) {
     const host = sshMatch[1]!;
     const parts = sshMatch[2]!.split("/");
@@ -29,7 +42,7 @@ export function parseRepoUrl(url: string): ParsedRepo {
 
   // HTTPS 格式: https://github.com/owner/repo/...
   try {
-    const u = new URL(url.replace(/\.git$/, ""));
+    const u = new URL(trimmed.replace(/\.git$/, ""));
     const parts = u.pathname.replace(/\/$/, "").split("/").filter(Boolean);
     return {
       owner: parts[0] ?? "",
@@ -44,6 +57,25 @@ export function parseRepoUrl(url: string): ParsedRepo {
 export function isValidGithubUrl(url: string): boolean {
   const parsed = parseRepoUrl(url);
   return parsed.isGitHub && parsed.owner !== "" && parsed.repo !== "";
+}
+
+export function normalizeGithubUrl(url: string): string {
+  const parsed = parseRepoUrl(url);
+  if (!parsed.isGitHub || !parsed.owner || !parsed.repo) return url.trim();
+  return `https://github.com/${parsed.owner}/${parsed.repo}.git`;
+}
+
+export function isValidBranchName(branch: string): boolean {
+  const value = branch.trim();
+  return value.length > 0
+    && value.length <= 255
+    && !value.startsWith("-")
+    && !value.startsWith("/")
+    && !value.endsWith("/")
+    && !value.endsWith(".")
+    && !value.includes("..")
+    && !value.includes("@{")
+    && !/[\s~^:?*\[\\]/.test(value);
 }
 
 export async function fetchRepoSize(owner: string, repo: string): Promise<number | null> {
@@ -62,36 +94,68 @@ export async function fetchRepoSize(owner: string, repo: string): Promise<number
 export async function cloneRepo(
   url: string,
   taskDir: string,
+  branch = "main",
+  options: { depth?: number; timeoutMs?: number } = {},
 ): Promise<{ localPath: string; git: SimpleGit; commitHash: string; cached: boolean }> {
-  // Check if cache directory exists
+  const previous = cloneLocks.get(taskDir) ?? Promise.resolve();
+  const current = previous
+    .catch(() => undefined)
+    .then(() => cloneRepoUnlocked(url, taskDir, branch, options));
+  cloneLocks.set(taskDir, current);
+
+  try {
+    return await current;
+  } finally {
+    if (cloneLocks.get(taskDir) === current) {
+      cloneLocks.delete(taskDir);
+    }
+  }
+}
+
+const cloneLocks = new Map<string, Promise<{
+  localPath: string;
+  git: SimpleGit;
+  commitHash: string;
+  cached: boolean;
+}>>();
+
+async function cloneRepoUnlocked(
+  url: string,
+  taskDir: string,
+  branch: string,
+  options: { depth?: number; timeoutMs?: number },
+): Promise<{ localPath: string; git: SimpleGit; commitHash: string; cached: boolean }> {
+  const depth = options.depth ?? parseInt(process.env.CLONE_DEPTH ?? "1", 10);
+  const timeoutMs = options.timeoutMs ?? parseInt(process.env.CLONE_TIMEOUT_MS ?? "60000", 10);
+  const gitOptions = { timeout: { block: timeoutMs } };
+
   try {
     const stat = await fs.stat(taskDir);
     if (stat.isDirectory()) {
-      const taskGit = simpleGit(taskDir);
-      // Fetch latest changes and reset
-      await taskGit.fetch();
-      const currentBranch = (await taskGit.branch()).current || "main";
-      try {
-        await taskGit.reset(["--hard", `origin/${currentBranch}`]);
-      } catch {
-        // If reset fails, maybe no origin/main, just fallback to whatever is there
+      const taskGit = simpleGit({ baseDir: taskDir, ...gitOptions });
+      if (await taskGit.checkIsRepo()) {
+        await taskGit.raw(["fetch", "origin", branch, "--depth", String(depth)]);
+        await taskGit.raw(["checkout", "-B", branch, `origin/${branch}`]);
+        await taskGit.reset(["--hard", `origin/${branch}`]);
+        const commitHash = await taskGit.revparse(["HEAD"]);
+        return { localPath: taskDir, git: taskGit, commitHash, cached: true };
       }
-      const commitHash = await taskGit.revparse(["HEAD"]);
-      return { localPath: taskDir, git: taskGit, commitHash, cached: true };
     }
+    await fs.rm(taskDir, { recursive: true, force: true });
   } catch {
-    // Directory does not exist, proceed with cloning
+    // 缓存目录不存在时继续 clone
   }
 
-  await fs.mkdir(taskDir, { recursive: true });
-  const git = simpleGit();
+  await fs.mkdir(path.dirname(taskDir), { recursive: true });
+  const git = simpleGit(gitOptions);
 
   await git.clone(url, taskDir, {
-    "--depth": String(parseInt(process.env.CLONE_DEPTH ?? "10", 10)),
+    "--depth": String(depth),
+    "--branch": branch,
     "--single-branch": null,
   });
 
-  const taskGit = simpleGit(taskDir);
+  const taskGit = simpleGit({ baseDir: taskDir, ...gitOptions });
   const commitHash = await taskGit.revparse(["HEAD"]);
 
   return { localPath: taskDir, git: taskGit, commitHash, cached: false };

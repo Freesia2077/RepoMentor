@@ -11,12 +11,20 @@ import type {
 import { runStage, ParseError, LLMError } from "./claude-client.js";
 import type { StageOutputFor } from "./claude-client.js";
 import { sseManager } from "../lib/sse.js";
-import { cloneRepo, getFileCount, extractCommitSummary, cleanup, parseRepoUrl } from "../lib/repo.js";
+import {
+  cloneRepo,
+  getFileCount,
+  extractCommitSummary,
+  parseRepoUrl,
+  fetchRepoSize,
+} from "../lib/repo.js";
 import { config } from "../config.js";
 import { getDb } from "../db/index.js";
 import * as cacheRepo from "../db/repositories/analysis-cache.js";
+import * as experienceRepo from "../db/repositories/experiences.js";
 import fs from "node:fs";
 import path from "node:path";
+import { createHash } from "node:crypto";
 
 // ========== Pipeline 上下文 & 类型 ==========
 
@@ -24,6 +32,7 @@ export interface PipelineLifecycleCallbacks {
   onStageStart: (stage: StageName) => void;
   onStageDone: (stage: StageName) => void;
   onStatusChange: (status: import("../types/index.js").TaskStatus) => void;
+  onCommitHash: (commitHash: string) => void;
 }
 
 export interface PipelineContext {
@@ -31,6 +40,7 @@ export interface PipelineContext {
   repoUrl: string;
   branch: string;
   stageProgress: StageProgress;
+  abortController: AbortController;
   callbacks: PipelineLifecycleCallbacks;
   pendingQuestion: {
     questionId: string;
@@ -59,9 +69,35 @@ export async function executePipeline(ctx: PipelineContext): Promise<PipelineRes
 
     const parsedRepo = parseRepoUrl(ctx.repoUrl);
     const repoCacheName = parsedRepo.owner && parsedRepo.repo ? `${parsedRepo.owner}_${parsedRepo.repo}` : ctx.taskId;
-    const taskDir = path.join(process.cwd(), "data/repos", repoCacheName);
-    const { localPath: lp, commitHash, cached: repoCached } = await cloneRepo(ctx.repoUrl, taskDir);
+    const branchCacheKey = createHash("sha256").update(ctx.branch).digest("hex").slice(0, 12);
+    const taskDir = path.join(process.cwd(), "data/repos", repoCacheName, branchCacheKey);
+    const repoSizeKb = await fetchRepoSize(parsedRepo.owner, parsedRepo.repo);
+    const maxRepoSizeKb = config.MAX_REPO_SIZE_MB * 1024;
+    if (repoSizeKb !== null && repoSizeKb > maxRepoSizeKb) {
+      throw {
+        category: "clone_failed",
+        message: `仓库大小约 ${Math.ceil(repoSizeKb / 1024)}MB，超过 ${config.MAX_REPO_SIZE_MB}MB 限制`,
+        retryable: false,
+      };
+    }
+
+    let cloneResult;
+    try {
+      cloneResult = await cloneRepo(ctx.repoUrl, taskDir, ctx.branch, {
+        depth: config.CLONE_DEPTH,
+        timeoutMs: config.CLONE_TIMEOUT_MS,
+      });
+    } catch (err) {
+      throw {
+        category: "clone_failed",
+        message: `仓库拉取失败: ${err instanceof Error ? err.message : String(err)}`,
+        retryable: true,
+      };
+    }
+
+    const { localPath: lp, commitHash, cached: repoCached } = cloneResult;
     localPath = lp;
+    ctx.callbacks.onCommitHash(commitHash);
 
     if (repoCached) {
       sseManager.emit(ctx.taskId, { type: "stage:progress", stage: "explorer", message: "检测到本地仓库缓存，已拉取最新代码" });
@@ -76,13 +112,6 @@ export async function executePipeline(ctx: PipelineContext): Promise<PipelineRes
 
     if (cached) {
       const cachedResult = JSON.parse(cached.result) as AnalysisResult;
-      sseManager.emit(ctx.taskId, {
-        type: "task:completed",
-        taskId: ctx.taskId,
-        summary: cachedResult.explorer.projectSummary,
-      });
-      // 采用全局缓存机制，保留仓库内容，不执行删除
-      // await cleanup(localPath);
       return { result: cachedResult, cached: true };
     }
 
@@ -103,23 +132,34 @@ export async function executePipeline(ctx: PipelineContext): Promise<PipelineRes
     }, ctx, localPath);
 
     // 交互点：Explorer 结果确认
-    await askUser(ctx, "q_explorer_review", "explorer",
+    const explorerFeedback = await askUser(ctx, "q_explorer_review", "explorer",
       `识别项目类型为 ${explorerOutput.projectType.primary}，是否正确？`,
       ["是", "否，请纠正"]);
 
     // 2. Mentor
-    const skillContent = loadSkillTemplate(explorerOutput.projectType.primary);
+    const skillContent = loadSkillTemplates(
+      explorerOutput.projectType.primary,
+      explorerOutput.projectType.secondary,
+    );
+    const relevantExperiences = experienceRepo.findRelevant(
+      db,
+      explorerOutput.projectType.primary,
+      explorerOutput.techStack.framework,
+      explorerOutput.projectType.secondary,
+      cacheOwner,
+    );
 
     const mentorOutput = await runStageWithRetry("mentor", {
       localPath,
       explorerOutput,
       skillContent,
-      experiences: "",
+      experiences: relevantExperiences.map((item) => item.content).join("\n\n"),
+      userFocus: explorerFeedback && explorerFeedback !== "是" ? explorerFeedback : undefined,
     }, ctx, localPath);
 
     // 交互点：依赖图反馈
     const deps = Object.entries(mentorOutput.dependencyGraph);
-    await askUser(ctx, "q_deps", "mentor",
+    const dependencyFocus = await askUser(ctx, "q_deps", "mentor",
       `依赖图包含 ${deps.length} 个模块。想深入了解哪个模块？`,
       deps.slice(0, 5).map(([mod]) => mod));
 
@@ -131,6 +171,7 @@ export async function executePipeline(ctx: PipelineContext): Promise<PipelineRes
       explorerOutput,
       mentorOutput,
       commitSummary,
+      userFocus: dependencyFocus || undefined,
     }, ctx, localPath);
 
     const analysisResult: AnalysisResult = {
@@ -148,6 +189,14 @@ export async function executePipeline(ctx: PipelineContext): Promise<PipelineRes
       result: analysisResult,
       projectTypePrimary: analysisResult.explorer.projectType.primary,
       framework: analysisResult.explorer.techStack.framework,
+    });
+    experienceRepo.save(getDb(), {
+      owner: cacheOwner,
+      repo: cacheRepoName,
+      primaryType: analysisResult.explorer.projectType.primary,
+      framework: analysisResult.explorer.techStack.framework,
+      secondaryType: analysisResult.explorer.projectType.secondary,
+      content: buildExperienceSummary(analysisResult),
     });
 
     return { result: analysisResult, cached: false };
@@ -191,6 +240,14 @@ async function runStageWithRetry<S extends StageName>(
       }
 
       if (err instanceof LLMError) {
+        if (err.timedOut) {
+          emitError(ctx.taskId, {
+            category: "timeout",
+            message: err.message,
+            retryable: true,
+          });
+          throw { category: "timeout", message: err.message, retryable: true };
+        }
         if (attempt < maxRetries && err.retryable) {
           sseManager.emit(ctx.taskId, {
             type: "stage:progress", stage,
@@ -234,7 +291,7 @@ async function runStageWithSSE<S extends StageName>(
     onField: (field: string, value: unknown) => {
       sseManager.emit(ctx.taskId, { type: "stage:field", stage, field, value });
     },
-  }, localPath);
+  }, localPath, ctx.abortController);
 
   ctx.callbacks.onStageDone(stage);
   sseManager.emit(ctx.taskId, { type: "stage:done", stage, output: result });
@@ -293,13 +350,39 @@ const SKILL_TEMPLATES: Record<string, string> = {
   "unknown": "skills/analyze-generic/SKILL.md",
 };
 
-function loadSkillTemplate(primaryType: string): string {
-  const filePath = SKILL_TEMPLATES[primaryType] ?? SKILL_TEMPLATES["unknown"]!;
-  try {
-    return fs.readFileSync(filePath, "utf-8");
-  } catch {
-    return "";
-  }
+function loadSkillTemplates(primaryType: string, secondaryTypes: string[]): string {
+  const selectedTypes = [primaryType, ...secondaryTypes]
+    .map((type) => SKILL_TEMPLATES[type] ? type : "unknown")
+    .filter((type, index, values) => values.indexOf(type) === index);
+
+  return selectedTypes
+    .map((type) => {
+      const filePath = SKILL_TEMPLATES[type]!;
+      try {
+        return fs.readFileSync(filePath, "utf-8");
+      } catch {
+        return "";
+      }
+    })
+    .filter(Boolean)
+    .join("\n\n---\n\n");
+}
+
+function buildExperienceSummary(result: AnalysisResult): string {
+  const patterns = result.mentor.keyPatterns
+    .slice(0, 3)
+    .map((item) => `${item.pattern}（${item.where}）`)
+    .join("、");
+  const conventions = result.mentor.codeConventions
+    .slice(0, 3)
+    .map((item) => item.rule)
+    .join("；");
+
+  return [
+    result.mentor.architectureOverview.slice(0, 800),
+    patterns ? `关键模式：${patterns}` : "",
+    conventions ? `代码约定：${conventions}` : "",
+  ].filter(Boolean).join("\n");
 }
 
 // ========== 错误广播 ==========

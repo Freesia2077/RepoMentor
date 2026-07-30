@@ -1,5 +1,37 @@
-import { describe, it, expect, beforeAll, afterAll } from "vitest";
+import { describe, it, expect, beforeAll, afterAll, vi } from "vitest";
 import Fastify from "fastify";
+
+vi.mock("../../src/services/pipeline.js", () => ({
+  executePipeline: vi.fn(async () => ({
+    cached: false,
+    result: {
+      explorer: {
+        projectType: { primary: "library", secondary: [] },
+        techStack: { language: "typescript", framework: null, buildTool: "npm" },
+        fileCount: 1,
+        entryPoints: [],
+        moduleMap: [],
+        directorySummary: "test",
+        projectSummary: "test repository",
+      },
+      mentor: {
+        architectureOverview: "test",
+        dependencyGraph: {},
+        readingPath: [],
+        keyPatterns: [],
+        codeConventions: [],
+      },
+      contributor: {
+        goodFirstIssues: [],
+        contributionSetup: { devEnv: null, build: null, test: null },
+        entryFiles: [],
+        notesForNewcomers: [],
+      },
+    },
+  })),
+  resolveQuestion: vi.fn(() => false),
+}));
+
 import { analysisRoutes } from "../../src/routes/analysis.js";
 import { streamRoutes } from "../../src/routes/stream.js";
 
@@ -41,6 +73,30 @@ describe("POST /api/analysis", () => {
     expect(body.taskId).toBeDefined();
     expect(body.status).toBe("cloning");
     expect(body.createdAt).toBeDefined();
+  });
+
+  it("accepts owner/repo shorthand", async () => {
+    const res = await app.inject({
+      method: "POST",
+      url: "/api/analysis",
+      payload: { repoUrl: "facebook/react" },
+    });
+
+    expect(res.statusCode).toBe(201);
+  });
+
+  it("rejects an unsafe branch name", async () => {
+    const res = await app.inject({
+      method: "POST",
+      url: "/api/analysis",
+      payload: {
+        repoUrl: "https://github.com/facebook/react",
+        branch: "../main",
+      },
+    });
+
+    expect(res.statusCode).toBe(400);
+    expect(JSON.parse(res.payload).error).toBe("invalid_branch");
   });
 });
 

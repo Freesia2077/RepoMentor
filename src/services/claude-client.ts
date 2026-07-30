@@ -1,5 +1,6 @@
 import type { StageName, ExplorerOutput, MentorOutput, ContributorOutput } from "../types/index.js";
 import { validateExplorerOutput, validateMentorOutput, validateContributorOutput } from "../lib/schema.js";
+import { resolvePath, SandboxError } from "../lib/sandbox.js";
 import { config } from "../config.js";
 import { query } from "@anthropic-ai/claude-agent-sdk";
 import fs from "node:fs";
@@ -43,10 +44,12 @@ export type StageOutputFor<S extends StageName> =
 
 export class LLMError extends Error {
   retryable: boolean;
-  constructor(message: string, retryable: boolean) {
+  timedOut: boolean;
+  constructor(message: string, retryable: boolean, timedOut = false) {
     super(message);
     this.name = "LLMError";
     this.retryable = retryable;
+    this.timedOut = timedOut;
   }
 }
 
@@ -86,13 +89,14 @@ export async function runStage<S extends StageName>(
   input: Record<string, unknown>,
   callbacks: StageCallbacks,
   localPath: string,
+  taskAbortController?: AbortController,
 ): Promise<StageOutputFor<S>> {
   const validator = VALIDATORS[stage];
 
   callbacks.onProgress(`正在启动 ${stage} 阶段...`);
 
   // 1. 调用 Agent
-  const rawOutput = await invokeAgent(stage, input, callbacks, localPath);
+  const rawOutput = await invokeAgent(stage, input, callbacks, localPath, taskAbortController);
 
   // 2. 解析 JSON
   let parsed: unknown;
@@ -134,15 +138,34 @@ async function invokeAgent(
   input: Record<string, unknown>,
   callbacks: StageCallbacks,
   localPath: string,
+  taskAbortController?: AbortController,
 ): Promise<string> {
   // 1. 加载 Agent 定义（去掉 YAML frontmatter）
-  const systemPrompt = loadAgentDefinition(stage);
+  let systemPrompt = loadAgentDefinition(stage);
+  if (stage === "mentor") {
+    const skillContent = typeof input.skillContent === "string" ? input.skillContent : "";
+    const experiences = typeof input.experiences === "string" ? input.experiences : "";
+    systemPrompt += `\n\n## 当前分析策略\n${skillContent || "使用通用仓库分析策略"}`;
+    if (experiences) {
+      systemPrompt += `\n\n## 可参考的历史分析经验\n${experiences}`;
+    }
+  }
   const inputStr = JSON.stringify(input, null, 2);
   const prompt = buildPromptForStage(stage, inputStr);
 
   // 2. 超时控制
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), STAGE_TIMEOUT_MS[stage]);
+  let stageTimedOut = false;
+  const onTaskAbort = () => controller.abort(taskAbortController?.signal.reason);
+  if (taskAbortController?.signal.aborted) {
+    onTaskAbort();
+  } else {
+    taskAbortController?.signal.addEventListener("abort", onTaskAbort, { once: true });
+  }
+  const timeoutId = setTimeout(() => {
+    stageTimedOut = true;
+    controller.abort(new Error(`${stage} 阶段超时`));
+  }, STAGE_TIMEOUT_MS[stage]);
 
   // 3. 收集 assistant 消息中的文本输出
   const assistantChunks: string[] = [];
@@ -157,9 +180,11 @@ async function invokeAgent(
         allowedTools: ALLOWED_TOOLS[stage],
         cwd: localPath,
         maxTurns: MAX_TURNS[stage],
+        abortController: controller,
+        permissionMode: "dontAsk",
+        canUseTool: createRepoToolGuard(localPath),
         env: {
           ...process.env,
-          CLAUDE_CODE_GIT_BASH_PATH: process.env.CLAUDE_CODE_GIT_BASH_PATH || "D:\\Git\\usr\\bin\\bash.exe",
           ANTHROPIC_BASE_URL: config.ANTHROPIC_BASE_URL,
           ANTHROPIC_AUTH_TOKEN: config.ANTHROPIC_AUTH_TOKEN,
           ANTHROPIC_MODEL: config.ANTHROPIC_MODEL,
@@ -213,8 +238,19 @@ async function invokeAgent(
         // system 等类型忽略
       }
     }
+  } catch (err) {
+    const agentName = stage.charAt(0).toUpperCase() + stage.slice(1);
+    if (controller.signal.aborted) {
+      const reason = stageTimedOut ? "阶段执行超时" : "任务已取消";
+      throw new LLMError(`${agentName} ${reason}`, false, stageTimedOut);
+    }
+    throw new LLMError(
+      `${agentName} 调用失败: ${err instanceof Error ? err.message : String(err)}`,
+      true,
+    );
   } finally {
     clearTimeout(timeoutId);
+    taskAbortController?.signal.removeEventListener("abort", onTaskAbort);
   }
   // Agent 的文本输出在 assistant 消息的 message.content 中
   // 最终的 JSON 输出通常在最后一条包含文本的 assistant 消息中
@@ -231,6 +267,39 @@ async function invokeAgent(
   }
 
   return rawOutput;
+}
+
+export function createRepoToolGuard(localPath: string) {
+  return async (
+    toolName: string,
+    input: Record<string, unknown>,
+  ): Promise<
+    | { behavior: "allow"; updatedInput: Record<string, unknown> }
+    | { behavior: "deny"; message: string; interrupt: boolean }
+  > => {
+    const pathKeys = toolName === "Glob"
+      ? ["file_path", "path", "pattern"]
+      : ["file_path", "path"];
+    for (const key of pathKeys) {
+      const requestedPath = input[key];
+      if (typeof requestedPath !== "string" || requestedPath.length === 0) continue;
+
+      try {
+        resolvePath(localPath, requestedPath);
+      } catch (err) {
+        if (err instanceof SandboxError) {
+          return {
+            behavior: "deny",
+            message: "只能读取当前待分析仓库内的文件",
+            interrupt: false,
+          };
+        }
+        throw err;
+      }
+    }
+
+    return { behavior: "allow", updatedInput: input };
+  };
 }
 
 // ========== 消息内容提取辅助 ==========

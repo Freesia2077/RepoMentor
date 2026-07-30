@@ -11,11 +11,19 @@ interface Props {
 
 export function ProgressUI({ stages, logs, interaction, onAnswer, interactionError }: Props) {
   const [submittingOpt, setSubmittingOpt] = useState<string | null>(null);
+  const [customAnswer, setCustomAnswer] = useState('');
 
   const handleAnswer = async (id: string, opt: string) => {
     setSubmittingOpt(opt);
     await onAnswer(id, opt);
     setSubmittingOpt(null);
+  };
+
+  const handleCustomAnswer = async (id: string) => {
+    const answer = customAnswer.trim();
+    if (!answer) return;
+    await handleAnswer(id, answer);
+    setCustomAnswer('');
   };
 
   const getStatusIcon = (status: 'pending' | 'running' | 'done') => {
@@ -65,6 +73,23 @@ export function ProgressUI({ stages, logs, interaction, onAnswer, interactionErr
                 {submittingOpt === opt ? 'Sending...' : opt}
               </button>
             ))}
+          </div>
+          <div className="interaction-custom">
+            <input
+              type="text"
+              value={customAnswer}
+              onChange={(event) => setCustomAnswer(event.target.value)}
+              placeholder="Or enter a correction or module name"
+              disabled={submittingOpt !== null}
+            />
+            <button
+              type="button"
+              className="btn-ghost"
+              onClick={() => handleCustomAnswer(interaction.id)}
+              disabled={submittingOpt !== null || !customAnswer.trim()}
+            >
+              {submittingOpt === customAnswer.trim() ? 'Sending...' : 'Send'}
+            </button>
           </div>
           {interactionError && <p className="error-text">{interactionError}</p>}
         </div>
