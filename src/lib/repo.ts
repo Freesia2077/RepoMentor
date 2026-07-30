@@ -78,16 +78,22 @@ export function isValidBranchName(branch: string): boolean {
     && !/[\s~^:?*\[\\]/.test(value);
 }
 
-export async function fetchRepoSize(owner: string, repo: string): Promise<number | null> {
+export type GithubRepoPreflight =
+  | { status: "available"; sizeKb: number | null }
+  | { status: "not_found" }
+  | { status: "unavailable" };
+
+export async function preflightGithubRepo(owner: string, repo: string): Promise<GithubRepoPreflight> {
   try {
     const response = await fetch(`https://api.github.com/repos/${owner}/${repo}`, {
       headers: { Accept: "application/vnd.github+json" },
     });
-    if (!response.ok) return null;
+    if (response.status === 404) return { status: "not_found" };
+    if (!response.ok) return { status: "unavailable" };
     const data = await response.json() as { size?: number };
-    return data.size ?? null; // size 单位: KB
+    return { status: "available", sizeKb: data.size ?? null };
   } catch {
-    return null;
+    return { status: "unavailable" };
   }
 }
 

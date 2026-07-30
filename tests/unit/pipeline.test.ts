@@ -19,7 +19,7 @@ vi.mock("../../src/services/claude-client.js", () => ({
 
 vi.mock("../../src/lib/repo.js", () => ({
   parseRepoUrl: () => ({ owner: "owner", repo: "repo", isGitHub: true }),
-  fetchRepoSize: vi.fn(async () => 10),
+  preflightGithubRepo: vi.fn(async () => ({ status: "available", sizeKb: 10 })),
   cloneRepo: vi.fn(async () => ({
     localPath: "C:\\tmp\\repo",
     commitHash: "abc123",

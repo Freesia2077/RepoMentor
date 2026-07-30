@@ -2,6 +2,13 @@
 
 All notable changes to RepoMentor are documented in this file.
 
+## [0.2.1] - 2026-07-30
+
+### Fixed
+
+- Example buttons now populate complete GitHub URLs and use the correct `anthropics/anthropic-sdk-python` repository.
+- Missing or inaccessible GitHub repositories now produce a clear preflight error instead of a generic Clone failure.
+
 ## [0.2.0] - 2026-07-30
 
 ### Added

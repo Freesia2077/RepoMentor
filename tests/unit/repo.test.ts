@@ -1,11 +1,16 @@
-import { describe, it, expect } from "vitest";
+import { afterEach, describe, it, expect, vi } from "vitest";
 import {
   parseRepoUrl,
   isValidGithubUrl,
   getMaxRepoSizeKB,
   normalizeGithubUrl,
   isValidBranchName,
+  preflightGithubRepo,
 } from "../../src/lib/repo.js";
+
+afterEach(() => {
+  vi.unstubAllGlobals();
+});
 
 describe("parseRepoUrl", () => {
   it("parses standard GitHub URL", () => {
@@ -90,5 +95,33 @@ describe("isValidBranchName", () => {
 describe("getMaxRepoSizeKB", () => {
   it("returns 200MB in KB by default", () => {
     expect(getMaxRepoSizeKB()).toBe(200 * 1024);
+  });
+});
+
+describe("preflightGithubRepo", () => {
+  it("distinguishes a missing repository from a temporary API failure", async () => {
+    vi.stubGlobal("fetch", vi.fn()
+      .mockResolvedValueOnce({ ok: false, status: 404 })
+      .mockResolvedValueOnce({ ok: false, status: 403 }));
+
+    await expect(preflightGithubRepo("missing", "repo")).resolves.toEqual({
+      status: "not_found",
+    });
+    await expect(preflightGithubRepo("rate-limited", "repo")).resolves.toEqual({
+      status: "unavailable",
+    });
+  });
+
+  it("returns repository size when GitHub confirms access", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({ size: 2048 }),
+    }));
+
+    await expect(preflightGithubRepo("facebook", "react")).resolves.toEqual({
+      status: "available",
+      sizeKb: 2048,
+    });
   });
 });

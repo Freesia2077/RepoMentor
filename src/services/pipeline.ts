@@ -16,7 +16,7 @@ import {
   getFileCount,
   extractCommitSummary,
   parseRepoUrl,
-  fetchRepoSize,
+  preflightGithubRepo,
 } from "../lib/repo.js";
 import { config } from "../config.js";
 import { getDb } from "../db/index.js";
@@ -71,7 +71,16 @@ export async function executePipeline(ctx: PipelineContext): Promise<PipelineRes
     const repoCacheName = parsedRepo.owner && parsedRepo.repo ? `${parsedRepo.owner}_${parsedRepo.repo}` : ctx.taskId;
     const branchCacheKey = createHash("sha256").update(ctx.branch).digest("hex").slice(0, 12);
     const taskDir = path.join(process.cwd(), "data/repos", repoCacheName, branchCacheKey);
-    const repoSizeKb = await fetchRepoSize(parsedRepo.owner, parsedRepo.repo);
+    const repoPreflight = await preflightGithubRepo(parsedRepo.owner, parsedRepo.repo);
+    if (repoPreflight.status === "not_found") {
+      throw {
+        category: "clone_failed",
+        message: `GitHub 仓库 ${parsedRepo.owner}/${parsedRepo.repo} 不存在或无访问权限`,
+        retryable: false,
+      };
+    }
+
+    const repoSizeKb = repoPreflight.status === "available" ? repoPreflight.sizeKb : null;
     const maxRepoSizeKb = config.MAX_REPO_SIZE_MB * 1024;
     if (repoSizeKb !== null && repoSizeKb > maxRepoSizeKb) {
       throw {

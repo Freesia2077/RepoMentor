@@ -40,8 +40,8 @@ export function InputView({ onSubmit, error }: Props) {
       <div className="example-repos">
         <p className="text-secondary" style={{fontSize: '0.9rem', marginBottom: '0.8rem'}}>Try an example repository:</p>
         <div className="example-links">
-          <button type="button" className="example-btn" onClick={() => setUrl('anthropic/anthropic-sdk-python')}>anthropic/anthropic-sdk-python</button>
-          <button type="button" className="example-btn" onClick={() => setUrl('facebook/react')}>facebook/react</button>
+          <button type="button" className="example-btn" onClick={() => setUrl('https://github.com/anthropics/anthropic-sdk-python')}>anthropics/anthropic-sdk-python</button>
+          <button type="button" className="example-btn" onClick={() => setUrl('https://github.com/facebook/react')}>facebook/react</button>
         </div>
       </div>
     </div>
