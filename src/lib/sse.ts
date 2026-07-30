@@ -33,7 +33,10 @@ export class SSEManager {
   emit(taskId: string, event: SSEEvent): void {
     const id = (this.sequence.get(taskId) ?? 0) + 1;
     this.sequence.set(taskId, id);
-    const stored = { id, event };
+    const timestampedEvent = event.timestamp
+      ? event
+      : { ...event, timestamp: new Date().toISOString() };
+    const stored = { id, event: timestampedEvent };
     const events = this.history.get(taskId) ?? [];
     events.push(stored);
     if (events.length > this.maxHistory) events.shift();

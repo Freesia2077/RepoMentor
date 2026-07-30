@@ -8,7 +8,10 @@ describe('ProgressUI', () => {
     render(
       <ProgressUI 
         stages={{ explorer: 'done', mentor: 'running', contributor: 'pending' }}
-        logs={['Log 1', 'Log 2']}
+        logs={[
+          { message: 'Log 1', timestamp: '2026-07-30T12:00:00.000Z' },
+          { message: 'Log 2', timestamp: '2026-07-30T12:00:01.000Z' }
+        ]}
         interaction={{ id: 'q1', question: 'How to proceed?', options: ['Yes', 'No'] }}
         onAnswer={handleAnswer}
       />
@@ -21,6 +24,20 @@ describe('ProgressUI', () => {
       fireEvent.click(yesBtn);
     });
     expect(handleAnswer).toHaveBeenCalledWith('q1', 'Yes');
+  });
+
+  it('renders the timestamp captured when each log event occurred', () => {
+    const timestamp = '2026-07-30T12:34:56.000Z';
+    render(
+      <ProgressUI
+        stages={{ explorer: 'running', mentor: 'pending', contributor: 'pending' }}
+        logs={[{ message: 'Reading repository', timestamp }]}
+        onAnswer={vi.fn()}
+      />
+    );
+
+    expect(screen.getByText(`[${new Date(timestamp).toLocaleTimeString()}]`)).toBeInTheDocument();
+    expect(screen.getAllByText('Reading repository')).toHaveLength(2);
   });
 
   it('shows loading state correctly when an option is clicked', async () => {

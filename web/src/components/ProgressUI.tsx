@@ -1,9 +1,10 @@
 import { useState } from 'react';
+import type { AnalysisLog } from '../types';
 import './ProgressUI.css';
 
 interface Props {
   stages: Record<string, 'pending' | 'running' | 'done'>;
-  logs: string[];
+  logs: AnalysisLog[];
   interaction?: { id: string; question: string; options: string[] } | null;
   onAnswer: (id: string, answer: string) => Promise<void>;
   interactionError?: string | null;
@@ -32,7 +33,7 @@ export function ProgressUI({ stages, logs, interaction, onAnswer, interactionErr
     return <span className="status-dot pending" />;
   };
 
-  const activeLog = logs.length > 0 ? logs[logs.length - 1] : 'Waiting to start...';
+  const activeLog = logs.length > 0 ? logs[logs.length - 1]?.message : 'Waiting to start...';
 
   return (
     <div className="progress-ui">
@@ -102,7 +103,11 @@ export function ProgressUI({ stages, logs, interaction, onAnswer, interactionErr
         </summary>
         <div className="log-panel">
           {logs.length === 0 ? <div className="text-secondary">No logs yet...</div> : null}
-          {logs.map((l, i) => <div key={i} className="log-line"><span className="log-ts">[{new Date().toLocaleTimeString()}]</span> {l}</div>)}
+          {logs.map((log, i) => (
+            <div key={`${log.timestamp}-${i}`} className="log-line">
+              <span className="log-ts">[{new Date(log.timestamp).toLocaleTimeString()}]</span> {log.message}
+            </div>
+          ))}
         </div>
       </details>
     </div>

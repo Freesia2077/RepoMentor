@@ -232,17 +232,10 @@ async function runStageWithRetry<S extends StageName>(
       return await runStageWithSSE(stage, input, ctx, localPath);
     } catch (err) {
       if (err instanceof ParseError) {
-        if (attempt < maxRetries) {
-          sseManager.emit(ctx.taskId, {
-            type: "stage:progress", stage,
-            message: `JSON 解析失败，重试中... (${attempt + 1}/${maxRetries})`,
-          });
-          continue;
-        }
         const agentName = stage.charAt(0).toUpperCase() + stage.slice(1);
         emitError(ctx.taskId, {
           category: "parse_failed",
-          message: `${agentName} 输出解析失败（已重试 ${maxRetries} 次）: ${err.message}`,
+          message: `${agentName} 输出校验失败（已尝试自动修复）: ${err.message}`,
           retryable: true,
         });
         throw { category: "parse_failed", message: err.message, retryable: true };

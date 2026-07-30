@@ -42,10 +42,10 @@ describe("validateExplorerOutput", () => {
     expect(() => validateExplorerOutput(bad)).toThrow();
   });
 
-  it("rejects moduleMap exceeding max 20", () => {
+  it("rejects moduleMap exceeding max 6", () => {
     const bad = {
       ...validExplorer,
-      moduleMap: Array.from({ length: 21 }, (_, i) => ({
+      moduleMap: Array.from({ length: 7 }, (_, i) => ({
         path: `src/module${i}/`,
         responsibility: "x",
         importance: "utility" as const,
@@ -74,6 +74,28 @@ describe("validateExplorerOutput", () => {
       projectType: { primary: "custom-game-engine", secondary: [] },
     };
     expect(() => validateExplorerOutput(custom)).not.toThrow();
+  });
+
+  it("normalizes the unambiguous supporting alias to support", () => {
+    const output = validateExplorerOutput({
+      ...validExplorer,
+      moduleMap: [{
+        ...validExplorer.moduleMap[0],
+        importance: "supporting",
+      }],
+    });
+
+    expect(output.moduleMap[0]?.importance).toBe("support");
+  });
+
+  it("rejects unknown module importance values", () => {
+    expect(() => validateExplorerOutput({
+      ...validExplorer,
+      moduleMap: [{
+        ...validExplorer.moduleMap[0],
+        importance: "auxiliary",
+      }],
+    })).toThrow();
   });
 });
 

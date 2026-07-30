@@ -2,6 +2,8 @@ import { z } from "zod";
 
 // ===== Explorer Output =====
 
+export const MODULE_IMPORTANCE_VALUES = ["core", "support", "utility"] as const;
+
 const projectTypeSchema = z.object({
   primary: z.string().min(1),
   secondary: z.array(z.string()),
@@ -18,10 +20,15 @@ const entryPointSchema = z.object({
   role: z.string(),
 });
 
+const moduleImportanceSchema = z.preprocess(
+  (value) => value === "supporting" ? "support" : value,
+  z.enum(MODULE_IMPORTANCE_VALUES),
+);
+
 const moduleInfoSchema = z.object({
   path: z.string(),
   responsibility: z.string().max(300),
-  importance: z.enum(["core", "support", "utility"]),
+  importance: moduleImportanceSchema,
   justification: z.string(),
 });
 

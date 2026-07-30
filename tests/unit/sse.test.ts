@@ -12,7 +12,11 @@ describe("SSEManager", () => {
     expect(manager.getEventsAfter("task-1")).toEqual([
       {
         id: 1,
-        event: { type: "stage:start", stage: "explorer" },
+        event: {
+          type: "stage:start",
+          stage: "explorer",
+          timestamp: expect.any(String),
+        },
       },
     ]);
   });
@@ -41,7 +45,24 @@ describe("SSEManager", () => {
 
     expect(listener).toHaveBeenCalledWith({
       id: 1,
-      event: { type: "stage:start", stage: "mentor" },
+      event: {
+        type: "stage:start",
+        stage: "mentor",
+        timestamp: expect.any(String),
+      },
     });
+  });
+
+  it("preserves an explicitly supplied event timestamp", () => {
+    const manager = new SSEManager();
+    manager.emit("task-1", {
+      type: "stage:start",
+      stage: "explorer",
+      timestamp: "2026-07-30T12:00:00.000Z",
+    });
+
+    expect(manager.getEventsAfter("task-1")[0]?.event.timestamp).toBe(
+      "2026-07-30T12:00:00.000Z",
+    );
   });
 });

@@ -212,15 +212,19 @@ export interface SSEInteractTimeoutEvent {
 }
 
 export type SSEEvent =
-  | SSETaskCreatedEvent
-  | SSETaskCompletedEvent
-  | SSETaskErrorEvent
-  | SSEStageStartEvent
-  | SSEStageProgressEvent
-  | SSEStageFieldEvent
-  | SSEStageDoneEvent
-  | SSEInteractAskEvent
-  | SSEInteractTimeoutEvent;
+  (
+    | SSETaskCreatedEvent
+    | SSETaskCompletedEvent
+    | SSETaskErrorEvent
+    | SSEStageStartEvent
+    | SSEStageProgressEvent
+    | SSEStageFieldEvent
+    | SSEStageDoneEvent
+    | SSEInteractAskEvent
+    | SSEInteractTimeoutEvent
+  ) & {
+    timestamp?: string;
+  };
 
 // ========== API 请求/响应 ==========
 

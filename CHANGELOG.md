@@ -2,6 +2,19 @@
 
 All notable changes to RepoMentor are documented in this file.
 
+## [0.2.2] - 2026-07-30
+
+### Changed
+
+- Explorer now uses a smaller turn budget and reports aggregated tool-call progress instead of one log entry per SDK message.
+- Invalid Agent JSON receives one short, tool-free repair pass rather than rerunning the complete repository scan.
+- Detailed logs now display backend event timestamps captured when each event occurred.
+
+### Fixed
+
+- Explorer output now documents and enforces the exact `core`, `support`, and `utility` importance values.
+- The unambiguous `supporting` alias is normalized to `support` before Schema validation.
+
 ## [0.2.1] - 2026-07-30
 
 ### Fixed

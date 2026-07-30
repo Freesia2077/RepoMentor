@@ -1,20 +1,27 @@
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const mocks = vi.hoisted(() => ({
-  runStage: vi.fn(),
-  cacheFind: vi.fn(),
-  cacheSave: vi.fn(),
-  experienceFind: vi.fn(),
-  experienceSave: vi.fn(),
-}));
+const mocks = vi.hoisted(() => {
+  class MockParseError extends Error {}
+  class MockLLMError extends Error {
+    retryable = false;
+    timedOut = false;
+  }
+
+  return {
+    runStage: vi.fn(),
+    cacheFind: vi.fn(),
+    cacheSave: vi.fn(),
+    experienceFind: vi.fn(),
+    experienceSave: vi.fn(),
+    MockParseError,
+    MockLLMError,
+  };
+});
 
 vi.mock("../../src/services/claude-client.js", () => ({
   runStage: mocks.runStage,
-  ParseError: class ParseError extends Error {},
-  LLMError: class LLMError extends Error {
-    retryable = false;
-    timedOut = false;
-  },
+  ParseError: mocks.MockParseError,
+  LLMError: mocks.MockLLMError,
 }));
 
 vi.mock("../../src/lib/repo.js", () => ({
@@ -50,6 +57,14 @@ vi.mock("../../src/db/repositories/experiences.js", () => ({
 import { executePipeline, resolveQuestion, type PipelineContext } from "../../src/services/pipeline.js";
 
 describe("analysis pipeline", () => {
+  beforeEach(() => {
+    mocks.runStage.mockReset();
+    mocks.cacheFind.mockReset();
+    mocks.cacheSave.mockReset();
+    mocks.experienceFind.mockReset();
+    mocks.experienceSave.mockReset();
+  });
+
   it("feeds interaction answers and stored experiences into later agents", async () => {
     mocks.cacheFind.mockReturnValue(undefined);
     mocks.experienceFind.mockReturnValue([{ content: "historical architecture lesson" }]);
@@ -116,5 +131,32 @@ describe("analysis pipeline", () => {
     const contributorCall = mocks.runStage.mock.calls.find(([stage]) => stage === "contributor");
     expect(contributorCall?.[1]).toMatchObject({ userFocus: "src/core" });
     expect(mocks.experienceSave).toHaveBeenCalledOnce();
+  });
+
+  it("does not rerun the full stage after JSON repair is exhausted", async () => {
+    mocks.cacheFind.mockReturnValue(undefined);
+    mocks.experienceFind.mockReturnValue([]);
+    mocks.runStage.mockRejectedValue(new mocks.MockParseError("invalid importance"));
+
+    const ctx: PipelineContext = {
+      taskId: "task-parse-failure",
+      repoUrl: "https://github.com/owner/repo.git",
+      branch: "main",
+      stageProgress: { explorer: "pending", mentor: "pending", contributor: "pending" },
+      abortController: new AbortController(),
+      callbacks: {
+        onStageStart: vi.fn(),
+        onStageDone: vi.fn(),
+        onStatusChange: vi.fn(),
+        onCommitHash: vi.fn(),
+      },
+      pendingQuestion: null,
+    };
+
+    await expect(executePipeline(ctx)).rejects.toMatchObject({
+      category: "parse_failed",
+      message: "invalid importance",
+    });
+    expect(mocks.runStage).toHaveBeenCalledOnce();
   });
 });

@@ -1,11 +1,12 @@
 import { useState, useEffect, useCallback } from 'react';
 import type { TaskStatus, StageProgress, SSEEvent, AnalysisResult } from '@backend-types/index';
 import { getAnalysis } from '../api';
+import type { AnalysisLog } from '../types';
 
 export interface StreamState {
   status: TaskStatus;
   stageProgress: StageProgress;
-  logs: string[];
+  logs: AnalysisLog[];
   interaction: { id: string; question: string; options: string[] } | null;
   result: Partial<AnalysisResult>;
   error: string | null;
@@ -74,7 +75,13 @@ export function useAnalysisStream(taskId: string | null) {
             eventSource.close();
             break;
           case 'stage:progress':
-            setState(s => ({ ...s, logs: [...s.logs, event.message] }));
+            setState(s => ({
+              ...s,
+              logs: [...s.logs, {
+                message: event.message,
+                timestamp: event.timestamp ?? new Date().toISOString()
+              }]
+            }));
             break;
           case 'stage:start':
             setState(s => ({ ...s, stageProgress: { ...s.stageProgress, [event.stage]: 'running' } }));

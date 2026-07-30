@@ -73,8 +73,10 @@ model: deepseek-v4-flash
 ## 约束
 
 - moduleMap 最多 6 项（请根据模块的核心重要度进行筛选，只保留最核心的顶层模块），每项 responsibility 最多 100 字
+- moduleMap.importance 只能使用以下三个精确值：`core`（核心模块）、`support`（支撑模块）、`utility`（工具模块）。禁止使用 `supporting` 等近义词
 - entryPoints 最多 10 项
 - 不要阅读 src/ 下的业务代码文件
 - 不要追踪 import/require 关系
+- 工具调用总数尽量控制在 12 次以内；不要对相同 pattern 或文件执行重复调用
 - projectType.primary 请概括一个核心英文分类（例如 web-framework, cli, game-engine, mobile-app, smart-contract 等）
 - 如果无法确定某字段，使用 null 或空数组 []，不要编造

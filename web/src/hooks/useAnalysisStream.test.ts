@@ -64,9 +64,16 @@ describe('useAnalysisStream', () => {
     expect(result.current.state.stageProgress.explorer).toBe('running');
 
     act(() => {
-      mockEventSourceInstance.emit('stage:progress', { type: 'stage:progress', message: 'Analyzing files...' });
+      mockEventSourceInstance.emit('stage:progress', {
+        type: 'stage:progress',
+        message: 'Analyzing files...',
+        timestamp: '2026-07-30T12:00:00.000Z'
+      });
     });
-    expect(result.current.state.logs).toContain('Analyzing files...');
+    expect(result.current.state.logs).toContainEqual({
+      message: 'Analyzing files...',
+      timestamp: '2026-07-30T12:00:00.000Z'
+    });
 
     act(() => {
       mockEventSourceInstance.emit('stage:done', { type: 'stage:done', stage: 'explorer', output: { summary: 'done' } });
