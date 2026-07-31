@@ -68,9 +68,9 @@ const codeConventionSchema = z.object({
 export const mentorOutputSchema = z.object({
   architectureOverview: z.string().max(3000),
   dependencyGraph: z.record(z.string(), z.array(z.string())),
-  readingPath: z.array(readingStepSchema).max(10),
-  keyPatterns: z.array(keyPatternSchema),
-  codeConventions: z.array(codeConventionSchema),
+  readingPath: z.array(readingStepSchema).max(5),
+  keyPatterns: z.array(keyPatternSchema).max(10),
+  codeConventions: z.array(codeConventionSchema).max(10),
 });
 
 export function validateMentorOutput(data: unknown) {
@@ -103,10 +103,10 @@ const newcomerNoteSchema = z.object({
 });
 
 export const contributorOutputSchema = z.object({
-  goodFirstIssues: z.array(goodFirstIssueSchema),
+  goodFirstIssues: z.array(goodFirstIssueSchema).max(6),
   contributionSetup: contributionSetupSchema,
-  entryFiles: z.array(entryFileSchema),
-  notesForNewcomers: z.array(newcomerNoteSchema),
+  entryFiles: z.array(entryFileSchema).max(10),
+  notesForNewcomers: z.array(newcomerNoteSchema).max(10),
 });
 
 export function validateContributorOutput(data: unknown) {

@@ -20,4 +20,38 @@ describe("Agent repository tool guard", () => {
       behavior: "deny",
     });
   });
+
+  it("reserves output time by denying tools after the configured budget", async () => {
+    const limitedGuard = createRepoToolGuard(repoRoot, 2);
+
+    await expect(limitedGuard("Glob", { pattern: "*" })).resolves.toMatchObject({
+      behavior: "allow",
+    });
+    await expect(limitedGuard("Read", { file_path: "README.md" })).resolves.toMatchObject({
+      behavior: "allow",
+    });
+    await expect(limitedGuard("Read", { file_path: "package.json" })).resolves.toMatchObject({
+      behavior: "deny",
+      interrupt: false,
+    });
+  });
+
+  it("denies an exact duplicate tool request without consuming useful work", async () => {
+    const duplicateGuard = createRepoToolGuard(repoRoot, 2);
+
+    await expect(duplicateGuard("Read", {
+      file_path: "README.md",
+      offset: 0,
+    })).resolves.toMatchObject({ behavior: "allow" });
+    await expect(duplicateGuard("Read", {
+      offset: 0,
+      file_path: "README.md",
+    })).resolves.toMatchObject({
+      behavior: "deny",
+      message: expect.stringContaining("已经调用过"),
+    });
+    await expect(duplicateGuard("Read", {
+      file_path: "package.json",
+    })).resolves.toMatchObject({ behavior: "allow" });
+  });
 });

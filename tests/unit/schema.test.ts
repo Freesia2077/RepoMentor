@@ -117,10 +117,10 @@ describe("validateMentorOutput", () => {
     expect(() => validateMentorOutput(bad)).toThrow();
   });
 
-  it("rejects readingPath exceeding 10 steps", () => {
+  it("rejects readingPath exceeding 5 steps", () => {
     const bad = {
       ...validMentor,
-      readingPath: Array.from({ length: 11 }, (_, i) => ({
+      readingPath: Array.from({ length: 6 }, (_, i) => ({
         step: i + 1,
         file: `src/file${i}.ts`,
         why: "reason",

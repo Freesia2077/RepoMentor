@@ -36,9 +36,35 @@ export interface ModuleInfo {
 
 // ========== Stage 1: Explorer ==========
 
-export interface ExplorerInput {
-  localPath: string;
+export interface SnapshotFile {
+  path: string;
+  content: string;
+  truncated: boolean;
+}
+
+export interface TodoMarker {
+  file: string;
+  line: number;
+  marker: "TODO" | "FIXME" | "HACK" | "XXX";
+  excerpt: string;
+}
+
+export interface RepositorySnapshot {
   fileCount: number;
+  topLevelTree: string[];
+  treeTruncated: boolean;
+  readme: SnapshotFile | null;
+  manifests: SnapshotFile[];
+  exampleManifests: SnapshotFile[];
+  guidanceFiles: SnapshotFile[];
+  todoMarkers: TodoMarker[];
+  languageStats: Record<string, number>;
+  entryCandidates: string[];
+}
+
+export interface ExplorerInput {
+  fileCount: number;
+  repositorySnapshot: RepositorySnapshot;
   projectTypeHint?: string;
 }
 
@@ -77,6 +103,7 @@ export interface CodeConvention {
 
 export interface MentorInput {
   explorerOutput: ExplorerOutput;
+  repositorySnapshot: RepositorySnapshot;
   skillContent: string;
   experiences: string;
   userFocus?: string;
@@ -101,6 +128,7 @@ export interface CommitSummary {
 export interface ContributorInput {
   explorerOutput: ExplorerOutput;
   mentorOutput: MentorOutput;
+  repositorySnapshot: RepositorySnapshot;
   commitSummary: CommitSummary;
   userFocus?: string;
 }

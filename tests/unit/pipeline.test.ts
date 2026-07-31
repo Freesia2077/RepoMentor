@@ -5,6 +5,7 @@ const mocks = vi.hoisted(() => {
   class MockLLMError extends Error {
     retryable = false;
     timedOut = false;
+    timeoutKind: "first_response" | "stage" | null = null;
   }
 
   return {
@@ -32,12 +33,28 @@ vi.mock("../../src/lib/repo.js", () => ({
     commitHash: "abc123",
     cached: false,
   })),
-  getFileCount: vi.fn(async () => 10),
   extractCommitSummary: vi.fn(async () => ({
     frequentFiles: [],
     recentThemes: [],
     contributorCount: 1,
   })),
+}));
+
+const repositorySnapshot = {
+  fileCount: 10,
+  topLevelTree: ["package.json", "src/", "src/index.ts"],
+  treeTruncated: false,
+  readme: null,
+  manifests: [],
+  exampleManifests: [],
+  guidanceFiles: [],
+  todoMarkers: [],
+  languageStats: { TypeScript: 8 },
+  entryCandidates: ["src/index.ts"],
+};
+
+vi.mock("../../src/lib/repository-snapshot.js", () => ({
+  buildRepositorySnapshot: vi.fn(async () => repositorySnapshot),
 }));
 
 vi.mock("../../src/db/index.js", () => ({
@@ -55,6 +72,7 @@ vi.mock("../../src/db/repositories/experiences.js", () => ({
 }));
 
 import { executePipeline, resolveQuestion, type PipelineContext } from "../../src/services/pipeline.js";
+import { sseManager } from "../../src/lib/sse.js";
 
 describe("analysis pipeline", () => {
   beforeEach(() => {
@@ -126,10 +144,23 @@ describe("analysis pipeline", () => {
     expect(mentorCall?.[1]).toMatchObject({
       experiences: "historical architecture lesson",
       userFocus: "实际是 CLI 工具",
+      repositorySnapshot,
     });
 
     const contributorCall = mocks.runStage.mock.calls.find(([stage]) => stage === "contributor");
-    expect(contributorCall?.[1]).toMatchObject({ userFocus: "src/core" });
+    expect(contributorCall?.[1]).toMatchObject({
+      userFocus: "src/core",
+      repositorySnapshot,
+    });
+    const explorerCall = mocks.runStage.mock.calls.find(([stage]) => stage === "explorer");
+    expect(explorerCall?.[1]).toEqual({
+      fileCount: 10,
+      repositorySnapshot,
+    });
+    expect(sseManager.getEventsAfter("task-pipeline").some(({ event }) =>
+      event.type === "stage:progress"
+      && event.message.includes("仓库预扫描完成")
+    )).toBe(true);
     expect(mocks.experienceSave).toHaveBeenCalledOnce();
   });
 
@@ -158,5 +189,71 @@ describe("analysis pipeline", () => {
       message: "invalid importance",
     });
     expect(mocks.runStage).toHaveBeenCalledOnce();
+  });
+
+  it("does not rerun a non-retryable max-turn failure", async () => {
+    mocks.cacheFind.mockReturnValue(undefined);
+    mocks.experienceFind.mockReturnValue([]);
+    mocks.runStage.mockRejectedValue(
+      new mocks.MockLLMError("Explorer 达到最大分析轮次，未生成最终 JSON"),
+    );
+
+    const ctx: PipelineContext = {
+      taskId: "task-max-turns",
+      repoUrl: "https://github.com/owner/repo.git",
+      branch: "main",
+      stageProgress: { explorer: "pending", mentor: "pending", contributor: "pending" },
+      abortController: new AbortController(),
+      callbacks: {
+        onStageStart: vi.fn(),
+        onStageDone: vi.fn(),
+        onStatusChange: vi.fn(),
+        onCommitHash: vi.fn(),
+      },
+      pendingQuestion: null,
+    };
+
+    await expect(executePipeline(ctx)).rejects.toMatchObject({
+      category: "llm_failed",
+      message: "Explorer 达到最大分析轮次，未生成最终 JSON",
+    });
+    expect(mocks.runStage).toHaveBeenCalledOnce();
+  });
+
+  it("retries once when a stage stalls before its first response", async () => {
+    mocks.cacheFind.mockReturnValue(undefined);
+    mocks.experienceFind.mockReturnValue([]);
+    const timeout = new mocks.MockLLMError("Explorer 首次响应超时");
+    timeout.retryable = true;
+    timeout.timedOut = true;
+    timeout.timeoutKind = "first_response";
+    mocks.runStage
+      .mockRejectedValueOnce(timeout)
+      .mockRejectedValueOnce(new mocks.MockParseError("second attempt invalid"));
+
+    const ctx: PipelineContext = {
+      taskId: "task-first-response-timeout",
+      repoUrl: "https://github.com/owner/repo.git",
+      branch: "main",
+      stageProgress: { explorer: "pending", mentor: "pending", contributor: "pending" },
+      abortController: new AbortController(),
+      callbacks: {
+        onStageStart: vi.fn(),
+        onStageDone: vi.fn(),
+        onStatusChange: vi.fn(),
+        onCommitHash: vi.fn(),
+      },
+      pendingQuestion: null,
+    };
+
+    await expect(executePipeline(ctx)).rejects.toMatchObject({
+      category: "parse_failed",
+      message: "second attempt invalid",
+    });
+    expect(mocks.runStage).toHaveBeenCalledTimes(2);
+    expect(sseManager.getEventsAfter("task-first-response-timeout").some(({ event }) =>
+      event.type === "stage:progress"
+      && event.message.includes("首次响应超时，正在重试")
+    )).toBe(true);
   });
 });

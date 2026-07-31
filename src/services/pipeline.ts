@@ -13,11 +13,11 @@ import type { StageOutputFor } from "./claude-client.js";
 import { sseManager } from "../lib/sse.js";
 import {
   cloneRepo,
-  getFileCount,
   extractCommitSummary,
   parseRepoUrl,
   preflightGithubRepo,
 } from "../lib/repo.js";
+import { buildRepositorySnapshot } from "../lib/repository-snapshot.js";
 import { config } from "../config.js";
 import { getDb } from "../db/index.js";
 import * as cacheRepo from "../db/repositories/analysis-cache.js";
@@ -124,7 +124,13 @@ export async function executePipeline(ctx: PipelineContext): Promise<PipelineRes
       return { result: cachedResult, cached: true };
     }
 
-    const fileCount = await getFileCount(localPath);
+    const repositorySnapshot = await buildRepositorySnapshot(localPath);
+    const fileCount = repositorySnapshot.fileCount;
+    sseManager.emit(ctx.taskId, {
+      type: "stage:progress",
+      stage: "explorer",
+      message: `仓库预扫描完成（${fileCount} 个文件，${repositorySnapshot.manifests.length} 个项目清单，${repositorySnapshot.exampleManifests.length} 个示例清单${repositorySnapshot.readme ? "，已读取 README" : ""}）`,
+    });
 
     // 标记进入 analyzing
     ctx.callbacks.onStatusChange("analyzing");
@@ -136,8 +142,8 @@ export async function executePipeline(ctx: PipelineContext): Promise<PipelineRes
 
     // 1. Explorer
     const explorerOutput = await runStageWithRetry("explorer", {
-      localPath,
       fileCount,
+      repositorySnapshot,
     }, ctx, localPath);
 
     // 交互点：Explorer 结果确认
@@ -159,8 +165,8 @@ export async function executePipeline(ctx: PipelineContext): Promise<PipelineRes
     );
 
     const mentorOutput = await runStageWithRetry("mentor", {
-      localPath,
       explorerOutput,
+      repositorySnapshot,
       skillContent,
       experiences: relevantExperiences.map((item) => item.content).join("\n\n"),
       userFocus: explorerFeedback && explorerFeedback !== "是" ? explorerFeedback : undefined,
@@ -176,9 +182,9 @@ export async function executePipeline(ctx: PipelineContext): Promise<PipelineRes
     const commitSummary = await extractCommitSummary(localPath);
 
     const contributorOutput = await runStageWithRetry("contributor", {
-      localPath,
       explorerOutput,
       mentorOutput,
+      repositorySnapshot,
       commitSummary,
       userFocus: dependencyFocus || undefined,
     }, ctx, localPath);
@@ -243,6 +249,15 @@ async function runStageWithRetry<S extends StageName>(
 
       if (err instanceof LLMError) {
         if (err.timedOut) {
+          if (err.timeoutKind === "first_response" && attempt < maxRetries) {
+            const agentName = stage.charAt(0).toUpperCase() + stage.slice(1);
+            sseManager.emit(ctx.taskId, {
+              type: "stage:progress",
+              stage,
+              message: `${agentName} 首次响应超时，正在重试... (${attempt + 1}/${maxRetries})`,
+            });
+            continue;
+          }
           emitError(ctx.taskId, {
             category: "timeout",
             message: err.message,
