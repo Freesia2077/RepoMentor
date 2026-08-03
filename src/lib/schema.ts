@@ -1,5 +1,20 @@
 import { z } from "zod";
 
+// ===== Evidence Plan =====
+
+export const evidencePlanSchema = z.object({
+  rationale: z.string().max(1000),
+  files: z.array(z.object({
+    path: z.string().min(1),
+    purpose: z.string().min(1).max(300),
+    priority: z.enum(["high", "medium", "low"]),
+  })).max(12),
+});
+
+export function validateEvidencePlan(data: unknown) {
+  return evidencePlanSchema.parse(data);
+}
+
 // ===== Explorer Output =====
 
 export const MODULE_IMPORTANCE_VALUES = ["core", "support", "utility"] as const;

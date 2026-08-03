@@ -1,9 +1,36 @@
 import { describe, it, expect } from "vitest";
 import {
+  validateEvidencePlan,
   validateExplorerOutput,
   validateMentorOutput,
   validateContributorOutput,
 } from "../../src/lib/schema.js";
+
+describe("evidence plan schema", () => {
+  it("accepts a bounded, prioritized reading plan", () => {
+    const result = validateEvidencePlan({
+      rationale: "Verify the public entry and representative tests",
+      files: [{
+        path: "src/index.ts",
+        purpose: "confirm public exports",
+        priority: "high",
+      }],
+    });
+
+    expect(result.files[0]?.path).toBe("src/index.ts");
+  });
+
+  it("rejects more than twelve planned files", () => {
+    expect(() => validateEvidencePlan({
+      rationale: "too many",
+      files: Array.from({ length: 13 }, (_, index) => ({
+        path: `src/${index}.ts`,
+        purpose: "read",
+        priority: "low",
+      })),
+    })).toThrow();
+  });
+});
 
 const validExplorer = {
   projectType: { primary: "library", secondary: [] },

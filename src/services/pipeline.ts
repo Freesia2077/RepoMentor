@@ -8,7 +8,12 @@ import type {
   TaskError,
   CommitSummary,
 } from "../types/index.js";
-import { runStage, ParseError, LLMError } from "./claude-client.js";
+import {
+  runStage,
+  orchestrateRepositoryEvidence,
+  ParseError,
+  LLMError,
+} from "./claude-client.js";
 import type { StageOutputFor } from "./claude-client.js";
 import { sseManager } from "../lib/sse.js";
 import {
@@ -17,7 +22,13 @@ import {
   parseRepoUrl,
   preflightGithubRepo,
 } from "../lib/repo.js";
-import { buildRepositorySnapshot } from "../lib/repository-snapshot.js";
+import {
+  buildContributionEvidence,
+  buildEvidenceBundle,
+  buildRepositoryContributionContext,
+  buildRepositoryOverview,
+  buildRepositoryProfile,
+} from "../lib/repository-profile.js";
 import { config } from "../config.js";
 import { getDb } from "../db/index.js";
 import * as cacheRepo from "../db/repositories/analysis-cache.js";
@@ -25,6 +36,8 @@ import * as experienceRepo from "../db/repositories/experiences.js";
 import fs from "node:fs";
 import path from "node:path";
 import { createHash } from "node:crypto";
+
+const ANALYSIS_PIPELINE_VERSION = "profile-evidence-v3";
 
 // ========== Pipeline 上下文 & 类型 ==========
 
@@ -117,19 +130,27 @@ export async function executePipeline(ctx: PipelineContext): Promise<PipelineRes
     // 缓存检查（clone 后、Explorer 前）
     const { owner: cacheOwner, repo: cacheRepoName } = parseRepoUrl(ctx.repoUrl);
     const db = getDb();
-    const cached = cacheRepo.findByCommit(db, cacheOwner, cacheRepoName, ctx.branch, commitHash);
+    const analysisCacheKey = `${ANALYSIS_PIPELINE_VERSION}:${commitHash}`;
+    const cached = cacheRepo.findByCommit(
+      db,
+      cacheOwner,
+      cacheRepoName,
+      ctx.branch,
+      analysisCacheKey,
+    );
 
     if (cached) {
       const cachedResult = JSON.parse(cached.result) as AnalysisResult;
       return { result: cachedResult, cached: true };
     }
 
-    const repositorySnapshot = await buildRepositorySnapshot(localPath);
-    const fileCount = repositorySnapshot.fileCount;
+    const repositoryProfile = await buildRepositoryProfile(localPath);
+    const repositoryOverview = buildRepositoryOverview(repositoryProfile);
+    const fileCount = repositoryProfile.fileCount;
     sseManager.emit(ctx.taskId, {
       type: "stage:progress",
       stage: "explorer",
-      message: `仓库预扫描完成（${fileCount} 个文件，${repositorySnapshot.manifests.length} 个项目清单，${repositorySnapshot.exampleManifests.length} 个示例清单${repositorySnapshot.readme ? "，已读取 README" : ""}）`,
+      message: `仓库画像构建完成（${fileCount} 个文件，${repositoryProfile.manifests.length} 个项目清单，${repositoryProfile.configFiles.length} 个工程配置${repositoryProfile.readme ? "，已读取 README" : ""}）`,
     });
 
     // 标记进入 analyzing
@@ -140,11 +161,23 @@ export async function executePipeline(ctx: PipelineContext): Promise<PipelineRes
       status: "analyzing",
     });
 
-    // 1. Explorer
+    // 1. Explorer：先规划，再由后端批量读取真实文件
+    beginStage(ctx, "explorer");
+    const explorerPlan = await planEvidenceWithRetry("explorer", {
+      repositoryProfile,
+    }, ctx, localPath);
+    const explorerEvidence = await buildEvidenceBundle(
+      localPath,
+      explorerPlan,
+      "explorer",
+    );
+    emitEvidenceReady(ctx, "explorer", explorerEvidence.files.length, explorerEvidence.totalBytes);
+
     const explorerOutput = await runStageWithRetry("explorer", {
       fileCount,
-      repositorySnapshot,
-    }, ctx, localPath);
+      repositoryProfile,
+      evidenceBundle: explorerEvidence,
+    }, ctx, localPath, true);
 
     // 交互点：Explorer 结果确认
     const explorerFeedback = await askUser(ctx, "q_explorer_review", "explorer",
@@ -162,15 +195,44 @@ export async function executePipeline(ctx: PipelineContext): Promise<PipelineRes
       explorerOutput.techStack.framework,
       explorerOutput.projectType.secondary,
       cacheOwner,
+    ).filter((item) =>
+      item.content.startsWith(`[${ANALYSIS_PIPELINE_VERSION}]\n`)
     );
+
+    beginStage(ctx, "mentor");
+    const mentorPlan = await planEvidenceWithRetry("mentor", {
+      explorerOutput,
+      repositoryProfile,
+      existingEvidencePaths: explorerEvidence.files.map((file) => file.path),
+      userFocus: explorerFeedback && explorerFeedback !== "是" ? explorerFeedback : undefined,
+    }, ctx, localPath);
+    const mentorEvidence = await buildEvidenceBundle(
+      localPath,
+      mentorPlan,
+      "mentor",
+      explorerEvidence.files.map((file) => file.path),
+    );
+    const evidenceBundle = {
+      files: [...explorerEvidence.files, ...mentorEvidence.files],
+      skippedPaths: [...explorerEvidence.skippedPaths, ...mentorEvidence.skippedPaths],
+      totalBytes: explorerEvidence.totalBytes + mentorEvidence.totalBytes,
+    };
+    emitEvidenceReady(ctx, "mentor", mentorEvidence.files.length, mentorEvidence.totalBytes);
+    emitAnalysisContextReady(ctx, "mentor", repositoryOverview, evidenceBundle.totalBytes);
 
     const mentorOutput = await runStageWithRetry("mentor", {
       explorerOutput,
-      repositorySnapshot,
+      repositoryOverview,
+      evidenceBundle,
       skillContent,
-      experiences: relevantExperiences.map((item) => item.content).join("\n\n"),
+      experiences: relevantExperiences
+        .map((item) => item.content.replace(
+          `[${ANALYSIS_PIPELINE_VERSION}]\n`,
+          "",
+        ))
+        .join("\n\n"),
       userFocus: explorerFeedback && explorerFeedback !== "是" ? explorerFeedback : undefined,
-    }, ctx, localPath);
+    }, ctx, localPath, true);
 
     // 交互点：依赖图反馈
     const deps = Object.entries(mentorOutput.dependencyGraph);
@@ -180,11 +242,19 @@ export async function executePipeline(ctx: PipelineContext): Promise<PipelineRes
 
     // 3. Contributor
     const commitSummary = await extractCommitSummary(localPath);
+    const repositoryContext = buildRepositoryContributionContext(repositoryProfile);
+    const contributionEvidence = buildContributionEvidence(evidenceBundle);
+    emitContributorContextReady(
+      ctx,
+      repositoryContext,
+      contributionEvidence.totalBytes,
+    );
 
     const contributorOutput = await runStageWithRetry("contributor", {
       explorerOutput,
       mentorOutput,
-      repositorySnapshot,
+      repositoryContext,
+      contributionEvidence,
       commitSummary,
       userFocus: dependencyFocus || undefined,
     }, ctx, localPath);
@@ -200,7 +270,7 @@ export async function executePipeline(ctx: PipelineContext): Promise<PipelineRes
       owner: cacheOwner,
       repo: cacheRepoName,
       branch: ctx.branch,
-      commitHash,
+      commitHash: analysisCacheKey,
       result: analysisResult,
       projectTypePrimary: analysisResult.explorer.projectType.primary,
       framework: analysisResult.explorer.techStack.framework,
@@ -225,17 +295,130 @@ export async function executePipeline(ctx: PipelineContext): Promise<PipelineRes
 
 // ========== 带重试的阶段执行 ==========
 
+function beginStage(ctx: PipelineContext, stage: StageName): void {
+  ctx.callbacks.onStageStart(stage);
+  sseManager.emit(ctx.taskId, { type: "stage:start", stage });
+}
+
+async function planEvidenceWithRetry(
+  phase: "explorer" | "mentor",
+  input: Record<string, unknown>,
+  ctx: PipelineContext,
+  localPath: string,
+) {
+  const maxRetries = 1;
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      return await orchestrateRepositoryEvidence(
+        phase,
+        input,
+        {
+          onProgress: (message) => {
+            sseManager.emit(ctx.taskId, {
+              type: "stage:progress",
+              stage: phase,
+              message,
+            });
+          },
+          onField: () => {},
+        },
+        localPath,
+        ctx.abortController,
+      );
+    } catch (err) {
+      if (err instanceof ParseError) {
+        emitError(ctx.taskId, {
+          category: "parse_failed",
+          message: `证据阅读计划输出校验失败: ${err.message}`,
+          retryable: true,
+        });
+        throw {
+          category: "parse_failed",
+          message: err.message,
+          retryable: true,
+        };
+      }
+      if (err instanceof LLMError && attempt < maxRetries && err.retryable) {
+        sseManager.emit(ctx.taskId, {
+          type: "stage:progress",
+          stage: phase,
+          message: `Orchestrator 调用失败，重试中... (${attempt + 1}/${maxRetries})`,
+        });
+        continue;
+      }
+      if (err instanceof LLMError) {
+        const category = err.timedOut ? "timeout" : "llm_failed";
+        emitError(ctx.taskId, {
+          category,
+          message: err.message,
+          retryable: err.retryable,
+        });
+        throw { category, message: err.message, retryable: err.retryable };
+      }
+      throw err;
+    }
+  }
+  throw new Error("unreachable");
+}
+
+function emitEvidenceReady(
+  ctx: PipelineContext,
+  stage: "explorer" | "mentor",
+  fileCount: number,
+  totalBytes: number,
+): void {
+  sseManager.emit(ctx.taskId, {
+    type: "stage:progress",
+    stage,
+    message: `${stage === "explorer" ? "Explorer" : "Mentor"} 定向证据已就绪（${fileCount} 个文件，${Math.ceil(totalBytes / 1024)}KB）`,
+  });
+}
+
+function emitAnalysisContextReady(
+  ctx: PipelineContext,
+  stage: "mentor",
+  repositoryContext: unknown,
+  evidenceBytes: number,
+): void {
+  const repositoryBytes = Buffer.byteLength(JSON.stringify(repositoryContext), "utf8");
+  sseManager.emit(ctx.taskId, {
+    type: "stage:progress",
+    stage,
+    message: `Mentor 分析上下文已准备（仓库概览 ${Math.ceil(repositoryBytes / 1024)}KB，源码证据 ${Math.ceil(evidenceBytes / 1024)}KB）`,
+  });
+}
+
+function emitContributorContextReady(
+  ctx: PipelineContext,
+  repositoryContext: unknown,
+  evidenceBytes: number,
+): void {
+  const contextBytes = Buffer.byteLength(JSON.stringify(repositoryContext), "utf8");
+  sseManager.emit(ctx.taskId, {
+    type: "stage:progress",
+    stage: "contributor",
+    message: `Contributor 分析上下文已准备（贡献资料 ${Math.ceil(contextBytes / 1024)}KB，重点源码 ${Math.ceil(evidenceBytes / 1024)}KB）`,
+  });
+}
+
 async function runStageWithRetry<S extends StageName>(
   stage: S,
   input: Record<string, unknown>,
   ctx: PipelineContext,
   localPath: string,
+  stageAlreadyStarted = false,
 ): Promise<StageOutputFor<S>> {
   const maxRetries = 1;
 
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
     try {
-      return await runStageWithSSE(stage, input, ctx, localPath);
+      return await runStageWithSSE(
+        stage,
+        input,
+        ctx,
+        localPath,
+        stageAlreadyStarted,
+      );
     } catch (err) {
       if (err instanceof ParseError) {
         const agentName = stage.charAt(0).toUpperCase() + stage.slice(1);
@@ -297,9 +480,9 @@ async function runStageWithSSE<S extends StageName>(
   input: Record<string, unknown>,
   ctx: PipelineContext,
   localPath: string,
+  stageAlreadyStarted = false,
 ): Promise<StageOutputFor<S>> {
-  ctx.callbacks.onStageStart(stage);
-  sseManager.emit(ctx.taskId, { type: "stage:start", stage });
+  if (!stageAlreadyStarted) beginStage(ctx, stage);
 
   const result = await runStage(stage, input, {
     onProgress: (message: string) => {
@@ -396,6 +579,7 @@ function buildExperienceSummary(result: AnalysisResult): string {
     .join("；");
 
   return [
+    `[${ANALYSIS_PIPELINE_VERSION}]`,
     result.mentor.architectureOverview.slice(0, 800),
     patterns ? `关键模式：${patterns}` : "",
     conventions ? `代码约定：${conventions}` : "",

@@ -36,7 +36,7 @@ export interface ModuleInfo {
 
 // ========== Stage 1: Explorer ==========
 
-export interface SnapshotFile {
+export interface RepositoryFileExcerpt {
   path: string;
   content: string;
   truncated: boolean;
@@ -49,22 +49,97 @@ export interface TodoMarker {
   excerpt: string;
 }
 
-export interface RepositorySnapshot {
+export interface RepositoryDirectoryStat {
+  path: string;
+  files: number;
+  sourceFiles: number;
+  testFiles: number;
+}
+
+export interface RepositoryProfile {
   fileCount: number;
+  fileIndex: string[];
+  fileIndexTruncated: boolean;
   topLevelTree: string[];
   treeTruncated: boolean;
-  readme: SnapshotFile | null;
-  manifests: SnapshotFile[];
-  exampleManifests: SnapshotFile[];
-  guidanceFiles: SnapshotFile[];
+  directoryStats: RepositoryDirectoryStat[];
+  readme: RepositoryFileExcerpt | null;
+  manifests: RepositoryFileExcerpt[];
+  exampleManifests: RepositoryFileExcerpt[];
+  configFiles: RepositoryFileExcerpt[];
+  guidanceFiles: RepositoryFileExcerpt[];
   todoMarkers: TodoMarker[];
   languageStats: Record<string, number>;
   entryCandidates: string[];
+  testCandidates: string[];
+}
+
+export interface RepositoryOverview {
+  fileCount: number;
+  topLevelTree: string[];
+  treeTruncated: boolean;
+  directoryStats: RepositoryDirectoryStat[];
+  languageStats: Record<string, number>;
+  entryCandidates: string[];
+  testCandidates: string[];
+  projectFiles: {
+    readme: string | null;
+    manifests: string[];
+    exampleManifests: string[];
+    configFiles: string[];
+    guidanceFiles: string[];
+  };
+}
+
+export interface RepositoryContributionContext {
+  fileCount: number;
+  manifests: RepositoryFileExcerpt[];
+  exampleManifests: RepositoryFileExcerpt[];
+  configFiles: RepositoryFileExcerpt[];
+  guidanceFiles: RepositoryFileExcerpt[];
+  todoMarkers: TodoMarker[];
+  languageStats: Record<string, number>;
+  entryCandidates: string[];
+  testCandidates: string[];
+}
+
+export interface EvidenceRequest {
+  path: string;
+  purpose: string;
+  priority: "high" | "medium" | "low";
+}
+
+export interface EvidencePlan {
+  rationale: string;
+  files: EvidenceRequest[];
+}
+
+export interface EvidenceFile extends RepositoryFileExcerpt {
+  purpose: string;
+  phase: "explorer" | "mentor";
+}
+
+export interface EvidenceBundle {
+  files: EvidenceFile[];
+  skippedPaths: string[];
+  totalBytes: number;
+}
+
+export interface ContributionEvidence {
+  examinedFiles: Array<{
+    path: string;
+    purpose: string;
+    phase: "explorer" | "mentor";
+    truncated: boolean;
+  }>;
+  focusedFiles: EvidenceFile[];
+  totalBytes: number;
 }
 
 export interface ExplorerInput {
   fileCount: number;
-  repositorySnapshot: RepositorySnapshot;
+  repositoryProfile: RepositoryProfile;
+  evidenceBundle: EvidenceBundle;
   projectTypeHint?: string;
 }
 
@@ -103,7 +178,8 @@ export interface CodeConvention {
 
 export interface MentorInput {
   explorerOutput: ExplorerOutput;
-  repositorySnapshot: RepositorySnapshot;
+  repositoryOverview: RepositoryOverview;
+  evidenceBundle: EvidenceBundle;
   skillContent: string;
   experiences: string;
   userFocus?: string;
@@ -128,7 +204,8 @@ export interface CommitSummary {
 export interface ContributorInput {
   explorerOutput: ExplorerOutput;
   mentorOutput: MentorOutput;
-  repositorySnapshot: RepositorySnapshot;
+  repositoryContext: RepositoryContributionContext;
+  contributionEvidence: ContributionEvidence;
   commitSummary: CommitSummary;
   userFocus?: string;
 }
