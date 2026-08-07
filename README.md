@@ -5,7 +5,17 @@
 [![Node.js](https://img.shields.io/badge/Node.js-20.19%2B-green)](https://nodejs.org/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.7-blue)](https://www.typescriptlang.org/)
 
-RepoMentor accepts a public GitHub repository and branch, builds a bounded repository profile, selects representative source evidence, and produces a structured learning report in three stages. Its public Analysis Trace shows plans, repository actions, evidence coverage, and user decisions in real time without exposing private model reasoning.
+RepoMentor accepts a public GitHub repository and branch, builds a bounded repository profile, selects real source evidence, and produces a structured learning report in three stages. Its public Analysis Trace shows plans, deterministic repository actions, evidence coverage, and runtime decisions in real time without exposing private model reasoning.
+
+## What's new in v0.3.1
+
+- **Adaptive small-repository path** — when all relevant source, test, documentation, and example files fit the active Harness policy, Explorer reads them directly without an extra planning-model call; Mentor then reuses the same complete evidence set.
+- **Evidence Ledger** — evidence is now tracked by normalized repository path as `available`, `partial`, or `missing`. Later reads can resolve earlier gaps, while shorter or less complete excerpts cannot overwrite better evidence.
+- **Runtime-derived coverage gaps** — missing and truncated evidence is reported from actual Harness state. Semantic gaps discovered by an Agent are preserved unless the referenced path has subsequently been read in full.
+- **Two-pass evidence budgeting** — RepoMentor prepares candidate contents before distributing the stage budget, preventing file order from causing unnecessary truncation when the complete set fits.
+- **Focused Contributor context** — contribution analysis can reuse the strongest evidence referenced across Explorer and Mentor, alongside contribution guidance, project metadata, TODO markers, tests, and Git history.
+- **Structured report boundaries** — coverage gaps now carry a stable kind, subject, summary, and severity, enabling resolved gaps, low-value exclusions, and duplicates to be handled consistently.
+- **Simplified automatic flow** — the default analysis no longer pauses for project-type or dependency-graph questions.
 
 ## Screenshots
 
@@ -54,10 +64,14 @@ flowchart LR
     A["Public GitHub repository"] --> B["Clone or update local cache"]
     B --> C["Build repository profile"]
     C --> S["Activate executable Skill policy"]
-    S --> D["Orchestrator plans Explorer actions"]
-    D --> E["Harness runs discovery tools and reads evidence"]
+    S --> Q{"Complete bounded coverage available?"}
+    Q -->|Yes| E["Harness builds and executes a complete evidence plan"]
+    Q -->|No| D["Orchestrator plans Explorer actions"]
+    D --> E
     E --> F["Explorer maps project structure"]
-    F --> G["Orchestrator plans Mentor actions"]
+    F --> R{"Explorer evidence complete?"}
+    R -->|Yes| H["Reuse the complete evidence set"]
+    R -->|No| G["Orchestrator plans Mentor actions"]
     G --> H["Harness discovers and reads additional evidence"]
     H --> I["Mentor explains architecture"]
     I --> J["Contributor proposes entry points"]
@@ -69,11 +83,11 @@ flowchart LR
     H -. "evidence trace" .-> L
 ```
 
-The repository profile includes a bounded file index, hierarchical directory statistics, README and manifest excerpts, engineering configuration, contribution guidance, language statistics, TODO markers, and entry/test candidates. Orchestrator uses that profile to choose representative files. RepoMentor's provider-neutral Repository Harness then validates every path, applies read budgets, prepares downstream context, and emits a safe operational trace. The same tool semantics are used regardless of model provider.
+The repository profile includes a bounded file index, hierarchical directory statistics, README and manifest excerpts, engineering configuration, contribution guidance, language statistics, TODO markers, and entry/test candidates. For a small repository whose relevant files fit the active policy, the Harness creates a deterministic complete-coverage plan. Other repositories use Orchestrator to select representative files. RepoMentor's provider-neutral Repository Harness validates every path, applies read budgets, prepares downstream context, and emits a safe operational trace. The same tool semantics are used regardless of model provider.
 
 | Role | Responsibility |
 |---|---|
-| **Orchestrator** | Plans small, stage-specific sets of source files to inspect; it does not produce the report itself |
+| **Orchestrator** | Plans small, stage-specific sets of source files when deterministic complete coverage is not available; it does not produce the report itself |
 | **Explorer** | Identifies the project type, technology stack, entry points, module boundaries, and repository summary |
 | **Mentor** | Explains architecture and dependencies, extracts code patterns, and builds a recommended reading path |
 | **Contributor** | Uses contribution docs, TODOs, commit history, tests, and focused source evidence to suggest realistic contribution paths |
@@ -92,20 +106,24 @@ RepoMentor treats the Harness as the runtime surrounding those models—not as a
 | `inspect_git_history` | Extract recent themes, frequently touched files, and contributor counts without executing repository code |
 | `prepare_contributor_context` | Combine verified evidence with manifests, guidance, tests, and TODO metadata |
 
-The shared `HarnessState` records goals, analysis questions, plans, tool observations, examined and skipped paths, unresolved evidence, user corrections, active Skill policy, and global usage. For each stage, Orchestrator creates one bounded plan; the Harness executes its selected discovery actions, merges discovered paths with direct file requests, reads evidence, records gaps, and stops. Explorer and Mentor can each consume only one evidence batch; the complete run stops after two batches, 18 files, or 88KB of source evidence. These are runtime invariants enforced in code rather than instructions that the model may ignore. Natural-language stop conditions remain visible planning intent; the Harness does not pretend they are machine-verified.
+The shared `HarnessState` records goals, analysis questions, plans, tool observations, examined and skipped paths, unresolved evidence, active Skill policy, and global usage. A path-keyed Evidence Ledger separately preserves the best known excerpt and its `available`, `partial`, or `missing` state across stages. The Harness executes selected discovery actions, merges discovered paths with direct requests, reads evidence, resolves or records coverage gaps, and stops. Explorer and Mentor can each consume at most one evidence batch; a complete small-repository evidence set can be reused without a second batch. The complete run stops after two batches, 18 file reads, or 88KB of source evidence. These are runtime invariants enforced in code rather than instructions that the model may ignore. Natural-language stop conditions remain visible planning intent; the Harness does not pretend they are machine-verified.
+
+Evidence content is prepared before the stage budget is distributed. If all selected contents fit, they are retained in full regardless of request order; otherwise every candidate receives a bounded baseline before remaining bytes are assigned by priority. Text files use the default bounded reader, while structured container formats can expose normalized text through small, isolated adapters without changing Harness behavior.
 
 Skills are executable Harness capability packs rather than extra Agents. Each `skills/*/SKILL.md` explains a project-type strategy for the model, while the adjacent `skill.json` declares the allowed and preferred domain tools, recommended investigation questions, evidence requirements, stop intent, and stage limits. A project-specific pack is selected when available; the generic pack is only a fallback. The Harness enforces tool permissions and action/file limits after planning, so a prompt cannot silently broaden the investigation.
 
 ## Features
 
 - **Evidence-driven analysis** — conclusions combine a deterministic repository profile with actual selected source files
+- **Adaptive complete coverage** — small repositories can skip redundant planning and reuse one complete evidence set across Explorer and Mentor
 - **Bounded orchestration** — file selection and batch reads replace uncontrolled tool-call loops
 - **Executable Skills** — project-type capability packs guide planning while the Harness enforces their tool and evidence boundaries
-- **Transparent Harness trace** — inspect evidence plans, deterministic repository tools, files examined, coverage budgets, and user decisions without exposing chain-of-thought or source contents
+- **Evidence Ledger** — path-level read status, monotonic evidence quality, and cross-stage gap resolution are maintained by the runtime
+- **Transparent Harness trace** — inspect evidence plans, deterministic repository tools, files examined, coverage budgets, and runtime decisions without exposing chain-of-thought or source contents
 - **Real-time progress** — Server-Sent Events stream stage status and detailed logs
-- **Interactive checkpoints** — correct the detected project type or choose a module to explore more deeply
 - **Structured report** — Overview, Architecture, Reading Path, code conventions, setup instructions, and contribution opportunities
-- **Shared Harness state** — repository coverage, evidence plans, examined paths, unresolved evidence, user focus, and global budgets move across stages without relying on growing chat history
+- **Structured coverage boundaries** — missing evidence, test absence, read limits, and deliberate exclusions use stable machine-readable gap types
+- **Shared Harness state** — repository coverage, evidence plans, examined paths, unresolved evidence, and global budgets move across stages without relying on growing chat history
 - **Repository and analysis caching** — local clones are updated in place; completed reports are cached by repository, branch, commit, and pipeline version
 - **Persistent tasks** — SQLite stores task state, completed reports, and compatible analysis experience
 - **Reliability controls** — path sandboxing, repository size limits, stage-specific context budgets, timeouts, retry classification, and schema validation
@@ -224,7 +242,7 @@ The production server is available at [http://localhost:3000](http://localhost:3
 ## Testing
 
 ```bash
-npm test                  # backend tests
+npm test                  # complete test suite
 npm test --workspace=web  # frontend tests
 npm run build             # frontend and backend production build
 ```
@@ -241,7 +259,7 @@ RepoMentor/
 ├── skills/                 # SKILL.md strategies + executable skill.json Harness policies
 ├── src/
 │   ├── db/                 # SQLite migrations and repositories
-│   ├── lib/                # Git, SSE, sandbox, schemas, repository profile
+│   ├── lib/                # Git, SSE, sandbox, schemas, repository profile, content adapters
 │   ├── routes/             # Fastify API and event-stream routes
 │   └── services/           # Repository Harness, orchestration, pipeline, and provider integration
 ├── web/                    # React dashboard
@@ -255,7 +273,7 @@ RepoMentor/
 |---|---|---|
 | `POST` | `/api/analysis` | Create an analysis task from `repoUrl` and optional `branch` |
 | `GET` | `/api/analysis/:id` | Read task status or the completed report |
-| `POST` | `/api/analysis/:id/ask` | Answer an active interaction question |
+| `POST` | `/api/analysis/:id/ask` | Answer an active interaction question in optional interactive flows |
 | `GET` | `/api/analysis/:id/stream` | Subscribe to task events over SSE |
 | `GET` | `/api/settings/model` | Read non-secret local model configuration metadata |
 | `PUT` | `/api/settings/model` | Save the local provider, endpoint, model, and optional API key |

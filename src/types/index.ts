@@ -66,7 +66,20 @@ export interface EvidenceClaim {
 
 export interface EvidenceCoverage {
   examinedFiles: string[];
-  gaps: string[];
+  gaps: EvidenceGap[];
+}
+
+export type EvidenceGapKind =
+  | "missing_evidence"
+  | "test_absent"
+  | "coverage_limit"
+  | "out_of_scope";
+
+export interface EvidenceGap {
+  kind: EvidenceGapKind;
+  subject: string;
+  summary: string;
+  severity: "high" | "medium" | "low";
 }
 
 export interface EvidenceFirstOutput {
@@ -168,7 +181,22 @@ export interface EvidenceFile extends RepositoryFileExcerpt {
 export interface EvidenceBundle {
   files: EvidenceFile[];
   skippedPaths: string[];
+  omissions: EvidenceOmission[];
   totalBytes: number;
+}
+
+export type EvidenceOmissionReason =
+  | "duplicate_request"
+  | "already_available"
+  | "not_tracked"
+  | "file_limit"
+  | "budget_exhausted"
+  | "oversized"
+  | "unreadable";
+
+export interface EvidenceOmission {
+  path: string;
+  reason: EvidenceOmissionReason;
 }
 
 // ========== Repository Harness ==========
@@ -256,6 +284,7 @@ export type HarnessStopReason =
   | "evidence_batch_completed"
   | "evidence_gaps_recorded"
   | "no_valid_evidence_selected"
+  | "existing_evidence_reused"
   | "global_evidence_budget_exhausted";
 
 export interface HarnessStageState {

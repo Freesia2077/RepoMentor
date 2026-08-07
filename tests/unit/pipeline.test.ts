@@ -52,7 +52,7 @@ const repositoryProfile = {
   treeTruncated: false,
   directoryStats: [],
   readme: { path: "README.md", content: "# Test project", truncated: false },
-  manifests: [],
+  manifests: [{ path: "package.json", content: "{}", truncated: false }],
   exampleManifests: [],
   configFiles: [],
   guidanceFiles: [],
@@ -103,14 +103,16 @@ vi.mock("../../src/lib/repository-profile.js", () => ({
   buildRepositoryProfile: vi.fn(async () => repositoryProfile),
   buildRepositoryOverview: vi.fn(() => repositoryOverview),
   buildRepositoryContributionContext: vi.fn(() => repositoryContext),
-  buildContributionEvidence: vi.fn((bundle: any) => ({
+  buildContributionEvidence: vi.fn((bundle: any, referencedPaths: string[] = []) => ({
     examinedFiles: bundle.files.map((file: any) => ({
       path: file.path,
       purpose: file.purpose,
       phase: file.phase,
       truncated: file.truncated,
     })),
-    focusedFiles: bundle.files.filter((file: any) => file.phase === "mentor"),
+    focusedFiles: bundle.files.filter((file: any) =>
+      referencedPaths.includes(file.path) || file.phase === "mentor"
+    ),
     totalBytes: 10,
   })),
   buildEvidenceBundle: mocks.buildEvidenceBundle,
@@ -130,7 +132,7 @@ vi.mock("../../src/db/repositories/experiences.js", () => ({
   save: mocks.experienceSave,
 }));
 
-import { executePipeline, resolveQuestion, type PipelineContext } from "../../src/services/pipeline.js";
+import { executePipeline, type PipelineContext } from "../../src/services/pipeline.js";
 import { sseManager } from "../../src/lib/sse.js";
 
 describe("analysis pipeline", () => {
@@ -152,17 +154,17 @@ describe("analysis pipeline", () => {
     }));
     mocks.buildEvidenceBundle.mockImplementation(async (
       _localPath: string,
-      _plan: unknown,
+      plan: any,
       phase: "explorer" | "mentor",
     ) => ({
       files: phase === "explorer"
-        ? [{
-            path: "src/index.ts",
-            content: "export {}",
+        ? plan.files.map((request: any) => ({
+            path: request.path,
+            content: `source:${request.path}`,
             truncated: false,
-            purpose: "entry",
+            purpose: request.purpose,
             phase,
-          }]
+          }))
         : [{
             path: "src/core.ts",
             content: "export class Core {}",
@@ -171,14 +173,15 @@ describe("analysis pipeline", () => {
             phase,
           }],
       skippedPaths: [],
+      omissions: [],
       totalBytes: 10,
     }));
   });
 
-  it("feeds interaction answers and stored experiences into later agents", async () => {
+  it("uses the complete-coverage path for small repositories and reuses evidence", async () => {
     mocks.cacheFind.mockReturnValue(undefined);
     mocks.experienceFind.mockReturnValue([{
-      content: "[harness-skills-v6]\nhistorical architecture lesson",
+      content: "[adaptive-harness-v7]\nhistorical architecture lesson",
     }]);
     mocks.runStage.mockImplementation(async (stage: string) => {
       if (stage === "explorer") {
@@ -243,36 +246,30 @@ describe("analysis pipeline", () => {
       pendingQuestion: null,
     };
 
-    const pipelinePromise = executePipeline(ctx);
-
-    await vi.waitFor(() => expect(ctx.pendingQuestion?.questionId).toBe("q_explorer_review"));
-    expect(resolveQuestion(ctx, "q_explorer_review", "实际是 CLI 工具")).toBe(true);
-
-    await vi.waitFor(() => expect(ctx.pendingQuestion?.questionId).toBe("q_deps"));
-    expect(resolveQuestion(ctx, "q_deps", "src/core")).toBe(true);
-
-    await pipelinePromise;
+    await executePipeline(ctx);
 
     const mentorCall = mocks.runStage.mock.calls.find(([stage]) => stage === "mentor");
     expect(mentorCall?.[1]).toMatchObject({
       experiences: "historical architecture lesson",
-      userFocus: "实际是 CLI 工具",
       repositoryOverview,
       evidenceBundle: expect.objectContaining({
         files: expect.arrayContaining([
           expect.objectContaining({ path: "src/index.ts" }),
           expect.objectContaining({ path: "src/core.ts" }),
+          expect.objectContaining({ path: "tests/core.test.ts" }),
         ]),
       }),
       harnessState: expect.objectContaining({
-        userFocus: ["实际是 CLI 工具"],
-        budget: expect.objectContaining({ usedEvidenceBatches: 2, filesRead: 2 }),
+        userFocus: [],
+        budget: expect.objectContaining({ usedEvidenceBatches: 1, filesRead: 3 }),
+        stages: expect.objectContaining({
+          mentor: expect.objectContaining({ stopReason: "existing_evidence_reused" }),
+        }),
       }),
     });
 
     const contributorCall = mocks.runStage.mock.calls.find(([stage]) => stage === "contributor");
     expect(contributorCall?.[1]).toMatchObject({
-      userFocus: "src/core",
       mentorOutput: {
         evidenceClaims: [expect.objectContaining({
           evidence: [expect.objectContaining({ path: "README.md" })],
@@ -280,10 +277,10 @@ describe("analysis pipeline", () => {
       },
       repositoryContext,
       contributionEvidence: expect.objectContaining({
-        focusedFiles: [expect.objectContaining({ path: "src/core.ts" })],
+        focusedFiles: [expect.objectContaining({ path: "src/index.ts" })],
       }),
       harnessState: expect.objectContaining({
-        userFocus: ["实际是 CLI 工具", "src/core"],
+        userFocus: [],
         stages: expect.objectContaining({
           explorer: expect.objectContaining({ status: "completed" }),
           mentor: expect.objectContaining({ status: "completed" }),
@@ -295,10 +292,14 @@ describe("analysis pipeline", () => {
       fileCount: 10,
       repositoryProfile,
       evidenceBundle: expect.objectContaining({
-        files: [expect.objectContaining({ path: "src/index.ts" })],
+        files: expect.arrayContaining([
+          expect.objectContaining({ path: "src/index.ts" }),
+          expect.objectContaining({ path: "src/core.ts" }),
+          expect.objectContaining({ path: "tests/core.test.ts" }),
+        ]),
       }),
       harnessState: expect.objectContaining({
-        budget: expect.objectContaining({ usedEvidenceBatches: 1, filesRead: 1 }),
+        budget: expect.objectContaining({ usedEvidenceBatches: 1, filesRead: 3 }),
         stages: expect.objectContaining({
           explorer: expect.objectContaining({ status: "evidence_ready" }),
         }),
@@ -319,35 +320,18 @@ describe("analysis pipeline", () => {
         trace: expect.objectContaining({ tool: "inspect_git_history" }),
       }),
       expect.objectContaining({
-        trace: expect.objectContaining({
-          kind: "decision",
-          title: "用户指引已应用",
-        }),
+        trace: expect.objectContaining({ title: "已启用小仓库直接覆盖路径" }),
       }),
     ]));
-    expect(mocks.planEvidence).toHaveBeenCalledTimes(2);
-    expect(mocks.buildEvidenceBundle).toHaveBeenCalledTimes(2);
-    expect(mocks.planEvidence.mock.calls[0]?.[0]).toBe("explorer");
-    expect(mocks.planEvidence.mock.calls[0]?.[5]).toBe(pipelineModelSettings);
+    expect(mocks.planEvidence).not.toHaveBeenCalled();
+    expect(mocks.buildEvidenceBundle).toHaveBeenCalledOnce();
     expect(mentorCall?.[5]).toBe(pipelineModelSettings);
-    expect(mocks.planEvidence.mock.calls[0]?.[1]).toMatchObject({
-      repositoryProfile,
-      harnessState: expect.objectContaining({
-        budget: expect.objectContaining({ usedEvidenceBatches: 0 }),
-      }),
-    });
-    expect(mocks.planEvidence.mock.calls[1]?.[0]).toBe("mentor");
-    expect(mocks.planEvidence.mock.calls[1]?.[1]).toMatchObject({
-      repositoryProfile,
-      existingEvidencePaths: ["src/index.ts"],
-      userFocus: "实际是 CLI 工具",
-    });
     expect(mocks.cacheFind).toHaveBeenCalledWith(
       {},
       "owner",
       "repo",
       "main",
-      expect.stringMatching(/^harness-skills-v6:[a-f0-9]{12}:abc123$/),
+      expect.stringMatching(/^adaptive-harness-v7:[a-f0-9]{12}:abc123$/),
     );
     expect(mocks.experienceSave).toHaveBeenCalledOnce();
   });

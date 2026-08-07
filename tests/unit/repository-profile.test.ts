@@ -196,7 +196,153 @@ describe("repository profile and evidence", () => {
       }),
     ]);
     expect(bundle.skippedPaths).toEqual(["missing.ts", "src/index.ts"]);
+    expect(bundle.omissions).toEqual([
+      { path: "missing.ts", reason: "not_tracked" },
+      { path: "src/index.ts", reason: "duplicate_request" },
+    ]);
     expect(bundle.totalBytes).toBeGreaterThan(0);
+  });
+
+  it("extracts Notebook source cells without spending evidence budget on outputs", async () => {
+    const notebook = JSON.stringify({
+      cells: [
+        {
+          cell_type: "markdown",
+          source: ["# Training demo\n", "A minimal optimization loop."],
+        },
+        {
+          cell_type: "code",
+          source: [
+            "for k in range(100):\n",
+            "    loss = model(inputs)\n",
+            "    loss.backward()\n",
+            "    for p in model.parameters():\n",
+            "        p.data -= 0.1 * p.grad\n",
+          ],
+          outputs: [{ output_type: "stream", text: ["x".repeat(20_000)] }],
+        },
+      ],
+      metadata: { bulky: "y".repeat(20_000) },
+      nbformat: 4,
+      nbformat_minor: 5,
+    });
+    const repository = await createRepository({ "demo.ipynb": notebook });
+
+    const bundle = await buildEvidenceBundle(
+      repository,
+      {
+        goal: "确认端到端训练流程",
+        rationale: "读取 Notebook 中的可执行示例",
+        questions: ["训练循环如何更新参数？"],
+        actions: [],
+        files: [{ path: "demo.ipynb", purpose: "训练示例", priority: "high" }],
+        stopConditions: ["训练循环已完整读取"],
+      },
+      "explorer",
+      [],
+      ["demo.ipynb"],
+    );
+
+    expect(bundle.files[0]).toMatchObject({
+      path: "demo.ipynb",
+      truncated: false,
+      content: expect.stringContaining("p.data -= 0.1 * p.grad"),
+    });
+    expect(bundle.files[0]?.content).not.toContain("x".repeat(100));
+    expect(bundle.files[0]?.content).not.toContain("bulky");
+    expect(bundle.totalBytes).toBeLessThan(1_000);
+  });
+
+  it("records an explicit omission when a container file exceeds its adapter limit", async () => {
+    const repository = await createRepository({
+      "large-demo.ipynb": Buffer.alloc(20_000_001, 0x78),
+    });
+
+    const bundle = await buildEvidenceBundle(
+      repository,
+      {
+        goal: "检查大型示例",
+        rationale: "超出适配器限制时保留明确状态",
+        questions: [],
+        actions: [],
+        files: [{ path: "large-demo.ipynb", purpose: "训练示例", priority: "high" }],
+        stopConditions: ["示例已读取或缺口已记录"],
+      },
+      "explorer",
+      [],
+      ["large-demo.ipynb"],
+    );
+
+    expect(bundle.files).toEqual([]);
+    expect(bundle.omissions).toEqual([
+      { path: "large-demo.ipynb", reason: "oversized" },
+    ]);
+  });
+
+  it("allocates evidence after preparing all files so order does not cause truncation", async () => {
+    const files = Object.fromEntries([
+      ["src/large.ts", "a".repeat(12_000)],
+      ...Array.from({ length: 7 }, (_, index) => [
+        `src/small-${index}.ts`,
+        String(index).repeat(4_000),
+      ]),
+    ]);
+    const repository = await createRepository(files);
+    const requestedFiles = Object.keys(files).map((file, index) => ({
+      path: file,
+      purpose: `evidence ${index}`,
+      priority: "high" as const,
+    }));
+
+    const bundle = await buildEvidenceBundle(
+      repository,
+      {
+        goal: "读取完整的小型证据集",
+        rationale: "总内容小于阶段预算",
+        questions: [],
+        actions: [],
+        files: requestedFiles,
+        stopConditions: ["所有请求均完整读取"],
+      },
+      "explorer",
+      [],
+      Object.keys(files),
+    );
+
+    expect(bundle.files).toHaveLength(8);
+    expect(bundle.files.every((file) => !file.truncated)).toBe(true);
+    expect(bundle.files[0]?.content).toHaveLength(12_000);
+    expect(bundle.totalBytes).toBe(40_000);
+  });
+
+  it("distinguishes reusable evidence from true omissions", async () => {
+    const repository = await createRepository({
+      "src/index.ts": "export const value = true;",
+    });
+
+    const bundle = await buildEvidenceBundle(
+      repository,
+      {
+        goal: "复用入口证据",
+        rationale: "避免重复读取",
+        questions: [],
+        actions: [],
+        files: [
+          { path: "src/index.ts", purpose: "公共入口", priority: "high" },
+          { path: "missing.ts", purpose: "缺失实现", priority: "medium" },
+        ],
+        stopConditions: ["复用或记录真实缺口"],
+      },
+      "mentor",
+      ["src\\index.ts"],
+      ["src/index.ts"],
+    );
+
+    expect(bundle.files).toEqual([]);
+    expect(bundle.omissions).toEqual([
+      { path: "src/index.ts", reason: "already_available" },
+      { path: "missing.ts", reason: "not_tracked" },
+    ]);
   });
 
   it("builds a compact Mentor overview without repeating repository file contents", async () => {
@@ -230,7 +376,7 @@ describe("repository profile and evidence", () => {
     expect(serialized).not.toContain("fileIndex");
   });
 
-  it("builds a focused Contributor context without repeating Explorer source bodies", async () => {
+  it("builds a focused Contributor context from referenced evidence across stages", async () => {
     const repository = await createRepository({
       "package.json": "{\"scripts\":{\"test\":\"vitest\"}}",
       "CONTRIBUTING.md": "Run tests before submitting.",
@@ -262,16 +408,18 @@ describe("repository profile and evidence", () => {
         },
       ],
       skippedPaths: [],
+      omissions: [],
       totalBytes: 42,
-    });
+    }, ["src/index.ts"]);
 
     expect(context.manifests[0]?.content).toContain("vitest");
     expect(context.guidanceFiles[0]?.content).toContain("Run tests");
     expect(contributionEvidence.examinedFiles).toHaveLength(2);
     expect(contributionEvidence.focusedFiles.map((file) => file.path)).toEqual([
+      "src/index.ts",
       "src/core.ts",
     ]);
-    expect(JSON.stringify(contributionEvidence)).not.toContain("UNIQUE_EXPLORER_SOURCE");
+    expect(JSON.stringify(contributionEvidence)).toContain("UNIQUE_EXPLORER_SOURCE");
     expect(JSON.stringify(contributionEvidence)).toContain("UNIQUE_MENTOR_SOURCE");
   });
 

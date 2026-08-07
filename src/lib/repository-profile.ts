@@ -1,6 +1,11 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import { simpleGit } from "simple-git";
+import {
+  decodeBoundedUtf8,
+  prepareEvidenceContent,
+  type PreparedEvidenceContent,
+} from "./evidence-content.js";
 
 import type {
   EvidenceBundle,
@@ -41,7 +46,10 @@ const MAX_EVIDENCE_FILES: Record<EvidencePhase, number> = {
   explorer: 10,
   mentor: 8,
 };
-const MAX_EVIDENCE_FILE_BYTES = 8_000;
+const MAX_EVIDENCE_FILE_BYTES_WITH_SPARE_BUDGET = 24_000;
+const MIN_EVIDENCE_FILE_BYTES = 4_000;
+const MAX_CONTRIBUTION_EVIDENCE_FILES = 10;
+const MAX_CONTRIBUTION_EVIDENCE_BYTES = 40_000;
 const MAX_EVIDENCE_TOTAL_BYTES: Record<EvidencePhase, number> = {
   explorer: 48_000,
   mentor: 40_000,
@@ -307,8 +315,27 @@ export function buildRepositoryContributionContext(
 
 export function buildContributionEvidence(
   bundle: EvidenceBundle,
+  referencedPaths: string[] = [],
 ): ContributionEvidence {
-  const focusedFiles = bundle.files.filter((file) => file.phase === "mentor");
+  const referenced = new Set(referencedPaths.map((value) => value.replaceAll("\\", "/")));
+  const ordered = [...bundle.files].sort((left, right) => {
+    const leftRank = referenced.has(left.path) ? 0 : left.phase === "mentor" ? 1 : 2;
+    const rightRank = referenced.has(right.path) ? 0 : right.phase === "mentor" ? 1 : 2;
+    return leftRank - rightRank;
+  });
+  const focusedFiles: EvidenceBundle["files"] = [];
+  let focusedBytes = 0;
+  for (const file of ordered) {
+    const bytes = Buffer.byteLength(file.content, "utf8");
+    if (
+      focusedFiles.length >= MAX_CONTRIBUTION_EVIDENCE_FILES
+      || focusedBytes + bytes > MAX_CONTRIBUTION_EVIDENCE_BYTES
+    ) {
+      continue;
+    }
+    focusedFiles.push(file);
+    focusedBytes += bytes;
+  }
   return {
     examinedFiles: bundle.files.map((file) => ({
       path: file.path,
@@ -317,10 +344,7 @@ export function buildContributionEvidence(
       truncated: file.truncated,
     })),
     focusedFiles,
-    totalBytes: focusedFiles.reduce(
-      (total, file) => total + Buffer.byteLength(file.content, "utf8"),
-      0,
-    ),
+    totalBytes: focusedBytes,
   };
 }
 
@@ -335,40 +359,72 @@ export async function buildEvidenceBundle(
   const trackedSet = new Set(
     trackedFiles.map((file) => file.replaceAll("\\", "/")).filter(Boolean),
   );
-  const existingSet = new Set(existingPaths);
+  const existingSet = new Set(
+    existingPaths.map((file) => file.replaceAll("\\", "/").replace(/^\.\/+/, "")),
+  );
   const seen = new Set<string>();
   const files: EvidenceBundle["files"] = [];
   const skippedPaths: string[] = [];
-  let remainingBytes = MAX_EVIDENCE_TOTAL_BYTES[phase];
+  const omissions: EvidenceBundle["omissions"] = [];
+  const candidates: Array<{ request: EvidencePlan["files"][number]; path: string }> = [];
 
   for (const request of plan.files) {
     const relativePath = request.path.replaceAll("\\", "/").replace(/^\.\/+/, "");
-    if (
-      seen.has(relativePath)
-      || existingSet.has(relativePath)
-      || !trackedSet.has(relativePath)
-      || files.length >= MAX_EVIDENCE_FILES[phase]
-      || remainingBytes <= 0
-    ) {
+    let omissionReason: EvidenceBundle["omissions"][number]["reason"] | null = null;
+    if (seen.has(relativePath)) omissionReason = "duplicate_request";
+    else {
+      seen.add(relativePath);
+      if (existingSet.has(relativePath)) omissionReason = "already_available";
+      else if (!trackedSet.has(relativePath)) omissionReason = "not_tracked";
+      else if (candidates.length >= MAX_EVIDENCE_FILES[phase]) omissionReason = "file_limit";
+    }
+    if (omissionReason) {
       skippedPaths.push(relativePath);
+      omissions.push({ path: relativePath, reason: omissionReason });
       continue;
     }
-    seen.add(relativePath);
+    candidates.push({ request, path: relativePath });
+  }
 
-    const evidence = await readRepositoryFile(
+  const prepared: Array<{
+    request: EvidencePlan["files"][number];
+    file: PreparedEvidenceContent;
+  }> = [];
+  for (const candidate of candidates) {
+    const result = await prepareEvidenceContent(
       localPath,
-      relativePath,
-      Math.min(MAX_EVIDENCE_FILE_BYTES, remainingBytes),
+      candidate.path,
+      MAX_EVIDENCE_FILE_BYTES_WITH_SPARE_BUDGET,
     );
-    if (!evidence) {
-      skippedPaths.push(relativePath);
+    if (!result.file) {
+      skippedPaths.push(candidate.path);
+      omissions.push({ path: candidate.path, reason: result.reason });
       continue;
     }
+    prepared.push({ request: candidate.request, file: result.file });
+  }
 
-    remainingBytes -= Buffer.byteLength(evidence.content, "utf8");
+  const budgets = allocateEvidenceBudgets(
+    prepared.map(({ request, file }) => ({ request, targetBytes: Buffer.byteLength(file.content, "utf8") })),
+    MAX_EVIDENCE_TOTAL_BYTES[phase],
+  );
+  for (let index = 0; index < prepared.length; index++) {
+    const item = prepared[index]!;
+    const budget = budgets[index] ?? 0;
+    const targetBytes = Buffer.byteLength(item.file.content, "utf8");
+    if (budget <= 0 && targetBytes > 0) {
+      skippedPaths.push(item.file.path);
+      omissions.push({ path: item.file.path, reason: "budget_exhausted" });
+      continue;
+    }
+    const content = decodeBoundedUtf8(Buffer.from(item.file.content, "utf8"), budget);
+
     files.push({
-      ...evidence,
-      purpose: request.purpose,
+      path: item.file.path,
+      content,
+      truncated: item.file.truncated
+        || Buffer.byteLength(content, "utf8") < item.file.sourceBytes,
+      purpose: item.request.purpose,
       phase,
     });
   }
@@ -376,11 +432,40 @@ export async function buildEvidenceBundle(
   return {
     files,
     skippedPaths: [...new Set(skippedPaths)],
+    omissions,
     totalBytes: files.reduce(
       (total, file) => total + Buffer.byteLength(file.content, "utf8"),
       0,
     ),
   };
+}
+
+function allocateEvidenceBudgets(
+  candidates: Array<{
+    request: EvidencePlan["files"][number];
+    targetBytes: number;
+  }>,
+  totalBudget: number,
+): number[] {
+  const targets = candidates.map(({ targetBytes }) =>
+    Math.min(targetBytes, MAX_EVIDENCE_FILE_BYTES_WITH_SPARE_BUDGET)
+  );
+  if (targets.reduce((total, value) => total + value, 0) <= totalBudget) return targets;
+
+  const budgets = targets.map((target) => Math.min(target, MIN_EVIDENCE_FILE_BYTES));
+  let remaining = Math.max(0, totalBudget - budgets.reduce((total, value) => total + value, 0));
+  const priorityRank = { high: 0, medium: 1, low: 2 } as const;
+  const order = candidates
+    .map(({ request }, index) => ({ index, rank: priorityRank[request.priority] }))
+    .sort((left, right) => left.rank - right.rank || left.index - right.index);
+  for (const { index } of order) {
+    if (remaining <= 0) break;
+    const needed = targets[index]! - budgets[index]!;
+    const granted = Math.min(needed, remaining);
+    budgets[index] = budgets[index]! + granted;
+    remaining -= granted;
+  }
+  return budgets;
 }
 
 async function listTrackedFiles(localPath: string): Promise<string[]> {
@@ -452,33 +537,13 @@ async function readRepositoryFile(
   relativePath: string,
   maxBytes: number,
 ): Promise<RepositoryFileExcerpt | null> {
-  if (maxBytes <= 0) return null;
-  const root = path.resolve(localPath);
-  const absolutePath = path.resolve(root, ...relativePath.split("/"));
-  if (absolutePath !== root && !absolutePath.startsWith(`${root}${path.sep}`)) return null;
-
-  let handle: Awaited<ReturnType<typeof fs.open>> | undefined;
-  try {
-    const stat = await fs.lstat(absolutePath);
-    if (!stat.isFile() || stat.isSymbolicLink()) return null;
-
-    handle = await fs.open(absolutePath, "r");
-    const bytesToRead = Math.min(maxBytes, stat.size);
-    const buffer = Buffer.alloc(bytesToRead);
-    const { bytesRead } = await handle.read(buffer, 0, bytesToRead, 0);
-    const contentBuffer = buffer.subarray(0, bytesRead);
-    if (contentBuffer.includes(0)) return null;
-
-    return {
-      path: relativePath,
-      content: contentBuffer.toString("utf8"),
-      truncated: stat.size > bytesRead,
-    };
-  } catch {
-    return null;
-  } finally {
-    await handle?.close();
-  }
+  const result = await prepareEvidenceContent(localPath, relativePath, maxBytes);
+  if (!result.file) return null;
+  return {
+    path: result.file.path,
+    content: result.file.content,
+    truncated: result.file.truncated,
+  };
 }
 
 function buildTopLevelTree(files: string[]): { entries: string[]; truncated: boolean } {

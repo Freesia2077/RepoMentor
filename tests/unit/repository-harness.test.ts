@@ -19,6 +19,7 @@ import {
   REPOSITORY_HARNESS_TOOLS,
   RepositoryHarness,
 } from "../../src/services/repository-harness.js";
+import type { HarnessSkillPolicy } from "../../src/types/index.js";
 
 const profile = {
   fileCount: 4,
@@ -48,7 +49,7 @@ describe("RepositoryHarness", () => {
       recentThemes: ["refactor core"],
       contributorCount: 2,
     });
-    mocks.buildEvidenceBundle.mockResolvedValue({ files: [], skippedPaths: [], totalBytes: 0 });
+    mocks.buildEvidenceBundle.mockResolvedValue({ files: [], skippedPaths: [], omissions: [], totalBytes: 0 });
   });
 
   it("publishes a provider-neutral repository map trace", async () => {
@@ -77,6 +78,7 @@ describe("RepositoryHarness", () => {
         phase: "explorer",
       }],
       skippedPaths: ["missing.ts"],
+      omissions: [{ path: "missing.ts", reason: "not_tracked" }],
       totalBytes: 13,
     });
     const traces: any[] = [];
@@ -122,11 +124,336 @@ describe("RepositoryHarness", () => {
         },
       },
     });
+    const verified = harness.verifyEvidenceOutput("explorer", {
+      evidenceClaims: [],
+      evidenceCoverage: { examinedFiles: [], gaps: [] },
+    });
+    expect(verified.evidenceCoverage.gaps).toEqual([
+      expect.objectContaining({
+        kind: "missing_evidence",
+        subject: "missing.ts",
+      }),
+    ]);
     expect(() => harness.recordEvidencePlan("explorer", plan)).toThrow(HarnessInvariantError);
   });
 
+  it("selects complete relevant coverage for a small repository and reuses it for Mentor", async () => {
+    mocks.buildEvidenceBundle.mockImplementation(async (_path, plan, phase) => ({
+      files: plan.files.map((request: any) => ({
+        path: request.path,
+        content: `source:${request.path}`,
+        truncated: false,
+        purpose: request.purpose,
+        phase,
+      })),
+      skippedPaths: [],
+      omissions: [],
+      totalBytes: 60,
+    }));
+    const traces: any[] = [];
+    const harness = new RepositoryHarness("C:\\repo", (entry) => traces.push(entry));
+    await harness.getRepositoryMap();
+    const policy: HarnessSkillPolicy = {
+      skillNames: ["small-repository"],
+      allowedTools: ["search_symbols", "trace_module_dependencies", "find_related_tests"],
+      preferredTools: [],
+      recommendedQuestions: ["核心流程是什么？"],
+      evidenceRequirements: ["读取源码和测试"],
+      stopConditions: ["所有相关文件均已读取"],
+      maxDiscoveryActions: 3,
+      maxEvidenceFiles: 8,
+    };
+    harness.activateSkillPolicy("explorer", policy);
+
+    const plan = harness.createCompleteCoveragePlan("explorer", policy);
+    expect(plan?.files.map((file) => file.path)).toEqual([
+      "src/index.ts",
+      "src/core.ts",
+      "tests/core.test.ts",
+    ]);
+    await harness.executeEvidencePlan("explorer", plan!);
+    expect(harness.hasCompleteEvidenceCoverage("explorer")).toBe(true);
+    harness.completeStage("explorer");
+    harness.activateSkillPolicy("mentor", policy);
+    const reused = harness.reuseExistingEvidenceForStage("mentor");
+
+    expect(reused.files).toHaveLength(3);
+    expect(mocks.buildEvidenceBundle).toHaveBeenCalledOnce();
+    expect(harness.getContextView()).toMatchObject({
+      budget: { usedEvidenceBatches: 1, filesRead: 3 },
+      stages: {
+        mentor: {
+          status: "evidence_ready",
+          stopReason: "existing_evidence_reused",
+          examinedPaths: ["src/index.ts", "src/core.ts", "tests/core.test.ts"],
+        },
+      },
+    });
+    expect(traces).toEqual(expect.arrayContaining([
+      expect.objectContaining({ title: "已启用小仓库直接覆盖路径" }),
+      expect.objectContaining({ title: "已复用完整仓库证据" }),
+    ]));
+  });
+
+  it("does not claim complete coverage when a selected file is truncated", async () => {
+    mocks.buildEvidenceBundle.mockImplementation(async (_path, plan, phase) => ({
+      files: plan.files.map((request: any, index: number) => ({
+        path: request.path,
+        content: `source:${request.path}`,
+        truncated: index === 0,
+        purpose: request.purpose,
+        phase,
+      })),
+      skippedPaths: [],
+      omissions: [],
+      totalBytes: 60,
+    }));
+    const harness = new RepositoryHarness("C:\\repo");
+    await harness.getRepositoryMap();
+    const policy: HarnessSkillPolicy = {
+      skillNames: ["small-repository"],
+      allowedTools: [],
+      preferredTools: [],
+      recommendedQuestions: [],
+      evidenceRequirements: [],
+      stopConditions: ["全部相关文件均有完整证据"],
+      maxDiscoveryActions: 0,
+      maxEvidenceFiles: 8,
+    };
+    harness.activateSkillPolicy("explorer", policy);
+    const plan = harness.createCompleteCoveragePlan("explorer", policy)!;
+
+    await harness.executeEvidencePlan("explorer", plan);
+    harness.completeStage("explorer");
+
+    expect(harness.hasCompleteEvidenceCoverage("explorer")).toBe(false);
+    expect(() => harness.reuseExistingEvidenceForStage("mentor")).toThrow(
+      "只有 Mentor 可以复用已完整读取的小仓库证据集",
+    );
+  });
+
+  it("falls back to Orchestrator planning when an unclassified file could be relevant", async () => {
+    mocks.buildRepositoryProfile.mockResolvedValueOnce({
+      ...profile,
+      fileIndex: [...profile.fileIndex, "schema/custom.avsc"],
+      fileCount: 6,
+    });
+    const harness = new RepositoryHarness("C:\\repo");
+    await harness.getRepositoryMap();
+    const policy: HarnessSkillPolicy = {
+      skillNames: ["small-repository"],
+      allowedTools: [],
+      preferredTools: [],
+      recommendedQuestions: [],
+      evidenceRequirements: [],
+      stopConditions: ["相关文件已覆盖"],
+      maxDiscoveryActions: 0,
+      maxEvidenceFiles: 8,
+    };
+    harness.activateSkillPolicy("explorer", policy);
+
+    expect(harness.createCompleteCoveragePlan("explorer", policy)).toBeNull();
+  });
+
+  it("treats already-read files as reused evidence instead of coverage gaps", async () => {
+    mocks.buildEvidenceBundle.mockResolvedValue({
+      files: [],
+      skippedPaths: ["src/index.ts"],
+      omissions: [{ path: "src/index.ts", reason: "already_available" }],
+      totalBytes: 0,
+    });
+    const harness = new RepositoryHarness("C:\\repo");
+    await harness.getRepositoryMap();
+    const plan = {
+      goal: "复用入口",
+      rationale: "入口已读取",
+      questions: [],
+      actions: [],
+      files: [{ path: "src/index.ts", purpose: "公共入口", priority: "high" as const }],
+      stopConditions: ["入口证据可用"],
+    };
+    harness.recordEvidencePlan("explorer", plan);
+
+    await harness.readEvidenceBatch("explorer", plan, ["src/index.ts"]);
+
+    expect(harness.getContextView()).toMatchObject({
+      unresolvedQuestions: [],
+      stages: {
+        explorer: {
+          examinedPaths: ["src/index.ts"],
+          skippedPaths: [],
+          stopReason: "existing_evidence_reused",
+        },
+      },
+    });
+  });
+
+  it("resolves an earlier omission when a later stage reads the file", async () => {
+    mocks.buildEvidenceBundle
+      .mockResolvedValueOnce({
+        files: [],
+        skippedPaths: ["src/core.ts"],
+        omissions: [{ path: "src/core.ts", reason: "budget_exhausted" }],
+        totalBytes: 0,
+      })
+      .mockResolvedValueOnce({
+        files: [{
+          path: "src/core.ts",
+          content: "export class Core {}",
+          truncated: false,
+          purpose: "核心实现",
+          phase: "mentor",
+        }],
+        skippedPaths: [],
+        omissions: [],
+        totalBytes: 20,
+      });
+    const harness = new RepositoryHarness("C:\\repo");
+    const explorerPlan = {
+      goal: "定位核心实现",
+      rationale: "读取核心模块",
+      questions: [],
+      actions: [],
+      files: [{ path: "src/core.ts", purpose: "核心实现", priority: "high" as const }],
+      stopConditions: ["核心实现已检查"],
+    };
+    const mentorPlan = { ...explorerPlan, goal: "补齐核心实现证据" };
+
+    await harness.getRepositoryMap();
+    await harness.executeEvidencePlan("explorer", explorerPlan);
+    harness.completeStage("explorer");
+    await harness.executeEvidencePlan("mentor", mentorPlan);
+
+    expect(harness.getEvidenceBundle()).toMatchObject({
+      skippedPaths: [],
+      omissions: [],
+      files: [expect.objectContaining({ path: "src/core.ts", truncated: false })],
+    });
+    expect(harness.getContextView().unresolvedQuestions).toEqual([]);
+
+    const verified = harness.verifyEvidenceOutput("mentor", {
+      evidenceClaims: [],
+      evidenceCoverage: {
+        examinedFiles: [],
+        gaps: [{
+          kind: "missing_evidence" as const,
+          subject: "src/core.ts",
+          summary: "核心实现尚未读取",
+          severity: "medium" as const,
+        }],
+      },
+    });
+    expect(verified.evidenceCoverage.gaps).toEqual([]);
+  });
+
+  it("keeps a runtime coverage gap when a later stage only reads a partial file", async () => {
+    mocks.buildEvidenceBundle
+      .mockResolvedValueOnce({
+        files: [],
+        skippedPaths: ["src/core.ts"],
+        omissions: [{ path: "src/core.ts", reason: "budget_exhausted" }],
+        totalBytes: 0,
+      })
+      .mockResolvedValueOnce({
+        files: [{
+          path: "src/core.ts",
+          content: "partial core excerpt",
+          truncated: true,
+          purpose: "核心实现",
+          phase: "mentor",
+        }],
+        skippedPaths: [],
+        omissions: [],
+        totalBytes: 20,
+      });
+    const harness = new RepositoryHarness("C:\\repo");
+    const plan = {
+      goal: "读取核心实现",
+      rationale: "补齐核心模块证据",
+      questions: [],
+      actions: [],
+      files: [{ path: "src/core.ts", purpose: "核心实现", priority: "high" as const }],
+      stopConditions: ["核心实现已检查"],
+    };
+
+    await harness.getRepositoryMap();
+    await harness.executeEvidencePlan("explorer", plan);
+    harness.completeStage("explorer");
+    await harness.executeEvidencePlan("mentor", plan);
+
+    const verified = harness.verifyEvidenceOutput("mentor", {
+      evidenceClaims: [],
+      evidenceCoverage: {
+        examinedFiles: [],
+        gaps: Array.from({ length: 8 }, (_, index) => ({
+          kind: "test_absent" as const,
+          subject: `optional-${index}.ts`,
+          summary: `可选模块 ${index} 没有直接测试`,
+          severity: "medium" as const,
+        })),
+      },
+    });
+    expect(verified.evidenceCoverage.gaps).toHaveLength(8);
+    expect(verified.evidenceCoverage.gaps[0]).toMatchObject({
+      kind: "coverage_limit",
+      subject: "src/core.ts",
+      severity: "medium",
+    });
+  });
+
+  it("keeps richer evidence when a later read returns a poorer excerpt", async () => {
+    const richContent = "r".repeat(12_000);
+    mocks.buildEvidenceBundle
+      .mockResolvedValueOnce({
+        files: [{
+          path: "src/core.ts",
+          content: richContent,
+          truncated: true,
+          purpose: "核心实现",
+          phase: "explorer",
+        }],
+        skippedPaths: [],
+        omissions: [],
+        totalBytes: richContent.length,
+      })
+      .mockResolvedValueOnce({
+        files: [{
+          path: "src/core.ts",
+          content: "short excerpt",
+          truncated: true,
+          purpose: "再次检查",
+          phase: "mentor",
+        }],
+        skippedPaths: [],
+        omissions: [],
+        totalBytes: 13,
+      });
+    const harness = new RepositoryHarness("C:\\repo");
+    const plan = {
+      goal: "读取核心实现",
+      rationale: "建立源码证据",
+      questions: [],
+      actions: [],
+      files: [{ path: "src/core.ts", purpose: "核心实现", priority: "high" as const }],
+      stopConditions: ["核心实现已读取"],
+    };
+
+    await harness.getRepositoryMap();
+    await harness.executeEvidencePlan("explorer", plan);
+    harness.completeStage("explorer");
+    await harness.executeEvidencePlan("mentor", plan);
+
+    expect(harness.getEvidenceBundle().files).toEqual([
+      expect.objectContaining({
+        path: "src/core.ts",
+        content: richContent,
+        phase: "explorer",
+      }),
+    ]);
+  });
+
   it("enforces one evidence batch per stage and stage completion order", async () => {
-    mocks.buildEvidenceBundle.mockResolvedValue({ files: [], skippedPaths: [], totalBytes: 0 });
+    mocks.buildEvidenceBundle.mockResolvedValue({ files: [], skippedPaths: [], omissions: [], totalBytes: 0 });
     const harness = new RepositoryHarness("C:\\repo");
     const plan = {
       goal: "entry",
@@ -158,6 +485,7 @@ describe("RepositoryHarness", () => {
         phase: "explorer",
       }],
       skippedPaths: [],
+      omissions: [],
       totalBytes: 20,
     });
     const harness = new RepositoryHarness("C:\\repo");
@@ -189,7 +517,78 @@ describe("RepositoryHarness", () => {
       evidence: [{ path: "src/core.ts" }],
     });
     expect(verified.evidenceCoverage.examinedFiles).toEqual(["src/core.ts"]);
-    expect(verified.evidenceCoverage.gaps.join(" ")).toContain("unsupported");
+    expect(verified.evidenceCoverage.gaps).toEqual([]);
+  });
+
+  it("preserves semantic gaps, filters explicit exclusions, and deduplicates by subject", async () => {
+    mocks.buildEvidenceBundle.mockResolvedValue({
+      files: [{
+        path: "src/core.ts",
+        content: "export class Core {}",
+        truncated: false,
+        purpose: "core implementation",
+        phase: "explorer",
+      }],
+      skippedPaths: [],
+      omissions: [],
+      totalBytes: 20,
+    });
+    const harness = new RepositoryHarness("C:\\repo");
+    const plan = {
+      goal: "verify core",
+      rationale: "read core",
+      questions: [],
+      actions: [],
+      files: [{ path: "src/core.ts", purpose: "core", priority: "high" as const }],
+      stopConditions: ["core covered"],
+    };
+    await harness.getRepositoryMap();
+    await harness.executeEvidencePlan("explorer", plan);
+
+    const verified = harness.verifyEvidenceOutput("explorer", {
+      evidenceClaims: [],
+      evidenceCoverage: {
+        examinedFiles: [],
+        gaps: [
+          {
+            kind: "out_of_scope" as const,
+            subject: "LICENSE",
+            summary: "LICENSE 未读取",
+            severity: "medium" as const,
+          },
+          {
+            kind: "missing_evidence" as const,
+            subject: "可选插件运行时",
+            summary: "规划阶段未选择可选插件，因此其运行时行为尚未确认",
+            severity: "medium" as const,
+          },
+          {
+            kind: "test_absent" as const,
+            subject: "src/core.ts",
+            summary: "核心模块没有直接测试",
+            severity: "medium" as const,
+          },
+          {
+            kind: "test_absent" as const,
+            subject: "src/core.ts",
+            summary: "仍需补充核心模块测试",
+            severity: "high" as const,
+          },
+        ],
+      },
+    });
+
+    expect(verified.evidenceCoverage.gaps).toEqual([
+      expect.objectContaining({
+        kind: "missing_evidence",
+        subject: "可选插件运行时",
+      }),
+      expect.objectContaining({
+        kind: "test_absent",
+        subject: "src/core.ts",
+        severity: "high",
+      }),
+    ]);
   });
 
   it("declares a small deterministic domain-tool surface", () => {
@@ -305,7 +704,7 @@ describe("RepositoryHarness", () => {
   });
 
   it("keeps Git inspection inside the Harness and after Mentor", async () => {
-    mocks.buildEvidenceBundle.mockResolvedValue({ files: [], skippedPaths: [], totalBytes: 0 });
+    mocks.buildEvidenceBundle.mockResolvedValue({ files: [], skippedPaths: [], omissions: [], totalBytes: 0 });
     const traces: any[] = [];
     const harness = new RepositoryHarness("C:\\repo", (entry) => traces.push(entry));
     const explorerPlan = {

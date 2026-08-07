@@ -33,7 +33,7 @@ import type { ModelSettings } from "./model-settings.js";
 import { RepositoryHarness } from "./repository-harness.js";
 import { loadHarnessSkill } from "./harness-skills.js";
 
-const ANALYSIS_PIPELINE_VERSION = "harness-skills-v6";
+const ANALYSIS_PIPELINE_VERSION = "adaptive-harness-v7";
 
 // ========== Pipeline 上下文 & 类型 ==========
 
@@ -183,19 +183,30 @@ export async function executePipeline(ctx: PipelineContext): Promise<PipelineRes
       status: "analyzing",
     });
 
-    // 1. Explorer：先规划，再由后端批量读取真实文件
+    // 1. Explorer：小仓库直接覆盖，其他仓库由 Orchestrator 定向规划
     const explorerSkill = loadHarnessSkill(["unknown"], "explorer");
     harness.activateSkillPolicy("explorer", explorerSkill.policy);
     beginStage(ctx, "explorer");
-    const explorerPlan = await planEvidenceWithRetry("explorer", {
-      repositoryProfile,
-      skillPolicy: explorerSkill.policy,
-      harnessState: harness.getContextView(),
-    }, ctx, localPath);
+    const completeCoveragePlan = harness.createCompleteCoveragePlan(
+      "explorer",
+      explorerSkill.policy,
+    );
+    const explorerPlan = completeCoveragePlan ?? await planEvidenceWithRetry(
+      "explorer",
+      {
+        repositoryProfile,
+        skillPolicy: explorerSkill.policy,
+        harnessState: harness.getContextView(),
+      },
+      ctx,
+      localPath,
+    );
     const explorerEvidence = await harness.executeEvidencePlan(
       "explorer",
       explorerPlan,
     );
+    const completeCoverageAchieved = Boolean(completeCoveragePlan)
+      && harness.hasCompleteEvidenceCoverage("explorer");
     emitEvidenceReady(ctx, "explorer", explorerEvidence.files.length, explorerEvidence.totalBytes);
 
     const explorerStageOutput = await runStageWithRetry("explorer", {
@@ -210,12 +221,6 @@ export async function executePipeline(ctx: PipelineContext): Promise<PipelineRes
       repositoryProfileEvidencePaths,
     );
     harness.completeStage("explorer");
-
-    // 交互点：Explorer 结果确认
-    const explorerFeedback = await askUser(ctx, "q_explorer_review", "explorer",
-      `识别项目类型为 ${explorerOutput.projectType.primary}，是否正确？`,
-      ["是", "否，请纠正"]);
-    harness.recordUserFocus(explorerFeedback);
 
     // 2. Mentor
     const mentorSkill = loadHarnessSkill([
@@ -234,19 +239,25 @@ export async function executePipeline(ctx: PipelineContext): Promise<PipelineRes
     );
 
     beginStage(ctx, "mentor");
-    const mentorPlan = await planEvidenceWithRetry("mentor", {
-      explorerOutput,
-      repositoryProfile,
-      existingEvidencePaths: harness.getContextView().evidenceIndex.map((file) => file.path),
-      skillPolicy: mentorSkill.policy,
-      harnessState: harness.getContextView(),
-      userFocus: explorerFeedback && explorerFeedback !== "是" ? explorerFeedback : undefined,
-    }, ctx, localPath);
-    const mentorEvidence = await harness.executeEvidencePlan(
-      "mentor",
-      mentorPlan,
-      harness.getContextView().evidenceIndex.map((file) => file.path),
-    );
+    const mentorEvidence = completeCoverageAchieved
+      ? harness.reuseExistingEvidenceForStage("mentor")
+      : await (async () => {
+          const reusableEvidencePaths = harness.getContextView().evidenceIndex
+            .filter((file) => !file.truncated)
+            .map((file) => file.path);
+          const mentorPlan = await planEvidenceWithRetry("mentor", {
+            explorerOutput,
+            repositoryProfile,
+            existingEvidencePaths: reusableEvidencePaths,
+            skillPolicy: mentorSkill.policy,
+            harnessState: harness.getContextView(),
+          }, ctx, localPath);
+          return harness.executeEvidencePlan(
+            "mentor",
+            mentorPlan,
+            reusableEvidencePaths,
+          );
+        })();
     const evidenceBundle = harness.getEvidenceBundle();
     emitEvidenceReady(ctx, "mentor", mentorEvidence.files.length, mentorEvidence.totalBytes);
     emitAnalysisContextReady(ctx, "mentor", repositoryOverview, evidenceBundle.totalBytes);
@@ -262,18 +273,10 @@ export async function executePipeline(ctx: PipelineContext): Promise<PipelineRes
           "",
         ))
         .join("\n\n"),
-      userFocus: explorerFeedback && explorerFeedback !== "是" ? explorerFeedback : undefined,
       harnessState: harness.getContextView(),
     }, ctx, localPath, true);
     const mentorOutput = harness.verifyEvidenceOutput("mentor", mentorStageOutput);
     harness.completeStage("mentor");
-
-    // 交互点：依赖图反馈
-    const deps = Object.entries(mentorOutput.dependencyGraph);
-    const dependencyFocus = await askUser(ctx, "q_deps", "mentor",
-      `依赖图包含 ${deps.length} 个模块。想深入了解哪个模块？`,
-      deps.slice(0, 5).map(([mod]) => mod));
-    harness.recordUserFocus(dependencyFocus);
 
     // 3. Contributor
     const commitSummary = await harness.inspectGitHistory();
@@ -291,7 +294,6 @@ export async function executePipeline(ctx: PipelineContext): Promise<PipelineRes
       repositoryContext,
       contributionEvidence,
       commitSummary,
-      userFocus: dependencyFocus || undefined,
       harnessState: harness.getContextView(),
     }, ctx, localPath);
     const contributorOutput = harness.verifyEvidenceOutput(

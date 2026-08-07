@@ -629,7 +629,7 @@ moduleMap: Array<{ path: string, responsibility: string, importance: "${MODULE_I
 directorySummary: string
 projectSummary: string
 evidenceClaims: Array<{ claim: string, confidence: "high"|"medium"|"low", evidence: Array<{ path: string, supports: string }> }>，最多 8 项
-evidenceCoverage: { examinedFiles: string[], gaps: string[] }`;
+evidenceCoverage: { examinedFiles: string[], gaps: Array<{ kind: "missing_evidence"|"test_absent"|"coverage_limit"|"out_of_scope", subject: string, summary: string, severity: "high"|"medium"|"low" }> }`;
     case "mentor":
       return `architectureOverview: string
 dependencyGraph: Record<string, string[]>
@@ -637,14 +637,14 @@ readingPath: Array<{ step: positive integer, file: string, why: string }>，最�
 keyPatterns: Array<{ pattern: string, where: string, description: string }>，最多 10 项
 codeConventions: Array<{ rule: string, example: string }>，最多 10 项
 evidenceClaims: Array<{ claim: string, confidence: "high"|"medium"|"low", evidence: Array<{ path: string, supports: string }> }>，最多 8 项
-evidenceCoverage: { examinedFiles: string[], gaps: string[] }`;
+evidenceCoverage: { examinedFiles: string[], gaps: Array<{ kind: "missing_evidence"|"test_absent"|"coverage_limit"|"out_of_scope", subject: string, summary: string, severity: "high"|"medium"|"low" }> }`;
     case "contributor":
       return `goodFirstIssues: Array<{ area: string, difficulty: "easy"|"medium"|"hard", description: string }>，最多 6 项
 contributionSetup: { devEnv: string|null, build: string|null, test: string|null, lint?: string|null }
 entryFiles: Array<{ file: string, description: string, reason: string }>，最多 10 项
 notesForNewcomers: Array<{ tip: string }>，最多 10 项
 evidenceClaims: Array<{ claim: string, confidence: "high"|"medium"|"low", evidence: Array<{ path: string, supports: string }> }>，最多 8 项
-evidenceCoverage: { examinedFiles: string[], gaps: string[] }`;
+evidenceCoverage: { examinedFiles: string[], gaps: Array<{ kind: "missing_evidence"|"test_absent"|"coverage_limit"|"out_of_scope", subject: string, summary: string, severity: "high"|"medium"|"low" }> }`;
   }
 }
 

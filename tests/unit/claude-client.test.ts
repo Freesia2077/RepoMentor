@@ -230,6 +230,7 @@ describe("Claude stage execution", () => {
         phase: "explorer",
       }],
       skippedPaths: [],
+      omissions: [],
       totalBytes: 18,
     };
     mocks.query.mockReturnValueOnce(messageStream([
@@ -271,7 +272,7 @@ describe("Claude stage execution", () => {
         guidanceFiles: [],
       },
     };
-    const evidenceBundle = { files: [], skippedPaths: [], totalBytes: 0 };
+    const evidenceBundle = { files: [], skippedPaths: [], omissions: [], totalBytes: 0 };
     mocks.query.mockReturnValueOnce(messageStream([
       resultMessage(JSON.stringify({
         architectureOverview: "architecture",

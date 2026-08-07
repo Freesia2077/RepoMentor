@@ -73,7 +73,14 @@ model: deepseek-v4-flash
   ],
   "evidenceCoverage": {
     "examinedFiles": ["src/index.ts"],
-    "gaps": ["尚未检查可选插件目录的运行时行为"]
+    "gaps": [
+      {
+        "kind": "missing_evidence",
+        "subject": "可选插件运行时",
+        "summary": "尚未检查可选插件目录的运行时行为",
+        "severity": "medium"
+      }
+    ]
   }
 }
 ```
@@ -90,3 +97,4 @@ model: deepseek-v4-flash
 - 如果无法确定某字段，使用 null 或空数组 []，不要编造
 - evidenceClaims 最多 8 条，只引用 repositoryProfile 中有内容的工程文件或 evidenceBundle 中实际提供的 path
 - 每条重要的项目定位、入口或核心模块判断都应对应文件证据；证据不足时降低 confidence 并写入 evidenceCoverage.gaps
+- gaps 使用稳定的 kind 和 subject；图片、许可证等不影响报告结论的文件标记为 out_of_scope，避免当成实际分析缺口

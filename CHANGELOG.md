@@ -2,6 +2,31 @@
 
 All notable changes to RepoMentor are documented in this file.
 
+## [0.3.1] - 2026-08-07
+
+### Added
+
+- An adaptive small-repository path that directly covers all relevant files when they fit the active Harness policy, avoiding redundant planning calls.
+- A path-keyed Evidence Ledger with explicit `available`, `partial`, and `missing` states shared across analysis stages.
+- Structured coverage gaps with stable kind, subject, summary, and severity fields.
+- A unified bounded content-preparation layer for plain text and isolated structured-container adapters.
+
+### Changed
+
+- Evidence budgets are allocated after candidate contents are prepared, so request order no longer causes unnecessary truncation when the complete set fits.
+- Mentor reuses a complete Explorer evidence set instead of repeating planning and file reads for small repositories.
+- Contributor context prioritizes the strongest evidence referenced across Explorer and Mentor while remaining within a fixed context budget.
+- The default analysis flow no longer pauses for project-type and dependency-graph interaction questions.
+- Analysis Trace and runtime-boundary messages use concise Chinese descriptions and aggregate repeated operations.
+
+### Fixed
+
+- Later complete reads now resolve earlier evidence omissions, while partial reads continue to produce an explicit coverage limit.
+- Shorter or less complete rereads can no longer overwrite stronger evidence already held by the Harness.
+- Legitimate semantic gaps outside the read-attempt ledger are preserved instead of being incorrectly filtered from the report.
+- Runtime-confirmed missing or partial evidence remains visible even when the report reaches its eight-gap display limit.
+- Generated container metadata no longer consumes the bounded source-evidence budget when a content adapter is available.
+
 ## [0.3.0] - 2026-08-07
 
 ### Added

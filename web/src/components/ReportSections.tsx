@@ -1,6 +1,11 @@
 import { useState, useEffect } from 'react';
 import ReactMarkdown from 'react-markdown';
-import type { ExplorerOutput, MentorOutput, ContributorOutput } from '@backend-types/index';
+import type {
+  ExplorerOutput,
+  MentorOutput,
+  ContributorOutput,
+  EvidenceGap,
+} from '@backend-types/index';
 import './ReportSections.css';
 
 export function AnchorNav() {
@@ -135,6 +140,16 @@ const confidenceLabels = {
   low: '低置信度',
 } as const;
 
+function normalizeReportGap(value: EvidenceGap | string): EvidenceGap {
+  if (typeof value !== 'string') return value;
+  return {
+    kind: 'missing_evidence',
+    subject: value.split(':', 1)[0]?.trim() || value,
+    summary: value,
+    severity: 'medium',
+  };
+}
+
 export function EvidenceAppendix({ explorer, mentor, contributor }: EvidenceAppendixProps) {
   const sections = [
     { key: 'explorer', label: '项目概览', data: explorer },
@@ -152,9 +167,16 @@ export function EvidenceAppendix({ explorer, mentor, contributor }: EvidenceAppe
     (total, { data }) => total + (data?.evidenceClaims.length ?? 0),
     0,
   );
-  const gaps = [...new Set(
-    sections.flatMap(({ data }) => data?.evidenceCoverage.gaps ?? []),
-  )];
+  const gaps = [...sections
+    .flatMap(({ data }) => (data?.evidenceCoverage.gaps ?? []) as Array<EvidenceGap | string>)
+    .map(normalizeReportGap)
+    .filter((gap) => gap.kind !== 'out_of_scope' && gap.severity !== 'low')
+    .reduce((deduplicated, gap) => {
+      const key = gap.subject.trim().toLowerCase();
+      if (!deduplicated.has(key)) deduplicated.set(key, gap);
+      return deduplicated;
+    }, new Map<string, EvidenceGap>())
+    .values()].slice(0, 8);
 
   return (
     <details className="evidence-appendix" id="evidence">
@@ -203,7 +225,9 @@ export function EvidenceAppendix({ explorer, mentor, contributor }: EvidenceAppe
         {gaps.length > 0 && (
           <section className="coverage-gaps">
             <h3>尚未覆盖的范围（{gaps.length}）</h3>
-            <ul>{gaps.map((gap) => <li key={gap}>{gap}</li>)}</ul>
+            <ul>{gaps.map((gap) => (
+              <li key={`${gap.kind}:${gap.subject}`}>{gap.summary}</li>
+            ))}</ul>
           </section>
         )}
       </div>

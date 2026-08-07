@@ -149,6 +149,23 @@ describe("validateExplorerOutput", () => {
     expect(output.moduleMap[0]?.importance).toBe("support");
   });
 
+  it("normalizes legacy string coverage gaps into the structured contract", () => {
+    const output = validateExplorerOutput({
+      ...validExplorer,
+      evidenceCoverage: {
+        examinedFiles: ["src/index.ts"],
+        gaps: ["demo.ipynb: 训练循环因截断未完整确认"],
+      },
+    });
+
+    expect(output.evidenceCoverage.gaps).toEqual([{
+      kind: "missing_evidence",
+      subject: "demo.ipynb",
+      summary: "demo.ipynb: 训练循环因截断未完整确认",
+      severity: "medium",
+    }]);
+  });
+
   it("rejects unknown module importance values", () => {
     expect(() => validateExplorerOutput({
       ...validExplorer,

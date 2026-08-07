@@ -157,9 +157,33 @@ const evidenceClaimSchema = z.object({
   })).max(4),
 });
 
+const evidenceGapSchema = z.preprocess(
+  (value) => {
+    if (typeof value !== "string") return value;
+    const subject = value.split(":", 1)[0]?.trim() || "legacy-gap";
+    return {
+      kind: "missing_evidence",
+      subject: subject.slice(0, 200),
+      summary: value,
+      severity: "medium",
+    };
+  },
+  z.object({
+    kind: z.enum([
+      "missing_evidence",
+      "test_absent",
+      "coverage_limit",
+      "out_of_scope",
+    ]),
+    subject: z.string().min(1).max(200),
+    summary: z.string().min(1).max(500),
+    severity: z.enum(["high", "medium", "low"]),
+  }),
+);
+
 const evidenceCoverageSchema = z.object({
   examinedFiles: z.array(z.string().min(1)).max(24),
-  gaps: z.array(z.string().min(1).max(500)).max(8),
+  gaps: z.array(evidenceGapSchema).max(8),
 });
 
 export const explorerOutputSchema = z.object({

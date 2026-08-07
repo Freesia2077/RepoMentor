@@ -21,7 +21,12 @@ const explorerOutput = {
   }],
   evidenceCoverage: {
     examinedFiles: ['src/index.ts'],
-    gaps: ['Optional adapters were not inspected.'],
+    gaps: [{
+      kind: 'missing_evidence',
+      subject: 'optional adapters',
+      summary: 'Optional adapters were not inspected.',
+      severity: 'medium',
+    }],
   },
 } satisfies ExplorerOutput;
 
@@ -43,5 +48,20 @@ describe('report evidence appendix', () => {
     expect(screen.getByText('尚未覆盖的范围（1）')).toBeInTheDocument();
     expect(screen.queryByText('Harness verified')).not.toBeInTheDocument();
     expect(screen.queryByText(/形式化验证/)).not.toBeInTheDocument();
+  });
+
+  it('renders legacy string gaps without crashing old saved reports', () => {
+    const legacy = {
+      ...explorerOutput,
+      evidenceCoverage: {
+        examinedFiles: ['src/index.ts'],
+        gaps: ['demo.ipynb: 训练循环因截断未完整确认'],
+      },
+    } as unknown as ExplorerOutput;
+
+    render(<EvidenceAppendix explorer={legacy} />);
+
+    expect(screen.getByText('尚未覆盖的范围（1）')).toBeInTheDocument();
+    expect(screen.getByText('demo.ipynb: 训练循环因截断未完整确认')).toBeInTheDocument();
   });
 });
