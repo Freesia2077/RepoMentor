@@ -3,7 +3,14 @@ import { InputView } from './components/InputView';
 import { createAnalysis, answerInteraction } from './api';
 import { useAnalysisStream } from './hooks/useAnalysisStream';
 import { ProgressUI } from './components/ProgressUI';
-import { AnchorNav, ExplorerSection, MentorSection, ContributorSection } from './components/ReportSections';
+import {
+  AnchorNav,
+  ExplorerSection,
+  MentorSection,
+  ContributorSection,
+  EvidenceAppendix,
+} from './components/ReportSections';
+import { AnalysisTrace } from './components/AnalysisTrace';
 
 export default function App() {
   const [taskId, setTaskId] = useState<string | null>(null);
@@ -72,6 +79,7 @@ export default function App() {
         <ProgressUI 
           stages={streamState.stageProgress}
           logs={streamState.logs}
+          traces={streamState.traces}
           interaction={streamState.interaction}
           onAnswer={handleAnswer}
           interactionError={interactionError}
@@ -80,10 +88,16 @@ export default function App() {
 
       {streamState.status === 'completed' && (
         <div style={{marginTop: '2rem'}}>
+          <AnalysisTrace traces={streamState.traces} defaultOpen={false} />
           <AnchorNav />
           <ExplorerSection data={streamState.result?.explorer} />
           <MentorSection data={streamState.result?.mentor} />
           <ContributorSection data={streamState.result?.contributor} />
+          <EvidenceAppendix
+            explorer={streamState.result?.explorer}
+            mentor={streamState.result?.mentor}
+            contributor={streamState.result?.contributor}
+          />
         </div>
       )}
     </div>

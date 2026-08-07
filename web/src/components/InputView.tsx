@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import './InputView.css';
+import { ModelSettingsPanel } from './ModelSettingsPanel';
 
 interface Props {
   onSubmit: (url: string, branch: string) => void;
@@ -36,6 +37,8 @@ export function InputView({ onSubmit, error }: Props) {
       </form>
       
       {error && <p className="error-text">{error}</p>}
+
+      <ModelSettingsPanel />
 
       <div className="example-repos">
         <p className="text-secondary" style={{fontSize: '0.9rem', marginBottom: '0.8rem'}}>Try an example repository:</p>

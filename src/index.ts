@@ -3,10 +3,12 @@ import fastifyStatic from "@fastify/static";
 import { config } from "./config.js";
 import { analysisRoutes } from "./routes/analysis.js";
 import { streamRoutes } from "./routes/stream.js";
+import { settingsRoutes } from "./routes/settings.js";
 import { getDb } from "./db/index.js";
 import * as taskRepo from "./db/repositories/tasks.js";
 import fs from "node:fs";
 import path from "node:path";
+import { resolveAppAsset } from "./lib/app-paths.js";
 
 const app = Fastify({
   logger: {
@@ -52,11 +54,12 @@ async function start(): Promise<void> {
   // 注册路由 (路由内部已包含 /api 前缀)
   await app.register(analysisRoutes);
   await app.register(streamRoutes);
+  await app.register(settingsRoutes);
 
   // 静态资源托管与 SPA 兜底 (仅生产环境)
   if (process.env.NODE_ENV === "production") {
     await app.register(fastifyStatic, {
-      root: path.resolve(process.cwd(), "web/dist"),
+      root: resolveAppAsset("web", "dist"),
       wildcard: false, // 防治与 SPA 兜底冲突
     });
 

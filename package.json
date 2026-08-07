@@ -1,18 +1,29 @@
 {
   "name": "repomentor",
-  "version": "0.2.2",
+  "version": "0.3.0",
   "description": "AI-powered open-source repository learning assistant",
   "type": "module",
   "engines": {
     "node": ">=20.19.0"
   },
+  "bin": {
+    "repomentor": "scripts/start.mjs"
+  },
+  "files": [
+    "agents",
+    "dist",
+    "scripts/start.mjs",
+    "skills",
+    "web/dist"
+  ],
   "scripts": {
     "dev:backend": "node --watch --import tsx src/index.ts",
     "dev:frontend": "npm run dev --workspace=web",
     "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\"",
-    "build:backend": "tsc && node scripts/copy-static-assets.mjs",
+    "build:backend": "node scripts/clean-backend-dist.mjs && tsc && node scripts/copy-static-assets.mjs",
     "build:frontend": "npm run build --workspace=web",
     "build": "npm run build:frontend && npm run build:backend",
+    "prepack": "npm run build",
     "start": "node scripts/start.mjs",
     "test": "vitest run",
     "test:watch": "vitest"

@@ -12,12 +12,26 @@ describe('ProgressUI', () => {
           { message: 'Log 1', timestamp: '2026-07-30T12:00:00.000Z' },
           { message: 'Log 2', timestamp: '2026-07-30T12:00:01.000Z' }
         ]}
+        traces={[{
+          stage: 'mentor',
+          kind: 'evidence',
+          title: 'Mentor 证据已收集',
+          summary: '已读取 3 个仓库文件。',
+          tool: 'read_evidence_batch',
+          files: ['src/core.ts'],
+          timestamp: '2026-07-30T12:00:02.000Z'
+        }]}
         interaction={{ id: 'q1', question: 'How to proceed?', options: ['Yes', 'No'] }}
         onAnswer={handleAnswer}
       />
     );
     expect(screen.getByText('Explorer')).toBeInTheDocument();
     expect(screen.getByText('How to proceed?')).toBeInTheDocument();
+    expect(screen.getByText('分析轨迹')).toBeInTheDocument();
+    expect(screen.getByText('1 个可核验步骤')).toBeInTheDocument();
+    expect(screen.getByText('证据')).toBeInTheDocument();
+    expect(screen.getByText('Mentor 证据已收集')).toBeInTheDocument();
+    expect(screen.getByText('src/core.ts')).toBeInTheDocument();
     
     const yesBtn = screen.getByText('Yes');
     await act(async () => {

@@ -1,16 +1,19 @@
 import { useState } from 'react';
 import type { AnalysisLog } from '../types';
+import type { HarnessTraceEntry } from '@backend-types/index';
+import { AnalysisTrace } from './AnalysisTrace';
 import './ProgressUI.css';
 
 interface Props {
   stages: Record<string, 'pending' | 'running' | 'done'>;
   logs: AnalysisLog[];
+  traces?: HarnessTraceEntry[];
   interaction?: { id: string; question: string; options: string[] } | null;
   onAnswer: (id: string, answer: string) => Promise<void>;
   interactionError?: string | null;
 }
 
-export function ProgressUI({ stages, logs, interaction, onAnswer, interactionError }: Props) {
+export function ProgressUI({ stages, logs, traces = [], interaction, onAnswer, interactionError }: Props) {
   const [submittingOpt, setSubmittingOpt] = useState<string | null>(null);
   const [customAnswer, setCustomAnswer] = useState('');
 
@@ -55,6 +58,8 @@ export function ProgressUI({ stages, logs, interaction, onAnswer, interactionErr
           );
         })}
       </div>
+
+      <AnalysisTrace traces={traces} />
 
       {interaction && (
         <div className="interaction-box">

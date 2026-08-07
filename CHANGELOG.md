@@ -2,6 +2,38 @@
 
 All notable changes to RepoMentor are documented in this file.
 
+## [0.3.0] - 2026-08-07
+
+### Added
+
+- Local Model Settings UI and API with API keys stored only under the ignored `data/` directory.
+- A provider-neutral model event interface with Anthropic-compatible and OpenAI-compatible adapters.
+- OpenAI-compatible Chat Completions streaming and JSON-response fallback support.
+- A provider-neutral Repository Harness with explicit repository-map, evidence-batch, and contributor-context tool contracts.
+- A live Analysis Trace showing plans, tool actions, evidence coverage, schema-validated stage completions, and user decisions.
+- Shared Harness state for repository coverage, evidence plans, examined and skipped paths, user focus, and global read budgets across all three stages.
+- Git history inspection moved from Pipeline glue into the provider-neutral Repository Harness domain-tool surface.
+- Bounded `search_symbols`, `trace_module_dependencies`, and `find_related_tests` domain tools for repository understanding without reopening low-level Glob/Read loops.
+- Executable project-type Skill packs: `SKILL.md` carries analysis strategy while validated `skill.json` manifests define tool permissions, evidence requirements, stop intent, and per-stage action/file limits enforced by the Harness.
+- A single-command local launcher that builds missing production assets, starts the local service, opens the browser, and supports `--port`, `--host`, `--no-open`, and `--rebuild`.
+- A package-level `repomentor` CLI entry with asset paths resolved independently from the user's local data directory.
+- Clean backend builds that remove obsolete compiled modules before packaging, preventing deleted features from surviving as stale distribution files.
+
+### Changed
+
+- Model credentials are no longer required at process startup; analysis requests return a clear configuration error until a provider is configured.
+- Generic `LLM_*` environment variables are supported while existing `ANTHROPIC_*` settings remain backward compatible.
+- Analysis caches are isolated by provider endpoint and model so switching models cannot return a stale report from another provider.
+- The default bind address is now `127.0.0.1` for local-first use.
+- Repository access now runs through deterministic Harness operations shared by every model provider; public traces exclude source contents and hidden model reasoning.
+- Evidence batches are now single-use stage transitions enforced by the Harness, with explicit total batch, file, and byte stop conditions.
+- Orchestrator output now defines a goal, analysis questions, discovery actions, direct evidence requests, and visible stop intent; Harness observations and unresolved evidence are shared across stages.
+- Patched production transitive dependencies for the `brace-expansion` and `fast-uri` high-severity advisories reported by npm audit.
+- Model-setting writes are now restricted to loopback clients, preventing a remotely exposed local server from redirecting a saved API key to an attacker-controlled Provider endpoint.
+- Each analysis task now freezes its Provider settings for planning, synthesis, retries, and JSON repair so reports and cache keys cannot mix configurations.
+- Harness evidence allocation now reserves bounded slots for domain-tool discoveries and records every candidate omitted from the final batch.
+- Verified evidence references now carry forward across stages, allowing Mentor to reuse Explorer-supported repository-profile evidence without broadly trusting unread files.
+
 ## [0.2.2] - 2026-07-30
 
 ### Changed

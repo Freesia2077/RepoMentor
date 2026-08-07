@@ -3,13 +3,114 @@ import { z } from "zod";
 // ===== Evidence Plan =====
 
 export const evidencePlanSchema = z.object({
+  goal: z.string().min(1).max(500),
   rationale: z.string().max(1000),
+  questions: z.array(z.string().min(1).max(300)).max(6),
+  actions: z.array(z.discriminatedUnion("tool", [
+    z.object({
+      tool: z.literal("search_symbols"),
+      query: z.string().min(1).max(120),
+      purpose: z.string().min(1).max(300),
+    }),
+    z.object({
+      tool: z.literal("trace_module_dependencies"),
+      paths: z.array(z.string().min(1)).min(1).max(6),
+      purpose: z.string().min(1).max(300),
+    }),
+    z.object({
+      tool: z.literal("find_related_tests"),
+      paths: z.array(z.string().min(1)).min(1).max(6),
+      purpose: z.string().min(1).max(300),
+    }),
+  ])).max(4),
   files: z.array(z.object({
     path: z.string().min(1),
     purpose: z.string().min(1).max(300),
     priority: z.enum(["high", "medium", "low"]),
   })).max(12),
+  stopConditions: z.array(z.string().min(1).max(300)).min(1).max(4),
 });
+
+/**
+ * Provider 原生结构化输出使用的 JSON Schema。它与上面的 Zod 契约保持同一
+ * 边界，让 Orchestrator 在生成阶段就受到约束；Zod 仍作为最终可信校验层。
+ */
+export const EVIDENCE_PLAN_JSON_SCHEMA: Record<string, unknown> = {
+  type: "object",
+  additionalProperties: false,
+  required: [
+    "goal",
+    "rationale",
+    "questions",
+    "actions",
+    "files",
+    "stopConditions",
+  ],
+  properties: {
+    goal: { type: "string", minLength: 1, maxLength: 500 },
+    rationale: { type: "string", maxLength: 1000 },
+    questions: {
+      type: "array",
+      maxItems: 6,
+      items: { type: "string", minLength: 1, maxLength: 300 },
+    },
+    actions: {
+      type: "array",
+      maxItems: 4,
+      items: {
+        anyOf: [
+          {
+            type: "object",
+            additionalProperties: false,
+            required: ["tool", "query", "purpose"],
+            properties: {
+              tool: { const: "search_symbols" },
+              query: { type: "string", minLength: 1, maxLength: 120 },
+              purpose: { type: "string", minLength: 1, maxLength: 300 },
+            },
+          },
+          {
+            type: "object",
+            additionalProperties: false,
+            required: ["tool", "paths", "purpose"],
+            properties: {
+              tool: {
+                enum: ["trace_module_dependencies", "find_related_tests"],
+              },
+              paths: {
+                type: "array",
+                minItems: 1,
+                maxItems: 6,
+                items: { type: "string", minLength: 1 },
+              },
+              purpose: { type: "string", minLength: 1, maxLength: 300 },
+            },
+          },
+        ],
+      },
+    },
+    files: {
+      type: "array",
+      maxItems: 12,
+      items: {
+        type: "object",
+        additionalProperties: false,
+        required: ["path", "purpose", "priority"],
+        properties: {
+          path: { type: "string", minLength: 1 },
+          purpose: { type: "string", minLength: 1, maxLength: 300 },
+          priority: { enum: ["high", "medium", "low"] },
+        },
+      },
+    },
+    stopConditions: {
+      type: "array",
+      minItems: 1,
+      maxItems: 4,
+      items: { type: "string", minLength: 1, maxLength: 300 },
+    },
+  },
+};
 
 export function validateEvidencePlan(data: unknown) {
   return evidencePlanSchema.parse(data);
@@ -47,6 +148,20 @@ const moduleInfoSchema = z.object({
   justification: z.string(),
 });
 
+const evidenceClaimSchema = z.object({
+  claim: z.string().min(1).max(600),
+  confidence: z.enum(["high", "medium", "low"]),
+  evidence: z.array(z.object({
+    path: z.string().min(1),
+    supports: z.string().min(1).max(300),
+  })).max(4),
+});
+
+const evidenceCoverageSchema = z.object({
+  examinedFiles: z.array(z.string().min(1)).max(24),
+  gaps: z.array(z.string().min(1).max(500)).max(8),
+});
+
 export const explorerOutputSchema = z.object({
   projectType: projectTypeSchema,
   techStack: techStackSchema,
@@ -55,6 +170,8 @@ export const explorerOutputSchema = z.object({
   moduleMap: z.array(moduleInfoSchema).max(6),
   directorySummary: z.string().max(1500),
   projectSummary: z.string().max(800),
+  evidenceClaims: z.array(evidenceClaimSchema).max(8),
+  evidenceCoverage: evidenceCoverageSchema,
 });
 
 export function validateExplorerOutput(data: unknown) {
@@ -86,6 +203,8 @@ export const mentorOutputSchema = z.object({
   readingPath: z.array(readingStepSchema).max(5),
   keyPatterns: z.array(keyPatternSchema).max(10),
   codeConventions: z.array(codeConventionSchema).max(10),
+  evidenceClaims: z.array(evidenceClaimSchema).max(8),
+  evidenceCoverage: evidenceCoverageSchema,
 });
 
 export function validateMentorOutput(data: unknown) {
@@ -122,6 +241,8 @@ export const contributorOutputSchema = z.object({
   contributionSetup: contributionSetupSchema,
   entryFiles: z.array(entryFileSchema).max(10),
   notesForNewcomers: z.array(newcomerNoteSchema).max(10),
+  evidenceClaims: z.array(evidenceClaimSchema).max(8),
+  evidenceCoverage: evidenceCoverageSchema,
 });
 
 export function validateContributorOutput(data: unknown) {

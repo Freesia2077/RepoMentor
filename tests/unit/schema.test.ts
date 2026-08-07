@@ -9,12 +9,16 @@ import {
 describe("evidence plan schema", () => {
   it("accepts a bounded, prioritized reading plan", () => {
     const result = validateEvidencePlan({
+      goal: "Map the public entry",
       rationale: "Verify the public entry and representative tests",
+      questions: ["Where are exports defined?"],
+      actions: [],
       files: [{
         path: "src/index.ts",
         purpose: "confirm public exports",
         priority: "high",
       }],
+      stopConditions: ["Public exports have source evidence"],
     });
 
     expect(result.files[0]?.path).toBe("src/index.ts");
@@ -22,13 +26,37 @@ describe("evidence plan schema", () => {
 
   it("rejects more than twelve planned files", () => {
     expect(() => validateEvidencePlan({
+      goal: "Read too much",
       rationale: "too many",
+      questions: [],
+      actions: [],
       files: Array.from({ length: 13 }, (_, index) => ({
         path: `src/${index}.ts`,
         purpose: "read",
         priority: "low",
       })),
+      stopConditions: ["Enough files"],
     })).toThrow();
+  });
+
+  it("accepts bounded repository discovery actions", () => {
+    const result = validateEvidencePlan({
+      goal: "Trace the request flow",
+      rationale: "Start from the API route and locate its dependencies",
+      questions: ["Which service handles the request?"],
+      actions: [{
+        tool: "trace_module_dependencies",
+        paths: ["src/routes/analysis.ts"],
+        purpose: "resolve direct internal dependencies",
+      }],
+      files: [{
+        path: "src/routes/analysis.ts",
+        purpose: "request entry",
+        priority: "high",
+      }],
+      stopConditions: ["The entry and direct service dependency are covered"],
+    });
+    expect(result.actions[0]?.tool).toBe("trace_module_dependencies");
   });
 });
 
@@ -45,6 +73,12 @@ const validExplorer = {
   }],
   directorySummary: "一个库项目",
   projectSummary: "轻量级工具库",
+  evidenceClaims: [{
+    claim: "src/index.ts is the public entry",
+    confidence: "high",
+    evidence: [{ path: "src/index.ts", supports: "exports the API" }],
+  }],
+  evidenceCoverage: { examinedFiles: ["src/index.ts"], gaps: [] },
 };
 
 describe("validateExplorerOutput", () => {
@@ -132,6 +166,12 @@ const validMentor = {
   readingPath: [{ step: 1, file: "src/index.ts", why: "入口文件" }],
   keyPatterns: [{ pattern: "中间件模式", where: "src/core/", description: "使用洋葱模型" }],
   codeConventions: [{ rule: "使用 JSDoc", example: "src/core/app.ts:45" }],
+  evidenceClaims: [{
+    claim: "Core depends on utilities",
+    confidence: "high",
+    evidence: [{ path: "src/core/app.ts", supports: "imports utilities" }],
+  }],
+  evidenceCoverage: { examinedFiles: ["src/core/app.ts"], gaps: [] },
 };
 
 describe("validateMentorOutput", () => {
@@ -162,6 +202,12 @@ const validContributor = {
   contributionSetup: { devEnv: "Node 18+", build: "npm build", test: "npm test" },
   entryFiles: [{ file: "src/index.ts", description: "入口", reason: "启动" }],
   notesForNewcomers: [{ tip: "遵循 Conventional Commits" }],
+  evidenceClaims: [{
+    claim: "The project defines a test command",
+    confidence: "high",
+    evidence: [{ path: "package.json", supports: "contains scripts.test" }],
+  }],
+  evidenceCoverage: { examinedFiles: ["package.json"], gaps: [] },
 };
 
 describe("validateContributorOutput", () => {

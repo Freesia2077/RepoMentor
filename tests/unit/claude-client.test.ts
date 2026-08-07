@@ -26,6 +26,12 @@ const baseExplorerOutput = {
   }],
   directorySummary: "Python SDK 项目",
   projectSummary: "一个 Python SDK",
+  evidenceClaims: [{
+    claim: "src/index.py is the public entry",
+    confidence: "high",
+    evidence: [{ path: "src/index.py", supports: "exports the client" }],
+  }],
+  evidenceCoverage: { examinedFiles: ["src/index.py"], gaps: [] },
 };
 
 function messageStream(messages: Array<Record<string, unknown>>) {
@@ -273,6 +279,8 @@ describe("Claude stage execution", () => {
         readingPath: [],
         keyPatterns: [],
         codeConventions: [],
+        evidenceClaims: [],
+        evidenceCoverage: { examinedFiles: [], gaps: [] },
       })),
     ]));
 
@@ -386,7 +394,10 @@ describe("Claude stage execution", () => {
 
   it("creates a tool-free evidence plan from the repository file index", async () => {
     const plan = {
+      goal: "Map public exports",
       rationale: "Read the public entry and its test",
+      questions: ["Where are exports defined?"],
+      actions: [],
       files: [
         {
           path: "src/index.ts",
@@ -394,6 +405,7 @@ describe("Claude stage execution", () => {
           priority: "high",
         },
       ],
+      stopConditions: ["Entry and test are covered"],
     };
     mocks.query.mockReturnValueOnce(messageStream([
       resultMessage(JSON.stringify(plan)),
@@ -418,8 +430,52 @@ describe("Claude stage execution", () => {
         tools: [],
         allowedTools: [],
         maxTurns: 4,
+        outputFormat: {
+          type: "json_schema",
+          schema: expect.objectContaining({
+            type: "object",
+            required: expect.arrayContaining(["goal", "actions", "files"]),
+          }),
+        },
       },
     });
     expect(progress).toHaveBeenCalledWith("Orchestrator 分析完成（模型轮次 1）");
+  });
+
+  it("accepts a structured result from the evidence-plan repair pass", async () => {
+    const repairedPlan = {
+      goal: "确认公共入口",
+      rationale: "读取入口文件",
+      questions: ["公共 API 在哪里导出？"],
+      actions: [],
+      files: [{
+        path: "src/index.ts",
+        purpose: "确认公共导出",
+        priority: "high",
+      }],
+      stopConditions: ["入口具有真实文件证据"],
+    };
+    mocks.query
+      .mockReturnValueOnce(messageStream([
+        resultMessage(JSON.stringify({ rationale: "字段不完整", files: [] })),
+      ]))
+      .mockReturnValueOnce(messageStream([{
+        type: "result",
+        subtype: "success",
+        is_error: false,
+        num_turns: 1,
+        result: "",
+        structured_output: repairedPlan,
+      }]));
+
+    const result = await orchestrateRepositoryEvidence(
+      "explorer",
+      { repositoryProfile: { fileIndex: ["src/index.ts"] } },
+      { onProgress: vi.fn(), onField: vi.fn() },
+      process.cwd(),
+    );
+
+    expect(result).toEqual(repairedPlan);
+    expect(mocks.query).toHaveBeenCalledTimes(2);
   });
 });

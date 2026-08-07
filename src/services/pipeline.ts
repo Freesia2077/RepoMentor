@@ -7,6 +7,8 @@ import type {
   AnalysisResult,
   TaskError,
   CommitSummary,
+  EvidencePlan,
+  HarnessTraceEntry,
 } from "../types/index.js";
 import {
   runStage,
@@ -18,26 +20,20 @@ import type { StageOutputFor } from "./claude-client.js";
 import { sseManager } from "../lib/sse.js";
 import {
   cloneRepo,
-  extractCommitSummary,
   parseRepoUrl,
   preflightGithubRepo,
+  resolveRepositoryCachePath,
 } from "../lib/repo.js";
-import {
-  buildContributionEvidence,
-  buildEvidenceBundle,
-  buildRepositoryContributionContext,
-  buildRepositoryOverview,
-  buildRepositoryProfile,
-} from "../lib/repository-profile.js";
 import { config } from "../config.js";
 import { getDb } from "../db/index.js";
 import * as cacheRepo from "../db/repositories/analysis-cache.js";
 import * as experienceRepo from "../db/repositories/experiences.js";
-import fs from "node:fs";
-import path from "node:path";
 import { createHash } from "node:crypto";
+import type { ModelSettings } from "./model-settings.js";
+import { RepositoryHarness } from "./repository-harness.js";
+import { loadHarnessSkill } from "./harness-skills.js";
 
-const ANALYSIS_PIPELINE_VERSION = "profile-evidence-v3";
+const ANALYSIS_PIPELINE_VERSION = "harness-skills-v6";
 
 // ========== Pipeline 上下文 & 类型 ==========
 
@@ -54,9 +50,12 @@ export interface PipelineContext {
   branch: string;
   stageProgress: StageProgress;
   abortController: AbortController;
+  modelSettings: ModelSettings;
   callbacks: PipelineLifecycleCallbacks;
   pendingQuestion: {
     questionId: string;
+    stage: StageName;
+    question: string;
     resolve: (answer: string) => void;
     timer: ReturnType<typeof setTimeout>;
   } | null;
@@ -81,9 +80,7 @@ export async function executePipeline(ctx: PipelineContext): Promise<PipelineRes
     });
 
     const parsedRepo = parseRepoUrl(ctx.repoUrl);
-    const repoCacheName = parsedRepo.owner && parsedRepo.repo ? `${parsedRepo.owner}_${parsedRepo.repo}` : ctx.taskId;
-    const branchCacheKey = createHash("sha256").update(ctx.branch).digest("hex").slice(0, 12);
-    const taskDir = path.join(process.cwd(), "data/repos", repoCacheName, branchCacheKey);
+    const taskDir = resolveRepositoryCachePath(ctx.repoUrl, ctx.branch, ctx.taskId);
     const repoPreflight = await preflightGithubRepo(parsedRepo.owner, parsedRepo.repo);
     if (repoPreflight.status === "not_found") {
       throw {
@@ -130,7 +127,12 @@ export async function executePipeline(ctx: PipelineContext): Promise<PipelineRes
     // 缓存检查（clone 后、Explorer 前）
     const { owner: cacheOwner, repo: cacheRepoName } = parseRepoUrl(ctx.repoUrl);
     const db = getDb();
-    const analysisCacheKey = `${ANALYSIS_PIPELINE_VERSION}:${commitHash}`;
+    const modelSettings = ctx.modelSettings;
+    const providerFingerprint = createHash("sha256")
+      .update(`${modelSettings.provider}\0${modelSettings.baseUrl}\0${modelSettings.model}`)
+      .digest("hex")
+      .slice(0, 12);
+    const analysisCacheKey = `${ANALYSIS_PIPELINE_VERSION}:${providerFingerprint}:${commitHash}`;
     const cached = cacheRepo.findByCommit(
       db,
       cacheOwner,
@@ -141,11 +143,31 @@ export async function executePipeline(ctx: PipelineContext): Promise<PipelineRes
 
     if (cached) {
       const cachedResult = JSON.parse(cached.result) as AnalysisResult;
+      emitHarnessTrace(ctx, {
+        stage: "repository",
+        kind: "decision",
+        title: "已复用现有报告",
+        summary: "仓库提交与模型配置均匹配已有分析，因此没有重复读取源码或调用模型。",
+        metadata: { cached: true },
+      });
       return { result: cachedResult, cached: true };
     }
 
-    const repositoryProfile = await buildRepositoryProfile(localPath);
-    const repositoryOverview = buildRepositoryOverview(repositoryProfile);
+    const harness = new RepositoryHarness(
+      localPath,
+      (entry) => emitHarnessTrace(ctx, entry),
+    );
+    const {
+      profile: repositoryProfile,
+      overview: repositoryOverview,
+    } = await harness.getRepositoryMap();
+    const repositoryProfileEvidencePaths = [
+      repositoryProfile.readme?.path,
+      ...repositoryProfile.manifests.map((file) => file.path),
+      ...repositoryProfile.exampleManifests.map((file) => file.path),
+      ...repositoryProfile.configFiles.map((file) => file.path),
+      ...repositoryProfile.guidanceFiles.map((file) => file.path),
+    ].filter((value): value is string => Boolean(value));
     const fileCount = repositoryProfile.fileCount;
     sseManager.emit(ctx.taskId, {
       type: "stage:progress",
@@ -162,33 +184,45 @@ export async function executePipeline(ctx: PipelineContext): Promise<PipelineRes
     });
 
     // 1. Explorer：先规划，再由后端批量读取真实文件
+    const explorerSkill = loadHarnessSkill(["unknown"], "explorer");
+    harness.activateSkillPolicy("explorer", explorerSkill.policy);
     beginStage(ctx, "explorer");
     const explorerPlan = await planEvidenceWithRetry("explorer", {
       repositoryProfile,
+      skillPolicy: explorerSkill.policy,
+      harnessState: harness.getContextView(),
     }, ctx, localPath);
-    const explorerEvidence = await buildEvidenceBundle(
-      localPath,
-      explorerPlan,
+    const explorerEvidence = await harness.executeEvidencePlan(
       "explorer",
+      explorerPlan,
     );
     emitEvidenceReady(ctx, "explorer", explorerEvidence.files.length, explorerEvidence.totalBytes);
 
-    const explorerOutput = await runStageWithRetry("explorer", {
+    const explorerStageOutput = await runStageWithRetry("explorer", {
       fileCount,
       repositoryProfile,
       evidenceBundle: explorerEvidence,
+      harnessState: harness.getContextView(),
     }, ctx, localPath, true);
+    const explorerOutput = harness.verifyEvidenceOutput(
+      "explorer",
+      explorerStageOutput,
+      repositoryProfileEvidencePaths,
+    );
+    harness.completeStage("explorer");
 
     // 交互点：Explorer 结果确认
     const explorerFeedback = await askUser(ctx, "q_explorer_review", "explorer",
       `识别项目类型为 ${explorerOutput.projectType.primary}，是否正确？`,
       ["是", "否，请纠正"]);
+    harness.recordUserFocus(explorerFeedback);
 
     // 2. Mentor
-    const skillContent = loadSkillTemplates(
+    const mentorSkill = loadHarnessSkill([
       explorerOutput.projectType.primary,
-      explorerOutput.projectType.secondary,
-    );
+      ...explorerOutput.projectType.secondary,
+    ], "mentor");
+    harness.activateSkillPolicy("mentor", mentorSkill.policy);
     const relevantExperiences = experienceRepo.findRelevant(
       db,
       explorerOutput.projectType.primary,
@@ -203,28 +237,25 @@ export async function executePipeline(ctx: PipelineContext): Promise<PipelineRes
     const mentorPlan = await planEvidenceWithRetry("mentor", {
       explorerOutput,
       repositoryProfile,
-      existingEvidencePaths: explorerEvidence.files.map((file) => file.path),
+      existingEvidencePaths: harness.getContextView().evidenceIndex.map((file) => file.path),
+      skillPolicy: mentorSkill.policy,
+      harnessState: harness.getContextView(),
       userFocus: explorerFeedback && explorerFeedback !== "是" ? explorerFeedback : undefined,
     }, ctx, localPath);
-    const mentorEvidence = await buildEvidenceBundle(
-      localPath,
-      mentorPlan,
+    const mentorEvidence = await harness.executeEvidencePlan(
       "mentor",
-      explorerEvidence.files.map((file) => file.path),
+      mentorPlan,
+      harness.getContextView().evidenceIndex.map((file) => file.path),
     );
-    const evidenceBundle = {
-      files: [...explorerEvidence.files, ...mentorEvidence.files],
-      skippedPaths: [...explorerEvidence.skippedPaths, ...mentorEvidence.skippedPaths],
-      totalBytes: explorerEvidence.totalBytes + mentorEvidence.totalBytes,
-    };
+    const evidenceBundle = harness.getEvidenceBundle();
     emitEvidenceReady(ctx, "mentor", mentorEvidence.files.length, mentorEvidence.totalBytes);
     emitAnalysisContextReady(ctx, "mentor", repositoryOverview, evidenceBundle.totalBytes);
 
-    const mentorOutput = await runStageWithRetry("mentor", {
+    const mentorStageOutput = await runStageWithRetry("mentor", {
       explorerOutput,
       repositoryOverview,
       evidenceBundle,
-      skillContent,
+      skillContent: mentorSkill.promptContent,
       experiences: relevantExperiences
         .map((item) => item.content.replace(
           `[${ANALYSIS_PIPELINE_VERSION}]\n`,
@@ -232,32 +263,49 @@ export async function executePipeline(ctx: PipelineContext): Promise<PipelineRes
         ))
         .join("\n\n"),
       userFocus: explorerFeedback && explorerFeedback !== "是" ? explorerFeedback : undefined,
+      harnessState: harness.getContextView(),
     }, ctx, localPath, true);
+    const mentorOutput = harness.verifyEvidenceOutput("mentor", mentorStageOutput);
+    harness.completeStage("mentor");
 
     // 交互点：依赖图反馈
     const deps = Object.entries(mentorOutput.dependencyGraph);
     const dependencyFocus = await askUser(ctx, "q_deps", "mentor",
       `依赖图包含 ${deps.length} 个模块。想深入了解哪个模块？`,
       deps.slice(0, 5).map(([mod]) => mod));
+    harness.recordUserFocus(dependencyFocus);
 
     // 3. Contributor
-    const commitSummary = await extractCommitSummary(localPath);
-    const repositoryContext = buildRepositoryContributionContext(repositoryProfile);
-    const contributionEvidence = buildContributionEvidence(evidenceBundle);
+    const commitSummary = await harness.inspectGitHistory();
+    const { repositoryContext, contributionEvidence } =
+      harness.prepareContributorContext();
     emitContributorContextReady(
       ctx,
       repositoryContext,
       contributionEvidence.totalBytes,
     );
 
-    const contributorOutput = await runStageWithRetry("contributor", {
+    const contributorStageOutput = await runStageWithRetry("contributor", {
       explorerOutput,
       mentorOutput,
       repositoryContext,
       contributionEvidence,
       commitSummary,
       userFocus: dependencyFocus || undefined,
+      harnessState: harness.getContextView(),
     }, ctx, localPath);
+    const contributorOutput = harness.verifyEvidenceOutput(
+      "contributor",
+      contributorStageOutput,
+      [
+        ...repositoryContext.manifests.map((file) => file.path),
+        ...repositoryContext.exampleManifests.map((file) => file.path),
+        ...repositoryContext.configFiles.map((file) => file.path),
+        ...repositoryContext.guidanceFiles.map((file) => file.path),
+        ...repositoryContext.todoMarkers.map((marker) => marker.file),
+      ],
+    );
+    harness.completeStage("contributor");
 
     const analysisResult: AnalysisResult = {
       explorer: explorerOutput,
@@ -298,6 +346,14 @@ export async function executePipeline(ctx: PipelineContext): Promise<PipelineRes
 function beginStage(ctx: PipelineContext, stage: StageName): void {
   ctx.callbacks.onStageStart(stage);
   sseManager.emit(ctx.taskId, { type: "stage:start", stage });
+  emitHarnessTrace(ctx, {
+    stage,
+    kind: "decision",
+    title: `${formatStageName(stage)} 阶段已启动`,
+    summary: stage === "contributor"
+      ? "正在依据已校验的仓库上下文和前序结论生成贡献指南。"
+      : "正在为当前阶段准备有仓库证据支撑的分析。",
+  });
 }
 
 async function planEvidenceWithRetry(
@@ -305,7 +361,7 @@ async function planEvidenceWithRetry(
   input: Record<string, unknown>,
   ctx: PipelineContext,
   localPath: string,
-) {
+): Promise<EvidencePlan> {
   const maxRetries = 1;
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
     try {
@@ -324,6 +380,7 @@ async function planEvidenceWithRetry(
         },
         localPath,
         ctx.abortController,
+        ctx.modelSettings,
       );
     } catch (err) {
       if (err instanceof ParseError) {
@@ -491,10 +548,17 @@ async function runStageWithSSE<S extends StageName>(
     onField: (field: string, value: unknown) => {
       sseManager.emit(ctx.taskId, { type: "stage:field", stage, field, value });
     },
-  }, localPath, ctx.abortController);
+  }, localPath, ctx.abortController, ctx.modelSettings);
 
   ctx.callbacks.onStageDone(stage);
   sseManager.emit(ctx.taskId, { type: "stage:done", stage, output: result });
+  emitHarnessTrace(ctx, {
+    stage,
+    kind: "decision",
+    title: `${formatStageName(stage)} 综合分析已完成`,
+    summary: "结构化阶段输出已通过 Schema 校验，可以进入下一步。",
+    metadata: { schemaValidated: true },
+  });
 
   return result;
 }
@@ -522,11 +586,18 @@ function askUser(
         type: "interact:timeout",
         questionId,
       });
+      emitHarnessTrace(ctx, {
+        stage,
+        kind: "decision",
+        title: "用户输入已超时",
+        summary: `未收到问题“${question}”的回答，分析流程将在没有额外关注点的情况下继续。`,
+        metadata: { questionId, answered: false },
+      });
       ctx.pendingQuestion = null;
       resolve("");
     }, config.INTERACTION_TIMEOUT_MS);
 
-    ctx.pendingQuestion = { questionId, resolve, timer };
+    ctx.pendingQuestion = { questionId, stage, question, resolve, timer };
   });
 }
 
@@ -535,37 +606,16 @@ export function resolveQuestion(ctx: PipelineContext, questionId: string, answer
     return false;
   }
   clearTimeout(ctx.pendingQuestion.timer);
+  emitHarnessTrace(ctx, {
+    stage: ctx.pendingQuestion.stage,
+    kind: "decision",
+    title: "用户指引已应用",
+    summary: `问题“${ctx.pendingQuestion.question}”的回答已加入下一分析步骤。`,
+    metadata: { questionId, answered: true },
+  });
   ctx.pendingQuestion.resolve(answer);
   ctx.pendingQuestion = null;
   return true;
-}
-
-// ========== Skill 模板加载 ==========
-
-const SKILL_TEMPLATES: Record<string, string> = {
-  "web-framework": "skills/analyze-web-framework/SKILL.md",
-  "cli": "skills/analyze-cli-tool/SKILL.md",
-  "monorepo": "skills/analyze-monorepo/SKILL.md",
-  "library": "skills/analyze-generic/SKILL.md",
-  "unknown": "skills/analyze-generic/SKILL.md",
-};
-
-function loadSkillTemplates(primaryType: string, secondaryTypes: string[]): string {
-  const selectedTypes = [primaryType, ...secondaryTypes]
-    .map((type) => SKILL_TEMPLATES[type] ? type : "unknown")
-    .filter((type, index, values) => values.indexOf(type) === index);
-
-  return selectedTypes
-    .map((type) => {
-      const filePath = SKILL_TEMPLATES[type]!;
-      try {
-        return fs.readFileSync(filePath, "utf-8");
-      } catch {
-        return "";
-      }
-    })
-    .filter(Boolean)
-    .join("\n\n---\n\n");
 }
 
 function buildExperienceSummary(result: AnalysisResult): string {
@@ -590,4 +640,17 @@ function buildExperienceSummary(result: AnalysisResult): string {
 
 function emitError(taskId: string, error: TaskError): void {
   sseManager.emit(taskId, { type: "task:error", taskId, error });
+}
+
+function emitHarnessTrace(ctx: PipelineContext, entry: HarnessTraceEntry): void {
+  const timestamp = entry.timestamp ?? new Date().toISOString();
+  sseManager.emit(ctx.taskId, {
+    type: "harness:trace",
+    trace: { ...entry, timestamp },
+    timestamp,
+  });
+}
+
+function formatStageName(stage: StageName): string {
+  return stage.charAt(0).toUpperCase() + stage.slice(1);
 }

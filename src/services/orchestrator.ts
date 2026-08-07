@@ -11,6 +11,11 @@ import { isValidGithubUrl, normalizeGithubUrl, isValidBranchName } from "../lib/
 import { config } from "../config.js";
 import { getDb } from "../db/index.js";
 import * as taskRepo from "../db/repositories/tasks.js";
+import {
+  ModelSettingsError,
+  requireModelSettings,
+  type ModelSettings,
+} from "./model-settings.js";
 
 // ========== 内存任务存储 ==========
 
@@ -35,6 +40,16 @@ export async function createTask(repoUrl: string, branch = "main"): Promise<Task
   }
   if (!isValidBranchName(branch)) {
     throw new OrchestratorError("invalid_branch", "分支名称无效", false);
+  }
+
+  let modelSettings: ModelSettings;
+  try {
+    modelSettings = requireModelSettings();
+  } catch (error) {
+    if (error instanceof ModelSettingsError) {
+      throw new OrchestratorError(error.code, error.message, false);
+    }
+    throw error;
   }
 
   const normalizedRepoUrl = normalizeGithubUrl(repoUrl);
@@ -65,6 +80,7 @@ export async function createTask(repoUrl: string, branch = "main"): Promise<Task
     branch: normalizedBranch,
     stageProgress: task.stageProgress,
     abortController: new AbortController(),
+    modelSettings,
     callbacks: {
       onStageStart: (stage: StageName) => {
         const rec = tasks.get(taskId);

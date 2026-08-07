@@ -30,6 +30,7 @@ vi.mock("../../src/services/claude-client.js", () => ({
 
 vi.mock("../../src/lib/repo.js", () => ({
   parseRepoUrl: () => ({ owner: "owner", repo: "repo", isGitHub: true }),
+  resolveRepositoryCachePath: () => "C:\\tmp\\repo",
   preflightGithubRepo: vi.fn(async () => ({ status: "available", sizeKb: 10 })),
   cloneRepo: vi.fn(async () => ({
     localPath: "C:\\tmp\\repo",
@@ -45,12 +46,12 @@ vi.mock("../../src/lib/repo.js", () => ({
 
 const repositoryProfile = {
   fileCount: 10,
-  fileIndex: ["package.json", "src/index.ts", "src/core.ts", "tests/core.test.ts"],
+  fileIndex: ["README.md", "package.json", "src/index.ts", "src/core.ts", "tests/core.test.ts"],
   fileIndexTruncated: false,
   topLevelTree: ["package.json", "src/", "src/index.ts"],
   treeTruncated: false,
   directoryStats: [],
-  readme: null,
+  readme: { path: "README.md", content: "# Test project", truncated: false },
   manifests: [],
   exampleManifests: [],
   configFiles: [],
@@ -70,7 +71,7 @@ const repositoryOverview = {
   entryCandidates: ["src/index.ts"],
   testCandidates: ["tests/core.test.ts"],
   projectFiles: {
-    readme: null,
+    readme: "README.md",
     manifests: [],
     exampleManifests: [],
     configFiles: [],
@@ -89,6 +90,14 @@ const repositoryContext = {
   entryCandidates: ["src/index.ts"],
   testCandidates: ["tests/core.test.ts"],
 };
+
+const pipelineModelSettings = {
+  provider: "anthropic-compatible",
+  apiKey: "task-key",
+  baseUrl: "https://provider.example/anthropic",
+  model: "task-model",
+  source: "environment",
+} as const;
 
 vi.mock("../../src/lib/repository-profile.js", () => ({
   buildRepositoryProfile: vi.fn(async () => repositoryProfile),
@@ -134,8 +143,12 @@ describe("analysis pipeline", () => {
     mocks.experienceFind.mockReset();
     mocks.experienceSave.mockReset();
     mocks.planEvidence.mockImplementation(async (phase: string) => ({
+      goal: `${phase} coverage`,
       rationale: `${phase} plan`,
+      questions: [`What should ${phase} verify?`],
+      actions: [],
       files: [],
+      stopConditions: ["Required evidence is available"],
     }));
     mocks.buildEvidenceBundle.mockImplementation(async (
       _localPath: string,
@@ -165,7 +178,7 @@ describe("analysis pipeline", () => {
   it("feeds interaction answers and stored experiences into later agents", async () => {
     mocks.cacheFind.mockReturnValue(undefined);
     mocks.experienceFind.mockReturnValue([{
-      content: "[profile-evidence-v3]\nhistorical architecture lesson",
+      content: "[harness-skills-v6]\nhistorical architecture lesson",
     }]);
     mocks.runStage.mockImplementation(async (stage: string) => {
       if (stage === "explorer") {
@@ -177,6 +190,16 @@ describe("analysis pipeline", () => {
           moduleMap: [],
           directorySummary: "test",
           projectSummary: "test",
+          evidenceClaims: [{
+            claim: "The public entry is src/index.ts",
+            confidence: "high",
+            evidence: [{ path: "src/index.ts", supports: "exports the API" }],
+          }, {
+            claim: "The README defines the project purpose",
+            confidence: "high",
+            evidence: [{ path: "README.md", supports: "describes the project" }],
+          }],
+          evidenceCoverage: { examinedFiles: ["src/index.ts"], gaps: [] },
         };
       }
       if (stage === "mentor") {
@@ -186,6 +209,12 @@ describe("analysis pipeline", () => {
           readingPath: [],
           keyPatterns: [],
           codeConventions: [],
+          evidenceClaims: [{
+            claim: "The README defines the project purpose",
+            confidence: "high",
+            evidence: [{ path: "README.md", supports: "describes the project" }],
+          }],
+          evidenceCoverage: { examinedFiles: ["README.md"], gaps: [] },
         };
       }
       return {
@@ -193,6 +222,8 @@ describe("analysis pipeline", () => {
         contributionSetup: { devEnv: null, build: null, test: null },
         entryFiles: [],
         notesForNewcomers: [],
+        evidenceClaims: [],
+        evidenceCoverage: { examinedFiles: [], gaps: [] },
       };
     });
 
@@ -202,6 +233,7 @@ describe("analysis pipeline", () => {
       branch: "main",
       stageProgress: { explorer: "pending", mentor: "pending", contributor: "pending" },
       abortController: new AbortController(),
+      modelSettings: pipelineModelSettings,
       callbacks: {
         onStageStart: vi.fn(),
         onStageDone: vi.fn(),
@@ -232,32 +264,78 @@ describe("analysis pipeline", () => {
           expect.objectContaining({ path: "src/core.ts" }),
         ]),
       }),
+      harnessState: expect.objectContaining({
+        userFocus: ["实际是 CLI 工具"],
+        budget: expect.objectContaining({ usedEvidenceBatches: 2, filesRead: 2 }),
+      }),
     });
 
     const contributorCall = mocks.runStage.mock.calls.find(([stage]) => stage === "contributor");
     expect(contributorCall?.[1]).toMatchObject({
       userFocus: "src/core",
+      mentorOutput: {
+        evidenceClaims: [expect.objectContaining({
+          evidence: [expect.objectContaining({ path: "README.md" })],
+        })],
+      },
       repositoryContext,
       contributionEvidence: expect.objectContaining({
         focusedFiles: [expect.objectContaining({ path: "src/core.ts" })],
       }),
+      harnessState: expect.objectContaining({
+        userFocus: ["实际是 CLI 工具", "src/core"],
+        stages: expect.objectContaining({
+          explorer: expect.objectContaining({ status: "completed" }),
+          mentor: expect.objectContaining({ status: "completed" }),
+        }),
+      }),
     });
     const explorerCall = mocks.runStage.mock.calls.find(([stage]) => stage === "explorer");
-    expect(explorerCall?.[1]).toEqual({
+    expect(explorerCall?.[1]).toMatchObject({
       fileCount: 10,
       repositoryProfile,
       evidenceBundle: expect.objectContaining({
         files: [expect.objectContaining({ path: "src/index.ts" })],
+      }),
+      harnessState: expect.objectContaining({
+        budget: expect.objectContaining({ usedEvidenceBatches: 1, filesRead: 1 }),
+        stages: expect.objectContaining({
+          explorer: expect.objectContaining({ status: "evidence_ready" }),
+        }),
       }),
     });
     expect(sseManager.getEventsAfter("task-pipeline").some(({ event }) =>
       event.type === "stage:progress"
       && event.message.includes("仓库画像构建完成")
     )).toBe(true);
+    const harnessEvents = sseManager.getEventsAfter("task-pipeline")
+      .map(({ event }) => event)
+      .filter((event) => event.type === "harness:trace");
+    expect(harnessEvents).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        trace: expect.objectContaining({ tool: "get_repository_map" }),
+      }),
+      expect.objectContaining({
+        trace: expect.objectContaining({ tool: "inspect_git_history" }),
+      }),
+      expect.objectContaining({
+        trace: expect.objectContaining({
+          kind: "decision",
+          title: "用户指引已应用",
+        }),
+      }),
+    ]));
     expect(mocks.planEvidence).toHaveBeenCalledTimes(2);
     expect(mocks.buildEvidenceBundle).toHaveBeenCalledTimes(2);
     expect(mocks.planEvidence.mock.calls[0]?.[0]).toBe("explorer");
-    expect(mocks.planEvidence.mock.calls[0]?.[1]).toEqual({ repositoryProfile });
+    expect(mocks.planEvidence.mock.calls[0]?.[5]).toBe(pipelineModelSettings);
+    expect(mentorCall?.[5]).toBe(pipelineModelSettings);
+    expect(mocks.planEvidence.mock.calls[0]?.[1]).toMatchObject({
+      repositoryProfile,
+      harnessState: expect.objectContaining({
+        budget: expect.objectContaining({ usedEvidenceBatches: 0 }),
+      }),
+    });
     expect(mocks.planEvidence.mock.calls[1]?.[0]).toBe("mentor");
     expect(mocks.planEvidence.mock.calls[1]?.[1]).toMatchObject({
       repositoryProfile,
@@ -269,7 +347,7 @@ describe("analysis pipeline", () => {
       "owner",
       "repo",
       "main",
-      "profile-evidence-v3:abc123",
+      expect.stringMatching(/^harness-skills-v6:[a-f0-9]{12}:abc123$/),
     );
     expect(mocks.experienceSave).toHaveBeenCalledOnce();
   });
@@ -285,6 +363,7 @@ describe("analysis pipeline", () => {
       branch: "main",
       stageProgress: { explorer: "pending", mentor: "pending", contributor: "pending" },
       abortController: new AbortController(),
+      modelSettings: pipelineModelSettings,
       callbacks: {
         onStageStart: vi.fn(),
         onStageDone: vi.fn(),
@@ -314,6 +393,7 @@ describe("analysis pipeline", () => {
       branch: "main",
       stageProgress: { explorer: "pending", mentor: "pending", contributor: "pending" },
       abortController: new AbortController(),
+      modelSettings: pipelineModelSettings,
       callbacks: {
         onStageStart: vi.fn(),
         onStageDone: vi.fn(),
@@ -347,6 +427,7 @@ describe("analysis pipeline", () => {
       branch: "main",
       stageProgress: { explorer: "pending", mentor: "pending", contributor: "pending" },
       abortController: new AbortController(),
+      modelSettings: pipelineModelSettings,
       callbacks: {
         onStageStart: vi.fn(),
         onStageDone: vi.fn(),

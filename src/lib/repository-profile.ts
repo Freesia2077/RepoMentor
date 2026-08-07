@@ -4,6 +4,7 @@ import { simpleGit } from "simple-git";
 
 import type {
   EvidenceBundle,
+  EvidencePhase,
   EvidencePlan,
   ContributionEvidence,
   RepositoryContributionContext,
@@ -36,12 +37,12 @@ const MAX_MANIFEST_CONTENT_BYTES = 14_000;
 const MAX_CONFIG_CONTENT_BYTES = 10_000;
 const MAX_GUIDANCE_CONTENT_BYTES = 8_000;
 const MAX_EXAMPLE_MANIFEST_CONTENT_BYTES = 7_000;
-const MAX_EVIDENCE_FILES: Record<"explorer" | "mentor", number> = {
+const MAX_EVIDENCE_FILES: Record<EvidencePhase, number> = {
   explorer: 10,
   mentor: 8,
 };
 const MAX_EVIDENCE_FILE_BYTES = 8_000;
-const MAX_EVIDENCE_TOTAL_BYTES: Record<"explorer" | "mentor", number> = {
+const MAX_EVIDENCE_TOTAL_BYTES: Record<EvidencePhase, number> = {
   explorer: 48_000,
   mentor: 40_000,
 };
@@ -326,7 +327,7 @@ export function buildContributionEvidence(
 export async function buildEvidenceBundle(
   localPath: string,
   plan: EvidencePlan,
-  phase: "explorer" | "mentor",
+  phase: EvidencePhase,
   existingPaths: string[] = [],
   providedTrackedFiles?: string[],
 ): Promise<EvidenceBundle> {

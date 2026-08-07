@@ -6,6 +6,25 @@ export type StageName = "explorer" | "mentor" | "contributor";
 
 export type StageProgress = Record<StageName, "pending" | "running" | "done">;
 
+// ========== 模型 Provider ==========
+
+export type ModelProviderId = "anthropic-compatible" | "openai-compatible";
+
+export interface PublicModelSettings {
+  provider: ModelProviderId;
+  baseUrl: string;
+  model: string;
+  hasApiKey: boolean;
+  source: "file" | "environment" | "default";
+}
+
+export interface UpdateModelSettingsRequest {
+  provider: ModelProviderId;
+  baseUrl: string;
+  model: string;
+  apiKey?: string;
+}
+
 // ========== 项目类型 ==========
 
 export type KnownProjectType = "library" | "cli" | "web-framework" | "monorepo" | "unknown";
@@ -32,6 +51,27 @@ export interface ModuleInfo {
   responsibility: string;
   importance: "core" | "support" | "utility";
   justification: string;
+}
+
+export interface EvidenceReference {
+  path: string;
+  supports: string;
+}
+
+export interface EvidenceClaim {
+  claim: string;
+  confidence: "high" | "medium" | "low";
+  evidence: EvidenceReference[];
+}
+
+export interface EvidenceCoverage {
+  examinedFiles: string[];
+  gaps: string[];
+}
+
+export interface EvidenceFirstOutput {
+  evidenceClaims: EvidenceClaim[];
+  evidenceCoverage: EvidenceCoverage;
 }
 
 // ========== Stage 1: Explorer ==========
@@ -110,13 +150,19 @@ export interface EvidenceRequest {
 }
 
 export interface EvidencePlan {
+  goal: string;
   rationale: string;
+  questions: string[];
+  actions: HarnessDiscoveryAction[];
   files: EvidenceRequest[];
+  stopConditions: string[];
 }
+
+export type EvidencePhase = "explorer" | "mentor";
 
 export interface EvidenceFile extends RepositoryFileExcerpt {
   purpose: string;
-  phase: "explorer" | "mentor";
+  phase: EvidencePhase;
 }
 
 export interface EvidenceBundle {
@@ -125,11 +171,146 @@ export interface EvidenceBundle {
   totalBytes: number;
 }
 
+// ========== Repository Harness ==========
+
+export type HarnessToolName =
+  | "get_repository_map"
+  | "search_symbols"
+  | "trace_module_dependencies"
+  | "find_related_tests"
+  | "read_evidence_batch"
+  | "inspect_git_history"
+  | "prepare_contributor_context";
+
+export type HarnessTraceKind = "plan" | "tool" | "evidence" | "decision";
+
+export type HarnessDiscoveryAction =
+  | {
+      tool: "search_symbols";
+      query: string;
+      purpose: string;
+    }
+  | {
+      tool: "trace_module_dependencies";
+      paths: string[];
+      purpose: string;
+    }
+  | {
+      tool: "find_related_tests";
+      paths: string[];
+      purpose: string;
+    };
+
+export interface HarnessToolObservation {
+  stage: EvidencePhase;
+  tool: Extract<
+    HarnessToolName,
+    "search_symbols" | "trace_module_dependencies" | "find_related_tests"
+  >;
+  purpose: string;
+  summary: string;
+  paths: string[];
+  metadata: Record<string, string | number | boolean>;
+}
+
+export type HarnessDiscoveryToolName = HarnessToolObservation["tool"];
+
+export interface HarnessSkillPolicy {
+  skillNames: string[];
+  allowedTools: HarnessDiscoveryToolName[];
+  preferredTools: HarnessDiscoveryToolName[];
+  recommendedQuestions: string[];
+  evidenceRequirements: string[];
+  stopConditions: string[];
+  maxDiscoveryActions: number;
+  maxEvidenceFiles: number;
+}
+
+export interface LoadedHarnessSkill {
+  policy: HarnessSkillPolicy;
+  promptContent: string;
+}
+
+/**
+ * 可公开展示的运行轨迹。这里只记录计划、工具动作和证据摘要，
+ * 不包含模型的隐藏思维过程，也不包含 API Key 或完整源码内容。
+ */
+export interface HarnessTraceEntry {
+  stage: StageName | "repository";
+  kind: HarnessTraceKind;
+  title: string;
+  summary: string;
+  tool?: HarnessToolName;
+  files?: string[];
+  metadata?: Record<string, string | number | boolean>;
+  timestamp?: string;
+}
+
+export type HarnessStageStatus =
+  | "pending"
+  | "planned"
+  | "evidence_ready"
+  | "completed";
+
+export type HarnessStopReason =
+  | "evidence_batch_completed"
+  | "evidence_gaps_recorded"
+  | "no_valid_evidence_selected"
+  | "global_evidence_budget_exhausted";
+
+export interface HarnessStageState {
+  status: HarnessStageStatus;
+  plan: EvidencePlan | null;
+  examinedPaths: string[];
+  skippedPaths: string[];
+  unresolvedQuestions: string[];
+  skillPolicy: HarnessSkillPolicy | null;
+  stopReason: HarnessStopReason | null;
+}
+
+export interface HarnessBudgetState {
+  maxEvidenceBatches: number;
+  usedEvidenceBatches: number;
+  maxFilesRead: number;
+  filesRead: number;
+  maxEvidenceBytes: number;
+  evidenceBytes: number;
+}
+
+/**
+ * Harness 持有的共享运行状态。Agent 只接收所需视图，文件内容不会通过
+ * 日志暴露，也不依赖不断增长的对话历史在阶段之间传递。
+ */
+export interface HarnessState {
+  repositoryProfile: RepositoryProfile | null;
+  repositoryOverview: RepositoryOverview | null;
+  evidence: EvidenceFile[];
+  observations: HarnessToolObservation[];
+  stages: Record<StageName, HarnessStageState>;
+  unresolvedQuestions: string[];
+  userFocus: string[];
+  budget: HarnessBudgetState;
+}
+
+export interface HarnessContextView {
+  stages: Record<StageName, HarnessStageState>;
+  unresolvedQuestions: string[];
+  userFocus: string[];
+  budget: HarnessBudgetState;
+  evidenceIndex: Array<{
+    path: string;
+    purpose: string;
+    phase: EvidencePhase;
+    truncated: boolean;
+  }>;
+  observations: HarnessToolObservation[];
+}
+
 export interface ContributionEvidence {
   examinedFiles: Array<{
     path: string;
     purpose: string;
-    phase: "explorer" | "mentor";
+    phase: EvidencePhase;
     truncated: boolean;
   }>;
   focusedFiles: EvidenceFile[];
@@ -140,10 +321,11 @@ export interface ExplorerInput {
   fileCount: number;
   repositoryProfile: RepositoryProfile;
   evidenceBundle: EvidenceBundle;
+  harnessState: HarnessContextView;
   projectTypeHint?: string;
 }
 
-export interface ExplorerOutput {
+export interface ExplorerOutput extends EvidenceFirstOutput {
   projectType: ProjectType;
   techStack: TechStack;
   fileCount: number;
@@ -182,10 +364,11 @@ export interface MentorInput {
   evidenceBundle: EvidenceBundle;
   skillContent: string;
   experiences: string;
+  harnessState: HarnessContextView;
   userFocus?: string;
 }
 
-export interface MentorOutput {
+export interface MentorOutput extends EvidenceFirstOutput {
   architectureOverview: string;
   dependencyGraph: DependencyGraph;
   readingPath: ReadingStep[];
@@ -207,6 +390,7 @@ export interface ContributorInput {
   repositoryContext: RepositoryContributionContext;
   contributionEvidence: ContributionEvidence;
   commitSummary: CommitSummary;
+  harnessState: HarnessContextView;
   userFocus?: string;
 }
 
@@ -233,7 +417,7 @@ export interface NewcomerNote {
   tip: string;
 }
 
-export interface ContributorOutput {
+export interface ContributorOutput extends EvidenceFirstOutput {
   goodFirstIssues: GoodFirstIssue[];
   contributionSetup: ContributionSetup;
   entryFiles: EntryFile[];
@@ -303,6 +487,11 @@ export interface SSEStageDoneEvent {
   output: unknown;
 }
 
+export interface SSEHarnessTraceEvent {
+  type: "harness:trace";
+  trace: HarnessTraceEntry;
+}
+
 export interface SSEInteractAskEvent {
   type: "interact:ask";
   questionId: string;
@@ -325,6 +514,7 @@ export type SSEEvent =
     | SSEStageProgressEvent
     | SSEStageFieldEvent
     | SSEStageDoneEvent
+    | SSEHarnessTraceEvent
     | SSEInteractAskEvent
     | SSEInteractTimeoutEvent
   ) & {

@@ -76,6 +76,24 @@ describe('useAnalysisStream', () => {
     });
 
     act(() => {
+      mockEventSourceInstance.emit('harness:trace', {
+        trace: {
+          stage: 'explorer',
+          kind: 'evidence',
+          title: 'Explorer evidence collected',
+          summary: 'Read 2 repository files.',
+          tool: 'read_evidence_batch',
+          files: ['src/index.ts', 'src/core.ts']
+        },
+        timestamp: '2026-07-30T12:00:01.000Z'
+      });
+    });
+    expect(result.current.state.traces).toContainEqual(expect.objectContaining({
+      tool: 'read_evidence_batch',
+      timestamp: '2026-07-30T12:00:01.000Z'
+    }));
+
+    act(() => {
       mockEventSourceInstance.emit('stage:done', { type: 'stage:done', stage: 'explorer', output: { summary: 'done' } });
     });
     expect(result.current.state.stageProgress.explorer).toBe('done');

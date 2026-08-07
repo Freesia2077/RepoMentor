@@ -8,6 +8,11 @@ describe("config", () => {
     delete process.env.ANTHROPIC_AUTH_TOKEN;
     delete process.env.ANTHROPIC_BASE_URL;
     delete process.env.ANTHROPIC_MODEL;
+    delete process.env.LLM_PROVIDER;
+    delete process.env.LLM_API_KEY;
+    delete process.env.LLM_BASE_URL;
+    delete process.env.LLM_MODEL;
+    delete process.env.MODEL_SETTINGS_PATH;
     delete process.env.PORT;
     delete process.env.HOST;
     delete process.env.CLONE_TIMEOUT_MS;
@@ -19,18 +24,18 @@ describe("config", () => {
     delete process.env.LOG_LEVEL;
   });
 
-  it("throws when ANTHROPIC_AUTH_TOKEN is missing", async () => {
-    await expect(() => import("../../src/config.js")).rejects.toThrow();
+  it("allows startup before a model API key is configured", async () => {
+    const { config } = await import("../../src/config.js");
+    expect(config.ANTHROPIC_AUTH_TOKEN).toBeUndefined();
   });
 
   it("parses valid environment with defaults", async () => {
     process.env.ANTHROPIC_AUTH_TOKEN = "sk-test";
     const { config } = await import("../../src/config.js");
     expect(config.PORT).toBe(3000);
-    expect(config.HOST).toBe("0.0.0.0");
+    expect(config.HOST).toBe("127.0.0.1");
     expect(config.CLONE_DEPTH).toBe(1);
-    expect(config.ANTHROPIC_BASE_URL).toBe("https://api.deepseek.com/anthropic");
-    expect(config.ANTHROPIC_MODEL).toBe("deepseek-v4-flash");
+    expect(config.ANTHROPIC_AUTH_TOKEN).toBe("sk-test");
     expect(config.LOG_LEVEL).toBe("info");
   });
 
@@ -43,6 +48,17 @@ describe("config", () => {
     expect(config.PORT).toBe(8080);
     expect(config.MAX_REPO_SIZE_MB).toBe(500);
     expect(config.LOG_LEVEL).toBe("debug");
+  });
+
+  it("parses generic multi-provider environment values", async () => {
+    process.env.LLM_PROVIDER = "openai-compatible";
+    process.env.LLM_API_KEY = "openai-test";
+    process.env.LLM_BASE_URL = "https://api.openai.com/v1";
+    process.env.LLM_MODEL = "example-model";
+    const { config } = await import("../../src/config.js");
+    expect(config.LLM_PROVIDER).toBe("openai-compatible");
+    expect(config.LLM_API_KEY).toBe("openai-test");
+    expect(config.LLM_MODEL).toBe("example-model");
   });
 
   it("rejects invalid LOG_LEVEL", async () => {

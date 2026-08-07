@@ -1,5 +1,11 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { createAnalysis, getAnalysis, answerInteraction } from './api';
+import {
+  answerInteraction,
+  createAnalysis,
+  getAnalysis,
+  getModelSettings,
+  saveModelSettings,
+} from './api';
 
 describe('API Client', () => {
   beforeEach(() => {
@@ -103,5 +109,61 @@ describe('API Client', () => {
     } as Response);
     
     await expect(answerInteraction('123', 'q1', 'my answer')).rejects.toThrow('Failed to answer interaction');
+  });
+
+  it('loads public model settings without exposing an API key', async () => {
+    vi.mocked(fetch).mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        provider: 'anthropic-compatible',
+        baseUrl: 'https://example.com',
+        model: 'example-model',
+        hasApiKey: true,
+        source: 'file',
+      }),
+    } as Response);
+
+    const settings = await getModelSettings();
+    expect(settings.hasApiKey).toBe(true);
+    expect(fetch).toHaveBeenCalledWith('/api/settings/model', { cache: 'no-store' });
+  });
+
+  it('saves model settings locally through the backend', async () => {
+    vi.mocked(fetch).mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        provider: 'openai-compatible',
+        baseUrl: 'https://api.openai.com/v1',
+        model: 'example-model',
+        hasApiKey: true,
+        source: 'file',
+      }),
+    } as Response);
+
+    await saveModelSettings({
+      provider: 'openai-compatible',
+      baseUrl: 'https://api.openai.com/v1',
+      model: 'example-model',
+      apiKey: 'secret',
+    });
+
+    expect(fetch).toHaveBeenCalledWith('/api/settings/model', expect.objectContaining({
+      method: 'PUT',
+      body: JSON.stringify({
+        provider: 'openai-compatible',
+        baseUrl: 'https://api.openai.com/v1',
+        model: 'example-model',
+        apiKey: 'secret',
+      }),
+    }));
+  });
+
+  it('uses a structured backend error message when available', async () => {
+    vi.mocked(fetch).mockResolvedValueOnce({
+      ok: false,
+      text: async () => JSON.stringify({ message: 'Configure a model first' }),
+    } as Response);
+
+    await expect(createAnalysis('foo/bar')).rejects.toThrow('Configure a model first');
   });
 });

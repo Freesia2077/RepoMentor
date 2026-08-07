@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import type { TaskStatus, StageProgress, SSEEvent, AnalysisResult } from '@backend-types/index';
+import type { TaskStatus, StageProgress, SSEEvent, AnalysisResult, HarnessTraceEntry } from '@backend-types/index';
 import { getAnalysis } from '../api';
 import type { AnalysisLog } from '../types';
 
@@ -7,6 +7,7 @@ export interface StreamState {
   status: TaskStatus;
   stageProgress: StageProgress;
   logs: AnalysisLog[];
+  traces: HarnessTraceEntry[];
   interaction: { id: string; question: string; options: string[] } | null;
   result: Partial<AnalysisResult>;
   error: string | null;
@@ -16,6 +17,7 @@ const initialState: StreamState = {
   status: 'cloning',
   stageProgress: { explorer: 'pending', mentor: 'pending', contributor: 'pending' },
   logs: [],
+  traces: [],
   interaction: null,
   result: {},
   error: null
@@ -86,6 +88,15 @@ export function useAnalysisStream(taskId: string | null) {
           case 'stage:start':
             setState(s => ({ ...s, stageProgress: { ...s.stageProgress, [event.stage]: 'running' } }));
             break;
+          case 'harness:trace':
+            setState(s => ({
+              ...s,
+              traces: [...s.traces, {
+                ...event.trace,
+                timestamp: event.trace.timestamp ?? event.timestamp ?? new Date().toISOString()
+              }]
+            }));
+            break;
           case 'stage:done':
             setState(s => ({ 
               ...s, 
@@ -110,7 +121,7 @@ export function useAnalysisStream(taskId: string | null) {
     };
 
     // The backend only sends named events. We bind to specific event names.
-    const eventTypes = ['task:created', 'task:error', 'stage:progress', 'stage:start', 'stage:done', 'interact:ask', 'interact:timeout', 'task:completed'];
+    const eventTypes = ['task:created', 'task:error', 'stage:progress', 'stage:start', 'stage:done', 'harness:trace', 'interact:ask', 'interact:timeout', 'task:completed'];
     eventTypes.forEach(type => eventSource.addEventListener(type, handleEvent as EventListener));
 
     eventSource.addEventListener('open', () => {

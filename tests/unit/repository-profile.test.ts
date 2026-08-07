@@ -159,15 +159,19 @@ describe("repository profile and evidence", () => {
     const profile = await buildRepositoryProfile(repository, trackedFiles);
     const bundle = await buildEvidenceBundle(
       repository,
-      {
-        rationale: "Verify entry and implementation",
+    {
+      goal: "Verify entry",
+      rationale: "Verify entry and implementation",
+      questions: ["Where is the implementation?"],
+      actions: [],
         files: [
           { path: "src/index.ts", purpose: "public exports", priority: "high" },
           { path: "src/run.ts", purpose: "core behavior", priority: "high" },
           { path: "missing.ts", purpose: "invalid", priority: "low" },
           { path: "src/index.ts", purpose: "duplicate", priority: "low" },
-        ],
-      },
+      ],
+      stopConditions: ["Entry and implementation are covered"],
+    },
       "explorer",
       [],
       trackedFiles,

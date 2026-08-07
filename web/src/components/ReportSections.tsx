@@ -122,3 +122,91 @@ export function ContributorSection({ data }: { data?: ContributorOutput }) {
     </section>
   );
 }
+
+interface EvidenceAppendixProps {
+  explorer?: ExplorerOutput;
+  mentor?: MentorOutput;
+  contributor?: ContributorOutput;
+}
+
+const confidenceLabels = {
+  high: '高置信度',
+  medium: '中置信度',
+  low: '低置信度',
+} as const;
+
+export function EvidenceAppendix({ explorer, mentor, contributor }: EvidenceAppendixProps) {
+  const sections = [
+    { key: 'explorer', label: '项目概览', data: explorer },
+    { key: 'mentor', label: '架构分析', data: mentor },
+    { key: 'contributor', label: '贡献指南', data: contributor },
+  ].filter((section) => section.data
+    && (section.data.evidenceClaims.length > 0 || section.data.evidenceCoverage.gaps.length > 0));
+
+  if (sections.length === 0) return null;
+
+  const examinedFiles = new Set(
+    sections.flatMap(({ data }) => data?.evidenceCoverage.examinedFiles ?? []),
+  );
+  const claimCount = sections.reduce(
+    (total, { data }) => total + (data?.evidenceClaims.length ?? 0),
+    0,
+  );
+  const gaps = [...new Set(
+    sections.flatMap(({ data }) => data?.evidenceCoverage.gaps ?? []),
+  )];
+
+  return (
+    <details className="evidence-appendix" id="evidence">
+      <summary className="evidence-appendix-summary">
+        <div>
+          <span className="evidence-eyebrow">分析依据</span>
+          <strong>证据引用与分析边界</strong>
+          <small>{claimCount} 条分析结论 · {examinedFiles.size} 个已检查文件</small>
+        </div>
+        <span className="evidence-appendix-chevron" aria-hidden="true">▼</span>
+      </summary>
+
+      <div className="evidence-appendix-content">
+        {sections
+          .filter(({ data }) => data && data.evidenceClaims.length > 0)
+          .map(({ key, label, data }) => data && (
+          <section className="evidence-stage" key={key}>
+            <h3>{label}</h3>
+            <div className="evidence-claims">
+              {data.evidenceClaims.map((claim, index) => (
+                <article className="evidence-claim" key={`${claim.claim}-${index}`}>
+                  <div className="evidence-claim-title">
+                    <strong>{claim.claim}</strong>
+                    <span className={`evidence-confidence confidence-${claim.confidence}`}>
+                      {confidenceLabels[claim.confidence]}
+                    </span>
+                  </div>
+                  {claim.evidence.length > 0 ? (
+                    <ul>
+                      {claim.evidence.map((reference) => (
+                        <li key={`${reference.path}-${reference.supports}`}>
+                          <code>{reference.path}</code>
+                          <span>{reference.supports}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p className="evidence-unsupported">该结论未附带文件引用，属于报告级解释。</p>
+                  )}
+                </article>
+              ))}
+            </div>
+          </section>
+        ))}
+
+        {gaps.length > 0 && (
+          <section className="coverage-gaps">
+            <h3>尚未覆盖的范围（{gaps.length}）</h3>
+            <ul>{gaps.map((gap) => <li key={gap}>{gap}</li>)}</ul>
+          </section>
+        )}
+      </div>
+    </details>
+  );
+}

@@ -1,6 +1,7 @@
 import { simpleGit, type SimpleGit } from "simple-git";
 import fs from "node:fs/promises";
 import path from "node:path";
+import { createHash } from "node:crypto";
 import type { CommitSummary } from "../types/index.js";
 
 // Lazy: read env directly, don't import config (avoids test failures when DEEPSEEK_API_KEY not set)
@@ -95,6 +96,19 @@ export async function preflightGithubRepo(owner: string, repo: string): Promise<
   } catch {
     return { status: "unavailable" };
   }
+}
+
+export function resolveRepositoryCachePath(
+  repoUrl: string,
+  branch: string,
+  fallbackName = "repository",
+): string {
+  const parsed = parseRepoUrl(repoUrl);
+  const repositoryName = parsed.owner && parsed.repo
+    ? `${parsed.owner}_${parsed.repo}`
+    : fallbackName;
+  const branchKey = createHash("sha256").update(branch).digest("hex").slice(0, 12);
+  return path.join(process.cwd(), "data/repos", repositoryName, branchKey);
 }
 
 export async function cloneRepo(
