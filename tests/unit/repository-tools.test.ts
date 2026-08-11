@@ -12,7 +12,9 @@ const profile = {
   fileIndex: [
     "src/index.ts",
     "src/utils/helper.ts",
+    "bin/nanoid.js",
     "tests/utils/helper.test.ts",
+    "test/bin.test.js",
   ],
 } as RepositoryProfile;
 
@@ -46,5 +48,9 @@ describe("repository domain tools", () => {
       profile,
       ["src/utils/helper.ts"],
     )).toEqual(["tests/utils/helper.test.ts"]);
+    expect(findRepositoryRelatedTests(
+      profile,
+      ["bin/nanoid.js"],
+    )).toEqual(["test/bin.test.js"]);
   });
 });

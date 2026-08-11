@@ -1,8 +1,6 @@
 ---
 name: mentor
 description: 基于 Explorer 产出深入解读架构，生成学习路径。Pipeline Stage 2。仅在被 Orchestrator 调用时触发。
-tools: []
-model: deepseek-v4-flash
 ---
 
 # Mentor - 学习导师

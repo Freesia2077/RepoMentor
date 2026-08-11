@@ -1,10 +1,24 @@
 import { describe, it, expect } from "vitest";
 import {
+  CONTRIBUTOR_OUTPUT_JSON_SCHEMA,
+  EXPLORER_OUTPUT_JSON_SCHEMA,
+  MENTOR_OUTPUT_JSON_SCHEMA,
   validateEvidencePlan,
   validateExplorerOutput,
   validateMentorOutput,
   validateContributorOutput,
 } from "../../src/lib/schema.js";
+
+it("emits Claude Agent SDK-compatible Draft-07 output schemas", () => {
+  for (const schema of [
+    EXPLORER_OUTPUT_JSON_SCHEMA,
+    MENTOR_OUTPUT_JSON_SCHEMA,
+    CONTRIBUTOR_OUTPUT_JSON_SCHEMA,
+  ]) {
+    expect(schema.$schema).toBe("http://json-schema.org/draft-07/schema#");
+    expect(JSON.stringify(schema)).not.toContain("draft/2020-12");
+  }
+});
 
 describe("evidence plan schema", () => {
   it("accepts a bounded, prioritized reading plan", () => {

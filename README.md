@@ -7,15 +7,15 @@
 
 RepoMentor accepts a public GitHub repository and branch, builds a bounded repository profile, selects real source evidence, and produces a structured learning report in three stages. Its public Analysis Trace shows plans, deterministic repository actions, evidence coverage, and runtime decisions in real time without exposing private model reasoning.
 
-## What's new in v0.3.1
+## What's new in v0.3.2
 
-- **Adaptive small-repository path** — when all relevant source, test, documentation, and example files fit the active Harness policy, Explorer reads them directly without an extra planning-model call; Mentor then reuses the same complete evidence set.
-- **Evidence Ledger** — evidence is now tracked by normalized repository path as `available`, `partial`, or `missing`. Later reads can resolve earlier gaps, while shorter or less complete excerpts cannot overwrite better evidence.
-- **Runtime-derived coverage gaps** — missing and truncated evidence is reported from actual Harness state. Semantic gaps discovered by an Agent are preserved unless the referenced path has subsequently been read in full.
-- **Two-pass evidence budgeting** — RepoMentor prepares candidate contents before distributing the stage budget, preventing file order from causing unnecessary truncation when the complete set fits.
-- **Focused Contributor context** — contribution analysis can reuse the strongest evidence referenced across Explorer and Mentor, alongside contribution guidance, project metadata, TODO markers, tests, and Git history.
-- **Structured report boundaries** — coverage gaps now carry a stable kind, subject, summary, and severity, enabling resolved gaps, low-value exclusions, and duplicates to be handled consistently.
-- **Simplified automatic flow** — the default analysis no longer pauses for project-type or dependency-graph questions.
+- **Bounded Agentic Harness** — larger Anthropic-compatible analyses let Explorer and Mentor choose bounded discovery actions through RepoMentor's in-process MCP tools, while the Harness remains the only source reader.
+- **No raw repository permissions** — Agent queries run in isolated temporary directories without `Read`, `Glob`, `Grep`, shell, network, write, or edit tools.
+- **Adaptive provider routing** — complete small repositories and OpenAI-compatible providers retain the deterministic Workflow; unsupported Agent capabilities fall back once and are remembered per provider fingerprint.
+- **Claude Agent SDK as a first-class runtime** — the SDK is pinned, structured results retain usage and cost metadata, and trusted namespaced Skills are published through the local RepoMentor plugin.
+- **Structured output compatibility** — Explorer, Mentor, and Contributor use Draft-07 output schemas with Zod as the final validation boundary, plus text-JSON fallback for compatible endpoints without native support.
+- **Accurate analysis traces** — runtime selection, completed discovery actions, evidence reuse, empty tool results, and phase-specific Agent completion are reported without exposing source contents or hidden reasoning.
+- **Report polish** — Module Map importance labels now use coordinated colors for `core`, `support`, and `utility`.
 
 ## Screenshots
 
@@ -66,12 +66,15 @@ flowchart LR
     C --> S["Activate executable Skill policy"]
     S --> Q{"Complete bounded coverage available?"}
     Q -->|Yes| E["Harness builds and executes a complete evidence plan"]
-    Q -->|No| D["Orchestrator plans Explorer actions"]
-    D --> E
+    Q -->|No, Anthropic-compatible| D["Bounded Explorer Agent uses RepoMentor MCP discovery"]
+    Q -->|No, Workflow fallback| O["Orchestrator plans Explorer evidence"]
+    D --> P["Agent returns one EvidencePlan"]
+    P --> E
+    O --> E
     E --> F["Explorer maps project structure"]
     F --> R{"Explorer evidence complete?"}
     R -->|Yes| H["Reuse the complete evidence set"]
-    R -->|No| G["Orchestrator plans Mentor actions"]
+    R -->|No| G["Bounded Agent or Orchestrator plans Mentor evidence"]
     G --> H["Harness discovers and reads additional evidence"]
     H --> I["Mentor explains architecture"]
     I --> J["Contributor proposes entry points"]
@@ -83,7 +86,9 @@ flowchart LR
     H -. "evidence trace" .-> L
 ```
 
-The repository profile includes a bounded file index, hierarchical directory statistics, README and manifest excerpts, engineering configuration, contribution guidance, language statistics, TODO markers, and entry/test candidates. For a small repository whose relevant files fit the active policy, the Harness creates a deterministic complete-coverage plan. Other repositories use Orchestrator to select representative files. RepoMentor's provider-neutral Repository Harness validates every path, applies read budgets, prepares downstream context, and emits a safe operational trace. The same tool semantics are used regardless of model provider.
+The repository profile includes a bounded file index, hierarchical directory statistics, README and manifest excerpts, engineering configuration, contribution guidance, language statistics, TODO markers, and entry/test candidates. For a small repository whose relevant files fit the active policy, the Harness creates a deterministic complete-coverage plan. Other repositories use a bounded Claude Agent SDK research loop when the provider supports it, with the existing Orchestrator as a capability fallback. OpenAI-compatible providers always use the deterministic Workflow. RepoMentor's provider-neutral Repository Harness validates every tool action and path, applies read budgets, prepares downstream context, and emits a safe operational trace.
+
+The bounded loop is deliberately two-step. The Agent can call only `mcp__repomentor__search_symbols`, `mcp__repomentor__trace_module_dependencies`, and `mcp__repomentor__find_related_tests`; those tools return summaries, paths, and counts—not source. The Agent emits one `EvidencePlan`, then the Harness performs the only source batch read outside the loop. The SDK runs in a fresh temporary `cwd` with `settingSources: []`, no persisted session, and no raw file, shell, network, editing, or delegation tools. A target repository's `CLAUDE.md`, `.claude/skills`, hooks, and agents are therefore evidence only and are never loaded as SDK settings.
 
 | Role | Responsibility |
 |---|---|
@@ -92,7 +97,7 @@ The repository profile includes a bounded file index, hierarchical directory sta
 | **Mentor** | Explains architecture and dependencies, extracts code patterns, and builds a recommended reading path |
 | **Contributor** | Uses contribution docs, TODOs, commit history, tests, and focused source evidence to suggest realistic contribution paths |
 
-Explorer, Mentor, and Contributor receive stage-specific contexts rather than one repeated full prompt. Their outputs are validated with Zod; malformed JSON gets one tool-free repair pass without rescanning the repository.
+Explorer, Mentor, and Contributor receive stage-specific contexts rather than one repeated full prompt. Every stage requests provider-native JSON Schema output and then validates it with Zod; compatible endpoints that do not support native structured output retain the text-JSON parser and one tool-free repair pass.
 
 RepoMentor treats the Harness as the runtime surrounding those models—not as an evaluation suite and not as another Agent. It owns shared state, domain-tool execution, path validation, evidence budgets, stage transitions, tool results, and stop conditions. The current domain tools are deliberately coarse-grained:
 
@@ -110,7 +115,9 @@ The shared `HarnessState` records goals, analysis questions, plans, tool observa
 
 Evidence content is prepared before the stage budget is distributed. If all selected contents fit, they are retained in full regardless of request order; otherwise every candidate receives a bounded baseline before remaining bytes are assigned by priority. Text files use the default bounded reader, while structured container formats can expose normalized text through small, isolated adapters without changing Harness behavior.
 
-Skills are executable Harness capability packs rather than extra Agents. Each `skills/*/SKILL.md` explains a project-type strategy for the model, while the adjacent `skill.json` declares the allowed and preferred domain tools, recommended investigation questions, evidence requirements, stop intent, and stage limits. A project-specific pack is selected when available; the generic pack is only a fallback. The Harness enforces tool permissions and action/file limits after planning, so a prompt cannot silently broaden the investigation.
+Skills are executable Harness capability packs rather than extra Agents. RepoMentor is a trusted local Claude Agent SDK plugin (`.claude-plugin/plugin.json`): each `skills/*/SKILL.md` explains how to use only the RepoMentor discovery tools, while the adjacent `skill.json` remains the authoritative executable policy for allowed tools, questions, evidence requirements, stop intent, and stage limits. Skills are loaded under the `repomentor:<skill-name>` namespace. The Harness—not the prompt or SDK hook—enforces permissions, path provenance, duplicate fingerprints, action/file limits, and stage transitions.
+
+`MENTOR_SUBAGENTS_ENABLED=true` enables an experimental Mentor coordinator with two programmatic SDK `AgentDefinition`s: `architecture-analyst` and `learning-path-reviewer`. Each receives one read-only MCP view containing only evidence already read by the Harness, cannot delegate recursively, and is called exactly once. A third delegation is rejected by a hook. Any incomplete or invalid delegation falls back to the single Mentor synthesis without reading the repository again. This remains off by default until the benchmark gates are met.
 
 ## Features
 
@@ -195,6 +202,9 @@ LLM_PROVIDER=anthropic-compatible
 LLM_API_KEY=sk-xxx
 LLM_BASE_URL=https://api.deepseek.com/anthropic
 LLM_MODEL=deepseek-v4-flash
+AGENT_RUNTIME_MODE=adaptive
+MENTOR_SUBAGENTS_ENABLED=false
+# AGENT_MAX_BUDGET_USD=0.25
 ```
 
 Existing `ANTHROPIC_AUTH_TOKEN`, `ANTHROPIC_BASE_URL`, and `ANTHROPIC_MODEL` configurations remain backward compatible. Saved web settings take precedence over environment values.
@@ -213,6 +223,8 @@ MODEL_SETTINGS_PATH=./data/model-settings.json
 SQLITE_PATH=./data/repomentor.db
 LOG_LEVEL=info
 ```
+
+`AGENT_RUNTIME_MODE=adaptive` uses complete-coverage Workflow for eligible small repositories, bounded Agent discovery for other Anthropic-compatible runs, and Workflow for OpenAI-compatible runs. `workflow` is the immediate rollback switch. `agentic` requires an Anthropic-compatible provider and returns `invalid_model_settings` otherwise. `AGENT_MAX_BUDGET_USD` is optional; turn, task-timeout, and Harness budgets remain hard limits when it is omitted.
 
 ### Development
 

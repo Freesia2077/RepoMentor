@@ -1,8 +1,6 @@
 ---
 name: explorer
 description: 探索已克隆的仓库目录结构，产出项目类型、技术栈、模块清单。Pipeline Stage 1。仅在被 Orchestrator 调用时触发，不独立工作。
-tools: []
-model: deepseek-v4-flash
 ---
 
 # Explorer - 仓库探索者

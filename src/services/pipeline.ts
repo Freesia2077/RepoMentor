@@ -9,6 +9,9 @@ import type {
   CommitSummary,
   EvidencePlan,
   HarnessTraceEntry,
+  AnalysisRuntimeKind,
+  AgentEvidenceRequest,
+  EvidenceBundle,
 } from "../types/index.js";
 import {
   runStage,
@@ -32,8 +35,14 @@ import { createHash } from "node:crypto";
 import type { ModelSettings } from "./model-settings.js";
 import { RepositoryHarness } from "./repository-harness.js";
 import { loadHarnessSkill } from "./harness-skills.js";
+import {
+  AgentRuntimeError,
+  ClaudeAgentRuntime,
+  isAgentCapabilityKnownUnsupported,
+  rememberUnsupportedAgentCapability,
+} from "./claude-agent-runtime.js";
 
-const ANALYSIS_PIPELINE_VERSION = "adaptive-harness-v7";
+const ANALYSIS_PIPELINE_VERSION = "bounded-agent-v8";
 
 // ========== Pipeline 上下文 & 类型 ==========
 
@@ -72,6 +81,8 @@ export async function executePipeline(ctx: PipelineContext): Promise<PipelineRes
   let localPath: string | undefined;
 
   try {
+    const settingsError = validateAnalysisRuntimeSettings(ctx.modelSettings);
+    if (settingsError) throw settingsError;
     // 0. Clone
     sseManager.emit(ctx.taskId, {
       type: "task:created",
@@ -132,26 +143,7 @@ export async function executePipeline(ctx: PipelineContext): Promise<PipelineRes
       .update(`${modelSettings.provider}\0${modelSettings.baseUrl}\0${modelSettings.model}`)
       .digest("hex")
       .slice(0, 12);
-    const analysisCacheKey = `${ANALYSIS_PIPELINE_VERSION}:${providerFingerprint}:${commitHash}`;
-    const cached = cacheRepo.findByCommit(
-      db,
-      cacheOwner,
-      cacheRepoName,
-      ctx.branch,
-      analysisCacheKey,
-    );
-
-    if (cached) {
-      const cachedResult = JSON.parse(cached.result) as AnalysisResult;
-      emitHarnessTrace(ctx, {
-        stage: "repository",
-        kind: "decision",
-        title: "已复用现有报告",
-        summary: "仓库提交与模型配置均匹配已有分析，因此没有重复读取源码或调用模型。",
-        metadata: { cached: true },
-      });
-      return { result: cachedResult, cached: true };
-    }
+    let analysisCacheKey = "";
 
     const harness = new RepositoryHarness(
       localPath,
@@ -175,6 +167,48 @@ export async function executePipeline(ctx: PipelineContext): Promise<PipelineRes
       message: `仓库画像构建完成（${fileCount} 个文件，${repositoryProfile.manifests.length} 个项目清单，${repositoryProfile.configFiles.length} 个工程配置${repositoryProfile.readme ? "，已读取 README" : ""}）`,
     });
 
+    const explorerSkill = loadHarnessSkill(["unknown"], "explorer");
+    harness.activateSkillPolicy("explorer", explorerSkill.policy);
+    const completeCoveragePlan = harness.createCompleteCoveragePlan(
+      "explorer",
+      explorerSkill.policy,
+    );
+    let runtimeKind = selectAnalysisRuntimeKind(
+      ctx.modelSettings,
+      Boolean(completeCoveragePlan),
+    );
+    const expectedCacheRuntimeKind: AnalysisRuntimeKind = config.MENTOR_SUBAGENTS_ENABLED
+      && ctx.modelSettings.provider === "anthropic-compatible"
+      && !isAgentCapabilityKnownUnsupported(ctx.modelSettings)
+      ? "mentor-multi-agent"
+      : runtimeKind;
+    analysisCacheKey = buildAnalysisCacheKey(
+      providerFingerprint,
+      commitHash,
+      expectedCacheRuntimeKind,
+    );
+    const cached = cacheRepo.findByCommit(
+      db,
+      cacheOwner,
+      cacheRepoName,
+      ctx.branch,
+      analysisCacheKey,
+    );
+    if (cached) {
+      const cachedResult = JSON.parse(cached.result) as AnalysisResult;
+      emitHarnessTrace(ctx, {
+        stage: "repository",
+        kind: "decision",
+        title: "已复用现有报告",
+        summary: "仓库提交、模型配置与实际分析 Runtime 均匹配已有报告。",
+        metadata: { cached: true, runtimeKind: expectedCacheRuntimeKind },
+      });
+      return { result: cachedResult, cached: true };
+    }
+    emitRuntimeSelection(ctx, expectedCacheRuntimeKind, completeCoveragePlan
+      ? "仓库满足完整覆盖条件"
+      : "根据 Provider 与 AGENT_RUNTIME_MODE 自适应选择");
+
     // 标记进入 analyzing
     ctx.callbacks.onStatusChange("analyzing");
     sseManager.emit(ctx.taskId, {
@@ -184,23 +218,19 @@ export async function executePipeline(ctx: PipelineContext): Promise<PipelineRes
     });
 
     // 1. Explorer：小仓库直接覆盖，其他仓库由 Orchestrator 定向规划
-    const explorerSkill = loadHarnessSkill(["unknown"], "explorer");
-    harness.activateSkillPolicy("explorer", explorerSkill.policy);
     beginStage(ctx, "explorer");
-    const completeCoveragePlan = harness.createCompleteCoveragePlan(
-      "explorer",
-      explorerSkill.policy,
-    );
-    const explorerPlan = completeCoveragePlan ?? await planEvidenceWithRetry(
-      "explorer",
-      {
-        repositoryProfile,
-        skillPolicy: explorerSkill.policy,
-        harnessState: harness.getContextView(),
-      },
-      ctx,
-      localPath,
-    );
+    const explorerPlanning = completeCoveragePlan
+      ? { plan: completeCoveragePlan, runtimeKind: "workflow" as const }
+      : await planEvidenceAdaptively({
+          phase: "explorer",
+          repositoryProfile,
+          skillPolicy: explorerSkill.policy,
+          sdkSkillNames: explorerSkill.sdkSkillNames,
+          harnessState: harness.getContextView(),
+          existingEvidencePaths: [],
+        }, runtimeKind, harness, ctx, localPath);
+    runtimeKind = explorerPlanning.runtimeKind;
+    const explorerPlan = explorerPlanning.plan;
     const explorerEvidence = await harness.executeEvidencePlan(
       "explorer",
       explorerPlan,
@@ -245,13 +275,17 @@ export async function executePipeline(ctx: PipelineContext): Promise<PipelineRes
           const reusableEvidencePaths = harness.getContextView().evidenceIndex
             .filter((file) => !file.truncated)
             .map((file) => file.path);
-          const mentorPlan = await planEvidenceWithRetry("mentor", {
+          const mentorPlanning = await planEvidenceAdaptively({
+            phase: "mentor",
             explorerOutput,
             repositoryProfile,
             existingEvidencePaths: reusableEvidencePaths,
             skillPolicy: mentorSkill.policy,
+            sdkSkillNames: mentorSkill.sdkSkillNames,
             harnessState: harness.getContextView(),
-          }, ctx, localPath);
+          }, runtimeKind, harness, ctx, localPath);
+          runtimeKind = mentorPlanning.runtimeKind;
+          const mentorPlan = mentorPlanning.plan;
           return harness.executeEvidencePlan(
             "mentor",
             mentorPlan,
@@ -262,7 +296,7 @@ export async function executePipeline(ctx: PipelineContext): Promise<PipelineRes
     emitEvidenceReady(ctx, "mentor", mentorEvidence.files.length, mentorEvidence.totalBytes);
     emitAnalysisContextReady(ctx, "mentor", repositoryOverview, evidenceBundle.totalBytes);
 
-    const mentorStageOutput = await runStageWithRetry("mentor", {
+    const mentorInput = {
       explorerOutput,
       repositoryOverview,
       evidenceBundle,
@@ -274,7 +308,17 @@ export async function executePipeline(ctx: PipelineContext): Promise<PipelineRes
         ))
         .join("\n\n"),
       harnessState: harness.getContextView(),
-    }, ctx, localPath, true);
+    };
+    const mentorSynthesis = await runMentorSynthesis(
+      mentorInput,
+      evidenceBundle,
+      mentorSkill.sdkSkillNames,
+      runtimeKind,
+      ctx,
+      localPath,
+    );
+    runtimeKind = mentorSynthesis.runtimeKind;
+    const mentorStageOutput = mentorSynthesis.output;
     const mentorOutput = harness.verifyEvidenceOutput("mentor", mentorStageOutput);
     harness.completeStage("mentor");
 
@@ -316,6 +360,11 @@ export async function executePipeline(ctx: PipelineContext): Promise<PipelineRes
     };
 
     // 保存缓存
+    analysisCacheKey = buildAnalysisCacheKey(
+      providerFingerprint,
+      commitHash,
+      runtimeKind,
+    );
     cacheRepo.save(getDb(), {
       owner: cacheOwner,
       repo: cacheRepoName,
@@ -356,6 +405,222 @@ function beginStage(ctx: PipelineContext, stage: StageName): void {
       ? "正在依据已校验的仓库上下文和前序结论生成贡献指南。"
       : "正在为当前阶段准备有仓库证据支撑的分析。",
   });
+}
+
+export function selectAnalysisRuntimeKind(
+  settings: ModelSettings,
+  completeCoverage: boolean,
+): AnalysisRuntimeKind {
+  if (completeCoverage || config.AGENT_RUNTIME_MODE === "workflow") return "workflow";
+  if (settings.provider === "openai-compatible") return "workflow";
+  if (isAgentCapabilityKnownUnsupported(settings)) return "workflow";
+  return "bounded-agent";
+}
+
+export function validateAnalysisRuntimeSettings(
+  settings: ModelSettings,
+  runtimeMode = config.AGENT_RUNTIME_MODE,
+): TaskError | null {
+  if (runtimeMode === "agentic" && settings.provider === "openai-compatible") {
+    return {
+      category: "invalid_model_settings",
+      message: "AGENT_RUNTIME_MODE=agentic 不能与 OpenAI-compatible Provider 同时使用；请改用 adaptive 或 workflow",
+      retryable: false,
+    };
+  }
+  return null;
+}
+
+function buildAnalysisCacheKey(
+  providerFingerprint: string,
+  commitHash: string,
+  runtimeKind: AnalysisRuntimeKind,
+): string {
+  return `${ANALYSIS_PIPELINE_VERSION}:${runtimeKind}:${providerFingerprint}:${commitHash}`;
+}
+
+function emitRuntimeSelection(
+  ctx: PipelineContext,
+  runtimeKind: AnalysisRuntimeKind,
+  reason: string,
+): void {
+  emitHarnessTrace(ctx, {
+    stage: "repository",
+    kind: "decision",
+    title: "分析 Runtime 已选择",
+    summary: `${reason}，本次使用 ${runtimeKind}。`,
+    metadata: {
+      runtimeKind,
+      runtimeMode: config.AGENT_RUNTIME_MODE,
+      provider: ctx.modelSettings.provider,
+    },
+  });
+}
+
+async function planEvidenceAdaptively(
+  request: AgentEvidenceRequest,
+  requestedRuntimeKind: AnalysisRuntimeKind,
+  harness: RepositoryHarness,
+  ctx: PipelineContext,
+  localPath: string,
+): Promise<{ plan: EvidencePlan; runtimeKind: AnalysisRuntimeKind }> {
+  if (requestedRuntimeKind !== "bounded-agent") {
+    return {
+      plan: await planEvidenceWithRetry(request.phase, {
+        ...request,
+        sdkSkillNames: undefined,
+      }, ctx, localPath),
+      runtimeKind: "workflow",
+    };
+  }
+
+  const runtime = new ClaudeAgentRuntime(
+    ctx.modelSettings,
+    (entry) => emitHarnessTrace(ctx, entry),
+  );
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    try {
+      const result = await runtime.planEvidence({
+        ...request,
+        harnessState: harness.getContextView(),
+      }, harness, ctx.abortController);
+      emitHarnessTrace(ctx, {
+        stage: request.phase,
+        kind: "decision",
+        title: `受限 ${request.phase === "explorer" ? "Explorer" : "Mentor"} Research Agent 已完成`,
+        summary: "Agent 仅通过 RepoMentor 进程内 MCP 选择证据；源码将在循环外由 Harness 批量读取一次。",
+        metadata: {
+          runtimeKind: "bounded-agent",
+          turns: result.turns,
+          toolCalls: Object.values(result.toolCalls).reduce((sum, count) => sum + count, 0),
+          tokens: countUsageTokens(result.modelUsage ?? result.usage),
+          costUsd: result.costUsd ?? 0,
+        },
+      });
+      return { plan: result.evidencePlan, runtimeKind: "bounded-agent" };
+    } catch (error) {
+      if (!(error instanceof AgentRuntimeError)) throw error;
+      if (error.cancelled || ctx.abortController.signal.aborted) {
+        throw {
+          category: "timeout",
+          message: error.message,
+          retryable: false,
+        } satisfies TaskError;
+      }
+      if (error.fallbackEligible) {
+        if (error.rememberUnsupported) {
+          rememberUnsupportedAgentCapability(ctx.modelSettings);
+        }
+        emitHarnessTrace(ctx, {
+          stage: request.phase,
+          kind: "decision",
+          title: "受限 Agent 已降级为 Workflow",
+          summary: `${error.message}；Harness 将使用现有 Orchestrator 规划，且不会重复已完成的源码读取。`,
+          metadata: {
+            from: "bounded-agent",
+            to: "workflow",
+            reason: error.message.slice(0, 300),
+          },
+        });
+        const plan = await planEvidenceWithRetry(request.phase, {
+          ...request,
+          sdkSkillNames: undefined,
+          harnessState: harness.getContextView(),
+        }, ctx, localPath);
+        return { plan, runtimeKind: "workflow" };
+      }
+      if (error.retryable && attempt === 0) {
+        sseManager.emit(ctx.taskId, {
+          type: "stage:progress",
+          stage: request.phase,
+          message: "受限 Agent 调用遇到临时错误，正在按原有语义重试一次...",
+        });
+        continue;
+      }
+      throw {
+        category: "llm_failed",
+        message: error.message,
+        retryable: error.retryable,
+      } satisfies TaskError;
+    }
+  }
+  throw new Error("unreachable");
+}
+
+async function runMentorSynthesis(
+  input: Record<string, unknown>,
+  evidenceBundle: EvidenceBundle,
+  sdkSkillNames: string[],
+  currentRuntimeKind: AnalysisRuntimeKind,
+  ctx: PipelineContext,
+  localPath: string,
+): Promise<{ output: MentorOutput; runtimeKind: AnalysisRuntimeKind }> {
+  const multiAgentEligible = config.MENTOR_SUBAGENTS_ENABLED
+    && ctx.modelSettings.provider === "anthropic-compatible"
+    && !isAgentCapabilityKnownUnsupported(ctx.modelSettings);
+  if (!multiAgentEligible) {
+    return {
+      output: await runStageWithRetry("mentor", input, ctx, localPath, true),
+      runtimeKind: currentRuntimeKind,
+    };
+  }
+
+  const runtime = new ClaudeAgentRuntime(
+    ctx.modelSettings,
+    (entry) => emitHarnessTrace(ctx, entry),
+  );
+  try {
+    const result = await runtime.synthesizeMentorWithSubagents(
+      input,
+      evidenceBundle,
+      sdkSkillNames,
+      ctx.abortController,
+    );
+    ctx.callbacks.onStageDone("mentor");
+    sseManager.emit(ctx.taskId, {
+      type: "stage:done",
+      stage: "mentor",
+      output: result.output,
+    });
+    emitHarnessTrace(ctx, {
+      stage: "mentor",
+      kind: "decision",
+      title: "Mentor 双子智能体综合已完成",
+      summary: "架构分析与学习路径审阅各委派一次，且只访问 Harness 已读取的裁剪证据视图。",
+      metadata: {
+        runtimeKind: "mentor-multi-agent",
+        delegations: 2,
+        turns: result.turns,
+        tokens: countUsageTokens(result.modelUsage ?? result.usage),
+        costUsd: result.costUsd ?? 0,
+        schemaValidated: true,
+      },
+    });
+    return { output: result.output, runtimeKind: "mentor-multi-agent" };
+  } catch (error) {
+    if (error instanceof AgentRuntimeError && (error.cancelled || ctx.abortController.signal.aborted)) {
+      throw {
+        category: "timeout",
+        message: error.message,
+        retryable: false,
+      } satisfies TaskError;
+    }
+    emitHarnessTrace(ctx, {
+      stage: "mentor",
+      kind: "decision",
+      title: "Mentor 双子智能体已回退",
+      summary: `${error instanceof Error ? error.message : String(error)}；将复用相同证据执行单 Mentor 综合，不重新读取仓库。`,
+      metadata: {
+        from: "mentor-multi-agent",
+        to: currentRuntimeKind,
+        evidenceReread: false,
+      },
+    });
+    return {
+      output: await runStageWithRetry("mentor", input, ctx, localPath, true),
+      runtimeKind: currentRuntimeKind,
+    };
+  }
 }
 
 async function planEvidenceWithRetry(
@@ -642,6 +907,22 @@ function buildExperienceSummary(result: AnalysisResult): string {
 
 function emitError(taskId: string, error: TaskError): void {
   sseManager.emit(taskId, { type: "task:error", taskId, error });
+}
+
+function countUsageTokens(value: unknown): number {
+  if (!value || typeof value !== "object") return 0;
+  let total = 0;
+  for (const [key, nested] of Object.entries(value)) {
+    if (
+      typeof nested === "number"
+      && /^(input|output)_?tokens$/i.test(key)
+    ) {
+      total += nested;
+    } else if (nested && typeof nested === "object") {
+      total += countUsageTokens(nested);
+    }
+  }
+  return total;
 }
 
 function emitHarnessTrace(ctx: PipelineContext, entry: HarnessTraceEntry): void {

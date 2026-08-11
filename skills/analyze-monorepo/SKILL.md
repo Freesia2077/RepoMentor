@@ -15,11 +15,13 @@ description: 分析 Monorepo 多包管理类项目的策略模板
 
 ## 推荐探索路径
 
-1. 理解包结构：查看 packages/ 或 apps/ 目录下的子包列表
-2. 读取根配置：pnpm-workspace.yaml, lerna.json, turbo.json 等
-3. 绘制依赖图：各 package.json 之间的相互引用关系
-4. 找到共享包：shared/, common/, utils/ 等被多个包引用的模块
-5. 了解 CI/CD：查看测试、构建、发布的流水线配置
+1. 从 repositoryProfile 的目录统计和工程文件路径识别 workspace 与包边界
+2. 用 `search_symbols` 调查 workspace、shared、common 或核心包概念
+3. 用 `trace_module_dependencies` 从索引中的包入口确认跨包依赖方向
+4. 用 `find_related_tests` 为代表性包入口定位测试路径
+5. 输出一次 EvidencePlan，由 Harness 统一读取根配置、包入口和测试证据
+
+不得自行读取目录或配置文件；只可使用 RepoMentor MCP 返回的路径和统计摘要。
 
 ## 常见架构模式
 

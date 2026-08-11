@@ -95,8 +95,16 @@ export function findRepositoryRelatedTests(
     for (const sourcePath of sourcePaths) {
       const sourceBase = basenameWithoutExtension(sourcePath)
         .replace(/^(index|main|mod|lib)$/i, path.posix.basename(path.posix.dirname(sourcePath)));
+      const sourceDirectoryBase = path.posix.basename(path.posix.dirname(sourcePath));
       const testBase = basenameWithoutExtension(testPath).replace(/\.(test|spec)$/i, "");
       if (sourceBase && testBase.toLowerCase().includes(sourceBase.toLowerCase())) score += 10;
+      if (
+        sourceDirectoryBase
+        && sourceDirectoryBase !== "."
+        && testBase.toLowerCase().includes(sourceDirectoryBase.toLowerCase())
+      ) {
+        score += 8;
+      }
       const sourceParts = new Set(path.posix.dirname(sourcePath).toLowerCase().split("/"));
       score += testPath.toLowerCase().split("/").filter((part) => sourceParts.has(part)).length;
     }

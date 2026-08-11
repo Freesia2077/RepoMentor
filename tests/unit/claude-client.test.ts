@@ -91,6 +91,9 @@ describe("Claude stage execution", () => {
         tools: [],
         allowedTools: [],
         maxTurns: 4,
+        outputFormat: expect.objectContaining({ type: "json_schema" }),
+        settingSources: [],
+        persistSession: false,
       },
     });
     expect(progress.mock.calls.map(([message]) => message)).toEqual([
@@ -98,6 +101,65 @@ describe("Claude stage execution", () => {
       "Explorer 正在思考与分析...",
       "Explorer 分析完成（模型轮次 1）",
     ]);
+  });
+
+  it("consumes native structured_output before text parsing", async () => {
+    mocks.query.mockReturnValueOnce(messageStream([{
+      type: "result",
+      subtype: "success",
+      is_error: false,
+      num_turns: 1,
+      result: "not-json",
+      structured_output: baseExplorerOutput,
+    }]));
+
+    const result = await runStage(
+      "explorer",
+      {},
+      { onProgress: vi.fn(), onField: vi.fn() },
+      process.cwd(),
+    );
+
+    expect(result.projectSummary).toBe("一个 Python SDK");
+    expect(mocks.query).toHaveBeenCalledOnce();
+  });
+
+  it("falls back once to text JSON when a compatible endpoint lacks structured output", async () => {
+    mocks.query
+      .mockReturnValueOnce(messageStream([{
+        type: "result",
+        subtype: "error_max_structured_output_retries",
+        is_error: true,
+        num_turns: 1,
+        errors: ["unsupported"],
+      }]))
+      .mockReturnValueOnce(messageStream([
+        resultMessage(JSON.stringify(baseExplorerOutput)),
+      ]));
+    const progress = vi.fn();
+
+    const result = await runStage(
+      "explorer",
+      {},
+      { onProgress: progress, onField: vi.fn() },
+      process.cwd(),
+      undefined,
+      {
+        provider: "anthropic-compatible",
+        apiKey: "secret",
+        baseUrl: "https://no-structured.example/anthropic",
+        model: "compat-model",
+        source: "environment",
+      },
+    );
+
+    expect(result.projectSummary).toBe("一个 Python SDK");
+    expect(mocks.query).toHaveBeenCalledTimes(2);
+    expect(mocks.query.mock.calls[0]?.[0].options.outputFormat).toBeDefined();
+    expect(mocks.query.mock.calls[1]?.[0].options.outputFormat).toBeUndefined();
+    expect(progress).toHaveBeenCalledWith(
+      "当前兼容端点不支持原生 structured output，已切换为文本 JSON 契约...",
+    );
   });
 
   it("uses one short tool-free repair pass for an invalid schema value", async () => {
@@ -334,6 +396,25 @@ describe("Claude stage execution", () => {
     expect(progress.mock.calls.flat()).not.toContainEqual(
       expect.stringContaining("分析完成"),
     );
+  });
+
+  it("does not retry a deterministic local JSON Schema validation error", async () => {
+    mocks.query.mockImplementationOnce(() => {
+      throw new Error(
+        'Claude Code process exited with code 1. stderr: Error: --json-schema is not a valid JSON Schema: no schema with key or ref "https://json-schema.org/draft/2020-12/schema"',
+      );
+    });
+
+    await expect(runStage(
+      "explorer",
+      { localPath: "D:\\repo", fileCount: 100 },
+      { onProgress: vi.fn(), onField: vi.fn() },
+      process.cwd(),
+    )).rejects.toMatchObject({
+      message: expect.stringContaining("结构化输出 Schema 与 Claude Agent SDK 不兼容"),
+      retryable: false,
+    });
+    expect(mocks.query).toHaveBeenCalledOnce();
   });
 
   it("allows Contributor 90 seconds before classifying a first-response stall", async () => {

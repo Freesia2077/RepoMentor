@@ -15,11 +15,13 @@ description: 分析 Web 框架类开源项目的策略模板
 
 ## 推荐探索路径
 
-1. 找到应用入口：查看 package.json 的 main/bin 字段，或启动脚本
-2. 理解路由系统：搜索 router、routes 关键词，理解 URL → handler 的映射
-3. 跟踪请求生命周期：从监听端口 → 路由匹配 → 中间件链 → 响应
-4. 学习配置机制：查看 config/ 目录或配置文件加载方式
-5. 了解扩展机制：如何编写和注册插件/中间件
+1. 从 repositoryProfile.entryCandidates 与清单路径中选择框架入口候选
+2. 用 `search_symbols` 调查 router、middleware、plugin、handler 等概念
+3. 用 `trace_module_dependencies` 从索引中的入口确认请求生命周期依赖方向
+4. 用 `find_related_tests` 为路由、中间件或插件候选寻找代表性测试
+5. 输出一次 EvidencePlan，由 Harness 在循环外读取并裁剪真实证据
+
+只使用当前 Skill Policy 暴露的 RepoMentor MCP 工具；不得请求 Read、Grep、Glob、Bash、网络或编辑能力。
 
 ## 常见架构模式
 

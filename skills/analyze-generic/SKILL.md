@@ -15,11 +15,13 @@ description: 通用项目分析策略（兜底模板，适用于任何类型的�
 
 ## 推荐探索路径
 
-1. 阅读 README 了解项目目的和基本使用方式
-2. 查看 package.json（或等效文件）的入口、脚本和依赖
-3. 浏览顶层目录结构，理解模块组织方式
-4. 阅读主入口文件的前 100 行，了解程序启动流程
-5. 检查 CONTRIBUTING.md 了解开发流程
+1. 从 repositoryProfile 的入口、测试与工程文件索引形成候选集合
+2. 用 `search_symbols` 定位一个关键概念，只消费返回的路径与统计摘要
+3. 用 `trace_module_dependencies` 从索引中的入口候选确认内部依赖方向
+4. 用 `find_related_tests` 为核心候选寻找代表性测试路径
+5. 输出一次 EvidencePlan；源码内容由 Harness 在 Agent 循环外统一读取
+
+不得请求或假设存在 Read、Glob、Grep、Bash、网络或编辑工具。工具参数中的路径必须逐字来自 repositoryProfile.fileIndex。
 
 ## 常见架构模式
 

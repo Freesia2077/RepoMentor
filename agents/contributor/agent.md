@@ -1,8 +1,6 @@
 ---
 name: contributor
 description: 基于前两阶段产出和 commit 摘要，分析贡献机会和入手路径。Pipeline Stage 3。仅在被 Orchestrator 调用时触发。
-tools: []
-model: deepseek-v4-flash
 ---
 
 # Contributor - 贡献顾问

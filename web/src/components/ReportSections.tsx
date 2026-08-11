@@ -59,7 +59,9 @@ export function ExplorerSection({ data }: { data?: ExplorerOutput }) {
           <div key={i} className="card">
             <h4 style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
               {mod.path} 
-              <span className="tag tag-status">{mod.importance}</span>
+              <span className={`tag tag-importance tag-importance-${mod.importance}`}>
+                {mod.importance}
+              </span>
             </h4>
             <p className="text-secondary">{mod.responsibility}</p>
           </div>

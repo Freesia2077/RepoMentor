@@ -1,5 +1,13 @@
 import { z } from "zod";
 
+// Claude Agent SDK 0.3.224 delegates `outputFormat` to Claude Code's
+// `--json-schema` validator, whose bundled Ajv accepts Draft-07 but does not
+// register the Draft 2020-12 meta-schema emitted by Zod by default.
+const CLAUDE_JSON_SCHEMA_OPTIONS = {
+  target: "draft-07",
+  unrepresentable: "any",
+} as const;
+
 // ===== Evidence Plan =====
 
 export const evidencePlanSchema = z.object({
@@ -198,6 +206,10 @@ export const explorerOutputSchema = z.object({
   evidenceCoverage: evidenceCoverageSchema,
 });
 
+export const EXPLORER_OUTPUT_JSON_SCHEMA = z.toJSONSchema(explorerOutputSchema, {
+  ...CLAUDE_JSON_SCHEMA_OPTIONS,
+}) as Record<string, unknown>;
+
 export function validateExplorerOutput(data: unknown) {
   return explorerOutputSchema.parse(data);
 }
@@ -230,6 +242,10 @@ export const mentorOutputSchema = z.object({
   evidenceClaims: z.array(evidenceClaimSchema).max(8),
   evidenceCoverage: evidenceCoverageSchema,
 });
+
+export const MENTOR_OUTPUT_JSON_SCHEMA = z.toJSONSchema(mentorOutputSchema, {
+  ...CLAUDE_JSON_SCHEMA_OPTIONS,
+}) as Record<string, unknown>;
 
 export function validateMentorOutput(data: unknown) {
   return mentorOutputSchema.parse(data);
@@ -268,6 +284,10 @@ export const contributorOutputSchema = z.object({
   evidenceClaims: z.array(evidenceClaimSchema).max(8),
   evidenceCoverage: evidenceCoverageSchema,
 });
+
+export const CONTRIBUTOR_OUTPUT_JSON_SCHEMA = z.toJSONSchema(contributorOutputSchema, {
+  ...CLAUDE_JSON_SCHEMA_OPTIONS,
+}) as Record<string, unknown>;
 
 export function validateContributorOutput(data: unknown) {
   return contributorOutputSchema.parse(data);

@@ -8,6 +8,9 @@ import type {
 import { resolveAppAsset } from "../lib/app-paths.js";
 import {
   EVIDENCE_PLAN_JSON_SCHEMA,
+  EXPLORER_OUTPUT_JSON_SCHEMA,
+  MENTOR_OUTPUT_JSON_SCHEMA,
+  CONTRIBUTOR_OUTPUT_JSON_SCHEMA,
   MODULE_IMPORTANCE_VALUES,
   validateEvidencePlan,
   validateExplorerOutput,
@@ -121,13 +124,39 @@ const VALIDATORS = {
   contributor: validateContributorOutput,
 } as const;
 
+const OUTPUT_SCHEMAS: Record<StructuredOutputKind, Record<string, unknown>> = {
+  orchestrator: EVIDENCE_PLAN_JSON_SCHEMA,
+  explorer: EXPLORER_OUTPUT_JSON_SCHEMA,
+  mentor: MENTOR_OUTPUT_JSON_SCHEMA,
+  contributor: CONTRIBUTOR_OUTPUT_JSON_SCHEMA,
+};
+
+interface AgentInvocationResult {
+  output: string;
+  structuredOutput?: unknown;
+}
+
+class StructuredOutputCapabilityError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "StructuredOutputCapabilityError";
+  }
+}
+
+function isLocalJsonSchemaValidationError(error: unknown): boolean {
+  const message = error instanceof Error ? error.message : String(error);
+  return message.includes("--json-schema is not a valid JSON Schema");
+}
+
+const unsupportedStructuredOutput = new Set<string>();
+
 // ========== 核心函数 ==========
 
 /**
  * 运行一个 Pipeline 阶段。
  *
- * 通过 Claude Agent SDK 的 query() 调用 Subagent，
- * localPath 作为 cwd 限制 Agent 的文件系统访问范围。
+ * 通过 Claude Agent SDK 的 query() 执行无工具结构化综合。
+ * 文件证据已由 Repository Harness 准备，模型不会获得文件系统工具。
  */
 export async function runStage<S extends StageName>(
   stage: S,
@@ -142,7 +171,7 @@ export async function runStage<S extends StageName>(
   callbacks.onProgress(`正在启动 ${stage} 阶段...`);
 
   // 1. 调用 Agent
-  const rawOutput = await invokeAgent(
+  const invocation = await invokeAgentWithStructuredFallback(
     stage,
     input,
     callbacks,
@@ -152,7 +181,7 @@ export async function runStage<S extends StageName>(
   );
 
   try {
-    return parseStageOutput(stage, rawOutput);
+    return parseStageOutput(stage, invocation);
   } catch (err) {
     if (!(err instanceof ParseError)) throw err;
 
@@ -163,7 +192,7 @@ export async function runStage<S extends StageName>(
     try {
       repairedOutput = await repairAgentOutput(
         stage,
-        rawOutput,
+        invocation.output,
         err.message,
         localPath,
         modelSettings,
@@ -172,12 +201,12 @@ export async function runStage<S extends StageName>(
     } catch (repairErr) {
       throw new ParseError(
         `${err.message}；自动修复调用失败: ${repairErr instanceof Error ? repairErr.message : String(repairErr)}`,
-        rawOutput,
+        invocation.output,
       );
     }
 
     try {
-      return parseStageOutput(stage, repairedOutput);
+      return parseStageOutput(stage, { output: repairedOutput });
     } catch (repairErr) {
       throw new ParseError(
         `自动修复后仍未通过校验: ${repairErr instanceof Error ? repairErr.message : String(repairErr)}`,
@@ -198,7 +227,7 @@ export async function orchestrateRepositoryEvidence(
   const phaseName = phase === "explorer" ? "Explorer" : "Mentor";
   callbacks.onProgress(`Orchestrator 正在为 ${phaseName} 规划定向阅读证据...`);
   const plannerInput = { phase, ...input };
-  const rawOutput = await invokeAgent(
+  const invocation = await invokeAgentWithStructuredFallback(
     "orchestrator",
     plannerInput,
     callbacks,
@@ -208,7 +237,7 @@ export async function orchestrateRepositoryEvidence(
   );
 
   try {
-    return parseStructuredOutput("orchestrator", rawOutput) as EvidencePlan;
+    return parseStructuredOutput("orchestrator", invocation) as EvidencePlan;
   } catch (err) {
     if (!(err instanceof ParseError)) throw err;
     callbacks.onProgress("证据阅读计划校验失败，正在自动修复 JSON...");
@@ -216,7 +245,7 @@ export async function orchestrateRepositoryEvidence(
     try {
       repaired = await repairAgentOutput(
         "orchestrator",
-        rawOutput,
+        invocation.output,
         err.message,
         localPath,
         modelSettings,
@@ -225,11 +254,11 @@ export async function orchestrateRepositoryEvidence(
     } catch (repairErr) {
       throw new ParseError(
         `${err.message}；自动修复调用失败: ${repairErr instanceof Error ? repairErr.message : String(repairErr)}`,
-        rawOutput,
+        invocation.output,
       );
     }
     try {
-      return parseStructuredOutput("orchestrator", repaired) as EvidencePlan;
+      return parseStructuredOutput("orchestrator", { output: repaired }) as EvidencePlan;
     } catch (repairErr) {
       throw new ParseError(
         `自动修复后仍未通过校验: ${repairErr instanceof Error ? repairErr.message : String(repairErr)}`,
@@ -241,16 +270,28 @@ export async function orchestrateRepositoryEvidence(
 
 function parseStageOutput<S extends StageName>(
   stage: S,
-  rawOutput: string,
+  invocation: AgentInvocationResult,
 ): StageOutputFor<S> {
-  return parseStructuredOutput(stage, rawOutput) as StageOutputFor<S>;
+  return parseStructuredOutput(stage, invocation) as StageOutputFor<S>;
 }
 
 function parseStructuredOutput(
   kind: StructuredOutputKind,
-  rawOutput: string,
+  invocation: AgentInvocationResult,
 ): unknown {
   const validator = VALIDATORS[kind] as (data: unknown) => unknown;
+  const rawOutput = invocation.output;
+
+  if (invocation.structuredOutput !== undefined) {
+    try {
+      return validator(invocation.structuredOutput);
+    } catch (err) {
+      throw new ParseError(
+        `原生 structured_output 格式错误: ${err instanceof Error ? err.message : String(err)}`,
+        JSON.stringify(invocation.structuredOutput),
+      );
+    }
+  }
 
   // 1. 解析 JSON
   let parsed: unknown;
@@ -279,11 +320,43 @@ function parseStructuredOutput(
 
 // ========== Agent 调用（SDK 接线） ==========
 
+async function invokeAgentWithStructuredFallback(
+  stage: AgentKind,
+  input: Record<string, unknown>,
+  callbacks: StageCallbacks,
+  localPath: string,
+  modelSettings: ModelSettings,
+  taskAbortController?: AbortController,
+): Promise<AgentInvocationResult> {
+  try {
+    return await invokeAgent(
+      stage,
+      input,
+      callbacks,
+      localPath,
+      modelSettings,
+      taskAbortController,
+    );
+  } catch (error) {
+    if (!(error instanceof StructuredOutputCapabilityError)) throw error;
+    unsupportedStructuredOutput.add(modelCapabilityFingerprint(modelSettings));
+    callbacks.onProgress("当前兼容端点不支持原生 structured output，已切换为文本 JSON 契约...");
+    return invokeAgent(
+      stage,
+      input,
+      callbacks,
+      localPath,
+      modelSettings,
+      taskAbortController,
+    );
+  }
+}
+
 /**
  * 调用 Claude Agent SDK 的 query() 运行 Subagent。
  *
  * - 读取 agents/<stage>/agent.md 作为 systemPrompt（去掉 YAML frontmatter）
- * - 通过 options.cwd 限定 Agent 文件系统访问范围为克隆仓库目录
+ * - settingSources 为空且工具集合为空，目标仓库设置不会加载、文件不会被直接访问
  * - 通过统一 Provider 接口路由到 Anthropic-compatible 或 OpenAI-compatible 模型
  * - 通过 AbortController + setTimeout 实现超时
  */
@@ -294,7 +367,7 @@ async function invokeAgent(
   localPath: string,
   modelSettings: ModelSettings,
   taskAbortController?: AbortController,
-): Promise<string> {
+): Promise<AgentInvocationResult> {
   // 1. 加载 Agent 定义（去掉 YAML frontmatter）
   let systemPrompt = loadAgentDefinition(stage);
   if (stage === "explorer") {
@@ -350,6 +423,7 @@ moduleMap.importance 只能使用这些精确值：${MODULE_IMPORTANCE_VALUES.jo
   let toolCallTotal = 0;
   let analysisStatusLogged = false;
   let resultOutput = "";
+  let resultStructuredOutput: unknown;
   let successfulResultReceived = false;
   let resultMetrics: string[] = [];
 
@@ -363,8 +437,8 @@ moduleMap.importance 只能使用这些精确值：${MODULE_IMPORTANCE_VALUES.jo
       maxTurns: MAX_TURNS[stage],
       abortController: controller,
       canUseTool: createRepoToolGuard(localPath, 0),
-      outputSchema: stage === "orchestrator"
-        ? EVIDENCE_PLAN_JSON_SCHEMA
+      outputSchema: supportsStructuredOutput(modelSettings)
+        ? OUTPUT_SCHEMAS[stage]
         : undefined,
     })) {
       const type = msg.type;
@@ -406,11 +480,17 @@ moduleMap.importance 只能使用这些精确值：${MODULE_IMPORTANCE_VALUES.jo
           const subtype = msg.subtype;
           const isError = msg.isError || subtype.startsWith("error_");
           if (isError) {
+            if (subtype === "error_max_structured_output_retries") {
+              throw new StructuredOutputCapabilityError(
+                `${formatAgentName(stage)} 的 Provider 不支持原生 structured output`,
+              );
+            }
             throw createResultError(stage, msg);
           }
 
           if (subtype === "success") {
             resultOutput = msg.output.trim();
+            resultStructuredOutput = msg.structuredOutput;
           }
           successfulResultReceived = true;
           resultMetrics = [];
@@ -431,11 +511,17 @@ moduleMap.importance 只能使用这些精确值：${MODULE_IMPORTANCE_VALUES.jo
     if (successfulResultReceived && (resultOutput || assistantChunks.length > 0)) {
       // 部分兼容 API 会在成功 result 后的流清理阶段报错；已有完整输出时不应重跑模型。
     } else {
-      if (err instanceof LLMError) throw err;
+      if (err instanceof LLMError || err instanceof StructuredOutputCapabilityError) throw err;
+      const agentName = formatAgentName(stage);
+      if (isLocalJsonSchemaValidationError(err)) {
+        throw new LLMError(
+          `${agentName} 的结构化输出 Schema 与 Claude Agent SDK 不兼容: ${err instanceof Error ? err.message : String(err)}`,
+          false,
+        );
+      }
       if (err instanceof ProviderRequestError) {
         throw new LLMError(err.message, err.retryable);
       }
-      const agentName = formatAgentName(stage);
       if (controller.signal.aborted) {
         if (firstResponseTimedOut) {
           throw new LLMError(`${agentName} 首次响应超时`, true, true, "first_response");
@@ -476,7 +562,7 @@ moduleMap.importance 只能使用这些精确值：${MODULE_IMPORTANCE_VALUES.jo
   const suffix = resultMetrics.length > 0 ? `（${resultMetrics.join("；")}）` : "";
   callbacks.onProgress(`${agentName} 分析完成${suffix}`);
 
-  return rawOutput;
+  return { output: rawOutput, structuredOutput: resultStructuredOutput };
 }
 
 function createResultError(
@@ -545,8 +631,8 @@ async function repairAgentOutput(
       cwd: localPath,
       maxTurns: REPAIR_MAX_TURNS,
       abortController: controller,
-      outputSchema: stage === "orchestrator"
-        ? EVIDENCE_PLAN_JSON_SCHEMA
+      outputSchema: supportsStructuredOutput(modelSettings)
+        ? OUTPUT_SCHEMAS[stage]
         : undefined,
     })) {
       if (event.type === "assistant" && event.text) chunks.push(event.text);
@@ -715,6 +801,14 @@ function stableStringify(value: unknown): string {
       .join(",")}}`;
   }
   return JSON.stringify(value) ?? "undefined";
+}
+
+function modelCapabilityFingerprint(settings: ModelSettings): string {
+  return `${settings.provider}\0${settings.baseUrl}\0${settings.model}`;
+}
+
+function supportsStructuredOutput(settings: ModelSettings): boolean {
+  return !unsupportedStructuredOutput.has(modelCapabilityFingerprint(settings));
 }
 
 // ========== 消息内容提取辅助 ==========

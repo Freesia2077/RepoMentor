@@ -86,6 +86,9 @@ describe("model provider adapters", () => {
         num_turns: 1,
         result: "",
         structured_output: { goal: "确认入口" },
+        usage: { input_tokens: 12, output_tokens: 3 },
+        total_cost_usd: 0.01,
+        session_id: "sdk-session",
         errors: [],
       };
     })());
@@ -117,10 +120,16 @@ describe("model provider adapters", () => {
     expect(events.at(-1)).toMatchObject({
       type: "result",
       output: JSON.stringify({ goal: "确认入口" }),
+      structuredOutput: { goal: "确认入口" },
+      usage: { input_tokens: 12, output_tokens: 3 },
+      costUsd: 0.01,
+      sessionId: "sdk-session",
     });
     expect(sdkMocks.query).toHaveBeenCalledWith(expect.objectContaining({
       options: expect.objectContaining({
         outputFormat: { type: "json_schema", schema },
+        settingSources: [],
+        persistSession: false,
       }),
     }));
   });

@@ -7,6 +7,17 @@ const mocks = vi.hoisted(() => {
     timedOut = false;
     timeoutKind: "first_response" | "stage" | null = null;
   }
+  class MockAgentRuntimeError extends Error {
+    constructor(
+      message: string,
+      public fallbackEligible: boolean,
+      public retryable: boolean,
+      public cancelled = false,
+      public rememberUnsupported = false,
+    ) {
+      super(message);
+    }
+  }
 
   return {
     runStage: vi.fn(),
@@ -18,6 +29,11 @@ const mocks = vi.hoisted(() => {
     experienceSave: vi.fn(),
     MockParseError,
     MockLLMError,
+    MockAgentRuntimeError,
+    agentPlan: vi.fn(),
+    mentorSynthesis: vi.fn(),
+    agentKnownUnsupported: vi.fn(() => false),
+    rememberUnsupported: vi.fn(),
   };
 });
 
@@ -26,6 +42,20 @@ vi.mock("../../src/services/claude-client.js", () => ({
   orchestrateRepositoryEvidence: mocks.planEvidence,
   ParseError: mocks.MockParseError,
   LLMError: mocks.MockLLMError,
+}));
+
+vi.mock("../../src/services/claude-agent-runtime.js", () => ({
+  AgentRuntimeError: mocks.MockAgentRuntimeError,
+  ClaudeAgentRuntime: class {
+    planEvidence(...args: unknown[]) {
+      return mocks.agentPlan(...args);
+    }
+    synthesizeMentorWithSubagents(...args: unknown[]) {
+      return mocks.mentorSynthesis(...args);
+    }
+  },
+  isAgentCapabilityKnownUnsupported: mocks.agentKnownUnsupported,
+  rememberUnsupportedAgentCapability: mocks.rememberUnsupported,
 }));
 
 vi.mock("../../src/lib/repo.js", () => ({
@@ -132,8 +162,13 @@ vi.mock("../../src/db/repositories/experiences.js", () => ({
   save: mocks.experienceSave,
 }));
 
-import { executePipeline, type PipelineContext } from "../../src/services/pipeline.js";
+import {
+  executePipeline,
+  validateAnalysisRuntimeSettings,
+  type PipelineContext,
+} from "../../src/services/pipeline.js";
 import { sseManager } from "../../src/lib/sse.js";
+import { buildRepositoryProfile } from "../../src/lib/repository-profile.js";
 
 describe("analysis pipeline", () => {
   beforeEach(() => {
@@ -144,6 +179,12 @@ describe("analysis pipeline", () => {
     mocks.cacheSave.mockReset();
     mocks.experienceFind.mockReset();
     mocks.experienceSave.mockReset();
+    mocks.agentPlan.mockReset();
+    mocks.mentorSynthesis.mockReset();
+    mocks.agentKnownUnsupported.mockReset();
+    mocks.agentKnownUnsupported.mockReturnValue(false);
+    mocks.rememberUnsupported.mockReset();
+    vi.mocked(buildRepositoryProfile).mockResolvedValue(repositoryProfile);
     mocks.planEvidence.mockImplementation(async (phase: string) => ({
       goal: `${phase} coverage`,
       rationale: `${phase} plan`,
@@ -176,12 +217,36 @@ describe("analysis pipeline", () => {
       omissions: [],
       totalBytes: 10,
     }));
+    mocks.agentPlan.mockImplementation(async (request: any) => ({
+      evidencePlan: {
+        goal: `${request.phase} Agent plan`,
+        rationale: "bounded discovery",
+        questions: [],
+        actions: [],
+        files: [{ path: "src/core.ts", purpose: "core", priority: "high" }],
+        stopConditions: ["core selected"],
+      },
+      toolCalls: { find_related_tests: 1 },
+      turns: 2,
+      degraded: false,
+    }));
+  });
+
+  it("rejects forced agentic mode for an OpenAI-compatible provider", () => {
+    expect(validateAnalysisRuntimeSettings({
+      ...pipelineModelSettings,
+      provider: "openai-compatible",
+      baseUrl: "https://provider.example/v1",
+    }, "agentic")).toMatchObject({
+      category: "invalid_model_settings",
+      retryable: false,
+    });
   });
 
   it("uses the complete-coverage path for small repositories and reuses evidence", async () => {
     mocks.cacheFind.mockReturnValue(undefined);
     mocks.experienceFind.mockReturnValue([{
-      content: "[adaptive-harness-v7]\nhistorical architecture lesson",
+      content: "[bounded-agent-v8]\nhistorical architecture lesson",
     }]);
     mocks.runStage.mockImplementation(async (stage: string) => {
       if (stage === "explorer") {
@@ -331,7 +396,7 @@ describe("analysis pipeline", () => {
       "owner",
       "repo",
       "main",
-      expect.stringMatching(/^adaptive-harness-v7:[a-f0-9]{12}:abc123$/),
+      expect.stringMatching(/^bounded-agent-v8:workflow:[a-f0-9]{12}:abc123$/),
     );
     expect(mocks.experienceSave).toHaveBeenCalledOnce();
   });
@@ -431,4 +496,188 @@ describe("analysis pipeline", () => {
       && event.message.includes("首次响应超时，正在重试")
     )).toBe(true);
   });
+
+  it("routes a large Anthropic-compatible repository through bounded Agent planning", async () => {
+    vi.mocked(buildRepositoryProfile).mockResolvedValue({
+      ...repositoryProfile,
+      fileCount: 100,
+    });
+    mocks.cacheFind.mockReturnValue(undefined);
+    mocks.experienceFind.mockReturnValue([]);
+    mockSuccessfulStageOutputs(100);
+    const ctx = createContext("task-bounded-agent", pipelineModelSettings);
+
+    await executePipeline(ctx);
+
+    expect(mocks.agentPlan).toHaveBeenCalledTimes(2);
+    expect(mocks.planEvidence).not.toHaveBeenCalled();
+    expect(mocks.cacheSave.mock.calls[0]?.[1].commitHash).toMatch(
+      /^bounded-agent-v8:bounded-agent:[a-f0-9]{12}:abc123$/,
+    );
+    const completionTitles = sseManager.getEventsAfter("task-bounded-agent")
+      .map(({ event }) => event)
+      .filter((event) => event.type === "harness:trace")
+      .map((event) => event.trace.title);
+    expect(completionTitles).toEqual(expect.arrayContaining([
+      "受限 Explorer Research Agent 已完成",
+      "受限 Mentor Research Agent 已完成",
+    ]));
+  });
+
+  it("falls back once on an Agent capability error and remembers that provider fingerprint", async () => {
+    vi.mocked(buildRepositoryProfile).mockResolvedValue({
+      ...repositoryProfile,
+      fileCount: 100,
+    });
+    mocks.cacheFind.mockReturnValue(undefined);
+    mocks.experienceFind.mockReturnValue([]);
+    mockSuccessfulStageOutputs(100);
+    mocks.agentPlan.mockRejectedValueOnce(new mocks.MockAgentRuntimeError(
+      "MCP protocol unsupported",
+      true,
+      false,
+      false,
+      true,
+    ));
+    const ctx = createContext("task-agent-fallback", pipelineModelSettings);
+
+    await executePipeline(ctx);
+
+    expect(mocks.agentPlan).toHaveBeenCalledOnce();
+    expect(mocks.planEvidence).toHaveBeenCalledTimes(2);
+    expect(mocks.rememberUnsupported).toHaveBeenCalledOnce();
+    expect(mocks.cacheSave.mock.calls[0]?.[1].commitHash).toMatch(
+      /^bounded-agent-v8:workflow:[a-f0-9]{12}:abc123$/,
+    );
+  });
+
+  it("retries a temporary Agent error without running Workflow in parallel", async () => {
+    vi.mocked(buildRepositoryProfile).mockResolvedValue({
+      ...repositoryProfile,
+      fileCount: 100,
+    });
+    mocks.cacheFind.mockReturnValue(undefined);
+    mocks.agentPlan.mockRejectedValue(new mocks.MockAgentRuntimeError(
+      "429 rate limit",
+      false,
+      true,
+    ));
+    const ctx = createContext("task-agent-rate-limit", pipelineModelSettings);
+
+    await expect(executePipeline(ctx)).rejects.toMatchObject({
+      category: "llm_failed",
+      retryable: true,
+    });
+    expect(mocks.agentPlan).toHaveBeenCalledTimes(2);
+    expect(mocks.planEvidence).not.toHaveBeenCalled();
+    expect(mocks.runStage).not.toHaveBeenCalled();
+  });
+
+  it("propagates Agent cancellation without retrying or falling back", async () => {
+    vi.mocked(buildRepositoryProfile).mockResolvedValue({
+      ...repositoryProfile,
+      fileCount: 100,
+    });
+    mocks.cacheFind.mockReturnValue(undefined);
+    mocks.agentPlan.mockRejectedValueOnce(new mocks.MockAgentRuntimeError(
+      "task cancelled",
+      false,
+      false,
+      true,
+    ));
+    const ctx = createContext("task-agent-cancelled", pipelineModelSettings);
+
+    await expect(executePipeline(ctx)).rejects.toMatchObject({
+      category: "timeout",
+      retryable: false,
+    });
+    expect(mocks.agentPlan).toHaveBeenCalledOnce();
+    expect(mocks.planEvidence).not.toHaveBeenCalled();
+    expect(mocks.runStage).not.toHaveBeenCalled();
+  });
+
+  it("keeps a large OpenAI-compatible repository on the tool-free Workflow", async () => {
+    vi.mocked(buildRepositoryProfile).mockResolvedValue({
+      ...repositoryProfile,
+      fileCount: 100,
+    });
+    mocks.cacheFind.mockReturnValue(undefined);
+    mocks.experienceFind.mockReturnValue([]);
+    mockSuccessfulStageOutputs(100);
+    const ctx = createContext("task-openai-workflow", {
+      ...pipelineModelSettings,
+      provider: "openai-compatible",
+      baseUrl: "https://provider.example/v1",
+    });
+
+    await executePipeline(ctx);
+
+    expect(mocks.agentPlan).not.toHaveBeenCalled();
+    expect(mocks.planEvidence).toHaveBeenCalledTimes(2);
+    expect(mocks.cacheSave.mock.calls[0]?.[1].commitHash).toMatch(
+      /^bounded-agent-v8:workflow:[a-f0-9]{12}:abc123$/,
+    );
+  });
 });
+
+function createContext(
+  taskId: string,
+  modelSettings: PipelineContext["modelSettings"],
+): PipelineContext {
+  return {
+    taskId,
+    repoUrl: "https://github.com/owner/repo.git",
+    branch: "main",
+    stageProgress: { explorer: "pending", mentor: "pending", contributor: "pending" },
+    abortController: new AbortController(),
+    modelSettings,
+    callbacks: {
+      onStageStart: vi.fn(),
+      onStageDone: vi.fn(),
+      onStatusChange: vi.fn(),
+      onCommitHash: vi.fn(),
+    },
+    pendingQuestion: null,
+  };
+}
+
+function mockSuccessfulStageOutputs(fileCount: number): void {
+  mocks.runStage.mockImplementation(async (stage: string) => {
+    if (stage === "explorer") {
+      return {
+        projectType: { primary: "library", secondary: [] },
+        techStack: { language: "typescript", framework: null, buildTool: "npm" },
+        fileCount,
+        entryPoints: [{ file: "src/core.ts", role: "core" }],
+        moduleMap: [],
+        directorySummary: "test",
+        projectSummary: "test",
+        evidenceClaims: [{
+          claim: "Core is selected",
+          confidence: "high",
+          evidence: [{ path: "src/core.ts", supports: "core evidence" }],
+        }],
+        evidenceCoverage: { examinedFiles: ["src/core.ts"], gaps: [] },
+      };
+    }
+    if (stage === "mentor") {
+      return {
+        architectureOverview: "architecture",
+        dependencyGraph: {},
+        readingPath: [],
+        keyPatterns: [],
+        codeConventions: [],
+        evidenceClaims: [],
+        evidenceCoverage: { examinedFiles: ["src/core.ts"], gaps: [] },
+      };
+    }
+    return {
+      goodFirstIssues: [],
+      contributionSetup: { devEnv: null, build: null, test: null },
+      entryFiles: [],
+      notesForNewcomers: [],
+      evidenceClaims: [],
+      evidenceCoverage: { examinedFiles: [], gaps: [] },
+    };
+  });
+}

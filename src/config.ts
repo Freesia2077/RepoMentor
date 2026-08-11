@@ -20,6 +20,11 @@ const envSchema = z.object({
   INTERACTION_TIMEOUT_MS: z.coerce.number().int().positive().default(15000),
   SQLITE_PATH: z.string().default("./data/repomentor.db"),
   LOG_LEVEL: z.enum(["debug", "info", "warn", "error"]).default("info"),
+  AGENT_RUNTIME_MODE: z.enum(["adaptive", "workflow", "agentic"]).default("adaptive"),
+  MENTOR_SUBAGENTS_ENABLED: z.string().optional().transform((value) =>
+    value?.trim().toLowerCase() === "true"
+  ),
+  AGENT_MAX_BUDGET_USD: z.coerce.number().positive().optional(),
 });
 
 export const config = envSchema.parse(process.env);

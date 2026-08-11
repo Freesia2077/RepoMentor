@@ -83,6 +83,7 @@ export function loadHarnessSkill(
     return {
       policy: clonePolicy(DEFAULT_HARNESS_SKILL_POLICY),
       promptContent: "",
+      sdkSkillNames: [`repomentor:${GENERIC_SKILL_NAME}`],
     };
   }
 
@@ -113,6 +114,7 @@ export function loadHarnessSkill(
   return {
     policy,
     promptContent: selected.map(({ markdown }) => markdown).filter(Boolean).join("\n\n---\n\n"),
+    sdkSkillNames: selected.map(({ manifest }) => `repomentor:${manifest.name}`),
   };
 }
 

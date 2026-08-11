@@ -10,6 +10,13 @@ export type StageProgress = Record<StageName, "pending" | "running" | "done">;
 
 export type ModelProviderId = "anthropic-compatible" | "openai-compatible";
 
+export type AnalysisRuntimeMode = "adaptive" | "workflow" | "agentic";
+
+export type AnalysisRuntimeKind =
+  | "workflow"
+  | "bounded-agent"
+  | "mentor-multi-agent";
+
 export interface PublicModelSettings {
   provider: ModelProviderId;
   baseUrl: string;
@@ -257,6 +264,29 @@ export interface HarnessSkillPolicy {
 export interface LoadedHarnessSkill {
   policy: HarnessSkillPolicy;
   promptContent: string;
+  sdkSkillNames: string[];
+}
+
+export interface AgentEvidenceRequest {
+  phase: EvidencePhase;
+  repositoryProfile: RepositoryProfile;
+  skillPolicy: HarnessSkillPolicy;
+  sdkSkillNames: string[];
+  harnessState: HarnessContextView;
+  existingEvidencePaths: string[];
+  explorerOutput?: ExplorerOutput;
+}
+
+export interface AgentEvidenceResult {
+  evidencePlan: EvidencePlan;
+  toolCalls: Record<string, number>;
+  turns: number;
+  usage?: Record<string, unknown>;
+  modelUsage?: Record<string, unknown>;
+  costUsd?: number;
+  sessionId?: string;
+  degraded: boolean;
+  degradationReason?: string;
 }
 
 /**
@@ -294,6 +324,7 @@ export interface HarnessStageState {
   skippedPaths: string[];
   unresolvedQuestions: string[];
   skillPolicy: HarnessSkillPolicy | null;
+  discoveryActionsUsed: number;
   stopReason: HarnessStopReason | null;
 }
 
@@ -463,7 +494,13 @@ export interface AnalysisResult {
 
 // ========== 错误 ==========
 
-export type ErrorCategory = "clone_failed" | "llm_failed" | "parse_failed" | "timeout" | "internal";
+export type ErrorCategory =
+  | "clone_failed"
+  | "invalid_model_settings"
+  | "llm_failed"
+  | "parse_failed"
+  | "timeout"
+  | "internal";
 
 export interface TaskError {
   category: ErrorCategory;

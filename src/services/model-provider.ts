@@ -18,7 +18,12 @@ export type ProviderEvent =
       subtype: string;
       isError: boolean;
       output: string;
+      structuredOutput?: unknown;
       turns?: number;
+      usage?: Record<string, unknown>;
+      modelUsage?: Record<string, unknown>;
+      costUsd?: number;
+      sessionId?: string;
       errors: string[];
     };
 
@@ -63,6 +68,8 @@ class ClaudeAgentSdkProvider implements ModelProvider {
         abortController: request.abortController,
         permissionMode: "dontAsk",
         canUseTool: request.canUseTool,
+        settingSources: [],
+        persistSession: false,
         outputFormat: request.outputSchema
           ? { type: "json_schema", schema: request.outputSchema }
           : undefined,
@@ -106,7 +113,16 @@ class ClaudeAgentSdkProvider implements ModelProvider {
           subtype: typeof record.subtype === "string" ? record.subtype : "unknown",
           isError: record.is_error === true,
           output,
+          structuredOutput,
           turns: typeof record.num_turns === "number" ? record.num_turns : undefined,
+          usage: isRecord(record.usage) ? record.usage : undefined,
+          modelUsage: isRecord(record.modelUsage) ? record.modelUsage : undefined,
+          costUsd: typeof record.total_cost_usd === "number"
+            ? record.total_cost_usd
+            : undefined,
+          sessionId: typeof record.session_id === "string"
+            ? record.session_id
+            : undefined,
           errors: Array.isArray(record.errors)
             ? record.errors.filter((item): item is string => typeof item === "string")
             : [],
@@ -168,6 +184,7 @@ class OpenAICompatibleProvider implements ModelProvider {
         subtype: "success",
         isError: false,
         output,
+        structuredOutput: undefined,
         turns: 1,
         errors: [],
       };
@@ -214,6 +231,7 @@ class OpenAICompatibleProvider implements ModelProvider {
       subtype: "success",
       isError: false,
       output,
+      structuredOutput: undefined,
       turns: 1,
       errors: [],
     };

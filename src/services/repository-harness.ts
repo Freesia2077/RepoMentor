@@ -129,6 +129,13 @@ export class RepositoryHarness {
   private readonly state: HarnessState = createInitialState();
   private readonly verifiedClaimPaths = new Set<string>();
   private readonly evidenceLedger = new Map<string, EvidenceLedgerEntry>();
+  private readonly discoveryObservations: Record<
+    EvidencePhase,
+    Map<string, HarnessToolObservation>
+  > = {
+    explorer: new Map(),
+    mentor: new Map(),
+  };
   private completeCoverageRequested = false;
 
   constructor(
@@ -334,16 +341,29 @@ export class RepositoryHarness {
     }
     stage.status = "planned";
     stage.plan = plan;
+    const completedDiscoveryActions = stage.discoveryActionsUsed;
+    const pendingDiscoveryActions = plan.actions.filter((action) =>
+      !this.discoveryObservations[phase].has(getDiscoveryFingerprint(action))
+    ).length;
+    let planSummary = completedDiscoveryActions > 0
+      ? `已基于 ${completedDiscoveryActions} 次已完成的仓库调查，规划 ${plan.files.length} 个直接阅读文件`
+      : `已规划 ${plan.files.length} 个直接阅读文件`;
+    if (pendingDiscoveryActions > 0) {
+      planSummary += `，并安排 ${pendingDiscoveryActions} 次补充调查`;
+    }
+    planSummary += `，用于回答 ${plan.questions.length} 个分析问题。`;
     this.onTrace({
       stage: phase,
       kind: "plan",
       title: `${formatStage(phase)} 证据阅读计划`,
-      summary: `已规划 ${plan.files.length} 个直接阅读文件和 ${plan.actions.length} 个仓库调查动作，用于回答 ${plan.questions.length} 个分析问题。`,
+      summary: planSummary,
       files: plan.files.map((request) => request.path),
       metadata: {
         goal: plan.goal,
         questions: plan.questions.length,
         actions: plan.actions.length,
+        completedDiscoveryActions,
+        pendingDiscoveryActions,
         requestedFiles: plan.files.length,
         highPriority: plan.files.filter((request) => request.priority === "high").length,
       },
@@ -355,6 +375,9 @@ export class RepositoryHarness {
     plan: EvidencePlan,
     existingPaths: string[] = [],
   ): Promise<EvidenceBundle> {
+    const profile = this.state.repositoryProfile;
+    if (!profile) throw new HarnessInvariantError("执行证据计划前必须先建立仓库画像");
+    const trackedPaths = new Set(profile.fileIndex.map(normalizePath));
     const policy = this.state.stages[phase].skillPolicy;
     const allowedTools = policy ? new Set(policy.allowedTools) : null;
     const blockedActions = allowedTools
@@ -363,19 +386,31 @@ export class RepositoryHarness {
     const allowedActions = plan.actions.filter((action) =>
       !allowedTools || allowedTools.has(action.tool)
     );
-    const permittedActions = allowedActions.slice(
-      0,
-      policy?.maxDiscoveryActions ?? allowedActions.length,
-    );
+    const remainingDiscoveryActions = policy
+      ? Math.max(0, policy.maxDiscoveryActions - this.state.stages[phase].discoveryActionsUsed)
+      : allowedActions.length;
+    const permittedActions = allowedActions.slice(0, remainingDiscoveryActions);
     const omittedActions = allowedActions.slice(
-      policy?.maxDiscoveryActions ?? allowedActions.length,
+      remainingDiscoveryActions,
     );
+    const deduplicatedFiles = deduplicateRequests(plan.files);
+    const trackedFiles = deduplicatedFiles.filter((request) =>
+      trackedPaths.has(normalizePath(request.path))
+    );
+    for (const request of deduplicatedFiles) {
+      if (!trackedPaths.has(normalizePath(request.path))) {
+        this.recordUnresolved(
+          phase,
+          `${request.path}: 证据路径不在仓库文件索引中，已拒绝`,
+        );
+      }
+    }
     const boundedPlan: EvidencePlan = {
       ...plan,
       actions: permittedActions,
-      files: deduplicateRequests(plan.files).slice(
+      files: trackedFiles.slice(
         0,
-        policy?.maxEvidenceFiles ?? plan.files.length,
+        policy?.maxEvidenceFiles ?? trackedFiles.length,
       ),
       stopConditions: [
         ...new Set([
@@ -390,8 +425,8 @@ export class RepositoryHarness {
         `${action.tool}: 当前 Harness Skill 策略不允许执行该调查动作`,
       );
     }
-    const omittedFiles = deduplicateRequests(plan.files).slice(
-      policy?.maxEvidenceFiles ?? plan.files.length,
+    const omittedFiles = trackedFiles.slice(
+      policy?.maxEvidenceFiles ?? trackedFiles.length,
     );
     for (const request of omittedFiles) {
       this.recordUnresolved(
@@ -403,8 +438,9 @@ export class RepositoryHarness {
     this.recordEvidencePlan(phase, boundedPlan);
     const discoveredRequests: EvidencePlan["files"] = [];
     for (const action of boundedPlan.actions) {
-      const observation = await this.executeDiscoveryAction(phase, action);
-      this.state.observations.push(observation);
+      const fingerprint = getDiscoveryFingerprint(action);
+      const observation = this.discoveryObservations[phase].get(fingerprint)
+        ?? await this.executeDiscoveryTool(phase, action);
       for (const discoveredPath of observation.paths) {
         discoveredRequests.push({
           path: discoveredPath,
@@ -439,6 +475,58 @@ export class RepositoryHarness {
     };
     this.state.stages[phase].plan = executionPlan;
     return this.readEvidenceBatch(phase, executionPlan, existingPaths);
+  }
+
+  /**
+   * Agent 与确定性 Workflow 共用的唯一发现工具入口。这里而不是 SDK hook
+   * 才是权限边界：阶段、Skill、路径、去重和动作预算都会在执行前校验。
+   */
+  async executeDiscoveryTool(
+    phase: EvidencePhase,
+    action: EvidencePlan["actions"][number],
+  ): Promise<HarnessToolObservation> {
+    validateDiscoveryAction(action);
+    const stage = this.state.stages[phase];
+    if (stage.status !== "pending" && stage.status !== "planned") {
+      throw new HarnessInvariantError(`${formatStage(phase)} 已离开证据规划阶段`);
+    }
+    const profile = this.state.repositoryProfile;
+    if (!profile) throw new HarnessInvariantError("执行领域工具前必须先建立仓库画像");
+    const policy = stage.skillPolicy;
+    if (!policy) {
+      throw new HarnessInvariantError(`${formatStage(phase)} 尚未激活 Harness Skill 策略`);
+    }
+    if (!policy.allowedTools.includes(action.tool)) {
+      throw new HarnessInvariantError(`当前 Harness Skill 策略不允许 ${action.tool}`);
+    }
+
+    const trackedPaths = new Set(profile.fileIndex.map(normalizePath));
+    if ("paths" in action) {
+      const invalidPaths = action.paths.filter((candidate) =>
+        !trackedPaths.has(normalizePath(candidate))
+      );
+      if (invalidPaths.length > 0) {
+        throw new HarnessInvariantError(
+          `调查工具路径必须来自仓库文件索引: ${invalidPaths.join("、")}`,
+        );
+      }
+    }
+
+    const fingerprint = getDiscoveryFingerprint(action);
+    if (this.discoveryObservations[phase].has(fingerprint)) {
+      throw new HarnessInvariantError("相同的调查工具及参数已经执行过，请复用已有观察结果");
+    }
+    if (stage.discoveryActionsUsed >= policy.maxDiscoveryActions) {
+      throw new HarnessInvariantError(
+        `${formatStage(phase)} 调查动作预算（${policy.maxDiscoveryActions} 次）已用完`,
+      );
+    }
+
+    const observation = await this.performDiscoveryAction(phase, action);
+    this.discoveryObservations[phase].set(fingerprint, observation);
+    stage.discoveryActionsUsed += 1;
+    this.state.observations.push(observation);
+    return observation;
   }
 
   async readEvidenceBatch(
@@ -828,13 +916,12 @@ export class RepositoryHarness {
     });
   }
 
-  private async executeDiscoveryAction(
+  private async performDiscoveryAction(
     phase: EvidencePhase,
     action: EvidencePlan["actions"][number],
   ): Promise<HarnessToolObservation> {
     const profile = this.state.repositoryProfile;
     if (!profile) throw new HarnessInvariantError("执行领域工具前必须先建立仓库画像");
-    const trackedPaths = new Set(profile.fileIndex.map(normalizePath));
 
     let observation: HarnessToolObservation;
     switch (action.tool) {
@@ -849,16 +936,20 @@ export class RepositoryHarness {
           stage: phase,
           tool: action.tool,
           purpose: action.purpose,
-          summary: `在受限范围内的 ${paths.length} 个文件中找到 ${matches.length} 处符号匹配。`,
+          summary: matches.length > 0
+            ? `找到 ${matches.length} 处符号匹配，分布在 ${paths.length} 个文件中。`
+            : "符号搜索已完成，未找到与该查询相符的标识符；此结果将用于避免选择无关证据。",
           paths,
-          metadata: { query: action.query, matches: matches.length, files: paths.length },
+          metadata: {
+            query: action.query,
+            matches: matches.length,
+            matchedFiles: paths.length,
+          },
         };
         break;
       }
       case "trace_module_dependencies": {
-        const validatedPaths = action.paths
-          .map(normalizePath)
-          .filter((candidate) => trackedPaths.has(candidate));
+        const validatedPaths = action.paths.map(normalizePath);
         const result = await traceRepositoryDependencies(
           this.localPath,
           profile,
@@ -868,7 +959,9 @@ export class RepositoryHarness {
           stage: phase,
           tool: action.tool,
           purpose: action.purpose,
-          summary: `从 ${validatedPaths.length} 个已校验起点解析出 ${result.edges.length} 条仓库内部依赖边。`,
+          summary: result.edges.length > 0
+            ? `从 ${validatedPaths.length} 个已校验起点解析出 ${result.edges.length} 条仓库内部依赖边。`
+            : `已检查 ${validatedPaths.length} 个校验起点，未解析出仓库内部依赖；将保留起点供证据计划直接评估。`,
           paths: result.paths,
           metadata: {
             requestedSeeds: action.paths.length,
@@ -879,15 +972,15 @@ export class RepositoryHarness {
         break;
       }
       case "find_related_tests": {
-        const validatedPaths = action.paths
-          .map(normalizePath)
-          .filter((candidate) => trackedPaths.has(candidate));
+        const validatedPaths = action.paths.map(normalizePath);
         const paths = findRepositoryRelatedTests(profile, validatedPaths);
         observation = {
           stage: phase,
           tool: action.tool,
           purpose: action.purpose,
-          summary: `为 ${validatedPaths.length} 个已校验源码路径找到 ${paths.length} 个相关测试候选。`,
+          summary: paths.length > 0
+            ? `为 ${validatedPaths.length} 个已校验源码路径找到 ${paths.length} 个相关测试候选。`
+            : "相关测试定位已完成，但未找到可可靠关联的测试候选；后续仍可从测试索引选择代表性文件。",
           paths,
           metadata: {
             requestedSources: action.paths.length,
@@ -930,6 +1023,7 @@ function createInitialState(): HarnessState {
     skippedPaths: [],
     unresolvedQuestions: [],
     skillPolicy: null,
+    discoveryActionsUsed: 0,
     stopReason: null,
   });
   return {
@@ -985,6 +1079,69 @@ function cloneSkillPolicy(policy: HarnessSkillPolicy): HarnessSkillPolicy {
 
 function normalizePath(value: string): string {
   return value.replaceAll("\\", "/").replace(/^\.\/+/, "");
+}
+
+function stableStringify(value: unknown): string {
+  if (Array.isArray(value)) return `[${value.map(stableStringify).join(",")}]`;
+  if (value && typeof value === "object") {
+    const record = value as Record<string, unknown>;
+    return `{${Object.keys(record).sort().map((key) =>
+      `${JSON.stringify(key)}:${stableStringify(record[key])}`
+    ).join(",")}}`;
+  }
+  return JSON.stringify(value) ?? "undefined";
+}
+
+function getDiscoveryFingerprint(
+  action: EvidencePlan["actions"][number],
+): string {
+  return action.tool === "search_symbols"
+    ? stableStringify({ tool: action.tool, query: action.query })
+    : stableStringify({
+        tool: action.tool,
+        paths: [...new Set(action.paths.map(normalizePath))].sort(),
+      });
+}
+
+function validateDiscoveryAction(
+  action: EvidencePlan["actions"][number],
+): void {
+  if (!action || typeof action !== "object") {
+    throw new HarnessInvariantError("调查工具参数必须是对象");
+  }
+  if (
+    typeof action.purpose !== "string"
+    || action.purpose.trim().length === 0
+    || action.purpose.length > 300
+  ) {
+    throw new HarnessInvariantError("调查工具 purpose 必须是 1 到 300 字符的字符串");
+  }
+  if (action.tool === "search_symbols") {
+    if (
+      typeof action.query !== "string"
+      || action.query.trim().length === 0
+      || action.query.length > 120
+    ) {
+      throw new HarnessInvariantError("search_symbols.query 必须是 1 到 120 字符的字符串");
+    }
+    return;
+  }
+  if (
+    action.tool !== "trace_module_dependencies"
+    && action.tool !== "find_related_tests"
+  ) {
+    throw new HarnessInvariantError(`未知的调查工具: ${String((action as { tool?: unknown }).tool)}`);
+  }
+  if (
+    !Array.isArray(action.paths)
+    || action.paths.length === 0
+    || action.paths.length > 6
+    || action.paths.some((candidate) =>
+      typeof candidate !== "string" || candidate.trim().length === 0
+    )
+  ) {
+    throw new HarnessInvariantError(`${action.tool}.paths 必须包含 1 到 6 个非空路径`);
+  }
 }
 
 function deduplicateRequests(requests: EvidencePlan["files"]): EvidencePlan["files"] {

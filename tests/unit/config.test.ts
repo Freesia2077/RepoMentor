@@ -22,6 +22,9 @@ describe("config", () => {
     delete process.env.INTERACTION_TIMEOUT_MS;
     delete process.env.SQLITE_PATH;
     delete process.env.LOG_LEVEL;
+    delete process.env.AGENT_RUNTIME_MODE;
+    delete process.env.MENTOR_SUBAGENTS_ENABLED;
+    delete process.env.AGENT_MAX_BUDGET_USD;
   });
 
   it("allows startup before a model API key is configured", async () => {
@@ -37,6 +40,8 @@ describe("config", () => {
     expect(config.CLONE_DEPTH).toBe(1);
     expect(config.ANTHROPIC_AUTH_TOKEN).toBe("sk-test");
     expect(config.LOG_LEVEL).toBe("info");
+    expect(config.AGENT_RUNTIME_MODE).toBe("adaptive");
+    expect(config.MENTOR_SUBAGENTS_ENABLED).toBe(false);
   });
 
   it("parses custom values", async () => {
@@ -65,5 +70,15 @@ describe("config", () => {
     process.env.ANTHROPIC_AUTH_TOKEN = "sk-test";
     process.env.LOG_LEVEL = "verbose";
     await expect(() => import("../../src/config.js")).rejects.toThrow();
+  });
+
+  it("parses bounded Agent Runtime switches", async () => {
+    process.env.AGENT_RUNTIME_MODE = "agentic";
+    process.env.MENTOR_SUBAGENTS_ENABLED = "true";
+    process.env.AGENT_MAX_BUDGET_USD = "0.25";
+    const { config } = await import("../../src/config.js");
+    expect(config.AGENT_RUNTIME_MODE).toBe("agentic");
+    expect(config.MENTOR_SUBAGENTS_ENABLED).toBe(true);
+    expect(config.AGENT_MAX_BUDGET_USD).toBe(0.25);
   });
 });

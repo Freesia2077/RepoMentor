@@ -15,11 +15,13 @@ description: 分析 CLI 命令行工具类项目的策略模板
 
 ## 推荐探索路径
 
-1. 找 CLI 入口：package.json 的 bin 字段指向的文件
-2. 理解参数解析：搜索 commander、yargs、argparse 或手写解析器
-3. 拆解命令树：理解主命令 → 子命令的注册方式
-4. 追踪核心逻辑：子命令如何调用核心库完成实际工作
-5. 了解输出机制：console.log vs 结构化日志，--json 等输出格式选项
+1. 从 repositoryProfile.entryCandidates 与清单路径中选择 CLI 入口候选
+2. 用 `search_symbols` 调查 commander、yargs、argparse、command、subcommand 等概念
+3. 用 `trace_module_dependencies` 从已索引入口确认命令分发到核心库的方向
+4. 用 `find_related_tests` 为命令入口和核心实现寻找代表性测试
+5. 输出一次 EvidencePlan，交由 Harness 在循环外批量读取源码
+
+只使用当前 Skill Policy 暴露的 RepoMentor MCP 工具；不得调用原始文件、Shell、网络或编辑工具。
 
 ## 常见架构模式
 

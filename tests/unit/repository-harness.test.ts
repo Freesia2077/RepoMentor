@@ -624,6 +624,16 @@ describe("RepositoryHarness", () => {
     };
 
     await harness.getRepositoryMap();
+    harness.activateSkillPolicy("explorer", {
+      skillNames: ["test-discovery"],
+      allowedTools: ["find_related_tests"],
+      preferredTools: ["find_related_tests"],
+      recommendedQuestions: [],
+      evidenceRequirements: [],
+      stopConditions: ["A related test is selected"],
+      maxDiscoveryActions: 1,
+      maxEvidenceFiles: 8,
+    });
     await harness.executeEvidencePlan("explorer", plan);
 
     const executedPlan = mocks.buildEvidenceBundle.mock.calls[0]?.[1];
@@ -701,6 +711,131 @@ describe("RepositoryHarness", () => {
       ]),
       observations: [expect.objectContaining({ tool: "find_related_tests" })],
     });
+  });
+
+  it("rejects untracked paths, duplicate discovery, and action overflow without double charging", async () => {
+    const harness = new RepositoryHarness("C:\\repo");
+    await harness.getRepositoryMap();
+    harness.activateSkillPolicy("explorer", {
+      skillNames: ["bounded-tests"],
+      allowedTools: ["find_related_tests"],
+      preferredTools: ["find_related_tests"],
+      recommendedQuestions: [],
+      evidenceRequirements: [],
+      stopConditions: ["bounded"],
+      maxDiscoveryActions: 1,
+      maxEvidenceFiles: 4,
+    });
+
+    await expect(harness.executeDiscoveryTool("explorer", {
+      tool: "find_related_tests",
+      paths: ["../outside.ts"],
+      purpose: "escape",
+    })).rejects.toThrow("必须来自仓库文件索引");
+    await expect(harness.executeDiscoveryTool("explorer", {
+      tool: "unknown_tool",
+      purpose: "invalid",
+    } as any)).rejects.toThrow("未知的调查工具");
+    expect(harness.getContextView().stages.explorer.discoveryActionsUsed).toBe(0);
+
+    await harness.executeDiscoveryTool("explorer", {
+      tool: "find_related_tests",
+      paths: ["src/core.ts"],
+      purpose: "first",
+    });
+    await expect(harness.executeDiscoveryTool("explorer", {
+      tool: "find_related_tests",
+      paths: ["src/core.ts"],
+      purpose: "same inputs, different prose",
+    })).rejects.toThrow("已经执行过");
+    await expect(harness.executeDiscoveryTool("explorer", {
+      tool: "find_related_tests",
+      paths: ["src/index.ts"],
+      purpose: "overflow",
+    })).rejects.toThrow("预算");
+    expect(harness.getContextView().stages.explorer.discoveryActionsUsed).toBe(1);
+  });
+
+  it("rejects tools outside the active policy and discovery after evidence is ready", async () => {
+    const harness = new RepositoryHarness("C:\\repo");
+    await harness.getRepositoryMap();
+    harness.activateSkillPolicy("explorer", {
+      skillNames: ["tests-only"],
+      allowedTools: ["find_related_tests"],
+      preferredTools: ["find_related_tests"],
+      recommendedQuestions: [],
+      evidenceRequirements: [],
+      stopConditions: ["bounded"],
+      maxDiscoveryActions: 1,
+      maxEvidenceFiles: 4,
+    });
+    await expect(harness.executeDiscoveryTool("explorer", {
+      tool: "search_symbols",
+      query: "Core",
+      purpose: "not allowed",
+    })).rejects.toThrow("不允许");
+
+    const plan = {
+      goal: "finish",
+      rationale: "finish",
+      questions: [],
+      actions: [],
+      files: [],
+      stopConditions: ["done"],
+    };
+    await harness.executeEvidencePlan("explorer", plan);
+    await expect(harness.executeDiscoveryTool("explorer", {
+      tool: "find_related_tests",
+      paths: ["src/core.ts"],
+      purpose: "too late",
+    })).rejects.toThrow("已离开证据规划阶段");
+  });
+
+  it("reuses an Agent observation when Workflow fallback proposes the same action", async () => {
+    const traces: any[] = [];
+    const harness = new RepositoryHarness("C:\\repo", (entry) => traces.push(entry));
+    await harness.getRepositoryMap();
+    harness.activateSkillPolicy("explorer", {
+      skillNames: ["fallback-reuse"],
+      allowedTools: ["find_related_tests"],
+      preferredTools: ["find_related_tests"],
+      recommendedQuestions: [],
+      evidenceRequirements: [],
+      stopConditions: ["bounded"],
+      maxDiscoveryActions: 2,
+      maxEvidenceFiles: 4,
+    });
+    const action = {
+      tool: "find_related_tests" as const,
+      paths: ["src/core.ts"],
+      purpose: "Agent discovery",
+    };
+    await harness.executeDiscoveryTool("explorer", action);
+    await harness.executeEvidencePlan("explorer", {
+      goal: "fallback",
+      rationale: "reuse prior discovery",
+      questions: [],
+      actions: [{ ...action, purpose: "Workflow duplicate" }],
+      files: [{ path: "src/core.ts", purpose: "core", priority: "high" }],
+      stopConditions: ["done"],
+    });
+
+    expect(harness.getContextView().stages.explorer.discoveryActionsUsed).toBe(1);
+    expect(harness.getContextView().observations).toHaveLength(1);
+    expect(traces).toContainEqual(expect.objectContaining({
+      title: "Explorer 证据阅读计划",
+      summary: expect.stringContaining("已基于 1 次已完成的仓库调查"),
+      metadata: expect.objectContaining({
+        completedDiscoveryActions: 1,
+        pendingDiscoveryActions: 0,
+      }),
+    }));
+    expect(traces.map((trace) => trace.summary).join("\n"))
+      .not.toContain("0 个仓库调查动作");
+    const executedPlan = mocks.buildEvidenceBundle.mock.calls.at(-1)?.[1];
+    expect(executedPlan.files).toEqual(expect.arrayContaining([
+      expect.objectContaining({ path: "tests/core.test.ts" }),
+    ]));
   });
 
   it("keeps Git inspection inside the Harness and after Mentor", async () => {

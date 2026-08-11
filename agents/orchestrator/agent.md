@@ -1,8 +1,6 @@
 ---
 name: orchestrator
 description: 根据仓库画像协调各分析阶段的定向源码阅读计划。
-tools: []
-model: deepseek-v4-flash
 ---
 
 # Orchestrator - 分析编排器

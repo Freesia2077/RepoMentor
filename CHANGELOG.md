@@ -2,6 +2,32 @@
 
 All notable changes to RepoMentor are documented in this file.
 
+## [0.3.2] - 2026-08-11
+
+### Added
+
+- A bounded Claude Agent Runtime that lets Explorer and Mentor choose repository investigations through RepoMentor's in-process MCP tools without receiving raw filesystem, shell, network, or editing access.
+- Adaptive runtime routing that keeps complete small repositories and OpenAI-compatible providers on the deterministic Workflow while using bounded Agent discovery for larger Anthropic-compatible analyses.
+- A trusted local Claude Agent SDK plugin manifest, namespaced Skills, programmatic Mentor specialist definitions, and opt-in evaluation assets for comparing Workflow and Agent modes.
+- Structured Agent metrics and public Harness traces for runtime selection, tool summaries, turns, token usage, cost, and explicit fallback reasons.
+
+### Changed
+
+- Pinned `@anthropic-ai/claude-agent-sdk` to `0.3.224` and isolated every Agent query in a temporary working directory with project and target-repository settings disabled.
+- Agent discovery now produces only an EvidencePlan; the Harness remains the sole source reader and performs one validated, budgeted evidence batch outside the Agent loop.
+- Explorer, Mentor, and Contributor synthesis prefer native structured output and retain Zod validation, with Draft-07 schemas for Claude Code compatibility and text-JSON fallback for unsupported endpoints.
+- Analysis caches are isolated by actual runtime kind under pipeline version `bounded-agent-v8`.
+- Development watch mode preserves previous terminal output across backend restarts.
+- Analysis traces use accurate completed-discovery counts and intentional empty-result wording instead of misleading zero-value summaries.
+- Module Map importance tags now use coordinated low-saturation colors for `core`, `support`, and `utility`.
+
+### Fixed
+
+- Allowed the SDK-internal `StructuredOutput` terminal submission for main Agents without broadening repository permissions or allowing subagents to invoke it.
+- Prevented Zod's Draft 2020-12 meta-schema from crashing Claude Code's `--json-schema` validator and classified local schema failures as non-retryable.
+- Related-test discovery now associates directory-owned entry points such as `bin/nanoid.js` with tests such as `test/bin.test.js`.
+- Mentor Agent completion traces now use the correct phase name instead of always identifying the Explorer.
+
 ## [0.3.1] - 2026-08-07
 
 ### Added

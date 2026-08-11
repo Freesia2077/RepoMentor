@@ -53,6 +53,7 @@ describe("Harness Skills", () => {
     });
     expect(loaded.promptContent).toContain("analyze-cli-tool");
     expect(loaded.promptContent).not.toContain("analyze-generic");
+    expect(loaded.sdkSkillNames).toEqual(["repomentor:analyze-cli-tool"]);
   });
 
   it("merges multiple matching packs by keeping the strictest execution limits", () => {
@@ -91,6 +92,10 @@ describe("Harness Skills", () => {
     ]);
     expect(loaded.policy.maxDiscoveryActions).toBe(2);
     expect(loaded.policy.maxEvidenceFiles).toBe(5);
+    expect(loaded.sdkSkillNames).toEqual([
+      "repomentor:cli-pack",
+      "repomentor:monorepo-pack",
+    ]);
   });
 
   it("falls back to safe built-in constraints when manifests are missing or invalid", () => {
@@ -102,6 +107,37 @@ describe("Harness Skills", () => {
 
     expect(loaded.policy).toEqual(DEFAULT_HARNESS_SKILL_POLICY);
     expect(loaded.promptContent).toBe("");
+    expect(loaded.sdkSkillNames).toEqual(["repomentor:analyze-generic"]);
+  });
+
+  it("publishes the trusted SDK plugin, skills, and prompt assets", () => {
+    const root = process.cwd();
+    const manifest = JSON.parse(fs.readFileSync(
+      path.join(root, ".claude-plugin", "plugin.json"),
+      "utf8",
+    ));
+    const packageJson = JSON.parse(fs.readFileSync(
+      path.join(root, "package.json"),
+      "utf8",
+    ));
+
+    expect(manifest.name).toBe("repomentor");
+    expect(packageJson.files).toEqual(expect.arrayContaining([
+      ".claude-plugin",
+      "agents",
+      "skills",
+    ]));
+
+    for (const skill of fs.readdirSync(path.join(root, "skills"))) {
+      expect(fs.existsSync(path.join(root, "skills", skill, "skill.json"))).toBe(true);
+      expect(fs.existsSync(path.join(root, "skills", skill, "SKILL.md"))).toBe(true);
+    }
+    for (const agent of ["orchestrator", "explorer", "mentor", "contributor"]) {
+      const prompt = fs.readFileSync(path.join(root, "agents", agent, "agent.md"), "utf8");
+      const frontmatter = prompt.match(/^---\s*\n([\s\S]*?)\n---/)?.[1] ?? "";
+      expect(frontmatter).not.toMatch(/^tools:/m);
+      expect(frontmatter).not.toMatch(/^model:/m);
+    }
   });
 });
 

@@ -8,7 +8,11 @@ const explorerOutput = {
   techStack: { language: 'TypeScript', framework: null, buildTool: 'npm' },
   fileCount: 10,
   entryPoints: [{ file: 'src/index.ts', role: 'public entry' }],
-  moduleMap: [],
+  moduleMap: [
+    { path: 'src/core.ts', responsibility: 'Core behavior', importance: 'core', justification: 'Primary logic' },
+    { path: 'src/support.ts', responsibility: 'Supporting behavior', importance: 'support', justification: 'Shared support' },
+    { path: 'src/utility.ts', responsibility: 'Utility behavior', importance: 'utility', justification: 'Small helpers' },
+  ],
   directorySummary: 'A small library',
   projectSummary: 'A TypeScript library.',
   evidenceClaims: [{
@@ -36,6 +40,9 @@ describe('report evidence appendix', () => {
 
     expect(screen.queryByText('Harness verified')).not.toBeInTheDocument();
     expect(screen.queryByText('证据引用与分析边界')).not.toBeInTheDocument();
+    expect(screen.getByText('core')).toHaveClass('tag-importance-core');
+    expect(screen.getByText('support')).toHaveClass('tag-importance-support');
+    expect(screen.getByText('utility')).toHaveClass('tag-importance-utility');
   });
 
   it('renders one concise report-level evidence appendix', () => {
