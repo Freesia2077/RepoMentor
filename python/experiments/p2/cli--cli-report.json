@@ -1,0 +1,1636 @@
+{
+  "schema_version": "repomentor.v1",
+  "run_id": "c37272ba6f30419bbe13f37831c08f27",
+  "snapshot_id": "11a147cb9d33d9ab6acadd76",
+  "runtime": "claude-agent-sdk",
+  "status": "success",
+  "outputs": {
+    "explorer": {
+      "evidenceClaims": [
+        {
+          "claim": "cmd/gh/main.go 是 gh 二进制的唯一运行时入口，只做一件事：调用 ghcmd.Main() 并把返回的退出码交给 os.Exit。",
+          "confidence": "high",
+          "evidence": [
+            {
+              "path": "cmd/gh/main.go",
+              "supports": "main() 内仅通过 ghcmd.Main() 取得 code 并 os.Exit(int(code))"
+            },
+            {
+              "path": "docs/project-layout.md",
+              "supports": "文档描述流程第 2-3 步：先编译 cmd/gh/main.go 为 bin/gh，main() 是首个运行的 Go 函数"
+            }
+          ]
+        },
+        {
+          "claim": "internal/ghcmd/cmd.go 是启动引导层，集中承担配置加载、IOStreams 构造、遥测服务选择、cobra 根命令执行以及错误到退出码（0/1/2/4/8）的映射。",
+          "confidence": "high",
+          "evidence": [
+            {
+              "path": "internal/ghcmd/cmd.go",
+              "supports": "Main() 中 config.NewConfig、newIOStreams、telemetry.ParseTelemetryState、root.NewCmdRoot 与 ExecuteContextC 的错误分支返回 exitError/exitCancel/exitAuth/exitPending"
+            },
+            {
+              "path": "docs/project-layout.md",
+              "supports": "文档说明 main 包初始化 root 命令并分派执行，非零错误以非零状态退出进程"
+            }
+          ]
+        },
+        {
+          "claim": "pkg/cmd/root/root.go 定义并装配 cobra 根命令：注册核心子命令、命令分组、帮助主题，运行期还追加扩展命令、别名与官方扩展占位命令。",
+          "confidence": "high",
+          "evidence": [
+            {
+              "path": "pkg/cmd/root/root.go",
+              "supports": "NewCmdRoot 内 AddGroup(core/actions/extension)、批量 AddCommand、以及遍历 em.List()、cfg.Aliases()、extensions.OfficialExtensions 的动态注册"
+            }
+          ]
+        },
+        {
+          "claim": "pkg/cmdutil/factory.go 定义 Factory 依赖注入契约，集中提供 IOStreams、Config、HttpClient、BaseRepo、ExtensionManager 等能力，是命令层与基础设施层之间的边界。",
+          "confidence": "high",
+          "evidence": [
+            {
+              "path": "pkg/cmdutil/factory.go",
+              "supports": "Factory 结构体声明 AppVersion/IOStreams/Prompter/GitClient/Config/HttpClient/BaseRepo 等字段，注释说明配置延迟加载的理由"
+            },
+            {
+              "path": "pkg/cmd/root/root.go",
+              "supports": "NewCmdRoot 首参数即 *cmdutil.Factory，子命令构造函数均以 f 或 repoResolvingCmdFactory 注入"
+            }
+          ]
+        },
+        {
+          "claim": "api/client.go 提供对 GitHub REST/GraphQL 的访问实现（Client、RequestOption、HTTPError 等），处于命令层的下游被调用，不反向依赖命令包。",
+          "confidence": "medium",
+          "evidence": [
+            {
+              "path": "api/client.go",
+              "supports": "该文件实现 GraphQL/Query/Mutate/REST/RequestWithContext 等方法，仅导入 go-gh 的 api/auth 与标准库，未导入 pkg/cmd/*"
+            }
+          ]
+        },
+        {
+          "claim": "仓库对关键路径有同包共置的测试：internal/ghcmd/cmd_test.go 覆盖 printError 的错误输出分支与 newIOStreams 的分页器优先级。",
+          "confidence": "medium",
+          "evidence": [
+            {
+              "path": "internal/ghcmd/cmd_test.go",
+              "supports": "Test_printError 用表驱动断言 DNS/flag/unknown command 等输出，Test_newIOStreams_pager 验证 GH_PAGER 与 PAGER 优先级"
+            }
+          ]
+        },
+        {
+          "claim": "项目是模块 github.com/cli/cli/v2 的 Go 工程，主框架为 spf13/cobra，并大量依赖 GitHub 官方库 github.com/cli/go-gh/v2 以及 charmbracelet/huh 等终端 UI 库。",
+          "confidence": "high",
+          "evidence": [
+            {
+              "path": "go.mod",
+              "supports": "module github.com/cli/cli/v2，require 列表含 spf13/cobra、cli/go-gh/v2、charm.land/huh/v2、cli/oauth 等"
+            },
+            {
+              "path": "pkg/cmd/root/root.go",
+              "supports": "根命令直接构造 cobra.Command 并 AddCommand/AddGroup"
+            }
+          ]
+        },
+        {
+          "claim": "仓库分层与命令命名约定由维护者文档明确记录：cmd/ 为入口、pkg/cmd/<command>/<subcommand>/<subcommand>.go 为命令实现、internal/ 为内部包、api/ 与 git/ 为历史遗留顶层包。",
+          "confidence": "high",
+          "evidence": [
+            {
+              "path": "docs/project-layout.md",
+              "supports": "文档列出 cmd/、pkg/、docs/、script/、internal/、go.mod 的职责，并标注 context/、test/、utils/ 已废弃"
+            }
+          ]
+        }
+      ],
+      "evidenceCoverage": {
+        "examinedFiles": [
+          ".github/CONTRIBUTING.md",
+          ".github/workflows/acceptance.yml",
+          ".github/workflows/agentics-maintenance.yml",
+          ".github/workflows/bump-go.yml",
+          ".github/workflows/codeql.yml",
+          ".github/workflows/copilot-setup-steps.yml",
+          ".github/workflows/dependabot-triage.lock.yml",
+          "README.md",
+          "api/client.go",
+          "cmd/gh/main.go",
+          "docs/project-layout.md",
+          "go.mod",
+          "internal/ghcmd/cmd.go",
+          "internal/ghcmd/cmd_test.go",
+          "pkg/cmd/root/help_test.go",
+          "pkg/cmd/root/root.go",
+          "pkg/cmdutil/factory.go"
+        ],
+        "gaps": [
+          {
+            "kind": "coverage_limit",
+            "subject": "api/client.go",
+            "summary": "Only a bounded excerpt was read",
+            "severity": "medium"
+          },
+          {
+            "kind": "coverage_limit",
+            "subject": "internal/ghcmd/cmd_test.go",
+            "summary": "Only a bounded excerpt was read",
+            "severity": "medium"
+          },
+          {
+            "kind": "coverage_limit",
+            "subject": "pkg/cmd/root/help_test.go",
+            "summary": "Only a bounded excerpt was read",
+            "severity": "medium"
+          },
+          {
+            "kind": "coverage_limit",
+            "subject": "docs/project-layout.md",
+            "summary": "Only a bounded excerpt was read",
+            "severity": "medium"
+          },
+          {
+            "kind": "coverage_limit",
+            "subject": "api/client.go 与两个测试文件仅部分读取",
+            "summary": "api/client.go、internal/ghcmd/cmd_test.go、pkg/cmd/root/help_test.go 均因长度被截断，只读到前缀部分，函数级实现细节（如请求重试、重定向处理分支）未被完整核验。",
+            "severity": "medium"
+          },
+          {
+            "kind": "missing_evidence",
+            "subject": "internal/ 下子系统未检查",
+            "summary": "codespaces、attestation、skills、telemetry、config、update 等内部子系统仅有目录级证据，其运行时行为未读取，职责描述来自目录名与文件名。",
+            "severity": "medium"
+          },
+          {
+            "kind": "missing_evidence",
+            "subject": "pkg/cmd 下各业务命令实现未逐条检查",
+            "summary": "约 40 余个命令族（issue/pr/repo/release/project/run 等）仅通过根命令注册清单确认存在，未检查任一具体命令的实现以验证其职责边界。",
+            "severity": "medium"
+          }
+        ]
+      },
+      "projectType": {
+        "primary": "cli",
+        "secondary": [
+          "developer-tools",
+          "api-client"
+        ]
+      },
+      "techStack": {
+        "language": "go",
+        "framework": "cobra",
+        "buildTool": "make"
+      },
+      "fileCount": 1406,
+      "entryPoints": [
+        {
+          "file": "cmd/gh/main.go",
+          "role": "gh 二进制的运行时入口，转交 ghcmd.Main() 并处理退出码"
+        },
+        {
+          "file": "internal/ghcmd/cmd.go",
+          "role": "启动引导：配置、IOStreams、遥测、根命令执行与错误映射"
+        },
+        {
+          "file": "pkg/cmd/root/root.go",
+          "role": "cobra 根命令与全部子命令/别名/扩展的命令树装配点"
+        },
+        {
+          "file": "cmd/gen-docs/main.go",
+          "role": "独立二进制入口，从命令树生成手册页与文档"
+        },
+        {
+          "file": "script/api-host-gateway/gateway/main.go",
+          "role": "测试基础设施入口，模拟 API 宿主的网关服务"
+        }
+      ],
+      "moduleMap": [
+        {
+          "path": "pkg/cmd/",
+          "responsibility": "全部 gh 命令实现，按 <command>/<subcommand> 组织，每个子命令自带 opts 与 RunE，并负责该命令的帮助文本",
+          "importance": "core",
+          "justification": "pkg/cmd/root/root.go 中逐条 AddCommand 注册的命令族全部位于此目录，是 CLI 的功能主体与最大模块"
+        },
+        {
+          "path": "internal/",
+          "responsibility": "仓库专用的内部支撑包：配置、认证、遥测、codespaces、attestation、skills、prompter、更新检查等",
+          "importance": "core",
+          "justification": "启动引导 internal/ghcmd/cmd.go 直接依赖 internal/config、internal/gh、internal/telemetry、internal/update；docs/project-layout.md 明确其为高度定制的内部包层"
+        },
+        {
+          "path": "api/",
+          "responsibility": "GitHub API 访问层：REST/GraphQL 客户端、查询构造与仓库/PR/issue 等资源查询实现",
+          "importance": "core",
+          "justification": "api/client.go 实现 GraphQL/REST/RequestWithContext 等全部请求入口，被命令层调用且不反向依赖命令包"
+        },
+        {
+          "path": "pkg/cmdutil/",
+          "responsibility": "命令公共设施：Factory 依赖注入契约、参数/flag 辅助、认证检查、JSON 输出 flag 与遥测挂钩",
+          "importance": "support",
+          "justification": "pkg/cmdutil/factory.go 定义的 Factory 是 root.NewCmdRoot 的首参数，几乎每个命令构造函数都以其为入参"
+        },
+        {
+          "path": "git/ 与 context/",
+          "responsibility": "本地仓库与 git 交互：执行 git 命令、解析远端与 URL、读取对象信息；context/ 保留用于解析 git remotes",
+          "importance": "support",
+          "justification": "Factory 暴露 GitClient 与 Remotes；docs/project-layout.md 标注 context/ 已废弃但仍用于 remote 解析"
+        },
+        {
+          "path": "acceptance/",
+          "responsibility": "端到端验收测试，使用 txtar 脚本在真实 GitHub 环境下驱动 gh 命令并比对输出",
+          "importance": "utility",
+          "justification": "acceptance/acceptance_test.go 与 testdata 下大量按命令分组的 .txtar 用例；.github/workflows/acceptance.yml 以 -tags=acceptance 运行"
+        }
+      ],
+      "directorySummary": "顶层按 Go 工程惯例分层：cmd/ 存放二进制入口（gh 与 gen-docs），internal/ 为仓库专用内部包，pkg/ 下 cmd/ 是全部命令实现、cmdutil/ 是命令公共设施、iostreams 与扩展管理等为通用库，api/ git/ context/ 为历史遗留的顶层功能包，docs/ 与 script/ 分别承载维护者文档和构建发布脚本。另有 acceptance/ 端到端 txtar 测试、.github/ 下的 CI 工作流与 CodeQL 自定义查询、以及 build/ 下的 macOS/Windows 打包定义。规模最大的两个目录是 pkg/cmd（按 issue/pr/repo/release/project/run 等命令族切分，均为 test 与实现同目录共置）与 internal（按 config、authflow、codespaces、attestation、skills、telemetry 等子系统切分）。总体呈单向分层：cmd → internal/ghcmd → pkg/cmd/root → pkg/cmd/* → pkg/cmdutil + api/git。",
+      "projectSummary": "GitHub CLI（gh）：一个基于 cobra 的大型 Go 命令行工具，把 pull request、issue、repo、release、workflow 等 GitHub 概念带到终端，与本地 git 协作。运行时入口为 cmd/gh/main.go，真正逻辑在 internal/ghcmd/cmd.go 中完成配置与遥测初始化后交给 pkg/cmd/root 构建的命令树；命令通过 cmdutil.Factory 注入 IOStreams、配置与 HTTP 客户端，经 api/ 层的 REST/GraphQL 访问 GitHub。仓库同时包含大量同目录共置单元测试、acceptance/ 下的 txtar 端到端用例，以及 CodeQL 自定义查询与多条 CI 工作流。"
+    },
+    "mentor": {
+      "evidenceClaims": [
+        {
+          "claim": "cmd/gh/main.go 是 gh 二进制的运行时入口，只做一次转交：调用 ghcmd.Main() 并把返回的退出码交给 os.Exit，因此进程生命周期语义完全由 internal/ghcmd 决定。",
+          "confidence": "high",
+          "evidence": [
+            {
+              "path": "cmd/gh/main.go",
+              "supports": "main() 内仅 code := ghcmd.Main() 后 os.Exit(int(code))，无其他逻辑"
+            },
+            {
+              "path": "docs/project-layout.md",
+              "supports": "文档把 cmd/gh/main.go 描述为编译目标，并说明执行结束回到 main() 后以退出码结束进程"
+            }
+          ]
+        },
+        {
+          "claim": "internal/ghcmd/cmd.go 是启动引导层：加载配置、构造 IOStreams、按配置选择遥测服务、创建 Factory、构建并执行根命令，并把错误映射为退出码 0/1/2/4/8。",
+          "confidence": "high",
+          "evidence": [
+            {
+              "path": "internal/ghcmd/cmd.go",
+              "supports": "Main() 定义 exitOK/exitError/exitCancel/exitAuth/exitPending，并在 ExecuteContextC 错误分支按 SilentError、PendingError、IsUserCancellation、root.AuthError、NoResultsError、ExternalCommandExitError 返回不同码"
+            },
+            {
+              "path": "internal/ghcmd/cmd.go",
+              "supports": "同一函数内完成 config.NewConfig、newIOStreams、telemetry.ParseTelemetryState、factory.New 与 root.NewCmdRoot 调用"
+            }
+          ]
+        },
+        {
+          "claim": "pkg/cmd/root/root.go 是命令树的唯一静态装配点，并在静态构建之后追加动态节点：扩展命令、用户别名、官方扩展占位命令。",
+          "confidence": "high",
+          "evidence": [
+            {
+              "path": "pkg/cmd/root/root.go",
+              "supports": "NewCmdRoot 内 AddGroup(core/actions/extension)、批量 AddCommand、遍历 em.List() 注册扩展、遍历 cfg.Aliases() 注册别名、遍历 extensions.OfficialExtensions 注册占位命令"
+            }
+          ]
+        },
+        {
+          "claim": "子命令注册采用「父命令只分组、叶子命令自包含」的约定：pkg/cmd/issue/issue.go 不实现业务逻辑，仅用 cmdutil.AddGroup 把 list/create/status/view 等子命令挂到分组下。",
+          "confidence": "high",
+          "evidence": [
+            {
+              "path": "pkg/cmd/issue/issue.go",
+              "supports": "NewCmdIssue 中 EnableRepoOverride 后直接调用 cmdutil.AddGroup 挂载 General commands 与 Targeted commands 两组子命令，自身无 RunE"
+            }
+          ]
+        },
+        {
+          "claim": "命令层与基础设施层通过 cmdutil.Factory 解耦，具体实现由 pkg/cmd/factory/default.go 绑定 api、git、config、iostreams 等核心包，这是 CLI 与核心逻辑之间的边界。",
+          "confidence": "high",
+          "evidence": [
+            {
+              "path": "pkg/cmdutil/factory.go",
+              "supports": "Factory 以函数字段声明 Config/HttpClient/PlainHttpClient/ExternalHttpClient/Remotes/BaseRepo/Branch，并持有 IOStreams、GitClient、Prompter、Browser、ExtensionManager"
+            },
+            {
+              "path": "pkg/cmd/factory/default.go",
+              "supports": "New() 逐项绑定 HttpClientFunc、newGitClient、newPrompter、extensionManager，并实现 SmartBaseRepoFunc 的 base repo 解析策略"
+            }
+          ]
+        },
+        {
+          "claim": "别名在命令树构建完成后以运行期节点注入：pkg/cmd/root/alias.go 定义普通别名（重设参数并重入 root.Execute）与 shell 别名（转交 sh -c）两类命令，且禁用 flag 解析、认证检查与遥测。",
+          "confidence": "high",
+          "evidence": [
+            {
+              "path": "pkg/cmd/root/alias.go",
+              "supports": "NewCmdAlias 内 root.SetArgs(expandedArgs) 后 root.Execute() 重入；NewCmdShellAlias 用 findsh.Find 找到 sh 后以 -c 执行；两者均 DisableFlagParsing 并调用 DisableAuthCheck/DisableTelemetry"
+            },
+            {
+              "path": "pkg/cmd/root/root.go",
+              "supports": "NewCmdRoot 中按 cfg.Aliases() 的键值构造并 AddCommand 这些别名命令"
+            }
+          ]
+        },
+        {
+          "claim": "分层是单向的：api/client.go 只依赖 go-gh 的 api/auth 与标准库，提供 REST/GraphQL 访问能力，不反向引用 pkg/cmd 或 cmdutil，因此命令层可以依赖 api 而 api 不依赖命令层。",
+          "confidence": "medium",
+          "evidence": [
+            {
+              "path": "api/client.go",
+              "supports": "该文件实现 GraphQL/Mutate/Query/REST/RequestWithContext 等方法，import 仅含标准库与 github.com/cli/go-gh/v2/pkg/{api,auth}"
+            }
+          ]
+        },
+        {
+          "claim": "主要验证路径是 Go 同包共置的表驱动测试：internal/ghcmd/cmd_test.go 覆盖错误输出与分页器优先级，pkg/cmd/issue/create/create_test.go 覆盖 flag 解析与输出契约。",
+          "confidence": "high",
+          "evidence": [
+            {
+              "path": "internal/ghcmd/cmd_test.go",
+              "supports": "Test_printError 表驱动断言 DNS/flag/unknown command 等输出分支，Test_newIOStreams_pager 断言 GH_PAGER 与 PAGER 优先级"
+            },
+            {
+              "path": "pkg/cmd/issue/create/create_test.go",
+              "supports": "TestNewCmdCreate 用表驱动覆盖 tty/非 tty、body 来源、template 与 attach 等参数组合及其期望 opts 与遥测事件"
+            }
+          ]
+        }
+      ],
+      "evidenceCoverage": {
+        "examinedFiles": [
+          ".github/CONTRIBUTING.md",
+          ".github/workflows/acceptance.yml",
+          ".github/workflows/agentics-maintenance.yml",
+          ".github/workflows/bump-go.yml",
+          ".github/workflows/codeql.yml",
+          ".github/workflows/copilot-setup-steps.yml",
+          ".github/workflows/dependabot-triage.lock.yml",
+          "README.md",
+          "api/client.go",
+          "cmd/gh/main.go",
+          "docs/project-layout.md",
+          "go.mod",
+          "internal/config/config.go",
+          "internal/ghcmd/cmd.go",
+          "internal/ghcmd/cmd_test.go",
+          "pkg/cmd/factory/default.go",
+          "pkg/cmd/issue/create/create.go",
+          "pkg/cmd/issue/create/create_test.go",
+          "pkg/cmd/issue/issue.go",
+          "pkg/cmd/root/alias.go",
+          "pkg/cmd/root/help_test.go",
+          "pkg/cmd/root/root.go",
+          "pkg/cmdutil/errors.go",
+          "pkg/cmdutil/factory.go"
+        ],
+        "gaps": [
+          {
+            "kind": "coverage_limit",
+            "subject": "api/client.go",
+            "summary": "Only a bounded excerpt was read",
+            "severity": "medium"
+          },
+          {
+            "kind": "coverage_limit",
+            "subject": "internal/ghcmd/cmd_test.go",
+            "summary": "Only a bounded excerpt was read",
+            "severity": "medium"
+          },
+          {
+            "kind": "coverage_limit",
+            "subject": "pkg/cmd/root/help_test.go",
+            "summary": "Only a bounded excerpt was read",
+            "severity": "medium"
+          },
+          {
+            "kind": "coverage_limit",
+            "subject": "docs/project-layout.md",
+            "summary": "Only a bounded excerpt was read",
+            "severity": "medium"
+          },
+          {
+            "kind": "coverage_limit",
+            "subject": "pkg/iostreams/iostreams.go",
+            "summary": "Only a bounded excerpt was read",
+            "severity": "medium"
+          },
+          {
+            "kind": "coverage_limit",
+            "subject": "internal/config/config.go",
+            "summary": "Only a bounded excerpt was read",
+            "severity": "medium"
+          },
+          {
+            "kind": "coverage_limit",
+            "subject": "pkg/cmd/issue/create/create.go",
+            "summary": "Only a bounded excerpt was read",
+            "severity": "medium"
+          },
+          {
+            "kind": "coverage_limit",
+            "subject": "pkg/cmd/issue/create/create_test.go",
+            "summary": "Only a bounded excerpt was read",
+            "severity": "medium"
+          }
+        ]
+      },
+      "architectureOverview": "gh 是模块 github.com/cli/cli/v2 的 Go 单二进制 CLI，基于 spf13/cobra，整体呈「薄 CLI + 胖核心」的单向分层。\n\n**启动链路。** cmd/gh/main.go 只做一次转交：调用 ghcmd.Main() 并以返回码执行 os.Exit。真正的引导逻辑集中在 internal/ghcmd/cmd.go：它读取配置（internal/config，失败时仅打印警告并让需要配置的命令自行报错）、构造 IOStreams（决定 TTY 判定、颜色、是否允许交互，并体现 GH_PAGER > 配置 pager > PAGER 的优先级）、按配置选择遥测服务（NoOp / Log / GitHub flusher，GHES 用户自动禁用），创建 cmdutil.Factory，最后构建根命令并 ExecuteContextC，把错误映射为 0/1/2/4/8 退出码（用户取消、待定、需认证、扩展退出码各有专门分支）。\n\n**命令树。** pkg/cmd/root/root.go 是唯一装配点：注册核心子命令、三个命令分组（core/actions/extension）、帮助主题，并在静态树构建后追加三类动态节点——用户扩展（em.List()）、config 中的别名、GitHub 官方扩展的安装提示占位命令；三者注册前都会先用 cmd.Find 做冲突检查。别名由 pkg/cmd/root/alias.go 实现：普通别名重设 root 参数并重入 Execute，! 前缀别名转交 sh -c，二者都禁用 flag 解析、认证检查与遥测（别名可能含敏感名称）。\n\n**命令层。** 路径约定为 pkg/cmd/<command>/<subcommand>/<subcommand>.go。父命令只做分组与注册，例如 pkg/cmd/issue/issue.go 仅用 cmdutil.AddGroup 挂上 list/create/view 等，自身没有 RunE。叶子命令暴露 NewCmdXxx(f *cmdutil.Factory, ...) 与 *XxxOptions，在 RunE 中绑定 flag、做互斥与必填校验（cmdutil.MutuallyExclusive、FlagErrorf），再委托执行；需要仓库上下文的命令族拿到的是把 BaseRepo 换成 SmartBaseRepoFunc 的 Factory 副本。\n\n**依赖边界。** pkg/cmdutil/factory.go 定义 Factory，把 Config、HttpClient、IOStreams、GitClient、BaseRepo、Prompter、Browser、ExtensionManager 以函数或字段延迟注入；pkg/cmd/factory/default.go 把 api、git、config、iostreams 的具体实现绑进去，并实现 remote 排序与 base repo 解析策略。api/client.go 只依赖 go-gh 与标准库、不反向引用命令包，形成 cmd → internal/ghcmd → pkg/cmd/root → pkg/cmd/* → cmdutil + api/git 的单向依赖。\n\n**验证。** Go 同包共置测试是主要路径：internal/ghcmd/cmd_test.go 表驱动覆盖 printError 分支与 pager 优先级，pkg/cmd/issue/create/create_test.go 覆盖参数组合、期望 opts 与遥测事件；acceptance/ 下另有 txtar 端到端用例在真实 GitHub 环境执行（.github/workflows/acceptance.yml，-tags=acceptance）。",
+      "dependencyGraph": {
+        "cmd/": [
+          "internal/ghcmd/"
+        ],
+        "internal/ghcmd/": [
+          "pkg/cmd/root/",
+          "pkg/cmd/factory/",
+          "pkg/cmdutil/",
+          "internal/config/",
+          "pkg/iostreams/",
+          "internal/telemetry/",
+          "internal/update/",
+          "api/"
+        ],
+        "pkg/cmd/root/": [
+          "pkg/cmd/*（各命令族，如 pkg/cmd/issue/）",
+          "pkg/cmdutil/",
+          "pkg/extensions/",
+          "internal/gh/",
+          "internal/run/",
+          "pkg/findsh/"
+        ],
+        "pkg/cmd/issue/": [
+          "pkg/cmd/issue/create/",
+          "pkg/cmd/issue/list/",
+          "pkg/cmd/issue/view/",
+          "pkg/cmdutil/"
+        ],
+        "pkg/cmd/issue/create/": [
+          "api/",
+          "pkg/cmdutil/",
+          "pkg/iostreams/",
+          "pkg/cmd/pr/shared/",
+          "pkg/cmd/issue/shared/",
+          "internal/attachments/",
+          "internal/ghrepo/",
+          "internal/prompter/",
+          "internal/browser/"
+        ],
+        "pkg/cmd/factory/": [
+          "api/",
+          "git/",
+          "context/",
+          "internal/config/",
+          "internal/prompter/",
+          "internal/browser/",
+          "internal/ghrepo/",
+          "pkg/cmd/extension/",
+          "pkg/iostreams/"
+        ],
+        "pkg/cmdutil/": [
+          "api/",
+          "git/",
+          "context/",
+          "internal/gh/",
+          "internal/ghrepo/",
+          "pkg/iostreams/",
+          "pkg/extensions/"
+        ],
+        "internal/config/": [
+          "internal/gh/",
+          "internal/keyring/",
+          "pkg/option/"
+        ],
+        "api/": [],
+        "pkg/iostreams/": []
+      },
+      "readingPath": [
+        {
+          "step": 1,
+          "file": "cmd/gh/main.go",
+          "why": "先看清进程边界：整个程序只有 ghcmd.Main() 一次调用，明确「入口不含逻辑」这一前提。"
+        },
+        {
+          "step": 2,
+          "file": "internal/ghcmd/cmd.go",
+          "why": "启动引导的核心：配置加载、IOStreams 构造、遥测服务选择、Factory 创建、根命令执行与退出码映射全在此处，读完即掌握完整生命周期。"
+        },
+        {
+          "step": 3,
+          "file": "pkg/cmd/root/root.go",
+          "why": "命令树的装配点：看清静态子命令、分组、帮助主题如何注册，以及扩展/别名/占位命令等运行期节点的插入位置与冲突检查。"
+        },
+        {
+          "step": 4,
+          "file": "pkg/cmdutil/factory.go",
+          "why": "掌握依赖注入契约与延迟加载的约定；再对照 pkg/cmd/factory/default.go 即可看到 api/git/config/iostreams 被绑入每个命令的具体方式与 base repo 解析策略。"
+        },
+        {
+          "step": 5,
+          "file": "pkg/cmd/issue/create/create.go",
+          "why": "以一个代表性叶子命令走完「父命令分组 → Options → flag 校验 → 委托执行」的全流程，并配合同目录 create_test.go 理解本仓库的表驱动测试写法。"
+        }
+      ],
+      "keyPatterns": [
+        {
+          "pattern": "父命令分组 + AddGroup 注册",
+          "where": "pkg/cmd/issue/issue.go",
+          "description": "父命令不实现逻辑，只用 cmdutil.AddGroup 把子命令挂在语义分组（General/Targeted commands）下；新增命令族的惯例就是照此模式加一个 NewCmdXxx。"
+        },
+        {
+          "pattern": "Options + runF 注入的叶子命令构造函数",
+          "where": "pkg/cmd/issue/create/create.go",
+          "description": "NewCmdXxx(f *cmdutil.Factory, telemetry, runF func(*XxxOptions) error) 先在函数内用 Factory 字段填充 Options 并绑定 flag，再在 RunE 中校验后调用 runF；runF 为 nil 时走真实执行，测试时可替换为断言桩。"
+        },
+        {
+          "pattern": "Factory 依赖注入（延迟函数字段）",
+          "where": "pkg/cmdutil/factory.go",
+          "description": "Config、HttpClient、Remotes、BaseRepo、Branch 都是函数字段而非具体值，用于避免启动即失败（如无配置时仍能跑 gh version），具体实现由 pkg/cmd/factory/default.go 在 factory.New 中一次性绑定。"
+        },
+        {
+          "pattern": "错误类型 → 退出码映射",
+          "where": "internal/ghcmd/cmd.go 与 pkg/cmdutil/errors.go",
+          "description": "cmdutil 定义 FlagError、SilentError、CancelError、PendingError、NoResultsError 等语义错误；Main 用 errors.As/AsType 逐一识别并映射为 0/1/2/4/8，命令只需返回语义化错误而不自行 os.Exit。"
+        },
+        {
+          "pattern": "IOStreams 输出抽象",
+          "where": "pkg/iostreams/iostreams.go",
+          "description": "命令通过 opts.IO 访问 In/Out/ErrOut/ContentOut，TTY 与颜色判定、分页器启停、spinner 开关都封装在此；命令逻辑因此不直接写 os.Stdout，便于测试与 --json/表格双输出。"
+        },
+        {
+          "pattern": "环境变量优先于配置文件的设置解析",
+          "where": "internal/ghcmd/cmd.go 的 newIOStreams",
+          "description": "对 prompt、accessible prompter、spinner、pager、color labels 等逐项按「环境变量 > 配置文件 > 默认值」判定，并在注释中明确 pager 的三级优先级顺序。"
+        },
+        {
+          "pattern": "运行期动态扩展命令树",
+          "where": "pkg/cmd/root/root.go 与 pkg/cmd/root/alias.go",
+          "description": "静态树构建完成后再注入扩展、别名（普通别名重入 root.Execute，! 别名转交 sh -c）与官方扩展占位命令；注册前用 cmd.Find 做冲突检查，且别名命令禁用 flag 解析、认证检查与遥测。"
+        },
+        {
+          "pattern": "API 访问层的请求选项模式",
+          "where": "api/client.go",
+          "description": "通过 RequestOption（WithHeader、WithoutFollowingRedirects、WithEndpointScopes）以函数式选项配置单次请求；REST 解码版本与 Request/RequestWithContext 流式版本并存，后者把响应体生命周期交给调用方。"
+        },
+        {
+          "pattern": "同包共置的表驱动测试",
+          "where": "internal/ghcmd/cmd_test.go、pkg/cmd/issue/create/create_test.go",
+          "description": "测试与实现同目录同包，用 struct 表 + t.Run 覆盖输入组合，并断言完整输出字符串或 Options 字段，而不是模糊匹配。"
+        }
+      ],
+      "codeConventions": [
+        {
+          "rule": "命令实现路径固定为 pkg/cmd/<command>/<subcommand>/<subcommand>.go，父命令与子命令各占一层目录",
+          "example": "docs/project-layout.md（并对应 pkg/cmd/issue/create/create.go）"
+        },
+        {
+          "rule": "每个子命令暴露 NewCmdXxx 构造函数，接收 *cmdutil.Factory 并返回 *cobra.Command；帮助文本以内嵌 Long/Example 形式写在该构造函数中",
+          "example": "pkg/cmd/issue/create/create.go 与 pkg/cmd/issue/issue.go 的 NewCmdCreate/NewCmdIssue"
+        },
+        {
+          "rule": "命令可选地接收 runF func(*XxxOptions) error 参数，使执行体可在测试中替换",
+          "example": "pkg/cmd/issue/create/create.go 的 NewCmdCreate(f, telemetry, runF)"
+        },
+        {
+          "rule": "用户输入错误返回 cmdutil.FlagErrorf/FlagErrorWrap，以便使用方展示用法；取消与静默结束使用 cmdutil.CancelError/SilentError/PendingError 等语义错误",
+          "example": "pkg/cmdutil/errors.go"
+        },
+        {
+          "rule": "所有终端输出经 IOStreams 写入（Out/ErrOut/ContentOut），禁止直接写 os.Stdout/os.Stderr；错误提示写 ErrOut",
+          "example": "pkg/iostreams/iostreams.go 与 internal/ghcmd/cmd.go 中 printError(stderr, ...)"
+        },
+        {
+          "rule": "配置与开关读取遵循「环境变量 > 配置文件（hosts 段优先于全局段）> 默认值」的优先级",
+          "example": "internal/ghcmd/cmd.go 的 newIOStreams 与 internal/config/config.go 的 get/GetOrDefault"
+        },
+        {
+          "rule": "测试与实现同目录同包，采用结构体表驱动的子测试命名并断言完整字符串",
+          "example": "internal/ghcmd/cmd_test.go 的 Test_printError，pkg/cmd/issue/create/create_test.go 的 TestNewCmdCreate"
+        },
+        {
+          "rule": "需要仓库上下文的命令族使用 BaseRepo 被替换为 factory.SmartBaseRepoFunc 的 Factory 副本注册，其余命令用原始 Factory",
+          "example": "pkg/cmd/root/root.go 中 repoResolvingCmdFactory 的构造与后续 AddCommand"
+        }
+      ]
+    },
+    "contributor": {
+      "evidenceClaims": [
+        {
+          "claim": "外部贡献者的 PR 只被接受用于带 help wanted 标签且写明验收标准（Acceptance Criteria）的 issue；core 标签的 issue 不接受外部 PR，good first issue 同样需满足上述要求。",
+          "confidence": "high",
+          "evidence": [
+            {
+              "path": ".github/CONTRIBUTING.md",
+              "supports": "明确写明 only for issues labelled help wanted with explicit Acceptance Criteria，并列出 Please do NOT 清单（无标签、扩大范围、core）"
+            }
+          ]
+        },
+        {
+          "claim": "构建方式为 Unix 用 make、Windows 用 go run script/build.go，产物是 bin/gh（Windows 下为 bin 目录下的 gh），前置要求 Go 1.26+。",
+          "confidence": "high",
+          "evidence": [
+            {
+              "path": ".github/CONTRIBUTING.md",
+              "supports": "Building the project 一节：Prerequisites Go 1.26+；Unix-like systems 用 make，Windows 用 go run script/build.go；运行 bin/gh"
+            },
+            {
+              "path": "go.mod",
+              "supports": "module github.com/cli/cli/v2，go 1.27.0 / toolchain go1.27.1"
+            }
+          ]
+        },
+        {
+          "claim": "单元测试命令为 go test ./...；测试与实现同目录同包，采用结构体表驱动子测试并断言完整字符串。",
+          "confidence": "high",
+          "evidence": [
+            {
+              "path": ".github/CONTRIBUTING.md",
+              "supports": "Run tests with: go test ./..."
+            },
+            {
+              "path": "internal/ghcmd/cmd_test.go",
+              "supports": "Test_printError 用 struct 表 + t.Run 断言完整输出字符串（已读片段）"
+            },
+            {
+              "path": "pkg/cmd/issue/create/create_test.go",
+              "supports": "TestNewCmdCreate 用表驱动覆盖 tty/非 tty、body 来源、template、attach 等参数组合"
+            }
+          ]
+        },
+        {
+          "claim": "端到端验收测试通过 go test -tags=acceptance ./acceptance 运行，并依赖 GH_ACCEPTANCE_HOST / GH_ACCEPTANCE_ORG / GH_ACCEPTANCE_TOKEN 环境变量（CI 中用 GitHub App token 提供）。",
+          "confidence": "medium",
+          "evidence": [
+            {
+              "path": ".github/workflows/acceptance.yml",
+              "supports": "run: go test -tags=acceptance ./acceptance，env 设置 GH_ACCEPTANCE_HOST/ORG/TOKEN/GROUP"
+            }
+          ]
+        },
+        {
+          "claim": "项目是 Go 模块 github.com/cli/cli/v2 的 cobra CLI，并依赖 github.com/cli/go-gh/v2 等官方库；仓库清单中未见 Node/npm 工具链文件，贡献环境只需 Go 工具链。",
+          "confidence": "high",
+          "evidence": [
+            {
+              "path": "go.mod",
+              "supports": "require 列表含 spf13/cobra、cli/go-gh/v2、charm.land/huh/v2 等；go.mod 为唯一根级 manifest"
+            },
+            {
+              "path": "pkg/cmd/root/root.go",
+              "supports": "根命令直接构造 cobra.Command 并 AddCommand/AddGroup"
+            }
+          ]
+        },
+        {
+          "claim": "代码检查存在独立配置与 CI：根目录有 .golangci.yml，.github/workflows/lint.yml 与 .github/golangci-lint-version 存在；但这些文件内容未被读取，具体 lint 命令与规则未能核验。",
+          "confidence": "low",
+          "evidence": []
+        },
+        {
+          "claim": "命令实现遵循 pkg/cmd/<command>/<subcommand>/<subcommand>.go 的路径约定，帮助文本内嵌在构造函数里；父命令只做分组注册、不含业务逻辑。",
+          "confidence": "high",
+          "evidence": [
+            {
+              "path": "docs/project-layout.md",
+              "supports": "文档说明命名约定为 pkg/cmd/<command>/<subcommand>/<subcommand>.go，并以 pkg/cmd/issue/list/list.go 为例"
+            },
+            {
+              "path": "pkg/cmd/issue/issue.go",
+              "supports": "NewCmdIssue 仅 EnableRepoOverride + cmdutil.AddGroup 挂载两组子命令，自身无 RunE"
+            },
+            {
+              "path": "pkg/cmd/issue/create/create.go",
+              "supports": "NewCmdCreate 内新建 CreateOptions、绑定 flag，并在 Long/Example 中内嵌帮助文本"
+            }
+          ]
+        },
+        {
+          "claim": "版本发布时手册页由源码自动生成，CONTRIBUTING 明确说明无需为文档单独提交 PR。",
+          "confidence": "high",
+          "evidence": [
+            {
+              "path": ".github/CONTRIBUTING.md",
+              "supports": "We generate manual pages from source on every release. You do not need to submit pull requests for documentation specifically"
+            },
+            {
+              "path": "docs/project-layout.md",
+              "supports": "帮助主题在发布流程中由 cmd/gen-docs/main.go 自动转换为手册页"
+            }
+          ]
+        }
+      ],
+      "evidenceCoverage": {
+        "examinedFiles": [
+          ".github/CONTRIBUTING.md",
+          ".github/workflows/acceptance.yml",
+          ".github/workflows/agentics-maintenance.yml",
+          ".github/workflows/bump-go.yml",
+          ".github/workflows/codeql.yml",
+          ".github/workflows/copilot-setup-steps.yml",
+          ".github/workflows/dependabot-triage.lock.yml",
+          "README.md",
+          "api/client.go",
+          "cmd/gh/main.go",
+          "docs/project-layout.md",
+          "go.mod",
+          "internal/config/config.go",
+          "internal/ghcmd/cmd.go",
+          "internal/ghcmd/cmd_test.go",
+          "pkg/cmd/factory/default.go",
+          "pkg/cmd/issue/create/create.go",
+          "pkg/cmd/issue/create/create_test.go",
+          "pkg/cmd/issue/issue.go",
+          "pkg/cmd/root/alias.go",
+          "pkg/cmd/root/help_test.go",
+          "pkg/cmd/root/root.go",
+          "pkg/cmdutil/errors.go",
+          "pkg/cmdutil/factory.go"
+        ],
+        "gaps": [
+          {
+            "kind": "missing_evidence",
+            "subject": "unsupported_claims",
+            "summary": "1 claims have no acceptable file reference",
+            "severity": "medium"
+          },
+          {
+            "kind": "coverage_limit",
+            "subject": "api/client.go",
+            "summary": "Only a bounded excerpt was read",
+            "severity": "medium"
+          },
+          {
+            "kind": "coverage_limit",
+            "subject": "internal/ghcmd/cmd_test.go",
+            "summary": "Only a bounded excerpt was read",
+            "severity": "medium"
+          },
+          {
+            "kind": "coverage_limit",
+            "subject": "pkg/cmd/root/help_test.go",
+            "summary": "Only a bounded excerpt was read",
+            "severity": "medium"
+          },
+          {
+            "kind": "coverage_limit",
+            "subject": "docs/project-layout.md",
+            "summary": "Only a bounded excerpt was read",
+            "severity": "medium"
+          },
+          {
+            "kind": "coverage_limit",
+            "subject": "pkg/iostreams/iostreams.go",
+            "summary": "Only a bounded excerpt was read",
+            "severity": "medium"
+          },
+          {
+            "kind": "coverage_limit",
+            "subject": "internal/config/config.go",
+            "summary": "Only a bounded excerpt was read",
+            "severity": "medium"
+          },
+          {
+            "kind": "coverage_limit",
+            "subject": "pkg/cmd/issue/create/create.go",
+            "summary": "Only a bounded excerpt was read",
+            "severity": "medium"
+          }
+        ]
+      },
+      "goodFirstIssues": [
+        {
+          "area": "api 层测试补全（repo 导出）",
+          "difficulty": "easy",
+          "description": "api/ 目录下 export_pr.go 配有同目录 export_pr_test.go，但 api/export_repo.go 在文件清单中未见对应的 export_repo_test.go。可参照 export_pr_test.go 的表驱动写法，为仓库信息的导出/字段映射补一组单元测试。注意：这两个文件的内容未被读取，覆盖情况仅由文件名推断，动手前请先在本地确认现有覆盖并核对 issue 是否有 help wanted 与验收标准。"
+        },
+        {
+          "area": "父命令分组注册的测试",
+          "difficulty": "easy",
+          "description": "pkg/cmd/issue/issue.go 只做 cmdutil.AddGroup 分组，同类父命令文件（如 pkg/cmd/label/label.go、pkg/cmd/org/org.go、pkg/cmd/search/search.go）在清单中未见同名 _test.go，而 pkg/cmd/skills/skills_test.go、pkg/cmd/root/help_test.go 已展示同类断言范式。可为这些父命令补一个轻量测试，断言子命令存在、分组 ID 正确、help 文本可渲染，防止子命令被误删或错挂分组。"
+        },
+        {
+          "area": "验收测试（txtar）用例补充",
+          "difficulty": "medium",
+          "description": "acceptance/testdata/ 下按命令族组织 .txtar 端到端用例，已覆盖 pr、repo、release、issue、workflow、skills、telemetry 等；而 alias、config、status 等命令族在清单中未见对应 testdata 目录。可参照 acceptance/testdata/pr/pr-view.txtar 的结构补一个场景（含 fixture 与期望 stdout/stderr）。注意：这类测试需要 GH_ACCEPTANCE_HOST/ORG/TOKEN 与真实 GitHub 环境，本地验证成本较高，建议先确认 issue 是否明确要求。"
+        },
+        {
+          "area": "启动引导的配置优先级测试",
+          "difficulty": "medium",
+          "description": "已读到的 internal/ghcmd/cmd_test.go 片段中，与 newIOStreams 相关的用例只有 pager 优先级的表驱动测试，而 newIOStreams 还按「环境变量 > 配置文件 > 默认值」处理 prompt 禁用、accessible prompter、spinner、color labels、accessible colors。可沿用同一表驱动风格为这些分支补用例，并覆盖 falsey 取值（false/0/no/空）的边界。注意：该测试文件仅被读取前缀，需先确认是否已存在同类用例。"
+        },
+        {
+          "area": "CodeQL 自定义查询与用例",
+          "difficulty": "medium",
+          "description": ".github/codeql/queries/unsanitized-response-to-terminal.ql 配有完整的测试夹具（hits_base64_after_json、hits_iocopy_crossfunc、misses_contentout、misses_sanitized 等）、test.expected 与 test.qlref，codeql.yml 用 build-mode: manual 运行该自定义配置。可按同一模式新增一种未净化响应写终端的检测模式，或补充 misses 用例以减少误报，作为低风险的静态分析贡献入口。"
+        },
+        {
+          "area": "codespace 子命令的共置测试",
+          "difficulty": "medium",
+          "description": "pkg/cmd/codespace/ 下多数文件已有共置测试（list_test.go、view_test.go、create_test.go 等），但 jupyter.go、root.go、select.go 在清单中未见同名测试文件；同目录已提供 mock_api.go 与 mock_prompter.go 可复用。可借用这些 mock 为交互式选择与 jupyter 转发路径补表驱动测试。"
+        }
+      ],
+      "contributionSetup": {
+        "devEnv": "Go 1.26+（.github/CONTRIBUTING.md 要求；go.mod 声明 go 1.27.0、toolchain go1.27.1）。这是纯 Go 模块项目，仓库清单中无 Node/npm 工具链文件，不需要 npm install。Windows 上可用原生 Go 工具链或 WSL。",
+        "build": "Unix-like：make；Windows：go run script/build.go。产物为 bin/gh（Windows 下为 bin 目录中的 gh）。",
+        "test": "单元测试：go test ./...；端到端验收测试：go test -tags=acceptance ./acceptance，需设置 GH_ACCEPTANCE_HOST、GH_ACCEPTANCE_ORG、GH_ACCEPTANCE_TOKEN（可参考 script/run-acceptance 与 .github/workflows/acceptance.yml）。",
+        "lint": "golangci-lint（配置见根目录 .golangci.yml，版本钉在 .github/golangci-lint-version，CI 见 .github/workflows/lint.yml 与 .github/workflows/govulncheck.yml）。未读取上述文件内容，具体执行命令与开关请以仓库实际配置为准。"
+      },
+      "entryFiles": [
+        {
+          "file": ".github/CONTRIBUTING.md",
+          "description": "贡献规则入口：外部 PR 的准入条件、构建与测试命令、设计提案流程",
+          "reason": "决定“能不能提 PR”与“怎么构建测试”的第一份文档，必须先读"
+        },
+        {
+          "file": "cmd/gh/main.go",
+          "description": "gh 二进制的运行时入口，仅一次转交：ghcmd.Main() 后 os.Exit",
+          "reason": "建立“入口不含逻辑、退出码语义在下游”的前提"
+        },
+        {
+          "file": "internal/ghcmd/cmd.go",
+          "description": "启动引导层：配置加载、IOStreams 构造、遥测服务选择、根命令执行与退出码映射",
+          "reason": "想修改任何全局行为（退出码、pager/prompt/spinner 优先级、遥测开关）都从这里入手"
+        },
+        {
+          "file": "pkg/cmd/root/root.go",
+          "description": "cobra 根命令与命令树装配点，含静态子命令、分组、帮助主题，以及运行期注入的扩展/别名/官方扩展占位命令",
+          "reason": "新增或调整命令注册的唯一位置，也是理解 CLI 全貌的枢纽"
+        },
+        {
+          "file": "pkg/cmdutil/factory.go",
+          "description": "Factory 依赖注入契约：IOStreams、Config、HttpClient、BaseRepo、Prompter、ExtensionManager 等以函数字段延迟注入",
+          "reason": "命令层与基础设施层的边界，理解它才能判断改动该落在哪一层"
+        },
+        {
+          "file": "pkg/cmd/factory/default.go",
+          "description": "Factory 的具体绑定实现：把 api/git/config/iostreams 装配进每个命令，并实现 remote 排序与 base repo 解析策略",
+          "reason": "看到抽象契约的真实实现，理解命令为何能拿到 HTTP 客户端与 BaseRepo"
+        },
+        {
+          "file": "pkg/cmd/issue/create/create.go",
+          "description": "代表性叶子命令：Options 结构、flag 绑定、校验，再委托执行；帮助文本内嵌在构造函数中",
+          "reason": "照着它写新命令或改现有命令，是贡献代码时最常见的落点"
+        }
+      ],
+      "notesForNewcomers": [
+        {
+          "tip": "先读 .github/CONTRIBUTING.md：外部 PR 只对带 help wanted 标签且写明 Acceptance Criteria 的 issue 开放，且不得超出该标准扩大改动范围；没有达标 issue 时先开 issue 或讨论，不要直接提 PR。"
+        },
+        {
+          "tip": "不要为文档单独提 PR：CONTRIBUTING 明确说明手册页在每次发布时由源码自动生成（对应 cmd/gen-docs），命令帮助文本改在命令实现里即可。"
+        },
+        {
+          "tip": "构建命令按平台不同：Unix 用 make，Windows 用 go run script/build.go，产物是 bin/gh（Windows 为 bin 目录下的 gh）。前置要求 Go 1.26+，这是纯 Go 项目，不需要 npm。"
+        },
+        {
+          "tip": "只跑 go test ./... 即可完成大部分验证；-tags=acceptance 的验收测试需要真实 GitHub 凭据（GH_ACCEPTANCE_*），一般贡献者不必本地运行。"
+        },
+        {
+          "tip": "测试与实现同目录同包，写在 <name>_test.go 里；本仓库偏好结构体表驱动 + t.Run 子测试，并断言完整输出字符串而不是模糊匹配。"
+        },
+        {
+          "tip": "找命令实现按 pkg/cmd/<command>/<subcommand>/<subcommand>.go 的约定；父命令文件（如 pkg/cmd/issue/issue.go）只做分组注册，没有业务逻辑。"
+        },
+        {
+          "tip": "输出一律经 opts.IO（IOStreams 的 Out/ErrOut/ContentOut），不要直接写 os.Stdout/os.Stderr，否则测试与 --json/表格双输出会失效。"
+        },
+        {
+          "tip": "用户输入错误返回 cmdutil.FlagErrorf 以触发用法提示；取消/静默/待定分别用 cmdutil.CancelError、SilentError、PendingError，让 internal/ghcmd 统一映射退出码，命令自身不要调用 os.Exit。"
+        },
+        {
+          "tip": "配置类开关遵循「环境变量 > 配置文件（hosts 段优先于全局段）> 默认值」的优先级，新增开关时保持同一顺序并补对应测试。"
+        },
+        {
+          "tip": "保持单向分层：api/ 与 git/ 不反向依赖 pkg/cmd 或 cmdutil；需要仓库上下文的命令族拿到的是把 BaseRepo 换成 factory.SmartBaseRepoFunc 的 Factory 副本。"
+        }
+      ]
+    }
+  },
+  "stop_reason": "report_completed",
+  "usage": [
+    {
+      "stage": "explorer",
+      "turns": 6,
+      "usage": {
+        "input_tokens": 30642,
+        "cache_creation_input_tokens": 0,
+        "cache_read_input_tokens": 63360,
+        "output_tokens": 3724,
+        "output_tokens_details": {
+          "thinking_tokens": 0
+        },
+        "server_tool_use": {
+          "web_search_requests": 0,
+          "web_fetch_requests": 0
+        },
+        "service_tier": "standard",
+        "cache_creation": {
+          "ephemeral_1h_input_tokens": 0,
+          "ephemeral_5m_input_tokens": 0
+        },
+        "inference_geo": "",
+        "iterations": [],
+        "speed": "standard"
+      },
+      "cost_usd": 0.20972,
+      "session_id": "125b08b7-d62d-4bad-af60-8f1b9c649db9",
+      "subtype": "success",
+      "duration_ms": 25391,
+      "model_usage": {
+        "deepseek-v4-flash": {
+          "inputTokens": 30642,
+          "outputTokens": 3724,
+          "cacheReadInputTokens": 63360,
+          "cacheCreationInputTokens": 0,
+          "webSearchRequests": 0,
+          "costUSD": 0.20972,
+          "contextWindow": 200000,
+          "maxOutputTokens": 32000,
+          "thinkingTokens": 0,
+          "canonicalModel": "deepseek-v4-flash",
+          "provider": "firstParty",
+          "costBasis": "unknown"
+        }
+      }
+    },
+    {
+      "stage": "explorer",
+      "turns": 2,
+      "usage": {
+        "input_tokens": 49595,
+        "cache_creation_input_tokens": 0,
+        "cache_read_input_tokens": 0,
+        "output_tokens": 3873,
+        "output_tokens_details": {
+          "thinking_tokens": 0
+        },
+        "server_tool_use": {
+          "web_search_requests": 0,
+          "web_fetch_requests": 0
+        },
+        "service_tier": "standard",
+        "cache_creation": {
+          "ephemeral_1h_input_tokens": 0,
+          "ephemeral_5m_input_tokens": 0
+        },
+        "inference_geo": "",
+        "iterations": [],
+        "speed": "standard"
+      },
+      "cost_usd": 0.27584,
+      "session_id": "5aa45c53-abb5-49ee-90ad-0f18916839e5",
+      "subtype": "success",
+      "duration_ms": 18112,
+      "model_usage": {
+        "deepseek-v4-flash": {
+          "inputTokens": 49595,
+          "outputTokens": 3873,
+          "cacheReadInputTokens": 0,
+          "cacheCreationInputTokens": 0,
+          "webSearchRequests": 0,
+          "costUSD": 0.27584,
+          "contextWindow": 200000,
+          "maxOutputTokens": 32000,
+          "thinkingTokens": 0,
+          "canonicalModel": "deepseek-v4-flash",
+          "provider": "firstParty",
+          "costBasis": "unknown"
+        }
+      }
+    },
+    {
+      "stage": "mentor",
+      "turns": 6,
+      "usage": {
+        "input_tokens": 32838,
+        "cache_creation_input_tokens": 0,
+        "cache_read_input_tokens": 68352,
+        "output_tokens": 4937,
+        "output_tokens_details": {
+          "thinking_tokens": 0
+        },
+        "server_tool_use": {
+          "web_search_requests": 0,
+          "web_fetch_requests": 0
+        },
+        "service_tier": "standard",
+        "cache_creation": {
+          "ephemeral_1h_input_tokens": 0,
+          "ephemeral_5m_input_tokens": 0
+        },
+        "inference_geo": "",
+        "iterations": [],
+        "speed": "standard"
+      },
+      "cost_usd": 0.2437624,
+      "session_id": "7c87d645-46fa-4993-9121-c078c2adda12",
+      "subtype": "success",
+      "duration_ms": 26678,
+      "model_usage": {
+        "deepseek-v4-flash": {
+          "inputTokens": 32838,
+          "outputTokens": 4937,
+          "cacheReadInputTokens": 68352,
+          "cacheCreationInputTokens": 0,
+          "webSearchRequests": 0,
+          "costUSD": 0.2437624,
+          "contextWindow": 200000,
+          "maxOutputTokens": 32000,
+          "thinkingTokens": 0,
+          "canonicalModel": "deepseek-v4-flash",
+          "provider": "firstParty",
+          "costBasis": "unknown"
+        }
+      }
+    },
+    {
+      "stage": "mentor",
+      "turns": 3,
+      "usage": {
+        "input_tokens": 69647,
+        "cache_creation_input_tokens": 0,
+        "cache_read_input_tokens": 70912,
+        "output_tokens": 11488,
+        "output_tokens_details": {
+          "thinking_tokens": 0
+        },
+        "server_tool_use": {
+          "web_search_requests": 0,
+          "web_fetch_requests": 0
+        },
+        "service_tier": "standard",
+        "cache_creation": {
+          "ephemeral_1h_input_tokens": 0,
+          "ephemeral_5m_input_tokens": 0
+        },
+        "inference_geo": "",
+        "iterations": [],
+        "speed": "standard"
+      },
+      "cost_usd": 0.5225304,
+      "session_id": "36139314-96b3-4df0-9da7-558dee06bc9f",
+      "subtype": "success",
+      "duration_ms": 49281,
+      "model_usage": {
+        "deepseek-v4-flash": {
+          "inputTokens": 69647,
+          "outputTokens": 11488,
+          "cacheReadInputTokens": 70912,
+          "cacheCreationInputTokens": 0,
+          "webSearchRequests": 0,
+          "costUSD": 0.5225304,
+          "contextWindow": 200000,
+          "maxOutputTokens": 32000,
+          "thinkingTokens": 0,
+          "canonicalModel": "deepseek-v4-flash",
+          "provider": "firstParty",
+          "costBasis": "unknown"
+        }
+      }
+    },
+    {
+      "stage": "contributor",
+      "turns": 3,
+      "usage": {
+        "input_tokens": 70000,
+        "cache_creation_input_tokens": 0,
+        "cache_read_input_tokens": 72960,
+        "output_tokens": 10848,
+        "output_tokens_details": {
+          "thinking_tokens": 0
+        },
+        "server_tool_use": {
+          "web_search_requests": 0,
+          "web_fetch_requests": 0
+        },
+        "service_tier": "standard",
+        "cache_creation": {
+          "ephemeral_1h_input_tokens": 0,
+          "ephemeral_5m_input_tokens": 0
+        },
+        "inference_geo": "",
+        "iterations": [],
+        "speed": "standard"
+      },
+      "cost_usd": 0.511552,
+      "session_id": "4affaa52-da2b-4525-813a-5d454b9764b7",
+      "subtype": "success",
+      "duration_ms": 46766,
+      "model_usage": {
+        "deepseek-v4-flash": {
+          "inputTokens": 70000,
+          "outputTokens": 10848,
+          "cacheReadInputTokens": 72960,
+          "cacheCreationInputTokens": 0,
+          "webSearchRequests": 0,
+          "costUSD": 0.511552,
+          "contextWindow": 200000,
+          "maxOutputTokens": 32000,
+          "thinkingTokens": 0,
+          "canonicalModel": "deepseek-v4-flash",
+          "provider": "firstParty",
+          "costBasis": "unknown"
+        }
+      }
+    }
+  ],
+  "elapsed_seconds": 170.391,
+  "error": null,
+  "versions": {
+    "repomentor": "0.1.0",
+    "sdk": "0.2.158",
+    "cli": "2.1.280",
+    "model": "deepseek-v4-flash"
+  },
+  "harness": {
+    "stages": {
+      "explorer": {
+        "status": "completed",
+        "plan": {
+          "goal": "Explain how GitHub CLI (gh) boots: how cmd/gh/main.go delegates to the internal command runner, how that runner builds the cobra root command tree with an injected cmdutil.Factory, and how that wiring is verified by tests.",
+          "rationale": "This is cli/cli: a large Go CLI (1406 files, module github.com/cli/cli/v2, cobra-based). Entry candidates mix the real binary (cmd/gh/main.go) with doc/JS tooling, so the runtime entry must be disambiguated. search_symbols(\"NewCmdRoot\") returned exactly two consumers — internal/ghcmd/cmd.go and cmd/gen-docs/main.go — confirming ghcmd is the seam turning the cobra tree into a process. trace_module_dependencies returned 0 edges for the entry/bootstrap/root trio, so import direction is unconfirmed by tooling and must be read from source; find_related_tests matched only unrelated attestation fixtures, so it is not coverage evidence and tests must be requested by known paths. Go colocates tests beside implementation, so the supplied testCandidates list was unhelpful. Evidence is bounded to 8 files: entry, bootstrap, root wiring, the Factory DI contract, one core API implementation, two colocated tests, and the layout doc.",
+          "questions": [
+            "What is the runtime entry point of the gh binary and how does it hand off to the command runner?",
+            "How is the cobra root command constructed and with what dependencies (Factory) is it injected?",
+            "Which module owns argument parsing, error/exit-code mapping, and cleanup between main() and cobra?",
+            "How is the command tree extended at runtime (aliases, extensions, help topics)?",
+            "Is the bootstrap path covered by tests, and which test files exercise it?",
+            "Where does the core HTTP/API layer sit relative to the command layer, and is the dependency direction one-way?"
+          ],
+          "actions": [],
+          "files": [
+            {
+              "path": "cmd/gh/main.go",
+              "purpose": "Runtime entry point of the shipped gh binary; establishes the main() → command-runner handoff and exit-code handling.",
+              "priority": "high"
+            },
+            {
+              "path": "internal/ghcmd/cmd.go",
+              "purpose": "Core bootstrap seam: the only non-docs consumer of NewCmdRoot, responsible for parsing args, invoking the root command, and process exit semantics.",
+              "priority": "high"
+            },
+            {
+              "path": "pkg/cmd/root/root.go",
+              "purpose": "Root cobra command definition and command-tree wiring; the central dispatch node of the CLI.",
+              "priority": "high"
+            },
+            {
+              "path": "pkg/cmdutil/factory.go",
+              "purpose": "Dependency-injection contract (Factory) that nearly every command consumes; defines the core abstraction and dependency direction.",
+              "priority": "high"
+            },
+            {
+              "path": "api/client.go",
+              "purpose": "Core API/data-access implementation showing how the command layer reaches GitHub; verifies one-way layering.",
+              "priority": "medium"
+            },
+            {
+              "path": "internal/ghcmd/cmd_test.go",
+              "purpose": "Representative colocated test for the bootstrap/entry path; the only realistic place coverage of cmd.go would live.",
+              "priority": "medium"
+            },
+            {
+              "path": "pkg/cmd/root/help_test.go",
+              "purpose": "Representative test for root-command assembly and help/command-tree behavior.",
+              "priority": "medium"
+            },
+            {
+              "path": "docs/project-layout.md",
+              "purpose": "Maintainer-documented module layout and conventions; cross-check observed structure against intended architecture.",
+              "priority": "low"
+            }
+          ],
+          "stopConditions": [
+            "Entry (cmd/gh/main.go), core responsibility (ghcmd bootstrap + root command wiring), and verification path (colocated *_test.go) are each supported by at least one read file, or explicitly marked unresolved.",
+            "The internal dependency direction main → ghcmd → root → cmdutil/Factory is either confirmed by imports in the read sources or recorded as an unresolved gap (trace_module_dependencies returned 0 edges).",
+            "Any remaining ambiguity about extension/alias command registration is stated as an open question rather than inferred.",
+            "Evidence stays within the 8-file budget; no further file reads are requested once these are consumed."
+          ]
+        },
+        "examinedPaths": [
+          "cmd/gh/main.go",
+          "internal/ghcmd/cmd.go",
+          "pkg/cmd/root/root.go",
+          "pkg/cmdutil/factory.go",
+          "api/client.go",
+          "internal/ghcmd/cmd_test.go",
+          "pkg/cmd/root/help_test.go",
+          "docs/project-layout.md"
+        ],
+        "skippedPaths": [],
+        "unresolvedQuestions": [],
+        "skillPolicy": {
+          "skillNames": [
+            "analyze-generic"
+          ],
+          "allowedTools": [
+            "search_symbols",
+            "trace_module_dependencies",
+            "find_related_tests"
+          ],
+          "preferredTools": [
+            "trace_module_dependencies",
+            "find_related_tests"
+          ],
+          "recommendedQuestions": [
+            "Where is the public or runtime entry point?",
+            "Which modules implement the main control flow?",
+            "How is the core behavior verified?"
+          ],
+          "evidenceRequirements": [
+            "One public or runtime entry file",
+            "One core implementation file",
+            "One representative test or an explicit coverage gap"
+          ],
+          "stopConditions": [
+            "Entry, core responsibility, and verification path are supported or explicitly unresolved"
+          ],
+          "maxDiscoveryActions": 3,
+          "maxEvidenceFiles": 8
+        },
+        "discoveryActionsUsed": 3,
+        "stopReason": "evidence_batch_completed"
+      },
+      "mentor": {
+        "status": "completed",
+        "plan": {
+          "goal": "Evidence the path from the gh CLI entry point through subcommand registration and dispatch to core behavior, and show how output formatting, config reading, and exit codes are separated from reusable logic across pkg/cmd/* and api/internal/*.",
+          "rationale": "Explorer evidenced the boot path (cmd/gh/main.go -> internal/ghcmd/cmd.go -> pkg/cmd/root/root.go -> pkg/cmdutil/factory.go) plus one API file and two partial tests, but left command-tree extension/alias registration open. Mentor discovery could not close it: trace_module_dependencies returned 0 edges for root/issue/factory, search_symbols('AddCommand') matched only internal/docs tests, and find_related_tests returned 12 attestation fixtures - so name-based matching is not coverage evidence and registration cannot be inferred from tooling. Go colocates tests beside implementation, so known paths must be requested. Remaining evidence goes to untouched layers: command-group registration, concrete Factory construction, alias registration, error/exit-code mapping, IOStreams output boundary, config (.rc/env) reading, and a leaf command with its colocated test.",
+          "questions": [
+            "How does a parent command (e.g. pkg/cmd/issue) register its subcommands and route argv to them, and what is the convention for a new command group?",
+            "How does pkg/cmd/factory/default.go construct the concrete Factory, and which core packages (api, git, config, iostreams) does it bind into every command?",
+            "How is the command tree mutated at runtime for aliases (and extensions) after the static tree is built?",
+            "Where are error types and exit codes defined, and how does a command-level error become a process exit status?",
+            "How is terminal output abstracted (IOStreams) so command logic stays testable, and how do table vs JSON output paths differ?",
+            "How does internal/config load and migrate configuration from files and environment, and which layer owns it?"
+          ],
+          "actions": [],
+          "files": [
+            {
+              "path": "pkg/cmd/issue/issue.go",
+              "purpose": "Parent command group: shows the AddCommand-based subcommand registration and routing convention that the explorer could not confirm via search_symbols.",
+              "priority": "high"
+            },
+            {
+              "path": "pkg/cmd/factory/default.go",
+              "purpose": "Concrete Factory construction - the CLI-to-core seam that binds api/git/config/iostreams into every command and defines the layering boundary.",
+              "priority": "high"
+            },
+            {
+              "path": "pkg/cmdutil/errors.go",
+              "purpose": "Error types and exit-code mapping contract, closing the gap left unnamed between main() and cobra.",
+              "priority": "high"
+            },
+            {
+              "path": "pkg/iostreams/iostreams.go",
+              "purpose": "Output formatting and TTY/color boundary; shows how command logic is kept free of direct stdout access.",
+              "priority": "medium"
+            },
+            {
+              "path": "internal/config/config.go",
+              "purpose": "Configuration reading (.rc files, environment variables, hosts, aliases) that the CLI tool policy flags as a focus area.",
+              "priority": "medium"
+            },
+            {
+              "path": "pkg/cmd/root/alias.go",
+              "purpose": "Runtime command-tree extension for aliases, answering the explorer's open question about post-construction registration.",
+              "priority": "medium"
+            },
+            {
+              "path": "pkg/cmd/issue/create/create.go",
+              "purpose": "Representative leaf command end-to-end: Options struct, flag parsing, validation, then delegation to core API - the thin-CLI/fat-core pattern.",
+              "priority": "medium"
+            },
+            {
+              "path": "pkg/cmd/issue/create/create_test.go",
+              "purpose": "Representative colocated command test (the real coverage path, unlike the name-matched candidates) covering flags, exit behavior, and output contract.",
+              "priority": "medium"
+            }
+          ],
+          "stopConditions": [
+            "CLI entry -> ghcmd bootstrap -> root tree -> a registered subcommand group -> a leaf command -> core api call is demonstrated by read sources, or the exact broken link is recorded as unresolved.",
+            "Subcommand registration and dispatch is evidenced from pkg/cmd/issue/issue.go (not inferred), since search_symbols('AddCommand') failed to locate registration sites and dependency tracing returned 0 edges.",
+            "Representative verification is evidenced by pkg/cmd/issue/create/create_test.go; find_related_tests results must not be treated as coverage because they returned attestation fixtures, not command tests.",
+            "Extension/plugin command registration remains explicitly open unless a read file covers it; no behavior is asserted from tool observations alone."
+          ]
+        },
+        "examinedPaths": [
+          "pkg/cmd/issue/issue.go",
+          "pkg/cmd/factory/default.go",
+          "pkg/cmdutil/errors.go",
+          "pkg/iostreams/iostreams.go",
+          "internal/config/config.go",
+          "pkg/cmd/root/alias.go",
+          "pkg/cmd/issue/create/create.go",
+          "pkg/cmd/issue/create/create_test.go"
+        ],
+        "skippedPaths": [],
+        "unresolvedQuestions": [],
+        "skillPolicy": {
+          "skillNames": [
+            "analyze-cli-tool"
+          ],
+          "allowedTools": [
+            "search_symbols",
+            "trace_module_dependencies",
+            "find_related_tests"
+          ],
+          "preferredTools": [
+            "trace_module_dependencies",
+            "find_related_tests"
+          ],
+          "recommendedQuestions": [
+            "How do argv parsing and command dispatch reach core behavior?",
+            "Where is the CLI boundary separated from reusable application logic?",
+            "Which tests verify commands, exit behavior, and output contracts?"
+          ],
+          "evidenceRequirements": [
+            "CLI entry or bin target",
+            "Command registration or dispatch implementation",
+            "Representative command test or an explicit coverage gap"
+          ],
+          "stopConditions": [
+            "The path from CLI entry through dispatch to core behavior is evidenced"
+          ],
+          "maxDiscoveryActions": 3,
+          "maxEvidenceFiles": 8
+        },
+        "discoveryActionsUsed": 3,
+        "stopReason": "global_evidence_budget_exhausted"
+      },
+      "contributor": {
+        "status": "completed",
+        "plan": null,
+        "examinedPaths": [],
+        "skippedPaths": [],
+        "unresolvedQuestions": [],
+        "skillPolicy": null,
+        "discoveryActionsUsed": 0,
+        "stopReason": null
+      }
+    },
+    "budget": {
+      "maxEvidenceBatches": 2,
+      "maxFilesRead": 18,
+      "maxEvidenceBytes": 88000,
+      "usedEvidenceBatches": 2,
+      "filesRead": 16,
+      "evidenceBytes": 88000
+    },
+    "observations": [
+      {
+        "stage": "explorer",
+        "tool": "trace_module_dependencies",
+        "purpose": "Confirm internal dependency direction from the runtime entry → command bootstrap → root command wiring.",
+        "summary": "Found 0 candidate paths; source text is not included.",
+        "paths": [],
+        "metadata": {
+          "edges": 0,
+          "seedFiles": 3
+        }
+      },
+      {
+        "stage": "explorer",
+        "tool": "find_related_tests",
+        "purpose": "Locate representative tests for the entry point, command bootstrap, and root command.",
+        "summary": "Found 12 candidate paths; source text is not included.",
+        "paths": [
+          "pkg/cmd/attestation/test/data/gh_2.60.1_windows_arm64.zip",
+          "pkg/cmd/attestation/test/data/trusted_root.json",
+          "test/integration/attestation-cmd/verify/verify-with-custom-trusted-root.sh",
+          "pkg/cmd/attestation/test/data/custom-issuer-artifact",
+          "pkg/cmd/attestation/test/data/custom-issuer.sigstore.json",
+          "pkg/cmd/attestation/test/data/data.go",
+          "pkg/cmd/attestation/test/data/github_provenance_demo-0.0.12-py3-none-any-bundle-missing-cert.jsonl",
+          "pkg/cmd/attestation/test/data/github_provenance_demo-0.0.12-py3-none-any-bundle-missing-verification-material.jsonl",
+          "pkg/cmd/attestation/test/data/github_provenance_demo-0.0.12-py3-none-any-bundle.jsonl",
+          "pkg/cmd/attestation/test/data/github_provenance_demo-0.0.12-py3-none-any.whl",
+          "pkg/cmd/attestation/test/data/github_release_artifact.zip",
+          "pkg/cmd/attestation/test/data/github_release_artifact_invalid.zip"
+        ],
+        "metadata": {
+          "tests": 12,
+          "seedFiles": 3
+        }
+      },
+      {
+        "stage": "explorer",
+        "tool": "search_symbols",
+        "purpose": "Find the root command constructor and its consumers to map the CLI command tree entry.",
+        "summary": "Found 2 candidate paths; source text is not included.",
+        "paths": [
+          "cmd/gen-docs/main.go",
+          "internal/ghcmd/cmd.go"
+        ],
+        "metadata": {
+          "query": "NewCmdRoot",
+          "matches": 2
+        }
+      },
+      {
+        "stage": "mentor",
+        "tool": "search_symbols",
+        "purpose": "Locate cobra subcommand registration sites in pkg/cmd/* to understand the command tree wiring convention.",
+        "summary": "Found 3 candidate paths; source text is not included.",
+        "paths": [
+          "internal/docs/docs_test.go",
+          "internal/docs/man_test.go",
+          "internal/ghcmd/cmd_test.go"
+        ],
+        "metadata": {
+          "query": "AddCommand",
+          "matches": 4
+        }
+      },
+      {
+        "stage": "mentor",
+        "tool": "trace_module_dependencies",
+        "purpose": "Confirm one-way layering from command packages down to cmdutil/Factory and core api/git packages.",
+        "summary": "Found 0 candidate paths; source text is not included.",
+        "paths": [],
+        "metadata": {
+          "edges": 0,
+          "seedFiles": 3
+        }
+      },
+      {
+        "stage": "mentor",
+        "tool": "find_related_tests",
+        "purpose": "Find representative colocated tests exercising command registration and factory wiring.",
+        "summary": "Found 12 candidate paths; source text is not included.",
+        "paths": [
+          "pkg/cmd/attestation/test/data/custom-issuer-artifact",
+          "pkg/cmd/attestation/test/data/custom-issuer.sigstore.json",
+          "pkg/cmd/attestation/test/data/trusted_root.json",
+          "test/integration/attestation-cmd/verify/verify-with-custom-trusted-root.sh",
+          "pkg/cmd/attestation/test/data/data.go",
+          "pkg/cmd/attestation/test/data/gh_2.60.1_windows_arm64.zip",
+          "pkg/cmd/attestation/test/data/github_provenance_demo-0.0.12-py3-none-any-bundle-missing-cert.jsonl",
+          "pkg/cmd/attestation/test/data/github_provenance_demo-0.0.12-py3-none-any-bundle-missing-verification-material.jsonl",
+          "pkg/cmd/attestation/test/data/github_provenance_demo-0.0.12-py3-none-any-bundle.jsonl",
+          "pkg/cmd/attestation/test/data/github_provenance_demo-0.0.12-py3-none-any.whl",
+          "pkg/cmd/attestation/test/data/github_release_artifact.zip",
+          "pkg/cmd/attestation/test/data/github_release_artifact_invalid.zip"
+        ],
+        "metadata": {
+          "tests": 12,
+          "seedFiles": 3
+        }
+      }
+    ],
+    "ledger": {
+      "cmd/gh/main.go": {
+        "status": "available",
+        "attempts": [
+          {
+            "phase": "explorer",
+            "status": "available",
+            "bytes": 131
+          }
+        ]
+      },
+      "internal/ghcmd/cmd.go": {
+        "status": "available",
+        "attempts": [
+          {
+            "phase": "explorer",
+            "status": "available",
+            "bytes": 16368
+          }
+        ]
+      },
+      "pkg/cmd/root/root.go": {
+        "status": "available",
+        "attempts": [
+          {
+            "phase": "explorer",
+            "status": "available",
+            "bytes": 9719
+          }
+        ]
+      },
+      "pkg/cmdutil/factory.go": {
+        "status": "available",
+        "attempts": [
+          {
+            "phase": "explorer",
+            "status": "available",
+            "bytes": 1953
+          }
+        ]
+      },
+      "api/client.go": {
+        "status": "partial",
+        "attempts": [
+          {
+            "phase": "explorer",
+            "status": "partial",
+            "bytes": 7829
+          }
+        ]
+      },
+      "internal/ghcmd/cmd_test.go": {
+        "status": "partial",
+        "attempts": [
+          {
+            "phase": "explorer",
+            "status": "partial",
+            "bytes": 4000
+          }
+        ]
+      },
+      "pkg/cmd/root/help_test.go": {
+        "status": "partial",
+        "attempts": [
+          {
+            "phase": "explorer",
+            "status": "partial",
+            "bytes": 4000
+          }
+        ]
+      },
+      "docs/project-layout.md": {
+        "status": "partial",
+        "attempts": [
+          {
+            "phase": "explorer",
+            "status": "partial",
+            "bytes": 4000
+          }
+        ]
+      },
+      "pkg/cmd/issue/issue.go": {
+        "status": "available",
+        "attempts": [
+          {
+            "phase": "mentor",
+            "status": "available",
+            "bytes": 2228
+          }
+        ]
+      },
+      "pkg/cmd/factory/default.go": {
+        "status": "available",
+        "attempts": [
+          {
+            "phase": "mentor",
+            "status": "available",
+            "bytes": 11701
+          }
+        ]
+      },
+      "pkg/cmdutil/errors.go": {
+        "status": "available",
+        "attempts": [
+          {
+            "phase": "mentor",
+            "status": "available",
+            "bytes": 1693
+          }
+        ]
+      },
+      "pkg/iostreams/iostreams.go": {
+        "status": "partial",
+        "attempts": [
+          {
+            "phase": "mentor",
+            "status": "partial",
+            "bytes": 8452
+          }
+        ]
+      },
+      "internal/config/config.go": {
+        "status": "partial",
+        "attempts": [
+          {
+            "phase": "mentor",
+            "status": "partial",
+            "bytes": 4000
+          }
+        ]
+      },
+      "pkg/cmd/root/alias.go": {
+        "status": "available",
+        "attempts": [
+          {
+            "phase": "mentor",
+            "status": "available",
+            "bytes": 3926
+          }
+        ]
+      },
+      "pkg/cmd/issue/create/create.go": {
+        "status": "partial",
+        "attempts": [
+          {
+            "phase": "mentor",
+            "status": "partial",
+            "bytes": 4000
+          }
+        ]
+      },
+      "pkg/cmd/issue/create/create_test.go": {
+        "status": "partial",
+        "attempts": [
+          {
+            "phase": "mentor",
+            "status": "partial",
+            "bytes": 4000
+          }
+        ]
+      }
+    }
+  },
+  "repository": "cli/cli",
+  "commit_sha": "a3d31e2764f110dd03c46136177360bc78dc3f63"
+}

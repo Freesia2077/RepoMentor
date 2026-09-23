@@ -1,5 +1,14 @@
 # RepoMentor
 
+## Versions / 版本入口
+
+| Version | Location | Status |
+| --- | --- | --- |
+| **Python — active development** | [python/](python/README.md) | Independent CLI/library, Git snapshots, controlled repository tools, Harness and Claude Agent SDK reports. Future conversational RAG and MiniMind/Qwen experiments build here. |
+| TypeScript — original web application | Root `src/`, `web/`, `package.json` | Preserved in place; existing frontend/backend startup remains available. |
+
+后续开发以 **Python 版**为准。两版并列保留，不需要启动 TS 前后端即可使用 Python。参见 [结构与功能对应关系](python/notes/architecture.md)、[验收与限制](python/notes/p0-p2-acceptance.md)。以下为原 TS Web 版说明。
+
 > Evidence-driven AI analysis for public GitHub repositories — understand the architecture, follow a reading path, and find a practical way to contribute.
 
 [![Node.js](https://img.shields.io/badge/Node.js-20.19%2B-green)](https://nodejs.org/)

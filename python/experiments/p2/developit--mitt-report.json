@@ -1,0 +1,1353 @@
+{
+  "schema_version": "repomentor.v1",
+  "run_id": "cc8e49d8f06842d390317cd046f3b193",
+  "snapshot_id": "dfdc0816797bf578d0363591",
+  "runtime": "claude-agent-sdk",
+  "status": "success",
+  "outputs": {
+    "explorer": {
+      "evidenceClaims": [
+        {
+          "claim": "项目是一个零依赖的极小体积事件发布/订阅库，对外的核心 API 由默认导出的 mitt() 工厂函数提供。",
+          "confidence": "high",
+          "evidence": [
+            {
+              "path": "package.json",
+              "supports": "name/description/keywords 声明为 events/eventemitter/pubsub，且无 dependencies 字段"
+            },
+            {
+              "path": "src/index.ts",
+              "supports": "export default function mitt(...) 返回包含 all/on/off/emit 的对象"
+            }
+          ]
+        },
+        {
+          "claim": "src/index.ts 同时承担实现与公共类型定义职责，导出 Emitter、EventType、Handler、EventHandlerMap 等类型。",
+          "confidence": "high",
+          "evidence": [
+            {
+              "path": "src/index.ts",
+              "supports": "文件中定义并导出 EventType、Handler、WildcardHandler、EventHandlerMap、Emitter 接口与默认工厂函数"
+            },
+            {
+              "path": "package.json",
+              "supports": "\"source\": \"src/index.ts\" 且 \"typings\": \"index.d.ts\"，构建产物类型由该源文件生成"
+            }
+          ]
+        },
+        {
+          "claim": "emit 的实现中，通配符 '*' 的处理器在按类型匹配的处理器之后被调用。",
+          "confidence": "high",
+          "evidence": [
+            {
+              "path": "src/index.ts",
+              "supports": "emit 内先取 all.get(type) 执行，再取 all.get('*') 执行"
+            },
+            {
+              "path": "test/index_test.ts",
+              "supports": "should invoke * handlers 用例断言通配符处理器被调用并收到 (type, evt)"
+            }
+          ]
+        },
+        {
+          "claim": "on/off 不做事件名大小写归一化，且 off 只移除首个匹配引用、off(type) 无 handler 时清空该类型全部处理器。",
+          "confidence": "high",
+          "evidence": [
+            {
+              "path": "src/index.ts",
+              "supports": "on 直接 all.get/set 原始 type；off 使用 handlers.splice(handlers.indexOf(handler) >>> 0, 1)，无 handler 时 set 为空数组"
+            },
+            {
+              "path": "test/index_test.ts",
+              "supports": "should NOT normalize case、should remove only the first matching listener、off(\"type\") should remove all handlers 用例"
+            }
+          ]
+        },
+        {
+          "claim": "运行期行为由 mocha + chai + sinon(spy) 在 test/index_test.ts 中验证，覆盖 on/off/emit、通配符、符号事件名与传入自定义 handler map 等场景。",
+          "confidence": "high",
+          "evidence": [
+            {
+              "path": "test/index_test.ts",
+              "supports": "describe('mitt#') 下按 properties/on()/off()/emit() 组织的断言"
+            },
+            {
+              "path": "package.json",
+              "supports": "mocha 配置 spec 为 test/*_test.ts，require ts-node/register"
+            },
+            {
+              "path": ".github/workflows/main.yml",
+              "supports": "CI 执行 npm install、npm run build --if-present、npm test"
+            }
+          ]
+        },
+        {
+          "claim": "类型层面的正确性由 test/test-types-compilation.ts 借助 @ts-expect-error 断言泛型推断与 strict 模式约束。",
+          "confidence": "high",
+          "evidence": [
+            {
+              "path": "test/test-types-compilation.ts",
+              "supports": "对 on/off/emit 参数推断的正反例均使用 @ts-expect-error 标注"
+            },
+            {
+              "path": "package.json",
+              "supports": "test-types 脚本为 tsc test/test-types-compilation.ts --noEmit --strict"
+            },
+            {
+              "path": "tsconfig.json",
+              "supports": "compilerOptions.strict 为 true，include 覆盖 src/*.ts 与 test/*.ts"
+            }
+          ]
+        },
+        {
+          "claim": "构建通过 microbundle 产出 es/cjs/umd 三种格式，并由 CI 单独校验压缩体积。",
+          "confidence": "high",
+          "evidence": [
+            {
+              "path": "package.json",
+              "supports": "bundle 脚本为 microbundle -f es,cjs,umd，module/main/umd:main 指向 dist 产物"
+            },
+            {
+              "path": ".github/workflows/compressed-size.yml",
+              "supports": "使用 preactjs/compressed-size-action 匹配 ./dist/*.{js,mjs,cjs}"
+            }
+          ]
+        },
+        {
+          "claim": "实现层没有任何内部模块依赖，整个库为单文件架构。",
+          "confidence": "medium",
+          "evidence": [
+            {
+              "path": "src/index.ts",
+              "supports": "文件内不存在对本地其他模块的 import"
+            },
+            {
+              "path": "package.json",
+              "supports": "files 仅发布 dist 与 index.d.ts，无多入口声明"
+            }
+          ]
+        }
+      ],
+      "evidenceCoverage": {
+        "examinedFiles": [
+          ".github/workflows/compressed-size.yml",
+          ".github/workflows/main.yml",
+          "README.md",
+          "package.json",
+          "src/index.ts",
+          "test/index_test.ts",
+          "test/test-types-compilation.ts",
+          "tsconfig.json"
+        ],
+        "gaps": [
+          {
+            "kind": "missing_evidence",
+            "subject": "构建产物 dist/* 与 index.d.ts",
+            "summary": "dist 目录与生成的 index.d.ts 未被索引（构建产物），因此 UMD/ES/CJS 实际产物形态与 README 宣称的 200 字节 gzip 体积无法从现有文件核实，压缩体积断言仅为间接证据。",
+            "severity": "medium"
+          }
+        ]
+      },
+      "projectType": {
+        "primary": "library",
+        "secondary": [
+          "event-emitter",
+          "typescript-library",
+          "pubsub"
+        ]
+      },
+      "techStack": {
+        "language": "typescript",
+        "framework": null,
+        "buildTool": "microbundle"
+      },
+      "fileCount": 13,
+      "entryPoints": [
+        {
+          "file": "src/index.ts",
+          "role": "源码入口与唯一实现文件，导出默认 mitt() 工厂及 Emitter 等类型"
+        },
+        {
+          "file": "package.json",
+          "role": "包入口声明源：source/main/module/umd:main/exports/typings 指向构建产物的访问路径"
+        }
+      ],
+      "moduleMap": [
+        {
+          "path": "src/",
+          "responsibility": "库的唯一实现模块，包含 Emitter 接口、mitt() 工厂以及 all/on/off/emit 与通配符 '*' 语义。",
+          "importance": "core",
+          "justification": "package.json 的 source 字段与唯一入口候选均指向 src/index.ts，且该文件无任何内部依赖边。"
+        },
+        {
+          "path": "test/",
+          "responsibility": "验证层：index_test.ts 做运行期行为断言，test-types-compilation.ts 做严格模式下的类型推断断言。",
+          "importance": "support",
+          "justification": "两个测试文件直接以 '..' 引用入口实现，并在 package.json 的 test 脚本与 CI 中被执行。"
+        },
+        {
+          "path": ".github/workflows/",
+          "responsibility": "CI 配置：main.yml 串联安装/构建/测试，compressed-size.yml 校验 dist 产物体积预算。",
+          "importance": "utility",
+          "justification": "两个工作流文件定义了构建与体积校验的执行路径，属于工程支撑而非库功能。"
+        },
+        {
+          "path": "package.json",
+          "responsibility": "工程与发布清单：声明多格式入口、构建/测试/文档脚本及 TypeScript、mocha、microbundle 等开发依赖。",
+          "importance": "support",
+          "justification": "集中定义入口字段、脚本与工具链，是判断技术栈与构建方式的主要依据。"
+        },
+        {
+          "path": "tsconfig.json",
+          "responsibility": "TypeScript 编译配置：开启 strict、declaration、noEmit 并指定 src/test 的包含范围。",
+          "importance": "utility",
+          "justification": "严格模式设置直接决定 README 所述类型推断行为与类型测试能否成立。"
+        }
+      ],
+      "directorySummary": "仓库规模极小且结构扁平，共 13 个文件。顶层由 src/（唯一源码文件 index.ts）、test/（两个测试文件）以及根目录工程配置组成；.github/ 下有两个工作流分别负责 CI 与压缩体积校验。src/index.ts 为全部功能实现且无内部模块依赖，package.json 通过 source/module/main/umd:main/exports/typings 定义多格式发布入口（dist/mitt.mjs、dist/mitt.js、dist/mitt.umd.js、index.d.ts）。",
+      "projectSummary": "mitt 是一个用 TypeScript 编写的超小型函数式事件发射器 / 发布订阅库，压缩后体积宣称小于 200 字节且零运行时依赖，可运行于浏览器与任意 JavaScript 运行时。它以默认导出的 mitt() 工厂返回 Emitter 对象，提供 all（事件到处理器的 Map）、on、off、emit 四个接口，并支持 '*' 通配符监听全部事件；emit 会先触发按类型匹配的处理器再触发通配符处理器。类型通过泛型 Events 映射推导，需配合 strict 模式获得最佳推断。构建使用 microbundle 输出 ES/CJS/UMD 三种格式，测试体系由 mocha 运行期用例与 tsc --strict 类型用例两部分构成。"
+    },
+    "mentor": {
+      "evidenceClaims": [
+        {
+          "claim": "公共 API 由默认导出的泛型工厂函数 mitt() 提供，它返回一个普通对象（all/on/off/emit），不使用 class 或 this。",
+          "confidence": "high",
+          "evidence": [
+            {
+              "path": "src/index.ts",
+              "supports": "export default function mitt<Events>(all?) 返回含 all/on/off/emit 的对象字面量"
+            },
+            {
+              "path": "test/index_test.ts",
+              "supports": "should default export be a function 与 should accept an optional event handler map 用例"
+            },
+            {
+              "path": "README.md",
+              "supports": "宣称 Functional: methods don't rely on this"
+            }
+          ]
+        },
+        {
+          "claim": "emit 的执行顺序是先调用按类型匹配的处理器，再调用 '*' 通配符处理器，并把 (type, evt) 一并传给通配符处理器。",
+          "confidence": "high",
+          "evidence": [
+            {
+              "path": "src/index.ts",
+              "supports": "emit 内先 all.get(type) 执行，再 all.get('*') 并以 handler(type, evt) 调用"
+            },
+            {
+              "path": "test/index_test.ts",
+              "supports": "should invoke * handlers 用例断言 calledWith('foo', ea)"
+            },
+            {
+              "path": "README.md",
+              "supports": "API 文档声明 '*' handlers are invoked after type-matched handlers"
+            }
+          ]
+        },
+        {
+          "claim": "只有一个 Map 保存状态，且 on/off/emit 均直接读写它；构造时可传入外部 Map 实现状态共享。",
+          "confidence": "high",
+          "evidence": [
+            {
+              "path": "src/index.ts",
+              "supports": "all = all || new Map() 及三个闭包对 all.get/set 的直接操作"
+            },
+            {
+              "path": "test/index_test.ts",
+              "supports": "should expose the event handler map 断言 all 是 map，且用外部 map 预置处理器后 emit"
+            }
+          ]
+        },
+        {
+          "claim": "off 只移除第一个引用匹配的处理器（splice(indexOf >>> 0, 1)），省略 handler 时清空该类型全部处理器；事件名不做大小写归一化。",
+          "confidence": "high",
+          "evidence": [
+            {
+              "path": "src/index.ts",
+              "supports": "off 中 handlers.splice(handlers.indexOf(handler) >>> 0, 1)，无 handler 时 all.set(type, [])"
+            },
+            {
+              "path": "test/index_test.ts",
+              "supports": "should remove only the first matching listener、off(\"type\") should remove all handlers、should NOT normalize case 用例"
+            }
+          ]
+        },
+        {
+          "claim": "emit 与通配符执行前先对处理器数组做 slice 复制，使回调中的增删不影响本轮遍历的对象。",
+          "confidence": "medium",
+          "evidence": [
+            {
+              "path": "src/index.ts",
+              "supports": "两处执行链均为 (handlers as ...).slice().map(handler => handler(...))"
+            }
+          ]
+        },
+        {
+          "claim": "运行期行为由 test/index_test.ts 使用 mocha + chai + sinon(spy) 验证，覆盖 on/off/emit、通配符、符号事件名、重复监听与移除边界。",
+          "confidence": "high",
+          "evidence": [
+            {
+              "path": "test/index_test.ts",
+              "supports": "按 properties/on()/off()/emit() 组织的 describe/it 断言"
+            },
+            {
+              "path": "package.json",
+              "supports": "mocha.spec 为 test/*_test.ts 且 require ts-node/register"
+            },
+            {
+              "path": ".github/workflows/main.yml",
+              "supports": "CI 执行 npm install、npm run build --if-present、npm test"
+            }
+          ]
+        },
+        {
+          "claim": "类型正确性由纯编译期测试验证：test/test-types-compilation.ts 用 @ts-expect-error 标注预期报错，配合 tsconfig 的 strict: true。",
+          "confidence": "high",
+          "evidence": [
+            {
+              "path": "test/test-types-compilation.ts",
+              "supports": "on/off/emit 的参数推断正反例均以 @ts-expect-error 断言"
+            },
+            {
+              "path": "package.json",
+              "supports": "test-types 脚本为 tsc test/test-types-compilation.ts --noEmit --strict"
+            },
+            {
+              "path": "tsconfig.json",
+              "supports": "compilerOptions.strict 为 true，include 覆盖 src/*.ts 与 test/*.ts"
+            }
+          ]
+        },
+        {
+          "claim": "发布入口在 package.json 中声明为 source/module/main/umd:main/typings/exports，由 microbundle 产出 es/cjs/umd 三种格式，CI 另有压缩体积检查。",
+          "confidence": "high",
+          "evidence": [
+            {
+              "path": "package.json",
+              "supports": "source: src/index.ts，module/main/umd:main 指向 dist/*，bundle 脚本为 microbundle -f es,cjs,umd"
+            },
+            {
+              "path": ".github/workflows/compressed-size.yml",
+              "supports": "preactjs/compressed-size-action 匹配 ./dist/*.{js,mjs,cjs}"
+            }
+          ]
+        }
+      ],
+      "evidenceCoverage": {
+        "examinedFiles": [
+          ".github/workflows/compressed-size.yml",
+          ".github/workflows/main.yml",
+          "README.md",
+          "package.json",
+          "src/index.ts",
+          "test/index_test.ts",
+          "test/test-types-compilation.ts",
+          "tsconfig.json"
+        ],
+        "gaps": [
+          {
+            "kind": "missing_evidence",
+            "subject": "构建产物 dist/* 与生成的 index.d.ts",
+            "summary": "dist 目录与 index.d.ts 属构建产物、未纳入文件索引，因此 ES/CJS/UMD 实际产物形态与类型声明的发布结果无法核实；README 中 <200 字节 gzip 的说法仅有压缩体积工作流作为间接旁证。",
+            "severity": "medium"
+          }
+        ]
+      },
+      "architectureOverview": "mitt 是一个**单文件实现**的极小型事件发射器/发布订阅库，整个仓库只有 13 个文件，没有任何内部模块拆分，理解成本集中在 `src/index.ts` 这一个文件上。\n\n**核心结构**：文件没有使用 class，也没有依赖 `this`。默认导出的是一个泛型工厂函数 `mitt<Events>(all?)`，调用后返回一个普通对象字面量，内含四个成员：`all`（`Map<keyof Events | '*', Handler[]>`，即事件名到处理器数组的映射，是整个库唯一的可变状态）、`on`、`off`、`emit`。`on/off/emit` 都是闭包，通过捕获参数上的 `all` 引用直接读写这张 Map，因此把外部 Map 传进来即可实现跨实例共享状态（`mitt(new Map())`）。\n\n**数据流**：`on(type, handler)` → 读 `all.get(type)`，已存在则 `push`，否则 `set(type, [handler])`；`off(type, handler?)` → 有 handler 时用 `handlers.splice(handlers.indexOf(handler) >>> 0, 1)` 只删除**第一个**引用匹配项，无 handler 时直接 `set(type, [])` 清空该类型；`emit(type, evt)` → 先取 `all.get(type)` 执行，再取 `all.get('*')` 执行并把 `(type, evt)` 一起传入，因此 `'*'` 处理器总在类型匹配处理器**之后**触发。两处执行前都先 `.slice()` 复制数组，避免处理器在回调中改动数组影响本轮遍历。\n\n**类型层**：`EventType = string | symbol`、`Handler<T>`、`WildcardHandler<T>`、`EventHandlerMap<Events>` 与 `Emitter<Events>` 接口共同构成公共契约，`Emitter` 通过 `Key extends keyof Events` 把事件名与载荷类型绑定，需在 `strict: true` 下才能得到 README 宣传的推断效果。注意事件名不做大小写归一化，`'FOO'` 与 `'foo'` 是两个不同事件。\n\n**验证与发布**：`test/index_test.ts` 用 mocha + chai + sinon 验证运行期行为（含 `'*'` 触发、大小写不敏感即「不归一化」、重复监听、只删首个匹配等），`test/test-types-compilation.ts` 用 `@ts-expect-error` 做纯编译期断言。`package.json` 声明 `source/module/main/umd:main/typings/exports` 多入口，由 microbundle 产出 ES/CJS/UMD，CI 另跑压缩体积检查。",
+      "dependencyGraph": {
+        "src/": [],
+        "test/": [
+          "src/"
+        ]
+      },
+      "readingPath": [
+        {
+          "step": 1,
+          "file": "src/index.ts",
+          "why": "唯一的实现文件，一次读完即可掌握全部功能：先看 EventType/Handler/EventHandlerMap/Emitter 的类型声明，再读 mitt() 工厂与 all/on/off/emit 四个闭包，重点体会为何返回普通对象而不是 class。"
+        },
+        {
+          "step": 2,
+          "file": "test/index_test.ts",
+          "why": "用具体用例反推语义边界：通配符 '*' 的触发与传参、事件名不做大小写归一化、重复监听被允许、off 只删首个匹配引用、off(type) 清空全部。"
+        },
+        {
+          "step": 3,
+          "file": "test/test-types-compilation.ts",
+          "why": "理解「类型也是被测试的」：@ts-expect-error 如何把错误用法固化为断言，以及 Events 泛型如何约束 on/off/emit 的参数。"
+        },
+        {
+          "step": 4,
+          "file": "package.json",
+          "why": "看清源码入口与发布产物的区别：source 指向 src/index.ts，而 module/main/umd:main/exports 指向 dist；同时 mocha.spec 的 test/*_test.ts 约定解释了测试如何被发现。"
+        },
+        {
+          "step": 5,
+          "file": "tsconfig.json",
+          "why": "最后确认 strict: true 与 noEmit 的配置，它既是 README 建议用户开启的选项，也是类型测试能成立的前提。"
+        }
+      ],
+      "keyPatterns": [
+        {
+          "pattern": "工厂函数返回闭包对象（无 class / 无 this）",
+          "where": "src/index.ts",
+          "description": "mitt() 是泛型函数，调用后返回对象字面量；on/off/emit 通过闭包捕获 all，方法可自由解构传递而不丢失状态，这是 README 强调 functional 的实现基础。"
+        },
+        {
+          "pattern": "单一 Map 作为唯一状态源",
+          "where": "src/index.ts",
+          "description": "all = all || new Map() 保存「事件名(或 '*') → 处理器数组」，并被三个方法直接读写；把外部 Map 传入即可共享状态，也使 all 可被直接 clear()。"
+        },
+        {
+          "pattern": "通配符 '*' 伪事件名",
+          "where": "src/index.ts",
+          "description": "'*' 以普通字符串键存放在同一张 Map 中；emit 时先执行类型匹配项再执行 '*' 项，并把事件名作为第一参数传给通配符处理器，从而复用同一套数据结构实现全局监听。"
+        },
+        {
+          "pattern": "复制后调用（防御性 slice）",
+          "where": "src/index.ts",
+          "description": "emit 对处理器数组先 .slice() 再 .map 调用，保证处理器内部注册/移除不会影响本轮遍历，是小型事件库常见的重入保护手法。"
+        },
+        {
+          "pattern": "泛型类型契约与实现分离",
+          "where": "src/index.ts",
+          "description": "Emitter<Events> 接口独立声明 public 契约，实现中的类型断言（GenericEventHandler、as EventHandlerList 等）把运行时统一处理与编译期精确推断调和起来，由 test/test-types-compilation.ts 兜底验证。"
+        }
+      ],
+      "codeConventions": [
+        {
+          "rule": "源码与测试使用 Tab 缩进，字符串用单引号，不以尾随逗号结尾",
+          "example": "package.json 的 prettier 字段：singleQuote: true、trailingComma: \"none\"；src/index.ts 全文件可见"
+        },
+        {
+          "rule": "公开成员必须带 JSDoc 块注释，方法标注 @memberOf mitt 以便 documentation.js 生成 API 章节",
+          "example": "src/index.ts 中 all/on/off/emit 上方的 /** ... @memberOf mitt */ 注释"
+        },
+        {
+          "rule": "运行期测试文件按 *_test.ts 命名，使用 describe/it + chai expect + sinon spy 风格组织",
+          "example": "test/index_test.ts 的 describe('mitt#') 与 beforeEach 中重建 events/inst"
+        },
+        {
+          "rule": "类型级断言统一使用 @ts-expect-error 注释标注预期编译错误，并保留文件顶部的 eslint 禁用注释",
+          "example": "test/test-types-compilation.ts:1 与 emitter.on('foo', barHandler) 前的 // @ts-expect-error"
+        },
+        {
+          "rule": "测试通过包根路径 '..' 引用实现（依赖 package.json 入口解析），而非相对源码路径",
+          "example": "test/index_test.ts 与 test/test-types-compilation.ts 的 import mitt from '..'"
+        }
+      ]
+    },
+    "contributor": {
+      "evidenceClaims": [
+        {
+          "claim": "开发、构建、测试与静态检查命令均由 package.json 的 scripts 定义：test 会并行串联 typecheck、lint、mocha、test-types，build 为 clean → bundle → docs。",
+          "confidence": "high",
+          "evidence": [
+            {
+              "path": "package.json",
+              "supports": "scripts 中 test/mocha/test-types/lint/typecheck/bundle/build/docs 的具体命令"
+            },
+            {
+              "path": "package.json",
+              "supports": "devDependencies 列出 mocha、ts-node、microbundle、typescript、eslint 等本地工具"
+            }
+          ]
+        },
+        {
+          "claim": "CI 在 Node 14 上执行 npm install、npm run build --if-present、npm test，因此提交前本地跑通同一组命令即可基本对齐 CI。",
+          "confidence": "high",
+          "evidence": [
+            {
+              "path": ".github/workflows/main.yml",
+              "supports": "setup-node 指定 node-version: 14，run 步骤为 npm install / npm run build --if-present / npm test"
+            }
+          ]
+        },
+        {
+          "claim": "PR 上另有压缩体积检查，对 dist 下的 js/mjs/cjs 产物做体积对比，因此改动引入的体积增长会被显式呈现。",
+          "confidence": "high",
+          "evidence": [
+            {
+              "path": ".github/workflows/compressed-size.yml",
+              "supports": "pull_request 触发 preactjs/compressed-size-action，pattern 为 ./dist/*.{js,mjs,cjs}"
+            },
+            {
+              "path": "README.md",
+              "supports": "README 宣称压缩后小于 200 字节，体积是该项目的核心卖点"
+            }
+          ]
+        },
+        {
+          "claim": "类型层正确性由纯编译期测试保证：test/test-types-compilation.ts 用 @ts-expect-error 固化预期错误用法，配合 tsconfig 的 strict: true 与 test-types 脚本的 --strict。",
+          "confidence": "high",
+          "evidence": [
+            {
+              "path": "test/test-types-compilation.ts",
+              "supports": "对 on/off/emit 参数推断的正反例均以 // @ts-expect-error 标注"
+            },
+            {
+              "path": "tsconfig.json",
+              "supports": "compilerOptions.strict 为 true，noEmit 为 true，include 覆盖 src/*.ts 与 test/*.ts"
+            },
+            {
+              "path": "package.json",
+              "supports": "test-types 脚本为 tsc test/test-types-compilation.ts --noEmit --strict"
+            }
+          ]
+        },
+        {
+          "claim": "两个测试文件都通过包根路径 '..' 引用实现，而不是直接指向 src/index.ts，说明测试依赖 package.json 的入口字段解析。",
+          "confidence": "high",
+          "evidence": [
+            {
+              "path": "test/index_test.ts",
+              "supports": "import mitt, { Emitter, EventHandlerMap } from '..'"
+            },
+            {
+              "path": "test/test-types-compilation.ts",
+              "supports": "import mitt from '..'"
+            },
+            {
+              "path": "package.json",
+              "supports": "source 指向 src/index.ts，main/module/umd:main 指向 dist 产物"
+            }
+          ]
+        },
+        {
+          "claim": "实现中的防御性 slice（emit 调用前复制处理器数组）在所提供的 test/index_test.ts 内容里没有对应运行期用例，该行为目前缺少回归保护。",
+          "confidence": "medium",
+          "evidence": [
+            {
+              "path": "src/index.ts",
+              "supports": "emit 中两处均为 (handlers as ...).slice().map(handler => handler(...))"
+            },
+            {
+              "path": "test/index_test.ts",
+              "supports": "已提供的用例覆盖 on/off/emit、通配符、符号事件名与删除边界，但未见在回调内增删处理器的断言"
+            }
+          ]
+        },
+        {
+          "claim": "仓库代码风格由 package.json 的 prettier 字段约定为单引号、无尾随逗号，源码可见 Tab 缩进；README 的 API 章节由 npm run docs 自动生成。",
+          "confidence": "high",
+          "evidence": [
+            {
+              "path": "package.json",
+              "supports": "prettier 字段 singleQuote: true、trailingComma: \"none\"；docs 脚本为 documentation readme src/index.ts --section API"
+            },
+            {
+              "path": "README.md",
+              "supports": "API 段落带有 “Generated by documentation.js. Update this documentation by updating the source code.” 提示"
+            }
+          ]
+        },
+        {
+          "claim": "仓库文件索引中没有 CONTRIBUTING.md，贡献流程说明只存在于 README 的 Contribute 章节，且该章节只提到 npm install，未提及测试与构建命令。",
+          "confidence": "high",
+          "evidence": [
+            {
+              "path": "README.md",
+              "supports": "Contribute 章节列出 fork、git checkout -b、npm install、提交 PR 的步骤"
+            },
+            {
+              "path": "package.json",
+              "supports": "仓库已定义 test/lint/build 脚本，可被贡献说明引用但 README 未引用"
+            }
+          ]
+        }
+      ],
+      "evidenceCoverage": {
+        "examinedFiles": [
+          ".github/workflows/compressed-size.yml",
+          ".github/workflows/main.yml",
+          "README.md",
+          "package.json",
+          "src/index.ts",
+          "test/index_test.ts",
+          "test/test-types-compilation.ts",
+          "tsconfig.json"
+        ],
+        "gaps": [
+          {
+            "kind": "missing_evidence",
+            "subject": "构建产物 dist/* 与生成的 index.d.ts",
+            "summary": "dist 目录与 index.d.ts 属构建产物、不在索引内，ES/CJS/UMD 实际产物形态与 README 宣称的 200 字节 gzip 体积无法离线核实，压缩体积工作流只能作为间接旁证。",
+            "severity": "medium"
+          },
+          {
+            "kind": "coverage_limit",
+            "subject": "提交历史与变更频率",
+            "summary": "commitSummary 的 historyDepth 为 1 且 frequencyStatisticsAvailable 为 false，没有 frequentFiles 数据，因此无法依据变更频率判断热点区域或维护者活跃度；相关结论仅来自当前文件内容。",
+            "severity": "medium"
+          }
+        ]
+      },
+      "goodFirstIssues": [
+        {
+          "area": "贡献文档",
+          "difficulty": "easy",
+          "description": "仓库文件索引中没有 CONTRIBUTING.md，贡献流程只写在 README 的 Contribute 章节，且该章节仅提到 npm install，没有引用 package.json 中已定义的 npm test / npm run lint / npm run build。候选方向：新增 CONTRIBUTING.md，或在 README 的 Contribute 章节补一句“提交前请运行 npm test”。这是纯文档改动，不触及 src/index.ts 与体积预算。"
+        },
+        {
+          "area": "文档补全（API 与 JSDoc 一致性）",
+          "difficulty": "easy",
+          "description": "src/index.ts 的 Emitter 接口只声明了方法签名，JSDoc 全部写在 mitt() 返回对象的实现上；而 README 的 API 章节是由 npm run docs（documentation readme src/index.ts --section API）自动生成的，直接手改 README 会被下一次 npm run build 覆盖。候选方向：为接口或实现补充 type 参数对符号事件名 / 通配符 '*' 的说明，然后重新生成 API 章节。"
+        },
+        {
+          "area": "运行期测试覆盖（重入行为）",
+          "difficulty": "medium",
+          "description": "src/index.ts 的 emit 在调用前对处理器数组做 slice() 复制，意在让回调内注册/移除处理器不影响本轮遍历；但所提供的 test/index_test.ts 只覆盖通配符触发、大小写不归一化、重复监听、off 只删首个引用等场景，没有针对该防御性复制的用例。候选方向：在 test/index_test.ts 中补一个“emit 回调内 on/off 不影响本轮调用”的断言。"
+        },
+        {
+          "area": "类型层测试覆盖（符号事件名）",
+          "difficulty": "medium",
+          "description": "EventType 被定义为 string | symbol，运行期测试也用 Symbol('eventType') 验证过 on；但 test/test-types-compilation.ts 的 Events 只包含字符串键，symbol 作为键时的 on/off/emit 推断没有任何 @ts-expect-error 断言。候选方向：在该文件中补充 symbol 键的正反例，保持既有注释风格与文件顶部的 eslint 禁用注释。"
+        },
+        {
+          "area": "发布入口与体积核查",
+          "difficulty": "hard",
+          "description": "package.json 声明了 source/module/main/umd:main/typings/exports 多套入口，由 microbundle 产出 ES/CJS/UMD，CI 的 compressed-size.yml 会对 ./dist/*.{js,mjs,cjs} 做体积对比。由于 dist 与 index.d.ts 不在仓库索引中，只能本地 npm run build 后才能核对产物与类型声明是否齐全、体积是否符合 README 宣称的阈值，上手成本高于前几项。"
+        }
+      ],
+      "contributionSetup": {
+        "devEnv": "Node.js + npm（CI 的 main.yml 使用 node-version: 14）。按 README 的 Contribute 章节执行 npm install 安装依赖，仓库无运行时依赖，全部为 devDependencies。",
+        "build": "npm run build（= clean → 并行 bundle + docs）；仅打包可用 npm run bundle（microbundle -f es,cjs,umd），清理用 npm run clean。",
+        "test": "npm test（= npm-run-all --silent typecheck lint mocha test-types）；也可单跑 npm run mocha、npm run test-types、npm run typecheck。",
+        "lint": "npm run lint（eslint src test --ext ts --ext js）"
+      },
+      "entryFiles": [
+        {
+          "file": "src/index.ts",
+          "description": "唯一实现文件，包含 EventType/Handler/EventHandlerMap/Emitter 类型声明与默认导出的 mitt() 工厂，以及 all/on/off/emit 四个返回成员。",
+          "reason": "库的全部功能都在这里，理解成本集中且无内部模块依赖，是改动的唯一落点。"
+        },
+        {
+          "file": "test/index_test.ts",
+          "description": "mocha + chai + sinon 的运行期行为测试，按 properties/on()/off()/emit() 组织，覆盖通配符、符号事件名、重复监听与删除边界。",
+          "reason": "从用例可反推 API 语义边界，也是新增行为断言时应扩展的文件。"
+        },
+        {
+          "file": "test/test-types-compilation.ts",
+          "description": "纯编译期类型测试，用 // @ts-expect-error 标注 on/off/emit 的预期报错。",
+          "reason": "理解本项目“类型也是被测试的”约定，是修改泛型契约后必须同步更新的文件。"
+        },
+        {
+          "file": "package.json",
+          "description": "声明 source/module/main/umd:main/typings/exports 多套发布入口，以及 test/build/lint/docs 等脚本、prettier 风格与 mocha 发现规则。",
+          "reason": "所有开发命令与入口映射的唯一来源，跑任何命令前先看这里。"
+        },
+        {
+          "file": "tsconfig.json",
+          "description": "开启 strict、declaration、noEmit，include 覆盖 src/*.ts 与 test/*.ts。",
+          "reason": "strict: true 是 README 宣传的类型推断与类型测试能够成立的前提。"
+        },
+        {
+          "file": "README.md",
+          "description": "公开 API 文档（API 章节由 documentation.js 生成）、Typescript 用法示例与 Contribute 章节。",
+          "reason": "判断“文档与实现是否一致”的对照基准，也是当前进度下唯一的贡献流程说明。"
+        },
+        {
+          "file": ".github/workflows/main.yml",
+          "description": "CI 流水线：npm install → npm run build --if-present → npm test。",
+          "reason": "说明提交者本地需要跑通哪些命令才算与 CI 对齐。"
+        }
+      ],
+      "notesForNewcomers": [
+        {
+          "tip": "提交前先在本地跑 npm test，它会串联 typecheck、lint、mocha、test-types 四项；CI 的 main.yml 在 Node 14 上执行的是 npm install → npm run build --if-present → npm test。"
+        },
+        {
+          "tip": "测试文件用 '..'（包根）引用实现，依赖 package.json 的入口字段解析，不要把 import 改成相对 src 的路径，否则会偏离现有约定。"
+        },
+        {
+          "tip": "代码风格由 package.json 的 prettier 字段约定：单引号、无尾随逗号；源码可见 Tab 缩进。"
+        },
+        {
+          "tip": "README 的 API 章节标注为 documentation.js 生成，应通过修改 src/index.ts 的 JSDoc 后运行 npm run docs 更新，而不是直接编辑 README。"
+        },
+        {
+          "tip": "类型断言统一使用 // @ts-expect-error 标注预期报错（test/test-types-compilation.ts 顶部还保留了 eslint 禁用注释），tsconfig 已开启 strict: true。"
+        },
+        {
+          "tip": "事件名不做大小写归一化，'FOO' 与 'foo' 是两个不同事件；通配符 '*' 处理器在按类型匹配的处理器之后被调用，并接收 (type, evt)。"
+        },
+        {
+          "tip": "PR 会触发 compressed-size 检查，对 ./dist/*.{js,mjs,cjs} 做体积对比；本项目以极小体积为卖点，改动应关注打包后大小，但需本地 npm run build 才能核实实际产物。"
+        },
+        {
+          "tip": "本次可用的提交历史非常浅（historyDepth 为 1，无变更频率统计），不要据此推断哪些文件是长期热点，建议以当前源码与测试为准。"
+        }
+      ]
+    }
+  },
+  "stop_reason": "report_completed",
+  "usage": [
+    {
+      "stage": "explorer",
+      "turns": 5,
+      "usage": {
+        "input_tokens": 6266,
+        "cache_creation_input_tokens": 0,
+        "cache_read_input_tokens": 6272,
+        "output_tokens": 2146,
+        "output_tokens_details": {
+          "thinking_tokens": 0
+        },
+        "server_tool_use": {
+          "web_search_requests": 0,
+          "web_fetch_requests": 0
+        },
+        "service_tier": "standard",
+        "cache_creation": {
+          "ephemeral_1h_input_tokens": 0,
+          "ephemeral_5m_input_tokens": 0
+        },
+        "inference_geo": "",
+        "iterations": [],
+        "speed": "standard"
+      },
+      "cost_usd": 0.0692384,
+      "session_id": "767eec1c-1e7e-47d2-8ec5-56e77d6f7fe3",
+      "subtype": "success",
+      "duration_ms": 12017,
+      "model_usage": {
+        "deepseek-v4-flash": {
+          "inputTokens": 6266,
+          "outputTokens": 2146,
+          "cacheReadInputTokens": 6272,
+          "cacheCreationInputTokens": 0,
+          "webSearchRequests": 0,
+          "costUSD": 0.0692384,
+          "contextWindow": 200000,
+          "maxOutputTokens": 32000,
+          "thinkingTokens": 0,
+          "canonicalModel": "deepseek-v4-flash",
+          "provider": "firstParty",
+          "costBasis": "unknown"
+        }
+      }
+    },
+    {
+      "stage": "explorer",
+      "turns": 2,
+      "usage": {
+        "input_tokens": 16436,
+        "cache_creation_input_tokens": 0,
+        "cache_read_input_tokens": 0,
+        "output_tokens": 2496,
+        "output_tokens_details": {
+          "thinking_tokens": 0
+        },
+        "server_tool_use": {
+          "web_search_requests": 0,
+          "web_fetch_requests": 0
+        },
+        "service_tier": "standard",
+        "cache_creation": {
+          "ephemeral_1h_input_tokens": 0,
+          "ephemeral_5m_input_tokens": 0
+        },
+        "inference_geo": "",
+        "iterations": [],
+        "speed": "standard"
+      },
+      "cost_usd": 0.11566399999999999,
+      "session_id": "a103ba90-245e-4101-9a72-bde89ee61e15",
+      "subtype": "success",
+      "duration_ms": 12167,
+      "model_usage": {
+        "deepseek-v4-flash": {
+          "inputTokens": 16436,
+          "outputTokens": 2496,
+          "cacheReadInputTokens": 0,
+          "cacheCreationInputTokens": 0,
+          "webSearchRequests": 0,
+          "costUSD": 0.11566399999999999,
+          "contextWindow": 200000,
+          "maxOutputTokens": 32000,
+          "thinkingTokens": 0,
+          "canonicalModel": "deepseek-v4-flash",
+          "provider": "firstParty",
+          "costBasis": "unknown"
+        }
+      }
+    },
+    {
+      "stage": "mentor",
+      "turns": 7,
+      "usage": {
+        "input_tokens": 8330,
+        "cache_creation_input_tokens": 0,
+        "cache_read_input_tokens": 47104,
+        "output_tokens": 7822,
+        "output_tokens_details": {
+          "thinking_tokens": 0
+        },
+        "server_tool_use": {
+          "web_search_requests": 0,
+          "web_fetch_requests": 0
+        },
+        "service_tier": "standard",
+        "cache_creation": {
+          "ephemeral_1h_input_tokens": 0,
+          "ephemeral_5m_input_tokens": 0
+        },
+        "inference_geo": "",
+        "iterations": [],
+        "speed": "standard"
+      },
+      "cost_usd": 0.19918080000000002,
+      "session_id": "2a065de4-bd07-4c1d-9e87-36b33ac8d89c",
+      "subtype": "success",
+      "duration_ms": 36588,
+      "model_usage": {
+        "deepseek-v4-flash": {
+          "inputTokens": 8330,
+          "outputTokens": 7822,
+          "cacheReadInputTokens": 47104,
+          "cacheCreationInputTokens": 0,
+          "webSearchRequests": 0,
+          "costUSD": 0.19918080000000002,
+          "contextWindow": 200000,
+          "maxOutputTokens": 32000,
+          "thinkingTokens": 0,
+          "canonicalModel": "deepseek-v4-flash",
+          "provider": "firstParty",
+          "costBasis": "unknown"
+        }
+      }
+    },
+    {
+      "stage": "mentor",
+      "turns": 2,
+      "usage": {
+        "input_tokens": 19798,
+        "cache_creation_input_tokens": 0,
+        "cache_read_input_tokens": 0,
+        "output_tokens": 4445,
+        "output_tokens_details": {
+          "thinking_tokens": 0
+        },
+        "server_tool_use": {
+          "web_search_requests": 0,
+          "web_fetch_requests": 0
+        },
+        "service_tier": "standard",
+        "cache_creation": {
+          "ephemeral_1h_input_tokens": 0,
+          "ephemeral_5m_input_tokens": 0
+        },
+        "inference_geo": "",
+        "iterations": [],
+        "speed": "standard"
+      },
+      "cost_usd": 0.16809200000000002,
+      "session_id": "e279bc5f-17e5-461d-b0fd-285287707817",
+      "subtype": "success",
+      "duration_ms": 21797,
+      "model_usage": {
+        "deepseek-v4-flash": {
+          "inputTokens": 19798,
+          "outputTokens": 4445,
+          "cacheReadInputTokens": 0,
+          "cacheCreationInputTokens": 0,
+          "webSearchRequests": 0,
+          "costUSD": 0.16809200000000002,
+          "contextWindow": 200000,
+          "maxOutputTokens": 32000,
+          "thinkingTokens": 0,
+          "canonicalModel": "deepseek-v4-flash",
+          "provider": "firstParty",
+          "costBasis": "unknown"
+        }
+      }
+    },
+    {
+      "stage": "contributor",
+      "turns": 2,
+      "usage": {
+        "input_tokens": 19102,
+        "cache_creation_input_tokens": 0,
+        "cache_read_input_tokens": 0,
+        "output_tokens": 5867,
+        "output_tokens_details": {
+          "thinking_tokens": 0
+        },
+        "server_tool_use": {
+          "web_search_requests": 0,
+          "web_fetch_requests": 0
+        },
+        "service_tier": "standard",
+        "cache_creation": {
+          "ephemeral_1h_input_tokens": 0,
+          "ephemeral_5m_input_tokens": 0
+        },
+        "inference_geo": "",
+        "iterations": [],
+        "speed": "standard"
+      },
+      "cost_usd": 0.193748,
+      "session_id": "4a480b6c-a907-4795-a09f-32f67f2431c5",
+      "subtype": "success",
+      "duration_ms": 27799,
+      "model_usage": {
+        "deepseek-v4-flash": {
+          "inputTokens": 19102,
+          "outputTokens": 5867,
+          "cacheReadInputTokens": 0,
+          "cacheCreationInputTokens": 0,
+          "webSearchRequests": 0,
+          "costUSD": 0.193748,
+          "contextWindow": 200000,
+          "maxOutputTokens": 32000,
+          "thinkingTokens": 0,
+          "canonicalModel": "deepseek-v4-flash",
+          "provider": "firstParty",
+          "costBasis": "unknown"
+        }
+      }
+    }
+  ],
+  "elapsed_seconds": 113.922,
+  "error": null,
+  "versions": {
+    "repomentor": "0.1.0",
+    "sdk": "0.2.158",
+    "cli": "2.1.280",
+    "model": "deepseek-v4-flash"
+  },
+  "harness": {
+    "stages": {
+      "explorer": {
+        "status": "completed",
+        "plan": {
+          "goal": "Produce a bounded learning report on how the mitt event-emitter library implements its public API in a single module and how that behavior and its TypeScript typing are verified.",
+          "rationale": "The index is tiny (13 files) and flat. Discovery shows a single implementation file (src/index.ts) with zero internal dependency edges, and an `Emitter` symbol shared between the entry and both test files. Therefore core code, public surface, and verification are concentrated in three files, with manifests/config supplying build and type-strictness context. Evidence is deliberately capped below the budget: the entry, two tests, package.json, tsconfig.json, and README are sufficient to cover entry point, core control flow, and verification; dist artifacts and gzip-size claims are excluded as unverifiable from indexed paths.",
+          "questions": [
+            "What is the public entry point and which symbols does it export (default mitt, Emitter type, EventHandler/EventType helpers)?",
+            "How are on/off/emit implemented, including the wildcard '*' registration and the ordering guarantee that '*' handlers run after type-matched handlers?",
+            "Why is trace_module_dependencies empty, and what does a single-module architecture imply for testability and bundle size?",
+            "How is runtime behavior verified in test/index_test.ts, and does it exercise wildcard emit, handler removal, and missing-handler edge cases?",
+            "How does test/test-types-compilation.ts verify generic inference under the strict compiler settings declared in tsconfig.json?",
+            "Which entry points and published type files does package.json declare (module/main/umd:main/exports/typings), and how do build/test scripts connect to CI?"
+          ],
+          "actions": [],
+          "files": [
+            {
+              "path": "src/index.ts",
+              "purpose": "The complete public implementation: mitt() factory, Emitter type, all/on/off/emit handlers, and wildcard '*' semantics. Primary source of truth for core behavior.",
+              "priority": "high"
+            },
+            {
+              "path": "test/index_test.ts",
+              "purpose": "Runtime behavioral verification of on/off/emit, wildcard handling, and handler-removal edge cases; representative test evidence for core behavior.",
+              "priority": "high"
+            },
+            {
+              "path": "test/test-types-compilation.ts",
+              "purpose": "Type-level verification that generic inference and strict-mode constraints on Emitter hold; complements runtime tests.",
+              "priority": "medium"
+            },
+            {
+              "path": "package.json",
+              "purpose": "Declares entry points (source/module/main/umd:main/exports/typings), build and test scripts, and dev toolchain (mocha, ts-node, microbundle, typescript).",
+              "priority": "medium"
+            },
+            {
+              "path": "tsconfig.json",
+              "purpose": "Strict-mode and moduleResolution settings that govern the type-inference behavior the README advertises and the type test enforces.",
+              "priority": "low"
+            },
+            {
+              "path": "README.md",
+              "purpose": "Documents the intended public API contract and semantics that the implementation and tests must match.",
+              "priority": "low"
+            },
+            {
+              "path": ".github/workflows/main.yml",
+              "purpose": "CI pipeline wiring (install, build --if-present, test) showing how the verification path is executed end to end.",
+              "priority": "low"
+            },
+            {
+              "path": ".github/workflows/compressed-size.yml",
+              "purpose": "Enforces the compressed-size budget for dist bundles, the only indexed signal relating to the 'tiny' positioning claim.",
+              "priority": "low"
+            }
+          ],
+          "stopConditions": [
+            "Entry point, core responsibility, and verification path are each backed by at least one indexed file path.",
+            "Single-module architecture is confirmed by a zero-edge dependency result, so no further dependency traversal is warranted.",
+            "Distribution outputs (dist/*) and the 200-byte gzip claim are explicitly recorded as unverifiable from the file index.",
+            "No additional file is requested beyond the 8 selected, respecting the 8-file evidence cap."
+          ]
+        },
+        "examinedPaths": [
+          "src/index.ts",
+          "test/index_test.ts",
+          "test/test-types-compilation.ts",
+          "package.json",
+          "tsconfig.json",
+          "README.md",
+          ".github/workflows/main.yml",
+          ".github/workflows/compressed-size.yml"
+        ],
+        "skippedPaths": [],
+        "unresolvedQuestions": [],
+        "skillPolicy": {
+          "skillNames": [
+            "analyze-generic"
+          ],
+          "allowedTools": [
+            "search_symbols",
+            "trace_module_dependencies",
+            "find_related_tests"
+          ],
+          "preferredTools": [
+            "trace_module_dependencies",
+            "find_related_tests"
+          ],
+          "recommendedQuestions": [
+            "Where is the public or runtime entry point?",
+            "Which modules implement the main control flow?",
+            "How is the core behavior verified?"
+          ],
+          "evidenceRequirements": [
+            "One public or runtime entry file",
+            "One core implementation file",
+            "One representative test or an explicit coverage gap"
+          ],
+          "stopConditions": [
+            "Entry, core responsibility, and verification path are supported or explicitly unresolved"
+          ],
+          "maxDiscoveryActions": 3,
+          "maxEvidenceFiles": 8
+        },
+        "discoveryActionsUsed": 3,
+        "stopReason": "evidence_batch_completed"
+      },
+      "mentor": {
+        "status": "completed",
+        "plan": {
+          "goal": "Explain, for a learner, how the mitt package delivers a complete, wildcard-capable event emitter from a single TypeScript module, how its public API is exported to consumers, and how runtime behavior plus type inference are verified before publication.",
+          "rationale": "Explorer evidence settles three facts: src/index.ts is the sole entry and implementation; trace_module_dependencies returns 0 edges from it, so the module is self-contained; find_related_tests returns 0 only because tests use the `*_test.ts` convention wired via package.json's mocha spec, not because coverage is absent. My re-runs confirm both: 0 edges across src/index.ts plus both tests, and search_symbols(\"mitt\") returning exactly those three paths. The report should teach the factory-returns-object pattern (no classes, no `this`), the single `all` Map, `*` registration with `*` handlers running after type-matched handlers, copy-before-invoke in emit, the Emitter generics, and two-layer verification (chai/sinon runtime plus a compile-only strict type test) gated by CI. Unverifiable and excluded: dist/* bundles, the generated index.d.ts, the <200-byte gzip claim. No further discovery is warranted.",
+          "questions": [
+            "What exactly does src/index.ts export (default `mitt` factory, Emitter/EventHandler/EventType types), and what shape is the returned emitter object?",
+            "How do `on`, `off`, and `emit` each manipulate the single `all` Map, and why does `on('*', handler)` use a string key while symbol event names stay symbols?",
+            "Why must `emit` copy the handler array before invoking it, and what guarantees that `*` handlers run after type-matched handlers?",
+            "How does `off(type)` with an omitted handler reuse the same removal logic, and what happens on emit when no handler is registered?",
+            "What do the chai/sinon specs in test/index_test.ts assert, and how does test/test-types-compilation.ts verify generic inference under tsconfig's `strict: true`?",
+            "Which package.json fields (module, main, umd:main, source, typings, exports) define consumer entry points, and how do the test/lint/typecheck scripts and CI workflows form the publish gate?"
+          ],
+          "actions": [],
+          "files": [
+            {
+              "path": "src/index.ts",
+              "purpose": "Read in full for the report body: the mitt() factory, the `all` Map, the on/off/emit closures with wildcard '*' handling, handler removal by reference, and the Emitter/EventHandler/EventType declarations. Single source of truth for every behavioral claim.",
+              "priority": "high"
+            },
+            {
+              "path": "test/index_test.ts",
+              "purpose": "Runtime verification evidence: chai/sinon specs exercising on/off/emit, '*' wildcard registration and emission order, handler-reference removal, emit with no handlers, and map clearing. Use concrete spec names as the teaching trace.",
+              "priority": "high"
+            },
+            {
+              "path": "test/test-types-compilation.ts",
+              "purpose": "Type-level verification evidence: compile-only assertions that generic inference under strict mode accepts correct event payloads and rejects wrong ones; explains why `npm test` includes a tsc pass over a test file.",
+              "priority": "medium"
+            },
+            {
+              "path": "package.json",
+              "purpose": "Consumer and toolchain contract: source/module/main/umd:main/typings/exports entry points, the mocha `spec: [\"test/*_test.ts\"]` convention that explains the zero test-discovery matches, and the test/lint/typecheck/bundle script graph.",
+              "priority": "medium"
+            },
+            {
+              "path": "tsconfig.json",
+              "purpose": "Explains the `strict: true` setting the README tells users to enable and that the type test depends on; also shows include: [src/*.ts, test/*.ts] and noEmit, clarifying the compile-only verification layer.",
+              "priority": "low"
+            },
+            {
+              "path": "README.md",
+              "purpose": "Documented intent and API contract (usage snippets, '*' semantics, Node EventEmitter familiarity, TypeScript inference example) to compare against actual implementation and test behavior.",
+              "priority": "low"
+            },
+            {
+              "path": ".github/workflows/main.yml",
+              "purpose": "Shows the verification gate executed end to end (install, `build --if-present`, `npm test`) on Node 14 for pushes to main and all pull requests.",
+              "priority": "low"
+            },
+            {
+              "path": ".github/workflows/compressed-size.yml",
+              "purpose": "Only indexed signal about bundle size: a PR-triggered compressed-size check over ./dist/*.{js,mjs,cjs}. Frames the 'tiny' claim as tooling-enforced but not verifiable from indexed sources.",
+              "priority": "low"
+            }
+          ],
+          "stopConditions": [
+            "Entry point (src/index.ts), core behavior (on/off/emit + `all` Map), and verification path (test/index_test.ts plus test/test-types-compilation.ts) are each anchored to an explicitly named indexed file.",
+            "Zero-edge dependency results from both explorer and mentor stages are recorded as the confirmed single-module architecture, and the mocha `test/*_test.ts` spec pattern explains the 0 test-discovery matches, so neither is reported as a gap.",
+            "dist/* bundles, the generated index.d.ts, and the <200-byte gzip claim are explicitly flagged as unverifiable from the file index rather than asserted.",
+            "Evidence is capped at the 8 already-read paths; no additional file is requested."
+          ]
+        },
+        "examinedPaths": [
+          "src/index.ts",
+          "test/index_test.ts",
+          "test/test-types-compilation.ts",
+          "package.json",
+          "tsconfig.json",
+          "README.md",
+          ".github/workflows/main.yml",
+          ".github/workflows/compressed-size.yml"
+        ],
+        "skippedPaths": [],
+        "unresolvedQuestions": [],
+        "skillPolicy": {
+          "skillNames": [
+            "analyze-generic"
+          ],
+          "allowedTools": [
+            "search_symbols",
+            "trace_module_dependencies",
+            "find_related_tests"
+          ],
+          "preferredTools": [
+            "trace_module_dependencies",
+            "find_related_tests"
+          ],
+          "recommendedQuestions": [
+            "Where is the public or runtime entry point?",
+            "Which modules implement the main control flow?",
+            "How is the core behavior verified?"
+          ],
+          "evidenceRequirements": [
+            "One public or runtime entry file",
+            "One core implementation file",
+            "One representative test or an explicit coverage gap"
+          ],
+          "stopConditions": [
+            "Entry, core responsibility, and verification path are supported or explicitly unresolved"
+          ],
+          "maxDiscoveryActions": 3,
+          "maxEvidenceFiles": 8
+        },
+        "discoveryActionsUsed": 2,
+        "stopReason": "existing_evidence_reused"
+      },
+      "contributor": {
+        "status": "completed",
+        "plan": null,
+        "examinedPaths": [],
+        "skippedPaths": [],
+        "unresolvedQuestions": [],
+        "skillPolicy": null,
+        "discoveryActionsUsed": 0,
+        "stopReason": null
+      }
+    },
+    "budget": {
+      "maxEvidenceBatches": 2,
+      "maxFilesRead": 18,
+      "maxEvidenceBytes": 88000,
+      "usedEvidenceBatches": 2,
+      "filesRead": 8,
+      "evidenceBytes": 20212
+    },
+    "observations": [
+      {
+        "stage": "explorer",
+        "tool": "search_symbols",
+        "purpose": "Locate the core public type/abstraction and where it is defined/implemented across the index.",
+        "summary": "Found 3 candidate paths; source text is not included.",
+        "paths": [
+          "src/index.ts",
+          "test/index_test.ts",
+          "test/test-types-compilation.ts"
+        ],
+        "metadata": {
+          "query": "Emitter",
+          "matches": 20
+        }
+      },
+      {
+        "stage": "explorer",
+        "tool": "trace_module_dependencies",
+        "purpose": "Confirm the entry file's internal dependency direction and whether it depends on any local modules.",
+        "summary": "Found 0 candidate paths; source text is not included.",
+        "paths": [],
+        "metadata": {
+          "edges": 0,
+          "seedFiles": 1
+        }
+      },
+      {
+        "stage": "explorer",
+        "tool": "find_related_tests",
+        "purpose": "Find representative test paths related to the entry implementation file.",
+        "summary": "Found 0 candidate paths; source text is not included.",
+        "paths": [],
+        "metadata": {
+          "tests": 0,
+          "seedFiles": 1
+        }
+      },
+      {
+        "stage": "mentor",
+        "tool": "trace_module_dependencies",
+        "purpose": "Confirm the dependency direction between the implementation entry and the two tests (tests should import the entry; entry should have no local imports), which underpins the single-module teaching narrative.",
+        "summary": "Found 0 candidate paths; source text is not included.",
+        "paths": [],
+        "metadata": {
+          "edges": 0,
+          "seedFiles": 3
+        }
+      },
+      {
+        "stage": "mentor",
+        "tool": "search_symbols",
+        "purpose": "Quantify where the default factory is referenced across index and tests to bound the public surface for the learning report.",
+        "summary": "Found 3 candidate paths; source text is not included.",
+        "paths": [
+          "src/index.ts",
+          "test/index_test.ts",
+          "test/test-types-compilation.ts"
+        ],
+        "metadata": {
+          "query": "mitt",
+          "matches": 20
+        }
+      }
+    ],
+    "ledger": {
+      "src/index.ts": {
+        "status": "available",
+        "attempts": [
+          {
+            "phase": "explorer",
+            "status": "available",
+            "bytes": 3723
+          },
+          {
+            "phase": "mentor",
+            "status": "reused",
+            "bytes": 0,
+            "reason": "already_available"
+          }
+        ]
+      },
+      "test/index_test.ts": {
+        "status": "available",
+        "attempts": [
+          {
+            "phase": "explorer",
+            "status": "available",
+            "bytes": 5310
+          },
+          {
+            "phase": "mentor",
+            "status": "reused",
+            "bytes": 0,
+            "reason": "already_available"
+          }
+        ]
+      },
+      "test/test-types-compilation.ts": {
+        "status": "available",
+        "attempts": [
+          {
+            "phase": "explorer",
+            "status": "available",
+            "bytes": 1691
+          },
+          {
+            "phase": "mentor",
+            "status": "reused",
+            "bytes": 0,
+            "reason": "already_available"
+          }
+        ]
+      },
+      "package.json": {
+        "status": "available",
+        "attempts": [
+          {
+            "phase": "explorer",
+            "status": "available",
+            "bytes": 2313
+          },
+          {
+            "phase": "mentor",
+            "status": "reused",
+            "bytes": 0,
+            "reason": "already_available"
+          }
+        ]
+      },
+      "tsconfig.json": {
+        "status": "available",
+        "attempts": [
+          {
+            "phase": "explorer",
+            "status": "available",
+            "bytes": 240
+          },
+          {
+            "phase": "mentor",
+            "status": "reused",
+            "bytes": 0,
+            "reason": "already_available"
+          }
+        ]
+      },
+      "README.md": {
+        "status": "available",
+        "attempts": [
+          {
+            "phase": "explorer",
+            "status": "available",
+            "bytes": 6274
+          },
+          {
+            "phase": "mentor",
+            "status": "reused",
+            "bytes": 0,
+            "reason": "already_available"
+          }
+        ]
+      },
+      ".github/workflows/main.yml": {
+        "status": "available",
+        "attempts": [
+          {
+            "phase": "explorer",
+            "status": "available",
+            "bytes": 425
+          },
+          {
+            "phase": "mentor",
+            "status": "reused",
+            "bytes": 0,
+            "reason": "already_available"
+          }
+        ]
+      },
+      ".github/workflows/compressed-size.yml": {
+        "status": "available",
+        "attempts": [
+          {
+            "phase": "explorer",
+            "status": "available",
+            "bytes": 236
+          },
+          {
+            "phase": "mentor",
+            "status": "reused",
+            "bytes": 0,
+            "reason": "already_available"
+          }
+        ]
+      }
+    }
+  },
+  "repository": "developit/mitt",
+  "commit_sha": "6b41670516ed8e8b738612f60491995470aa63b3"
+}

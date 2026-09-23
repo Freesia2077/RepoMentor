@@ -1,0 +1,1668 @@
+{
+  "schema_version": "repomentor.v1",
+  "run_id": "45a095034ee8475b8df47cd328e58c48",
+  "snapshot_id": "e9ac047065221c94556a7b60",
+  "runtime": "claude-agent-sdk",
+  "status": "success",
+  "outputs": {
+    "explorer": {
+      "evidenceClaims": [
+        {
+          "claim": "packages/vite/src/node/index.ts 是 Vite 的公共 Node API 门面入口，本身不实现逻辑，而是从 ./config、./server、./build、./preview、./optimizer、./plugins/* 等模块重新导出 createServer、build、createBuilder、preview、defineConfig、loadConfigFromFile 等符号与类型。",
+          "confidence": "high",
+          "evidence": [
+            {
+              "path": "packages/vite/src/node/index.ts",
+              "supports": "文件中存在大量 export { ... } from './config' | './server' | './build' | './preview' | './optimizer' 的再导出语句，并 export type 大量配置与插件类型"
+            }
+          ]
+        },
+        {
+          "claim": "config.ts 承担配置的解析与归一化职责，是 dev/build 数据流的输入阶段：内部定义了 defineConfig（直接返回入参）、UserConfig/ResolvedConfig 等类型，并导入 loadEnv、mergeConfig、resolvePlugins、resolveServerOptions 等完成合并与解析。",
+          "confidence": "high",
+          "evidence": [
+            {
+              "path": "packages/vite/src/node/config.ts",
+              "supports": "defineConfig 实现仅 return config；文件顶部导入 mergeConfig/resolvePlugins/resolveServerOptions/loadEnv，并定义 ConfigEnv、UserConfig、ResolvedDevEnvironmentOptions 等接口"
+            }
+          ]
+        },
+        {
+          "claim": "server/index.ts 是开发服务器创建与中间件装配的中心：导入 connect、chokidar、cors、launch-editor-middleware，并依次引入 base/error/hostCheck/htmlFallback/indexHtml/static/transform/proxy/time 等中间件以及 HMR、http、watch 模块。",
+          "confidence": "high",
+          "evidence": [
+            {
+              "path": "packages/vite/src/node/server/index.ts",
+              "supports": "顶部 import 列表明确列出 connect、chokidar、corsMiddleware 与 ./middlewares/* 各中间件、./hmr、../http、../watch、resolveConfig、bindCLIShortcuts"
+            },
+            {
+              "path": "packages/vite/src/node/index.ts",
+              "supports": "公共入口从 './server' 导出 createServer，印证 server/index.ts 是 dev server 的主实现位置"
+            }
+          ]
+        },
+        {
+          "claim": "build.ts 是构建命令（输出阶段）的实现，以 rolldown 为底层打包器，定义 BuildEnvironmentOptions（含 target、modulePreload 等选项）并组合 importAnalysisBuild、license、manifest、terser、worker 等构建期插件。",
+          "confidence": "high",
+          "evidence": [
+            {
+              "path": "packages/vite/src/node/build.ts",
+              "supports": "导入 rolldown 的 RolldownOptions/RolldownBuild 类型与 viteLoadFallbackPlugin，导入 buildImportAnalysisPlugin、licensePlugin、manifestPlugin、prepareOutDirPlugin、terserPlugin，并定义 export interface BuildEnvironmentOptions"
+            },
+            {
+              "path": "README.md",
+              "supports": "README 明确说明 build 命令使用 Rolldown 打包输出生产静态资源"
+            }
+          ]
+        },
+        {
+          "claim": "plugin.ts 定义了 Vite 的核心可扩展抽象：Plugin 接口继承 Rolldown/Rollup 的插件接口并追加 Vite 专有 hook，配套 PluginContextExtension 通过 declare module 'rolldown' 增强 Rolldown 类型。",
+          "confidence": "high",
+          "evidence": [
+            {
+              "path": "packages/vite/src/node/plugin.ts",
+              "supports": "文件定义 PluginContextExtension/Plugin<A> extends RolldownPlugin，并包含 declare module 'rolldown' { export interface MinimalPluginContext extends PluginContextExtension {} }"
+            }
+          ]
+        },
+        {
+          "claim": "pluginContainer.ts 负责插件 hook 的编排与上下文构造；但其源码在本次证据中仅读取到文件头许可证与 import 段，具体 resolve/load/transform 的调用顺序未能确认。",
+          "confidence": "medium",
+          "evidence": [
+            {
+              "path": "packages/vite/src/node/server/pluginContainer.ts",
+              "supports": "可见导入 rolldown 的 PluginContext/TransformResult 等类型、MagicString、TraceMap 与 createPluginHookUtils/getHookHandler，import 段表明其承担 hook 容器职责，但函数体未包含在证据中"
+            }
+          ]
+        },
+        {
+          "claim": "environment.ts 确立了多环境（client/dev、build、scan 等）抽象：Environment 为 DevEnvironment | BuildEnvironment | ScanEnvironment | UnknownEnvironment 的联合类型，并提供 perEnvironmentState 以基于 WeakMap 实现按环境隔离的插件状态。",
+          "confidence": "high",
+          "evidence": [
+            {
+              "path": "packages/vite/src/node/environment.ts",
+              "supports": "文件显式定义 export type Environment = DevEnvironment | BuildEnvironment | ScanEnvironment | UnknownEnvironment，并实现 perEnvironmentState 使用 WeakMap<Environment, State>"
+            }
+          ]
+        },
+        {
+          "claim": "该仓库是 pnpm workspace 单仓多包结构，对外发布三个包：vite、@vitejs/plugin-legacy、create-vite；根 package.json 声明 private monorepo 且强制 pnpm（preinstall 使用 only-allow pnpm）。",
+          "confidence": "high",
+          "evidence": [
+            {
+              "path": "README.md",
+              "supports": "Packages 表格列出 vite、@vitejs/plugin-legacy、create-vite 三个包的版本与 CHANGELOG 链接"
+            },
+            {
+              "path": "package.json",
+              "supports": "name 为 @vitejs/vite-monorepo、private: true、preinstall 为 npx only-allow pnpm，scripts 使用 pnpm -r 过滤 ./packages/* 执行 build"
+            },
+            {
+              "path": "CONTRIBUTING.md",
+              "supports": "说明 Vite 仓库是使用 pnpm workspaces 的 monorepo"
+            }
+          ]
+        }
+      ],
+      "evidenceCoverage": {
+        "examinedFiles": [
+          ".github/workflows/bot.yml",
+          ".github/workflows/ci.yml",
+          ".github/workflows/copilot-setup-steps.yml",
+          ".github/workflows/ecosystem-ci-trigger.yml",
+          "CONTRIBUTING.md",
+          "README.md",
+          "package.json",
+          "packages/create-vite/package.json",
+          "packages/create-vite/template-lit-ts/package.json",
+          "packages/create-vite/template-lit/package.json",
+          "packages/create-vite/template-preact-ts/package.json",
+          "packages/create-vite/template-preact/package.json",
+          "packages/create-vite/template-qwik-ts/package.json",
+          "packages/create-vite/template-qwik/package.json",
+          "packages/vite/src/node/__tests__/config.spec.ts",
+          "packages/vite/src/node/build.ts",
+          "packages/vite/src/node/config.ts",
+          "packages/vite/src/node/environment.ts",
+          "packages/vite/src/node/index.ts",
+          "packages/vite/src/node/plugin.ts",
+          "packages/vite/src/node/server/index.ts",
+          "packages/vite/src/node/server/pluginContainer.ts"
+        ],
+        "gaps": [
+          {
+            "kind": "coverage_limit",
+            "subject": "packages/vite/src/node/config.ts",
+            "summary": "Only a bounded excerpt was read",
+            "severity": "medium"
+          },
+          {
+            "kind": "coverage_limit",
+            "subject": "packages/vite/src/node/server/index.ts",
+            "summary": "Only a bounded excerpt was read",
+            "severity": "medium"
+          },
+          {
+            "kind": "coverage_limit",
+            "subject": "packages/vite/src/node/build.ts",
+            "summary": "Only a bounded excerpt was read",
+            "severity": "medium"
+          },
+          {
+            "kind": "coverage_limit",
+            "subject": "packages/vite/src/node/plugin.ts",
+            "summary": "Only a bounded excerpt was read",
+            "severity": "medium"
+          },
+          {
+            "kind": "coverage_limit",
+            "subject": "packages/vite/src/node/server/pluginContainer.ts",
+            "summary": "Only a bounded excerpt was read",
+            "severity": "medium"
+          },
+          {
+            "kind": "coverage_limit",
+            "subject": "packages/vite/src/node/__tests__/config.spec.ts",
+            "summary": "Only a bounded excerpt was read",
+            "severity": "medium"
+          },
+          {
+            "kind": "missing_evidence",
+            "subject": "插件 hook 编排顺序（resolve/load/transform）",
+            "summary": "pluginContainer.ts 与 server/index.ts 的证据均被截断，仅包含文件头与 import 段，无法确认 hook 的调用顺序与中间件链的实际装配次序；相关判断已下调为 medium 置信度。",
+            "severity": "high"
+          },
+          {
+            "kind": "coverage_limit",
+            "subject": "文件索引被截断",
+            "summary": "repositoryProfile.fileIndexTruncated 为 true，playground/ 下的夹具目录只列出前一部分（至 fs-serve），其余功能域与 packages 之外目录的完整性无法核对。",
+            "severity": "medium"
+          }
+        ]
+      },
+      "projectType": {
+        "primary": "build-tool",
+        "secondary": [
+          "dev-server",
+          "plugin-framework",
+          "cli"
+        ]
+      },
+      "techStack": {
+        "language": "typescript",
+        "framework": null,
+        "buildTool": "rolldown"
+      },
+      "fileCount": 2833,
+      "entryPoints": [
+        {
+          "file": "packages/vite/src/node/index.ts",
+          "role": "公共 Node API 主入口（门面）：再导出 createServer/build/preview/defineConfig 及全部公共类型"
+        },
+        {
+          "file": "packages/vite/bin/vite.js",
+          "role": "vite CLI 可执行入口（bin 脚本）"
+        },
+        {
+          "file": "packages/vite/src/node/cli.ts",
+          "role": "CLI 命令解析与 serve/build/preview 子命令分发"
+        },
+        {
+          "file": "packages/vite/src/client/client.ts",
+          "role": "浏览器端客户端运行时入口（HMR 客户端与错误遮罩）"
+        },
+        {
+          "file": "packages/vite/src/module-runner/index.ts",
+          "role": "module-runner 包入口，供 SSR / 非浏览器环境求值已转换模块"
+        },
+        {
+          "file": "packages/create-vite/index.js",
+          "role": "create-vite 脚手架 bin 入口（package.json 的 bin 指向该文件）"
+        },
+        {
+          "file": "packages/create-vite/src/index.ts",
+          "role": "create-vite 脚手架主逻辑（模板选择与项目生成）"
+        },
+        {
+          "file": "docs/.vitepress/theme/index.ts",
+          "role": "文档站（VitePress）主题入口"
+        }
+      ],
+      "moduleMap": [
+        {
+          "path": "packages/vite/src/node/",
+          "responsibility": "Vite 核心 Node 侧实现：配置解析（config.ts）、开发服务器与中间件（server/）、Rolldown 构建（build.ts）、插件容器、内置插件、SSR 与依赖预打包。",
+          "importance": "core",
+          "justification": "公共入口 index.ts 全部再导出均指向该目录，server/ 与 build.ts 分别承载 dev 与 build 两条主链路"
+        },
+        {
+          "path": "packages/vite/src/client/",
+          "responsibility": "浏览器端运行时：HMR 客户端、错误遮罩层、env 与由服务端注入的客户端入口。",
+          "importance": "support",
+          "justification": "client.ts / clientEntry.ts / overlay.ts 提供 dev server 与浏览器间通信的客户端一半，但不包含构建与配置逻辑"
+        },
+        {
+          "path": "packages/vite/src/module-runner/",
+          "responsibility": "可复用模块运行器：ESM 求值、evaluatedModules 缓存、HMR 处理与 sourcemap 解码，供 SSR/server 环境执行已转换模块。",
+          "importance": "support",
+          "justification": "独立子目录并对外以 vite/module-runner 子路径导出，被 server/ssr 层引用以支持服务端执行"
+        },
+        {
+          "path": "packages/create-vite/",
+          "responsibility": "脚手架 CLI 包：交互式选择框架模板并生成新项目，内含 react/vue/svelte/solid/qwik/lit/vanilla 等模板。",
+          "importance": "support",
+          "justification": "package.json 声明 bin（create-vite/cva）与 template-* 文件列表，是三个发布包之一"
+        },
+        {
+          "path": "packages/plugin-legacy/",
+          "responsibility": "官方 legacy 插件：为不支持 ESM 的旧浏览器生成降级构建与 polyfill 加载逻辑。",
+          "importance": "utility",
+          "justification": "独立发布为 @vitejs/plugin-legacy，仅由 src/index.ts、snippets.ts、types.ts 等少量文件构成"
+        },
+        {
+          "path": "playground/",
+          "responsibility": "端到端测试夹具：按功能域（assets、css、alias、env、dynamic-import、fs-serve 等）划分，每个目录含独立 vite.config 与 __tests__ 用例。",
+          "importance": "utility",
+          "justification": "根 package.json 的 test-serve/test-build 脚本以 vitest.config.e2e.ts 驱动该目录，属验证用途而非产品代码"
+        }
+      ],
+      "directorySummary": "pnpm workspace 单仓多包结构，顶层分为 docs/（VitePress 文档站）、packages/（发布包）、playground/（端到端测试夹具）、patches/（依赖补丁）与 .github/（CI 与 bot 工作流）。packages/ 下有三个发布包：vite（核心，内含 src/node 服务端与构建实现、src/client 浏览器运行时、src/module-runner 模块运行器、src/shared 共享工具、src/types 与 types/ 公共类型）、create-vite（脚手架与 template-* 模板）、plugin-legacy（旧浏览器兼容插件）。playground/ 以功能域为单位组织 e2e 夹具（assets、css、css-lightningcss、dynamic-import、env、fs-serve 等），与 packages/vite/src/node/__tests__ 下的单元测试共同构成验证体系；文件索引被截断，playground/ 仅列出到 fs-serve 部分。",
+      "projectSummary": "Vite（vitejs/vite）是面向现代 Web 项目的前端构建工具，由两大部分构成：提供原生 ESM 增强与极速 HMR 的开发服务器，以及基于 Rolldown 预配置的生产构建命令；通过通用 Plugin API 与 JavaScript API 扩展，并提供完整类型支持。仓库为 pnpm monorepo，发布 vite、@vitejs/plugin-legacy、create-vite 三个包，配套 docs/ 文档站与 playground/ e2e 夹具；核心实现集中在 packages/vite/src/node（配置解析、dev server、构建、插件容器与内置插件），以 Environment（client/build/scan）抽象统一多环境行为。"
+    },
+    "mentor": {
+      "evidenceClaims": [
+        {
+          "claim": "packages/vite/bin/vite.js 是薄启动壳，不做命令分发：它只设置 compile cache、根据 -d/--debug 与 -f/--filter 写入 DEBUG / VITE_DEBUG_FILTER、为 --profile 启动 inspector 会话、记录 global.__vite_start_time，最后 import('../dist/node/cli.js')。",
+          "confidence": "high",
+          "evidence": [
+            {
+              "path": "packages/vite/bin/vite.js",
+              "supports": "文件全文仅含 debug/filter/profile 索引查找、process.env.DEBUG 赋值、inspector 会话启动与 start() 内的动态 import"
+            },
+            {
+              "path": "packages/vite/package.json",
+              "supports": "bin 字段将 vite 命令指向 bin/vite.js，exports 与 build-bundle 脚本产出 dist/node 产物"
+            }
+          ]
+        },
+        {
+          "claim": "packages/vite/src/node/cli.ts 才是 argv 解析与命令分发的所有者：它创建 cac('vite')，注册全局选项与 serve(默认 [root])、build、optimize、preview 四个子命令，并在 action 内解析参数、调用核心 API。",
+          "confidence": "high",
+          "evidence": [
+            {
+              "path": "packages/vite/src/node/cli.ts",
+              "supports": "cli.command('[root]').alias('serve').alias('dev')、cli.command('build [root]')、cli.command('optimize [root]')、cli.command('preview [root]') 以及末尾的 cli.help()/cli.version(VERSION)/cli.parse()"
+            }
+          ]
+        },
+        {
+          "claim": "CLI 与核心层的分工是「薄 CLI + 胖核心」：CLI 只把 argv 映射为 InlineConfig 并格式化启动输出（VITE v版本 + ready in N ms），实际行为由 createServer、createBuilder/buildApp、optimizeDeps、preview 承担。",
+          "confidence": "high",
+          "evidence": [
+            {
+              "path": "packages/vite/src/node/cli.ts",
+              "supports": "dev action 组装 { root, base, mode, configFile, configLoader, logLevel, server: cleanGlobalCLIOptions(options) } 后调用 createServer 并打印 `VITE v${VERSION}` 与启动耗时；build action 调用 createBuilder + builder.buildApp()"
+            },
+            {
+              "path": "packages/vite/src/node/index.ts",
+              "supports": "公共 API 入口从 './server'、'./build'、'./preview'、'./optimizer' 导出 createServer/build/createBuilder/preview/optimizeDeps，说明行为实现位于核心层"
+            }
+          ]
+        },
+        {
+          "claim": "全局选项在进入核心前经过三层归一化：filterDuplicateOptions 折叠重复数组取末值、cleanGlobalCLIOptions / cleanBuilderCLIOptions 删除已消费的全局与 builder flag 并转换 sourcemap/watch 形态、convertHost/convertBase 处理数字型 host 与 base。",
+          "confidence": "high",
+          "evidence": [
+            {
+              "path": "packages/vite/src/node/cli.ts",
+              "supports": "文件中定义 filterDuplicateOptions、cleanGlobalCLIOptions（逐个 delete 全局 flag 并转换 sourcemap 与 watch）、cleanBuilderCLIOptions、convertHost、convertBase"
+            }
+          ]
+        },
+        {
+          "claim": "运行期交互命令不由 cli.ts 处理，而由 packages/vite/src/node/shortcuts.ts 基于 readline 分发，并且其 readline 实例保存在 server._shortcutsState 上以便重启后复用。",
+          "confidence": "high",
+          "evidence": [
+            {
+              "path": "packages/vite/src/node/shortcuts.ts",
+              "supports": "bindCLIShortcuts 使用 readline.createInterface，监听 'line' 事件查找 shortcut 并执行 action；状态写入 server._shortcutsState，httpServer 'close' 时关闭 readline"
+            },
+            {
+              "path": "packages/vite/src/node/cli.ts",
+              "supports": "dev action 中只调用 server.bindCLIShortcuts({ print: true, customShortcuts })，未在 CLI 层实现按键逻辑"
+            }
+          ]
+        },
+        {
+          "claim": "命令层存在两层验证：shortcuts.spec.ts 在真实 createServer/preview 实例上断言自定义快捷键绑定、覆盖与重启后保留；create-vite/__tests__/cli.spec.ts 通过 execa 执行 node <CLI_PATH> 断言交互提示文案与脚手架产物。",
+          "confidence": "high",
+          "evidence": [
+            {
+              "path": "packages/vite/src/node/__tests__/shortcuts.spec.ts",
+              "supports": "test.each 分别用 createServer() 与 preview() 构造服务器，emit('line','x'|'y'|'z') 后断言 action 调用次数，并验证 server.restart() 后快捷键顺序与 readline 实例保留"
+            },
+            {
+              "path": "packages/create-vite/__tests__/cli.spec.ts",
+              "supports": "使用 execaCommandSync 执行 `node ${CLI_PATH} ...`，断言 stdout 包含 'Project name:'、'Select a framework:'、目标目录非空提示，并核对生成的模板文件列表"
+            }
+          ]
+        },
+        {
+          "claim": "create-vite 的 bin 同样是一行转发壳（index.js → dist/index.js），但其实现模块自行解析 argv 并内联驱动模板选择，与 vite 的 cac 子命令模式形成对照。",
+          "confidence": "high",
+          "evidence": [
+            {
+              "path": "packages/create-vite/index.js",
+              "supports": "文件仅含 shebang 与 `import './dist/index.js'`"
+            },
+            {
+              "path": "packages/create-vite/src/index.ts",
+              "supports": "使用 mri 解析 process.argv.slice(2)（boolean/alias/string 声明），并定义 FRAMEWORKS 表与 helpMessage 文案"
+            }
+          ]
+        },
+        {
+          "claim": "配置文件与环境变量的读取不在 CLI 层：cli.ts 只透传 configFile、configLoader、mode 等字段，实际加载由 config.ts 的 loadEnv/resolveConfig 路径承担（该文件证据仅覆盖 import 段，细节未确认）。",
+          "confidence": "medium",
+          "evidence": [
+            {
+              "path": "packages/vite/src/node/cli.ts",
+              "supports": "各 action 只把 options.config/options.configLoader/options.mode 透传给 createServer/preview/resolveConfig，未见读取 .env 或解析配置文件的代码"
+            },
+            {
+              "path": "packages/vite/src/node/config.ts",
+              "supports": "顶部导入 loadEnv、mergeConfig、resolvePlugins、resolveServerOptions，表明配置与环境变量处理位于该模块"
+            }
+          ]
+        }
+      ],
+      "evidenceCoverage": {
+        "examinedFiles": [
+          ".github/workflows/bot.yml",
+          ".github/workflows/ci.yml",
+          ".github/workflows/copilot-setup-steps.yml",
+          ".github/workflows/ecosystem-ci-trigger.yml",
+          "CONTRIBUTING.md",
+          "README.md",
+          "package.json",
+          "packages/create-vite/__tests__/cli.spec.ts",
+          "packages/create-vite/index.js",
+          "packages/create-vite/package.json",
+          "packages/create-vite/src/index.ts",
+          "packages/create-vite/template-lit-ts/package.json",
+          "packages/create-vite/template-lit/package.json",
+          "packages/create-vite/template-preact-ts/package.json",
+          "packages/create-vite/template-preact/package.json",
+          "packages/create-vite/template-qwik-ts/package.json",
+          "packages/create-vite/template-qwik/package.json",
+          "packages/vite/bin/vite.js",
+          "packages/vite/package.json",
+          "packages/vite/src/node/__tests__/config.spec.ts",
+          "packages/vite/src/node/__tests__/shortcuts.spec.ts",
+          "packages/vite/src/node/build.ts",
+          "packages/vite/src/node/cli.ts",
+          "packages/vite/src/node/config.ts"
+        ],
+        "gaps": [
+          {
+            "kind": "coverage_limit",
+            "subject": "packages/vite/src/node/config.ts",
+            "summary": "Only a bounded excerpt was read",
+            "severity": "medium"
+          },
+          {
+            "kind": "coverage_limit",
+            "subject": "packages/vite/src/node/server/index.ts",
+            "summary": "Only a bounded excerpt was read",
+            "severity": "medium"
+          },
+          {
+            "kind": "coverage_limit",
+            "subject": "packages/vite/src/node/build.ts",
+            "summary": "Only a bounded excerpt was read",
+            "severity": "medium"
+          },
+          {
+            "kind": "coverage_limit",
+            "subject": "packages/vite/src/node/plugin.ts",
+            "summary": "Only a bounded excerpt was read",
+            "severity": "medium"
+          },
+          {
+            "kind": "coverage_limit",
+            "subject": "packages/vite/src/node/server/pluginContainer.ts",
+            "summary": "Only a bounded excerpt was read",
+            "severity": "medium"
+          },
+          {
+            "kind": "coverage_limit",
+            "subject": "packages/vite/src/node/__tests__/config.spec.ts",
+            "summary": "Only a bounded excerpt was read",
+            "severity": "medium"
+          },
+          {
+            "kind": "coverage_limit",
+            "subject": "packages/create-vite/__tests__/cli.spec.ts",
+            "summary": "Only a bounded excerpt was read",
+            "severity": "medium"
+          },
+          {
+            "kind": "coverage_limit",
+            "subject": "packages/vite/src/node/shortcuts.ts",
+            "summary": "Only a bounded excerpt was read",
+            "severity": "medium"
+          }
+        ]
+      },
+      "architectureOverview": "**产品定位 vs 代码实体**：README 把 Vite 定义为「下一代前端构建工具」，由 dev server（原生 ESM + 极速 HMR）与基于 Rolldown 的生产构建两部分组成。仓库实际可执行实现集中在 `packages/vite/`；`docs/` 是 VitePress 文档站，`playground/` 是按功能域（assets、css、env、dynamic-import、fs-serve…）划分的 e2e 夹具，二者不是产品逻辑。\n\n**整体分层**：pnpm monorepo 发布三个包（vite、@vitejs/plugin-legacy、create-vite）。vite 包内自外向内为：启动壳 → CLI 层 → 核心层（config.ts / server/ / build.ts / preview.ts / optimizer/）→ 共享层（src/shared、src/module-runner、src/client）。`src/node/index.ts` 是纯门面，把 `./config`、`./server`、`./build`、`./preview`、`./optimizer`、`./plugins/*` 的符号与类型再导出。\n\n**CLI 边界（本次重点）**：`packages/vite/package.json` 声明 `bin.vite = bin/vite.js`。该文件是**薄壳**：只做启动前处理（`module.enableCompileCache`、把 `-d/--debug` 与 `-f/--filter` 转成 `DEBUG` 与 `VITE_DEBUG_FILTER`、`--profile` 起 inspector CPU profiler、记录 `global.__vite_start_time`），最后 `import('../dist/node/cli.js')`。真正的命令定义在 `src/node/cli.ts`（即该 dist 文件的源码）。\n\n`cli.ts` 持有 `cac('vite')`：注册全局选项（`-c/--config`、`--base`、`-l/--logLevel`、`--configLoader`、`--profile`、`-d/--debug`、`-f/--filter`、`-m/--mode`）与四个子命令——默认 `[root]`（别名 `serve`/`dev`）、`build [root]`、`optimize [root]`（已废弃）、`preview [root]`。每个 action 先 `filterDuplicateOptions` 归一化，再用 `await import(...)` 惰性加载核心模块，把 argv 映射为 InlineConfig 后调用 `createServer` / `createBuilder` + `buildApp` / `optimizeDeps` / `preview`。\n\n**薄 CLI + 胖核心**：CLI 只做 argv → 配置翻译、日志格式化（`VITE vX ready in N ms`）与统一错误出口（`createLogger(options.logLevel).error(colors.red(...), { error: e })` 加 `process.exit(1)`）；行为主体全在核心层。**运行期**的交互命令（`r` 重启、`u` 打印 URL、`o` 开浏览器、`q` 退出）不在 cli.ts，而在 `src/node/shortcuts.ts`：基于 readline 分发，并把 readline 状态挂在 `server._shortcutsState` 上，使服务器重启后快捷键仍可用。\n\n**对比案例**：create-vite 的 bin（`index.js`）同样是一行转发到 `dist/index.js`，但其实现 `src/index.ts` 用 `mri` 自行解析 argv、用 `@clack/prompts` 交互、以内联 `FRAMEWORKS` 表驱动模板选择——解析与业务逻辑耦合度明显高于 vite 的 cac 子命令模式。\n\n**不确定项**：`config.ts` 的证据只到 import 段，`.env`/配置文件读取（`loadEnv`）细节未能确认；`logger.ts`（日志级别与输出格式）与 `preview.ts` 未进入证据；`bin/vite.js` 到 `src/node/cli.ts` 的对应关系由 package.json 的构建脚本推断，未直接读取 dist 产物。",
+      "dependencyGraph": {
+        "packages/vite/bin/": [
+          "packages/vite/src/node/"
+        ],
+        "packages/vite/src/node/": [
+          "packages/vite/src/node/server/",
+          "packages/vite/src/node/plugins/",
+          "packages/vite/src/node/optimizer/",
+          "packages/vite/src/node/ssr/",
+          "packages/vite/src/shared/"
+        ],
+        "packages/vite/src/node/server/": [
+          "packages/vite/src/node/plugins/",
+          "packages/vite/src/node/ssr/",
+          "packages/vite/src/shared/"
+        ],
+        "packages/vite/src/node/plugins/": [
+          "packages/vite/src/shared/"
+        ],
+        "packages/vite/src/module-runner/": [
+          "packages/vite/src/shared/"
+        ],
+        "packages/vite/src/client/": [
+          "packages/vite/src/shared/"
+        ],
+        "packages/create-vite/src/": [
+          "packages/create-vite/template-*/"
+        ]
+      },
+      "readingPath": [
+        {
+          "step": 1,
+          "file": "packages/vite/package.json",
+          "why": "先看清发布契约：bin.vite 指向 bin/vite.js，exports 暴露 dist/node/index.js 与 dist/node/module-runner.js——这是判断 CLI 入口与公共 API 入口分属两处的起点"
+        },
+        {
+          "step": 2,
+          "file": "packages/vite/bin/vite.js",
+          "why": "仅约 2.9KB 的启动壳，读完全文即可确认 argv 解析并不在这里，而只有 debug/profile/compile-cache 前处理与 import('../dist/node/cli.js')"
+        },
+        {
+          "step": 3,
+          "file": "packages/vite/src/node/cli.ts",
+          "why": "CLI 分发中心：cac 实例、全局选项表、serve/build/optimize/preview 四个命令及其 action 如何惰性加载并调用核心模块"
+        },
+        {
+          "step": 4,
+          "file": "packages/vite/src/node/shortcuts.ts",
+          "why": "运行期交互命令（r/rr/u/o/q）的真正落点，理解 CLI 能力如何被拆成启动期与运行期两段"
+        },
+        {
+          "step": 5,
+          "file": "packages/create-vite/src/index.ts",
+          "why": "对照案例：mri + @clack/prompts 的另一种 CLI 写法，凸显 cac 子命令模式与本项目的薄 CLI 约定"
+        }
+      ],
+      "keyPatterns": [
+        {
+          "pattern": "薄 bin + 胖 cli 启动壳",
+          "where": "packages/vite/bin/vite.js → packages/vite/src/node/cli.ts",
+          "description": "bin 脚本不做参数解析，只处理启动前副作用（compile cache、DEBUG 环境变量、--profile inspector 会话、global.__vite_start_time），随后动态 import 构建产物 dist/node/cli.js；所有命令定义集中在 cli.ts"
+        },
+        {
+          "pattern": "cac 命令注册 + 惰性动态导入",
+          "where": "packages/vite/src/node/cli.ts",
+          "description": "用 cac('vite') 注册全局 option 与四个 command，每个 action 内部先 await import('./server'|'./build'|'./preview'|'./config' + './optimizer')，避免启动时加载全部核心模块，兼顾启动耗时"
+        },
+        {
+          "pattern": "全局选项清洗/归一化适配层",
+          "where": "packages/vite/src/node/cli.ts",
+          "description": "filterDuplicateOptions 取数组末值、cleanGlobalCLIOptions / cleanBuilderCLIOptions 剥离全局与 builder 专属 flag、convertHost/convertBase 修正数字型 host/base，之后才组装 InlineConfig 传给核心"
+        },
+        {
+          "pattern": "运行期 readline 快捷键分发",
+          "where": "packages/vite/src/node/shortcuts.ts",
+          "description": "bindCLIShortcuts 用 readline 监听 stdin 的 line 事件，把按键映射到 CLIShortcut.action；状态存于 server._shortcutsState 以便重启后复用同一 readline 实例，插件也可通过 customShortcuts 注入"
+        },
+        {
+          "pattern": "统一错误出口与退出码",
+          "where": "packages/vite/src/node/cli.ts",
+          "description": "每个命令 action 用 try/catch 包住核心调用，失败时以 createLogger(logLevel).error(colors.red(...), { error: e }) 输出并 process.exit(1)；finally 中停止 profiler"
+        },
+        {
+          "pattern": "CLI 只翻译不实现",
+          "where": "packages/vite/src/node/cli.ts + packages/create-vite/src/index.ts",
+          "description": "vite 的 CLI 层只做 argv→配置映射与输出格式化，行为由核心模块承担；而 create-vite 把模板选择、目录覆盖判定等逻辑直接写在 CLI 实现里，是本仓库内两种不同边界的对照"
+        }
+      ],
+      "codeConventions": [
+        {
+          "rule": "可执行包在 package.json 声明 bin，且 bin 文件保持极薄（一行转发或仅做启动前处理），真实逻辑放在 src/ 的实现模块",
+          "example": "packages/vite/package.json (\"bin\": {\"vite\": \"bin/vite.js\"}) 与 packages/create-vite/index.js (`import './dist/index.js'`)"
+        },
+        {
+          "rule": "子命令的 action 内使用 await import('...') 惰性加载核心模块，而非在文件顶部静态导入",
+          "example": "packages/vite/src/node/cli.ts (`const { createServer } = await import('./server')`)"
+        },
+        {
+          "rule": "命令 action 接收的 options 在传给核心前必须经归一化助手处理：filterDuplicateOptions + cleanGlobalCLIOptions（build 另加 cleanBuilderCLIOptions）",
+          "example": "packages/vite/src/node/cli.ts"
+        },
+        {
+          "rule": "失败路径统一用 createLogger(options.logLevel).error(...) 打印彩色错误并 process.exit(1)，不用裸 console.error",
+          "example": "packages/vite/src/node/cli.ts"
+        },
+        {
+          "rule": "命令与选项描述使用 [string] / [boolean] / [number] 前缀标注类型，命令行框架统一为 cac",
+          "example": "packages/vite/src/node/cli.ts (`.option('--port <port>', \\`[number] specify port\\`)`)"
+        },
+        {
+          "rule": "CLI 状态挂在 server 对象上的下划线私有字段（_shortcutsState），以便服务器重启后复用而非重建",
+          "example": "packages/vite/src/node/shortcuts.ts"
+        },
+        {
+          "rule": "create-vite 这类小型 CLI 用 mri 解析 argv，并以 boolean/alias/string 三类声明约束选项",
+          "example": "packages/create-vite/src/index.ts"
+        }
+      ]
+    },
+    "contributor": {
+      "evidenceClaims": [
+        {
+          "claim": "本地开发需要 pnpm 与 Node ^20.19.0 或 >=22.12.0：根 package.json 声明 engines、preinstall 使用 only-allow pnpm、packageManager 为 pnpm@12.4.2；packages/vite 的 package.json 声明同样的 engines；cli.ts 中还有运行期 checkNodeVersion 版本告警。",
+          "confidence": "high",
+          "evidence": [
+            {
+              "path": "package.json",
+              "supports": "engines.node 为 ^20.19.0 || >=22.12.0；preinstall 为 npx only-allow pnpm；packageManager 为 pnpm@12.4.2"
+            },
+            {
+              "path": "packages/vite/package.json",
+              "supports": "engines.node 与根一致；bin.vite 指向 bin/vite.js"
+            },
+            {
+              "path": "packages/vite/src/node/cli.ts",
+              "supports": "checkNodeVersion 判定 20.19+ 或 22.12+ 或更高主版本，不满足则打印升级提示"
+            }
+          ]
+        },
+        {
+          "claim": "仓库提供了可直接运行的构建与验证命令：build 通过 pnpm -r 过滤 packages 执行，lint 使用 eslint --cache，format 使用 oxfmt，typecheck 分包并行，测试拆为 test-unit、test-serve、test-build 三段并由 test 串联。",
+          "confidence": "high",
+          "evidence": [
+            {
+              "path": "package.json",
+              "supports": "scripts 中 build、lint、format、typecheck、test、test-unit、test-serve、test-build 的具体命令"
+            }
+          ]
+        },
+        {
+          "claim": "vite 包的可执行入口是薄壳：bin 指向 bin/vite.js，该脚本只做启动前处理（compile cache、把 -d/--debug 与 -f/--filter 写入 DEBUG 与 VITE_DEBUG_FILTER、--profile 启动 inspector 会话、记录启动时间），最后动态导入 dist/node/cli.js，不含任何命令定义。",
+          "confidence": "high",
+          "evidence": [
+            {
+              "path": "packages/vite/package.json",
+              "supports": "bin 字段为 vite 指向 bin/vite.js"
+            },
+            {
+              "path": "packages/vite/bin/vite.js",
+              "supports": "全文只有 debug/filter/profile 参数索引查找、环境变量赋值、inspector 会话与 start 内的 dist/node/cli.js 动态导入"
+            }
+          ]
+        },
+        {
+          "claim": "argv 解析与命令分发集中在 packages/vite/src/node/cli.ts：以 cac 注册全局选项与默认 root、build、optimize、preview 四个子命令，各 action 惰性加载核心模块并把参数映射为内联配置。",
+          "confidence": "high",
+          "evidence": [
+            {
+              "path": "packages/vite/src/node/cli.ts",
+              "supports": "cli.command 注册 root（别名 serve/dev）、build、optimize、preview，末尾调用 cli.help、cli.version、cli.parse；action 内使用 await import 加载 server、build、preview、config、optimizer"
+            }
+          ]
+        },
+        {
+          "claim": "运行期的交互命令不在 cli.ts，而由 shortcuts.ts 基于 readline 分发，readline 状态挂在 server._shortcutsState 上以便服务器重启后复用；cli.ts 的 dev action 只调用 server.bindCLIShortcuts。",
+          "confidence": "high",
+          "evidence": [
+            {
+              "path": "packages/vite/src/node/shortcuts.ts",
+              "supports": "bindCLIShortcuts 使用 readline.createInterface 并监听 line 事件查找快捷键执行 action，状态写入 server._shortcutsState"
+            },
+            {
+              "path": "packages/vite/src/node/cli.ts",
+              "supports": "dev action 中仅调用 server.bindCLIShortcuts 并传 print 与 customShortcuts，未实现按键逻辑"
+            }
+          ]
+        },
+        {
+          "claim": "create-vite 的 bin 是一行转发壳，真实逻辑在 src/index.ts：使用 mri 解析 argv，并用内联框架表与帮助文案驱动模板选择，解析与业务耦合度高于 vite 的 cac 子命令模式。",
+          "confidence": "high",
+          "evidence": [
+            {
+              "path": "packages/create-vite/index.js",
+              "supports": "文件仅含 shebang 与 import './dist/index.js'"
+            },
+            {
+              "path": "packages/create-vite/src/index.ts",
+              "supports": "mri 解析 process.argv.slice(2) 并声明 boolean/alias/string；定义 FRAMEWORKS 框架表与 helpMessage 多行帮助文本"
+            }
+          ]
+        },
+        {
+          "claim": "命令层已有两层验证：shortcuts.spec.ts 在真实 createServer 与 preview 实例上断言自定义快捷键的绑定、覆盖与服务重启后保留；create-vite 的 cli.spec.ts 通过 execa 执行 node 与 CLI 路径，断言交互提示文案与脚手架产物文件列表。",
+          "confidence": "high",
+          "evidence": [
+            {
+              "path": "packages/vite/src/node/__tests__/shortcuts.spec.ts",
+              "supports": "test.each 分别用 createServer 与 preview 构造服务器，emit line 事件后断言各 action 调用次数，并验证 server.restart 后快捷键顺序保留"
+            },
+            {
+              "path": "packages/create-vite/__tests__/cli.spec.ts",
+              "supports": "使用 execaCommandSync 执行 node 加 CLI_PATH，断言 stdout 包含 Project name、Select a framework、目录非空提示，并读取 template-vue 与 template-react 目录核对产物文件"
+            }
+          ]
+        },
+        {
+          "claim": "在已提供的文件索引与测试候选列表中，packages/vite/src/node/__tests__/ 下存在 shortcuts.spec.ts、config.spec.ts、build.spec.ts 等，但未出现 cli.spec.ts；cli.ts 的辅助函数 filterDuplicateOptions、cleanGlobalCLIOptions、cleanBuilderCLIOptions、convertHost、convertBase 未被导出，因而缺少直接对应的单元测试。该判断受文件索引截断影响，置信度中等。",
+          "confidence": "medium",
+          "evidence": [
+            {
+              "path": "packages/vite/src/node/cli.ts",
+              "supports": "文件内部定义 filterDuplicateOptions、cleanGlobalCLIOptions、cleanBuilderCLIOptions、convertHost、convertBase，均无 export 关键字"
+            },
+            {
+              "path": "packages/vite/src/node/__tests__/shortcuts.spec.ts",
+              "supports": "作为最贴近 CLI 层的现有单测，仅覆盖快捷键绑定而未涉及 cli.ts 的参数归一化辅助函数"
+            }
+          ]
+        }
+      ],
+      "evidenceCoverage": {
+        "examinedFiles": [
+          ".github/workflows/bot.yml",
+          ".github/workflows/ci.yml",
+          ".github/workflows/copilot-setup-steps.yml",
+          ".github/workflows/ecosystem-ci-trigger.yml",
+          "CONTRIBUTING.md",
+          "README.md",
+          "package.json",
+          "packages/create-vite/__tests__/cli.spec.ts",
+          "packages/create-vite/index.js",
+          "packages/create-vite/package.json",
+          "packages/create-vite/src/index.ts",
+          "packages/create-vite/template-lit-ts/package.json",
+          "packages/create-vite/template-lit/package.json",
+          "packages/create-vite/template-preact-ts/package.json",
+          "packages/create-vite/template-preact/package.json",
+          "packages/create-vite/template-qwik-ts/package.json",
+          "packages/create-vite/template-qwik/package.json",
+          "packages/vite/bin/vite.js",
+          "packages/vite/package.json",
+          "packages/vite/src/node/__tests__/config.spec.ts",
+          "packages/vite/src/node/__tests__/shortcuts.spec.ts",
+          "packages/vite/src/node/build.ts",
+          "packages/vite/src/node/cli.ts",
+          "packages/vite/src/node/config.ts"
+        ],
+        "gaps": [
+          {
+            "kind": "coverage_limit",
+            "subject": "packages/vite/src/node/config.ts",
+            "summary": "Only a bounded excerpt was read",
+            "severity": "medium"
+          },
+          {
+            "kind": "coverage_limit",
+            "subject": "packages/vite/src/node/server/index.ts",
+            "summary": "Only a bounded excerpt was read",
+            "severity": "medium"
+          },
+          {
+            "kind": "coverage_limit",
+            "subject": "packages/vite/src/node/build.ts",
+            "summary": "Only a bounded excerpt was read",
+            "severity": "medium"
+          },
+          {
+            "kind": "coverage_limit",
+            "subject": "packages/vite/src/node/plugin.ts",
+            "summary": "Only a bounded excerpt was read",
+            "severity": "medium"
+          },
+          {
+            "kind": "coverage_limit",
+            "subject": "packages/vite/src/node/server/pluginContainer.ts",
+            "summary": "Only a bounded excerpt was read",
+            "severity": "medium"
+          },
+          {
+            "kind": "coverage_limit",
+            "subject": "packages/vite/src/node/__tests__/config.spec.ts",
+            "summary": "Only a bounded excerpt was read",
+            "severity": "medium"
+          },
+          {
+            "kind": "coverage_limit",
+            "subject": "packages/create-vite/__tests__/cli.spec.ts",
+            "summary": "Only a bounded excerpt was read",
+            "severity": "medium"
+          },
+          {
+            "kind": "coverage_limit",
+            "subject": "packages/vite/src/node/shortcuts.ts",
+            "summary": "Only a bounded excerpt was read",
+            "severity": "medium"
+          }
+        ]
+      },
+      "goodFirstIssues": [
+        {
+          "area": "测试补全（create-vite）",
+          "difficulty": "easy",
+          "description": "create-vite 的端到端测试目前只对 template-vue 与 template-react 做了产物文件列表断言，可为 lit、solid、qwik、svelte 等模板补充同类脚手架断言，改动局限在单个测试文件内。"
+        },
+        {
+          "area": "文档补全",
+          "difficulty": "easy",
+          "description": "已提供的文件索引显示部分 create-vite 模板目录（如 template-lit、template-lit-ts、template-preact、template-preact-ts、template-vanilla、template-vanilla-ts）未列出 README.md，而 template-qwik、template-react、template-svelte 等有 README.md。建议先核对该差异是否为有意为之（索引曾被截断），确认后再补全缺失的模板说明。"
+        },
+        {
+          "area": "CLI 单元测试",
+          "difficulty": "medium",
+          "description": "cli.ts 中的 filterDuplicateOptions、cleanGlobalCLIOptions、cleanBuilderCLIOptions、convertHost、convertBase 是纯函数但未导出，且已提供的测试候选中未见对应的 cli.spec.ts。可先为这些归一化行为（数组折叠取末值、全局 flag 剥离、host/base 数字转换）补充测试，必要时再小幅重构为可导出工具函数。"
+        },
+        {
+          "area": "CLI 快捷键测试",
+          "difficulty": "medium",
+          "description": "shortcuts.spec.ts 目前只覆盖自定义快捷键的绑定、覆盖与重启后保留，shortcuts.ts 内置的默认快捷键（含帮助输出与重启等）未见断言。可先补全读取该文件的默认快捷键列表，再为其中的可测行为（如帮助输出内容、禁用默认快捷键后不再触发）添加用例。"
+        },
+        {
+          "area": "插件容器可读性",
+          "difficulty": "medium",
+          "description": "pluginContainer.ts 承担 resolve/load/transform 的 hook 编排，但其调用顺序在现有证据中无法确认，说明该文件阅读门槛较高。可为关键流程补充分段注释或补充内部文档，帮助后续贡献者理解 hook 执行次序（不改变行为）。"
+        },
+        {
+          "area": "CLI 新选项的全链路接入",
+          "difficulty": "hard",
+          "description": "在 cli.ts 新增一个全局选项并非只改一行：需要同步 GlobalCLIOptions 接口、在 cleanGlobalCLIOptions 的删除列表中排除已消费字段（遗漏会导致选项被透传给核心）、必要时更新 packages/vite 的类型导出与文档，并考虑 playground/cli 下的端到端用例。适合在熟悉仓库后作为进阶任务。"
+        }
+      ],
+      "contributionSetup": {
+        "devEnv": "Node.js ^20.19.0 或 >=22.12.0；包管理器必须是 pnpm（packageManager 指定 pnpm@12.4.2，preinstall 通过 only-allow pnpm 强制）。克隆后先 pnpm i，再在根目录 pnpm run build；开发 vite 本体时进入 packages/vite 运行 pnpm run dev 做增量重建。",
+        "build": "pnpm run build（根目录，实际执行 pnpm -r --filter='./packages/*' run build）；文档站为 pnpm run docs / pnpm run docs-build",
+        "test": "pnpm test（等价于 test-unit + test-serve + test-build）；仅跑单测用 pnpm test-unit，e2e 用 pnpm test-serve 与 pnpm test-build",
+        "lint": "pnpm lint（eslint --cache . --concurrency auto）；格式化 pnpm format（oxfmt，非 prettier）；类型检查 pnpm typecheck"
+      },
+      "entryFiles": [
+        {
+          "file": "CONTRIBUTING.md",
+          "description": "贡献指南：monorepo 与 pnpm 工作区说明、本地开发步骤（pnpm i、pnpm run build、packages/vite 的 dev）、文档站开发方式、依赖取舍原则与 AI 政策入口。",
+          "reason": "第一次贡献前的必读入口，先看它再决定改哪里。"
+        },
+        {
+          "file": "packages/vite/bin/vite.js",
+          "description": "已发布 vite 命令的启动壳，仅处理 compile cache、debug/filter 环境变量与 --profile，最后动态导入 dist/node/cli.js。",
+          "reason": "理解 CLI 入口边界：这里不做参数解析，改命令行为应去 src/node/cli.ts。"
+        },
+        {
+          "file": "packages/vite/src/node/cli.ts",
+          "description": "CLI 分发中心：cac 实例、全局选项、serve/build/optimize/preview 四个子命令、选项归一化辅助函数与统一错误出口。",
+          "reason": "argv 到核心 API 的映射全部在此，是命令行相关贡献的首选落点。"
+        },
+        {
+          "file": "packages/vite/src/node/shortcuts.ts",
+          "description": "运行期交互快捷键（基于 readline 分发、状态挂在 server._shortcutsState、支持插件注入自定义快捷键）。",
+          "reason": "容易与 cli.ts 混淆的第二处命令入口，运行期行为改动在这里。"
+        },
+        {
+          "file": "packages/vite/src/node/index.ts",
+          "description": "公共 Node API 门面，只做再导出，不实现逻辑。",
+          "reason": "快速定位 createServer/build/preview 等 API 的真实实现文件位于哪个模块。"
+        },
+        {
+          "file": "packages/vite/src/node/config.ts",
+          "description": "配置解析与归一化：defineConfig、UserConfig 与解析后的配置类型、插件与服务选项合并的入口。",
+          "reason": "dev 与 build 两条链路的共同输入阶段，理解配置语义从这里开始。"
+        },
+        {
+          "file": "packages/vite/src/node/server/index.ts",
+          "description": "开发服务器创建与中间件装配中心，导入 connect、chokidar、cors 及 base/static/transform/proxy 等中间件。",
+          "reason": "dev 主链路的装配点，理解请求处理顺序的起点。"
+        },
+        {
+          "file": "packages/vite/src/node/build.ts",
+          "description": "构建命令实现，以 rolldown 为底层打包器，并组合 importAnalysisBuild、license、manifest、terser 等构建期插件。",
+          "reason": "与 dev server 对应的输出阶段实现。"
+        },
+        {
+          "file": "packages/vite/src/node/plugin.ts",
+          "description": "插件接口与 hook 上下文类型定义，通过 declare module 增强 rolldown 类型。",
+          "reason": "仓库最核心的扩展抽象，写插件或改插件行为前必读。"
+        },
+        {
+          "file": "packages/create-vite/src/index.ts",
+          "description": "脚手架 CLI 实现：mri 解析参数、内联框架表与帮助文案、模板选择与项目生成。",
+          "reason": "体量小、可独立运行，适合作为第二个熟悉目标与对照案例。"
+        }
+      ],
+      "notesForNewcomers": [
+        {
+          "tip": "这是 pnpm workspace 单仓多包仓库，发布 vite、@vitejs/plugin-legacy、create-vite 三个包；preinstall 用 only-allow pnpm，请勿使用 npm/yarn 安装。"
+        },
+        {
+          "tip": "Node 版本要求 ^20.19.0 或 >=22.12.0，cli.ts 中也有运行期版本告警；使用较老的 Node 可能在启动阶段直接看到升级提示。"
+        },
+        {
+          "tip": "标准起步流程是根目录 pnpm i 后 pnpm run build；开发 vite 本体时再到 packages/vite 运行 pnpm run dev，让改动自动重建。"
+        },
+        {
+          "tip": "测试分三层：pnpm test-unit（vitest run 单测）、pnpm test-serve、pnpm test-build（以 vitest.config.e2e.ts 驱动 playground 下的 e2e 夹具）；提交前至少跑相关单测。"
+        },
+        {
+          "tip": "playground/ 是按功能域（assets、css、env、dynamic-import、fs-serve 等）组织的 e2e 夹具目录，每个目录自带 vite.config 与 __tests__，新增行为验证通常需要同时改夹具与用例。"
+        },
+        {
+          "tip": "bin 文件保持极薄是仓库约定：packages/vite/bin/vite.js 与 packages/create-vite/index.js 都只做转发，改命令逻辑请改 src/ 下的实现文件。"
+        },
+        {
+          "tip": "命令行能力被拆成启动期（cli.ts，cac 子命令）与运行期（shortcuts.ts，readline 快捷键）两段，按需求归属选择修改位置。"
+        },
+        {
+          "tip": "格式化使用 oxfmt 而非 prettier：根 package.json 的 format 脚本与 lint-staged 配置均调用 oxfmt；提交时 lint-staged 会对 packages 下源码跑 eslint --fix。"
+        },
+        {
+          "tip": "PR 标题需符合语义化提交规范：仓库内存在 .github/commit-convention.md 与 semantic-pull-request 工作流，提交信息示例形如 docs(config): ...。"
+        },
+        {
+          "tip": "仓库有明确的 AI 政策：.github/workflows/bot.yml 使用 AgentScan 自动识别疑似由机器人或大模型创建的内容并关闭，请先阅读 CONTRIBUTING.md 中的 AI policy 再提交。"
+        }
+      ]
+    }
+  },
+  "stop_reason": "report_completed",
+  "usage": [
+    {
+      "stage": "explorer",
+      "turns": 6,
+      "usage": {
+        "input_tokens": 37940,
+        "cache_creation_input_tokens": 0,
+        "cache_read_input_tokens": 77824,
+        "output_tokens": 3879,
+        "output_tokens_details": {
+          "thinking_tokens": 0
+        },
+        "server_tool_use": {
+          "web_search_requests": 0,
+          "web_fetch_requests": 0
+        },
+        "service_tier": "standard",
+        "cache_creation": {
+          "ephemeral_1h_input_tokens": 0,
+          "ephemeral_5m_input_tokens": 0
+        },
+        "inference_geo": "",
+        "iterations": [],
+        "speed": "standard"
+      },
+      "cost_usd": 0.24490480000000003,
+      "session_id": "57262bf9-b217-43a7-abb6-8d89c2cdfe9c",
+      "subtype": "success",
+      "duration_ms": 25675,
+      "model_usage": {
+        "deepseek-v4-flash": {
+          "inputTokens": 37940,
+          "outputTokens": 3879,
+          "cacheReadInputTokens": 77824,
+          "cacheCreationInputTokens": 0,
+          "webSearchRequests": 0,
+          "costUSD": 0.24490480000000003,
+          "contextWindow": 200000,
+          "maxOutputTokens": 32000,
+          "thinkingTokens": 0,
+          "canonicalModel": "deepseek-v4-flash",
+          "provider": "firstParty",
+          "costBasis": "unknown"
+        }
+      }
+    },
+    {
+      "stage": "explorer",
+      "turns": 2,
+      "usage": {
+        "input_tokens": 54462,
+        "cache_creation_input_tokens": 0,
+        "cache_read_input_tokens": 0,
+        "output_tokens": 5139,
+        "output_tokens_details": {
+          "thinking_tokens": 0
+        },
+        "server_tool_use": {
+          "web_search_requests": 0,
+          "web_fetch_requests": 0
+        },
+        "service_tier": "standard",
+        "cache_creation": {
+          "ephemeral_1h_input_tokens": 0,
+          "ephemeral_5m_input_tokens": 0
+        },
+        "inference_geo": "",
+        "iterations": [],
+        "speed": "standard"
+      },
+      "cost_usd": 0.320628,
+      "session_id": "455f66b4-0c71-430c-bbb2-e562cc165e1d",
+      "subtype": "success",
+      "duration_ms": 23161,
+      "model_usage": {
+        "deepseek-v4-flash": {
+          "inputTokens": 54462,
+          "outputTokens": 5139,
+          "cacheReadInputTokens": 0,
+          "cacheCreationInputTokens": 0,
+          "webSearchRequests": 0,
+          "costUSD": 0.320628,
+          "contextWindow": 200000,
+          "maxOutputTokens": 32000,
+          "thinkingTokens": 0,
+          "canonicalModel": "deepseek-v4-flash",
+          "provider": "firstParty",
+          "costBasis": "unknown"
+        }
+      }
+    },
+    {
+      "stage": "mentor",
+      "turns": 6,
+      "usage": {
+        "input_tokens": 40321,
+        "cache_creation_input_tokens": 0,
+        "cache_read_input_tokens": 83968,
+        "output_tokens": 5027,
+        "output_tokens_details": {
+          "thinking_tokens": 0
+        },
+        "server_tool_use": {
+          "web_search_requests": 0,
+          "web_fetch_requests": 0
+        },
+        "service_tier": "standard",
+        "cache_creation": {
+          "ephemeral_1h_input_tokens": 0,
+          "ephemeral_5m_input_tokens": 0
+        },
+        "inference_geo": "",
+        "iterations": [],
+        "speed": "standard"
+      },
+      "cost_usd": 0.2786176,
+      "session_id": "7211d414-dfd8-4079-aea2-81d48e845bbc",
+      "subtype": "success",
+      "duration_ms": 24505,
+      "model_usage": {
+        "deepseek-v4-flash": {
+          "inputTokens": 40321,
+          "outputTokens": 5027,
+          "cacheReadInputTokens": 83968,
+          "cacheCreationInputTokens": 0,
+          "webSearchRequests": 0,
+          "costUSD": 0.2786176,
+          "contextWindow": 200000,
+          "maxOutputTokens": 32000,
+          "thinkingTokens": 0,
+          "canonicalModel": "deepseek-v4-flash",
+          "provider": "firstParty",
+          "costBasis": "unknown"
+        }
+      }
+    },
+    {
+      "stage": "mentor",
+      "turns": 3,
+      "usage": {
+        "input_tokens": 74268,
+        "cache_creation_input_tokens": 0,
+        "cache_read_input_tokens": 75904,
+        "output_tokens": 11412,
+        "output_tokens_details": {
+          "thinking_tokens": 0
+        },
+        "server_tool_use": {
+          "web_search_requests": 0,
+          "web_fetch_requests": 0
+        },
+        "service_tier": "standard",
+        "cache_creation": {
+          "ephemeral_1h_input_tokens": 0,
+          "ephemeral_5m_input_tokens": 0
+        },
+        "inference_geo": "",
+        "iterations": [],
+        "speed": "standard"
+      },
+      "cost_usd": 0.5404928,
+      "session_id": "a7ac64f5-7d18-46a4-badf-74a0f796a0ad",
+      "subtype": "success",
+      "duration_ms": 50528,
+      "model_usage": {
+        "deepseek-v4-flash": {
+          "inputTokens": 74268,
+          "outputTokens": 11412,
+          "cacheReadInputTokens": 75904,
+          "cacheCreationInputTokens": 0,
+          "webSearchRequests": 0,
+          "costUSD": 0.5404928,
+          "contextWindow": 200000,
+          "maxOutputTokens": 32000,
+          "thinkingTokens": 0,
+          "canonicalModel": "deepseek-v4-flash",
+          "provider": "firstParty",
+          "costBasis": "unknown"
+        }
+      }
+    },
+    {
+      "stage": "contributor",
+      "turns": 4,
+      "usage": {
+        "input_tokens": 74451,
+        "cache_creation_input_tokens": 0,
+        "cache_read_input_tokens": 155008,
+        "output_tokens": 12485,
+        "output_tokens_details": {
+          "thinking_tokens": 0
+        },
+        "server_tool_use": {
+          "web_search_requests": 0,
+          "web_fetch_requests": 0
+        },
+        "service_tier": "standard",
+        "cache_creation": {
+          "ephemeral_1h_input_tokens": 0,
+          "ephemeral_5m_input_tokens": 0
+        },
+        "inference_geo": "",
+        "iterations": [],
+        "speed": "standard"
+      },
+      "cost_usd": 0.5785056,
+      "session_id": "feaa4c00-dce9-47d6-adb0-4790cbe7d45e",
+      "subtype": "success",
+      "duration_ms": 54430,
+      "model_usage": {
+        "deepseek-v4-flash": {
+          "inputTokens": 74451,
+          "outputTokens": 12485,
+          "cacheReadInputTokens": 155008,
+          "cacheCreationInputTokens": 0,
+          "webSearchRequests": 0,
+          "costUSD": 0.5785056,
+          "contextWindow": 200000,
+          "maxOutputTokens": 32000,
+          "thinkingTokens": 0,
+          "canonicalModel": "deepseek-v4-flash",
+          "provider": "firstParty",
+          "costBasis": "unknown"
+        }
+      }
+    }
+  ],
+  "elapsed_seconds": 182.844,
+  "error": null,
+  "versions": {
+    "repomentor": "0.1.0",
+    "sdk": "0.2.158",
+    "cli": "2.1.280",
+    "model": "deepseek-v4-flash"
+  },
+  "harness": {
+    "stages": {
+      "explorer": {
+        "status": "completed",
+        "plan": {
+          "goal": "Explain how the Vite monorepo (vitejs/vite) organizes its core: public Node API entry → config resolution/plugin pipeline → dev server middleware chain and Rolldown-based build, and how that behavior is verified by unit tests plus playground e2e suites.",
+          "rationale": "Profile shows a pnpm monorepo with three published packages; README confirms Vite = dev server (ESM + HMR) + Rolldown build + universal Plugin API. Implementation mass sits in packages/vite/src/node, paralleled by src/client, src/module-runner, src/shared — a layered split. Discovery: search_symbols(\"createServer\") maps only to node unit tests, marking createServer as the central factory; trace_module_dependencies from src/node/index.ts + server/index.ts yielded 24 internal edges into build.ts, preview.ts, optimizer, plugins/*, server/hmr.ts, ssr/*, utils.ts, http.ts, watch.ts, so the entry is a thin re-export facade over server/build/optimizer; find_related_tests tied server/index.ts to runtime specs and config/build to node/__tests__ specs, giving a concrete verification path. Open question: which layer owns plugin-hook sequencing versus config normalization — the file batch should settle it.",
+          "questions": [
+            "What exactly does packages/vite/src/node/index.ts re-export as the public Node API surface, and where does the real control flow start?",
+            "How does config.ts resolve and load vite.config.* (loadConfigFromFile, mergeConfig, plugin normalization) and feed createServer/createBuilder?",
+            "What is the middleware/plugin-hook pipeline inside server/index.ts and pluginContainer.ts, and in what order do resolve/load/transform hooks run?",
+            "How does build.ts drive Rolldown, and how do shared plugins differ between the dev and build paths?",
+            "What role does environment.ts / BaseEnvironment play as the cross-cutting abstraction shared by client, ssr, and worker environments?",
+            "Are the unit tests in packages/vite/src/node/__tests__ representative of these core paths, or does real coverage live in playground/*/__tests__ e2e specs?"
+          ],
+          "actions": [],
+          "files": [
+            {
+              "path": "packages/vite/src/node/index.ts",
+              "purpose": "Public Node API entry facade; trace_module_dependencies shows it re-exports server/build/optimizer layers — establishes the true entry boundary",
+              "priority": "high"
+            },
+            {
+              "path": "packages/vite/src/node/config.ts",
+              "purpose": "Config resolution and loading (resolveConfig/loadConfigFromFile/mergeConfig); the input stage of the dev→build data flow",
+              "priority": "high"
+            },
+            {
+              "path": "packages/vite/src/node/server/index.ts",
+              "purpose": "Dev server creation and middleware wiring; central runtime hub with edges into hmr, plugins, http, watch, ws",
+              "priority": "high"
+            },
+            {
+              "path": "packages/vite/src/node/build.ts",
+              "purpose": "Build command driving Rolldown; the output stage of the pipeline and counterpart to the dev server",
+              "priority": "high"
+            },
+            {
+              "path": "packages/vite/src/node/plugin.ts",
+              "purpose": "Core Plugin interface contract and hook type definitions — the central abstraction implemented across plugins/ and consumed by pluginContainer",
+              "priority": "high"
+            },
+            {
+              "path": "packages/vite/src/node/server/pluginContainer.ts",
+              "purpose": "Plugin hook orchestration (resolve/load/transform sequencing) — the likely location of the main control flow",
+              "priority": "high"
+            },
+            {
+              "path": "packages/vite/src/node/__tests__/config.spec.ts",
+              "purpose": "Representative unit test for config resolution and createServer usage; concretely verifies the entry→config path",
+              "priority": "high"
+            },
+            {
+              "path": "packages/vite/src/node/environment.ts",
+              "purpose": "Environment/BaseEnvironment abstraction shared by client, ssr, and worker envs; explains the multi-environment architecture visible in the tree",
+              "priority": "medium"
+            }
+          ],
+          "stopConditions": [
+            "Entry (src/node/index.ts), core responsibility (config.ts + server/index.ts + build.ts), and a verification path (src/node/__tests__/config.spec.ts) are supported by indexed paths",
+            "Dependency direction from entry into server/build/config layers is confirmed by trace edges",
+            "If plugin.ts and pluginContainer.ts do not reveal hook sequencing, record plugin-hook ordering as an explicit unresolved question rather than inferring it",
+            "Do not read playground/** fixtures or template-* files; they are scaffolding, not core implementation"
+          ]
+        },
+        "examinedPaths": [
+          "packages/vite/src/node/index.ts",
+          "packages/vite/src/node/config.ts",
+          "packages/vite/src/node/server/index.ts",
+          "packages/vite/src/node/build.ts",
+          "packages/vite/src/node/plugin.ts",
+          "packages/vite/src/node/server/pluginContainer.ts",
+          "packages/vite/src/node/__tests__/config.spec.ts",
+          "packages/vite/src/node/environment.ts"
+        ],
+        "skippedPaths": [],
+        "unresolvedQuestions": [],
+        "skillPolicy": {
+          "skillNames": [
+            "analyze-generic"
+          ],
+          "allowedTools": [
+            "search_symbols",
+            "trace_module_dependencies",
+            "find_related_tests"
+          ],
+          "preferredTools": [
+            "trace_module_dependencies",
+            "find_related_tests"
+          ],
+          "recommendedQuestions": [
+            "Where is the public or runtime entry point?",
+            "Which modules implement the main control flow?",
+            "How is the core behavior verified?"
+          ],
+          "evidenceRequirements": [
+            "One public or runtime entry file",
+            "One core implementation file",
+            "One representative test or an explicit coverage gap"
+          ],
+          "stopConditions": [
+            "Entry, core responsibility, and verification path are supported or explicitly unresolved"
+          ],
+          "maxDiscoveryActions": 3,
+          "maxEvidenceFiles": 8
+        },
+        "discoveryActionsUsed": 3,
+        "stopReason": "evidence_batch_completed"
+      },
+      "mentor": {
+        "status": "completed",
+        "plan": {
+          "goal": "Map the CLI layer of this Vite monorepo: identify the published bin targets (vite, create-vite/cva), find where argv is parsed and subcommands (dev/build/preview/optimize and r/rr/u/o/q) are dispatched, establish where the thin-CLI/fat-core boundary falls relative to server/index.ts, build.ts and preview.ts, and pin down the representative command tests.",
+          "rationale": "The explorer stage already consumed 8 files on the node API facade, config, dev server, build and plugin container, so the open gap is exactly the CLI boundary this skill targets. Discovery supports the batch: search_symbols(\"cac\") returned packages/vite/bin/vite.js, showing the bin itself parses arguments; trace_module_dependencies seeded on bin/vite.js + src/node/cli.ts returned 8 internal edges into server/index.ts, build.ts, preview.ts, config.ts, optimizer/index.ts, constants.ts, logger.ts, shortcuts.ts, so the CLI→core direction is evidenced and those core files need not be re-read. find_related_tests tied shortcuts.ts to __tests__/shortcuts.spec.ts and surfaced create-vite/__tests__/cli.spec.ts, giving one command test per bin. Traces give edges but no source, so dispatch ownership remains an inference to settle by reading.",
+          "questions": [
+            "Which file owns argv parsing and dispatch for the published `vite` bin — packages/vite/bin/vite.js or src/node/cli.ts — and how is work divided between them?",
+            "How is the cac CLI instance wired to core calls (createServer, build, preview, optimizeDeps), and is there any dispatch layer between cli.ts and those modules?",
+            "Where does the thin-CLI / fat-core split actually fall: does the CLI only translate options and format output, or does it also implement behavior?",
+            "How are global options (--config, --root, --mode, --logLevel, --debug, --filter) normalized before reaching core, and where do .env / config-file reads enter that path?",
+            "For create-vite, how does the bin shim delegate to the implementation, and how are argv and template selection parsed there (mri vs cac)?",
+            "Which tests exercise command dispatch, exit behavior, and output contracts, and is the `vite` bin itself covered or is that an explicit gap?"
+          ],
+          "actions": [],
+          "files": [
+            {
+              "path": "packages/vite/bin/vite.js",
+              "purpose": "Published bin target and the site of cac wiring; decides whether the bin is a thin shim or the dispatch owner",
+              "priority": "high"
+            },
+            {
+              "path": "packages/vite/src/node/cli.ts",
+              "purpose": "CLI command definitions and option schemas for dev/build/preview/optimize; the CLI layer that maps argv to core calls",
+              "priority": "high"
+            },
+            {
+              "path": "packages/vite/package.json",
+              "purpose": "bin field for the vite package, establishing the published CLI entry contract named in the evidence requirement",
+              "priority": "high"
+            },
+            {
+              "path": "packages/vite/src/node/__tests__/shortcuts.spec.ts",
+              "purpose": "Representative test for CLI-side dispatch and output contracts; the unit-level verification path for the CLI layer",
+              "priority": "high"
+            },
+            {
+              "path": "packages/create-vite/__tests__/cli.spec.ts",
+              "purpose": "End-to-end command test asserting CLI behavior and output; the second representative command test for the required verification path",
+              "priority": "high"
+            },
+            {
+              "path": "packages/vite/src/node/shortcuts.ts",
+              "purpose": "In-server interactive command dispatch (r/rr/u/o/q); secondary command routing and terminal output behavior",
+              "priority": "medium"
+            },
+            {
+              "path": "packages/create-vite/index.js",
+              "purpose": "Second bin shim (create-vite / cva); shows how a thin bin delegates to the implementation module",
+              "priority": "medium"
+            },
+            {
+              "path": "packages/create-vite/src/index.ts",
+              "purpose": "create-vite CLI implementation including mri parsing and template selection; contrast case for thin-CLI vs inline logic",
+              "priority": "medium"
+            }
+          ],
+          "stopConditions": [
+            "The CLI entry/bin target, the command registration or dispatch implementation, and at least one representative command test are each supported by an indexed path (bin/vite.js, src/node/cli.ts or bin/vite.js as dispatcher, __tests__/shortcuts.spec.ts and create-vite/cli.spec.ts)",
+            "The path from CLI entry through dispatch to core behavior is evidenced by the 8 traced edges into server/index.ts, build.ts, preview.ts, config.ts and optimizer/index.ts — do not re-read those core files, they are already in evidence",
+            "If cli.ts turns out to be absent from the runtime path and bin/vite.js parses argv itself, record bin/vite.js as the dispatch owner instead of assuming the cli.ts layer applies",
+            "Record logger.ts (log-level and output formatting) as an explicit coverage gap if the 8-file cap is consumed, and do not read template-* or playground fixture files — they are scaffolding, not CLI implementation"
+          ]
+        },
+        "examinedPaths": [
+          "packages/vite/bin/vite.js",
+          "packages/vite/src/node/cli.ts",
+          "packages/vite/package.json",
+          "packages/vite/src/node/__tests__/shortcuts.spec.ts",
+          "packages/create-vite/__tests__/cli.spec.ts",
+          "packages/vite/src/node/shortcuts.ts",
+          "packages/create-vite/index.js",
+          "packages/create-vite/src/index.ts"
+        ],
+        "skippedPaths": [],
+        "unresolvedQuestions": [],
+        "skillPolicy": {
+          "skillNames": [
+            "analyze-cli-tool"
+          ],
+          "allowedTools": [
+            "search_symbols",
+            "trace_module_dependencies",
+            "find_related_tests"
+          ],
+          "preferredTools": [
+            "trace_module_dependencies",
+            "find_related_tests"
+          ],
+          "recommendedQuestions": [
+            "How do argv parsing and command dispatch reach core behavior?",
+            "Where is the CLI boundary separated from reusable application logic?",
+            "Which tests verify commands, exit behavior, and output contracts?"
+          ],
+          "evidenceRequirements": [
+            "CLI entry or bin target",
+            "Command registration or dispatch implementation",
+            "Representative command test or an explicit coverage gap"
+          ],
+          "stopConditions": [
+            "The path from CLI entry through dispatch to core behavior is evidenced"
+          ],
+          "maxDiscoveryActions": 3,
+          "maxEvidenceFiles": 8
+        },
+        "discoveryActionsUsed": 3,
+        "stopReason": "global_evidence_budget_exhausted"
+      },
+      "contributor": {
+        "status": "completed",
+        "plan": null,
+        "examinedPaths": [],
+        "skippedPaths": [],
+        "unresolvedQuestions": [],
+        "skillPolicy": null,
+        "discoveryActionsUsed": 0,
+        "stopReason": null
+      }
+    },
+    "budget": {
+      "maxEvidenceBatches": 2,
+      "maxFilesRead": 18,
+      "maxEvidenceBytes": 88000,
+      "usedEvidenceBatches": 2,
+      "filesRead": 16,
+      "evidenceBytes": 88000
+    },
+    "observations": [
+      {
+        "stage": "explorer",
+        "tool": "search_symbols",
+        "purpose": "Locate the public dev-server factory to confirm the primary runtime entry surface",
+        "summary": "Found 5 candidate paths; source text is not included.",
+        "paths": [
+          "packages/vite/scripts/benchCircularImport.ts",
+          "packages/vite/src/node/__tests__/config.spec.ts",
+          "packages/vite/src/node/__tests__/dev.spec.ts",
+          "packages/vite/src/node/__tests__/environment.spec.ts",
+          "packages/vite/src/node/__tests__/http.spec.ts"
+        ],
+        "metadata": {
+          "query": "createServer",
+          "matches": 20
+        }
+      },
+      {
+        "stage": "explorer",
+        "tool": "trace_module_dependencies",
+        "purpose": "Confirm internal dependency direction from the public entry into server/build/config layers",
+        "summary": "Found 24 candidate paths; source text is not included.",
+        "paths": [
+          "packages/vite/src/node/plugin.ts",
+          "packages/vite/src/node/environment.ts",
+          "packages/vite/src/node/server/index.ts",
+          "packages/vite/src/node/preview.ts",
+          "packages/vite/src/node/build.ts",
+          "packages/vite/src/node/optimizer/index.ts",
+          "packages/vite/src/node/idResolver.ts",
+          "packages/vite/src/node/plugins/css.ts",
+          "packages/vite/src/node/plugins/esbuild.ts",
+          "packages/vite/src/node/plugins/oxc.ts",
+          "packages/vite/src/node/server/middlewares/error.ts",
+          "packages/vite/src/node/ssr/runnerImport.ts",
+          "packages/vite/src/node/ssr/fetchModule.ts",
+          "packages/vite/src/node/server/hmr.ts",
+          "packages/vite/src/node/ssr/ssrTransform.ts",
+          "packages/vite/src/node/server/send.ts",
+          "packages/vite/src/node/logger.ts",
+          "packages/vite/src/node/server/searchRoot.ts",
+          "packages/vite/src/node/env.ts",
+          "packages/vite/src/node/assetSource.ts",
+          "packages/vite/src/node/utils.ts",
+          "packages/vite/src/node/http.ts",
+          "packages/vite/src/node/watch.ts",
+          "packages/vite/src/node/plugins/json.ts"
+        ],
+        "metadata": {
+          "edges": 24,
+          "seedFiles": 2
+        }
+      },
+      {
+        "stage": "explorer",
+        "tool": "find_related_tests",
+        "purpose": "Identify representative tests covering the core server, config, and build modules",
+        "summary": "Found 12 candidate paths; source text is not included.",
+        "paths": [
+          "packages/vite/src/node/ssr/runtime/__tests__/server-hmr.spec.ts",
+          "packages/vite/src/node/ssr/runtime/__tests__/server-no-hmr.spec.ts",
+          "packages/vite/src/node/ssr/runtime/__tests__/server-runtime.spec.ts",
+          "packages/vite/src/node/ssr/runtime/__tests__/server-source-maps.spec.ts",
+          "packages/vite/src/node/ssr/runtime/__tests__/server-worker-runner.invoke.spec.ts",
+          "packages/vite/src/node/ssr/runtime/__tests__/server-worker-runner.spec.ts",
+          "packages/vite/src/node/server/__tests__/fixtures/watcher/nested-root/vite.config.js",
+          "packages/vite/src/node/__tests__/build.spec.ts",
+          "packages/vite/src/node/__tests__/config.spec.ts",
+          "packages/vite/src/node/__tests__/fixtures/config/cjs-module-vars-in-esm/vite.config.ts",
+          "packages/vite/src/node/__tests__/fixtures/config/entry/vite.config.import-attributes.ts",
+          "packages/vite/src/node/__tests__/fixtures/config/entry/vite.config.ts"
+        ],
+        "metadata": {
+          "tests": 12,
+          "seedFiles": 3
+        }
+      },
+      {
+        "stage": "mentor",
+        "tool": "search_symbols",
+        "purpose": "Identify which CLI argument-parsing framework (cac) is used and where command definitions live",
+        "summary": "Found 7 candidate paths; source text is not included.",
+        "paths": [
+          "eslint.config.js",
+          "packages/create-vite/__tests__/cli.spec.ts",
+          "packages/vite/bin/vite.js",
+          "packages/vite/rolldown.config.ts",
+          "packages/vite/src/client/bundledDevClient.ts",
+          "packages/vite/src/client/bundledDevHmrClient.ts",
+          "packages/vite/src/module-runner/runner.ts"
+        ],
+        "metadata": {
+          "query": "cac",
+          "matches": 20
+        }
+      },
+      {
+        "stage": "mentor",
+        "tool": "trace_module_dependencies",
+        "purpose": "Confirm the direction from the bin shim through cli.ts into core server/build/preview modules",
+        "summary": "Found 8 candidate paths; source text is not included.",
+        "paths": [
+          "packages/vite/src/node/build.ts",
+          "packages/vite/src/node/config.ts",
+          "packages/vite/src/node/constants.ts",
+          "packages/vite/src/node/logger.ts",
+          "packages/vite/src/node/server/index.ts",
+          "packages/vite/src/node/shortcuts.ts",
+          "packages/vite/src/node/optimizer/index.ts",
+          "packages/vite/src/node/preview.ts"
+        ],
+        "metadata": {
+          "edges": 8,
+          "seedFiles": 2
+        }
+      },
+      {
+        "stage": "mentor",
+        "tool": "find_related_tests",
+        "purpose": "Locate representative tests for command parsing, exit behavior, and terminal shortcut output contracts",
+        "summary": "Found 12 candidate paths; source text is not included.",
+        "paths": [
+          "packages/vite/src/node/__tests__/fixtures/scan-build-input/src/entry-client.tsx",
+          "packages/vite/src/node/__tests__/fixtures/environment-alias/test.client.js",
+          "packages/vite/src/node/__tests__/shortcuts.spec.ts",
+          "packages/vite/src/node/ssr/runtime/__tests__/fixtures/cyclic/entry-cyclic.js",
+          "packages/create-vite/__tests__/cli.spec.ts",
+          "packages/vite/src/node/__tests__/fixtures/scan-subpath-import-glob/src/foo/a.ts",
+          "packages/vite/src/node/__tests__/packages/build-project/asset.txt",
+          "packages/vite/src/node/__tests__/packages/build-project/index.html",
+          "packages/vite/src/node/__tests__/packages/child/index.js",
+          "packages/vite/src/node/__tests__/packages/child/package.json",
+          "packages/vite/src/node/__tests__/packages/module/package.json",
+          "packages/vite/src/node/__tests__/packages/name/package.json"
+        ],
+        "metadata": {
+          "tests": 12,
+          "seedFiles": 3
+        }
+      }
+    ],
+    "ledger": {
+      "packages/vite/src/node/index.ts": {
+        "status": "available",
+        "attempts": [
+          {
+            "phase": "explorer",
+            "status": "available",
+            "bytes": 8165
+          }
+        ]
+      },
+      "packages/vite/src/node/config.ts": {
+        "status": "partial",
+        "attempts": [
+          {
+            "phase": "explorer",
+            "status": "partial",
+            "bytes": 18816
+          }
+        ]
+      },
+      "packages/vite/src/node/server/index.ts": {
+        "status": "partial",
+        "attempts": [
+          {
+            "phase": "explorer",
+            "status": "partial",
+            "bytes": 4000
+          }
+        ]
+      },
+      "packages/vite/src/node/build.ts": {
+        "status": "partial",
+        "attempts": [
+          {
+            "phase": "explorer",
+            "status": "partial",
+            "bytes": 4000
+          }
+        ]
+      },
+      "packages/vite/src/node/plugin.ts": {
+        "status": "partial",
+        "attempts": [
+          {
+            "phase": "explorer",
+            "status": "partial",
+            "bytes": 4000
+          }
+        ]
+      },
+      "packages/vite/src/node/server/pluginContainer.ts": {
+        "status": "partial",
+        "attempts": [
+          {
+            "phase": "explorer",
+            "status": "partial",
+            "bytes": 4000
+          }
+        ]
+      },
+      "packages/vite/src/node/__tests__/config.spec.ts": {
+        "status": "partial",
+        "attempts": [
+          {
+            "phase": "explorer",
+            "status": "partial",
+            "bytes": 4000
+          }
+        ]
+      },
+      "packages/vite/src/node/environment.ts": {
+        "status": "available",
+        "attempts": [
+          {
+            "phase": "explorer",
+            "status": "available",
+            "bytes": 1019
+          }
+        ]
+      },
+      "packages/vite/bin/vite.js": {
+        "status": "available",
+        "attempts": [
+          {
+            "phase": "mentor",
+            "status": "available",
+            "bytes": 2995
+          }
+        ]
+      },
+      "packages/vite/src/node/cli.ts": {
+        "status": "available",
+        "attempts": [
+          {
+            "phase": "mentor",
+            "status": "available",
+            "bytes": 14538
+          }
+        ]
+      },
+      "packages/vite/package.json": {
+        "status": "available",
+        "attempts": [
+          {
+            "phase": "mentor",
+            "status": "available",
+            "bytes": 5122
+          }
+        ]
+      },
+      "packages/vite/src/node/__tests__/shortcuts.spec.ts": {
+        "status": "available",
+        "attempts": [
+          {
+            "phase": "mentor",
+            "status": "available",
+            "bytes": 4908
+          }
+        ]
+      },
+      "packages/create-vite/__tests__/cli.spec.ts": {
+        "status": "partial",
+        "attempts": [
+          {
+            "phase": "mentor",
+            "status": "partial",
+            "bytes": 4391
+          }
+        ]
+      },
+      "packages/vite/src/node/shortcuts.ts": {
+        "status": "partial",
+        "attempts": [
+          {
+            "phase": "mentor",
+            "status": "partial",
+            "bytes": 4000
+          }
+        ]
+      },
+      "packages/create-vite/index.js": {
+        "status": "available",
+        "attempts": [
+          {
+            "phase": "mentor",
+            "status": "available",
+            "bytes": 46
+          }
+        ]
+      },
+      "packages/create-vite/src/index.ts": {
+        "status": "partial",
+        "attempts": [
+          {
+            "phase": "mentor",
+            "status": "partial",
+            "bytes": 4000
+          }
+        ]
+      }
+    }
+  },
+  "repository": "vitejs/vite",
+  "commit_sha": "1544bb1b7ac92f775e9d0dea97954c99cc6cbd43"
+}
