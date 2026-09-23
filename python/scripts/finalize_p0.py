@@ -3,11 +3,12 @@
 import json
 from pathlib import Path
 
+from repomentor.paths import data_root
 from repomentor.repository import SnapshotStore
 
 ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / "experiments/p0"
-store = SnapshotStore(ROOT / "artifacts/corpus")
+store = SnapshotStore(data_root() / "corpus")
 corpus = json.loads((OUT / "corpus.json").read_text(encoding="utf-8"))
 licenses = {
     "pypa/packaging": "Apache-2.0 OR BSD-2-Clause",

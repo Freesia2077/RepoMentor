@@ -28,7 +28,7 @@ cli.py / Notebook / 实验脚本
 | `src/services/harness-skills.ts`、根目录 `agents/` / `skills/` | `skills.py`、包内 `assets/` | 初次迁移复制可信资产并记录哈希；运行只用包内资产 |
 | `src/services/claude-agent-runtime.ts` | `runtimes/claude.py` | 官方 Python SDK、隔离 cwd、受控 MCP、权限 hook、结构化输出和有限修复 |
 | `src/services/pipeline.ts` | `report.py` | 三阶段报告、完整小仓库读取复用、取消和错误结果；无 HTTP 对象 |
-| `src/services/model-settings.ts` | `config.py` | 显式文件或环境变量；不自动读取目标仓库配置 |
+| `src/services/model-settings.ts` | `config.py`、`paths.py` | Python 专属 JSON / `REPOMENTOR_PY_*` 与数据目录；不读取 TS 配置或共享模型变量 |
 | `src/services/orchestrator.ts`、`src/db/`、路由与 SSE | `cli.py`、`storage.py` | 仅迁移独立运行记录；没有迁移 Web 任务队列、SSE、交互问答和分析缓存数据库 |
 | `web/` | 暂无 | 通过 CLI、Notebook 和 JSON 查看结果；需要 UI 时再接入 Python 核心 |
 
@@ -43,6 +43,8 @@ cli.py / Notebook / 实验脚本
 - 真实报告是改动前的固定历史基线。离线重验能验证结构与预算，不等于重新测量当前代码的模型行为或质量。
 
 ## 独立性与验证
+
+配置、缓存和运行记录的路径规则见[配置与数据隔离](configuration.md)。从不同目录启动使用同一 Python 默认位置；CLI 与实验脚本共用设置加载器，现有 Python 结果继续复用。
 
 默认 pytest 使用 `python/tests/fixtures/mini-repo`，它最初复制自 TS 基准样例。正常测试不再依赖根目录 fixture、Node 或 npm。包内 prompts、Skills、隐藏 plugin manifest 随 wheel 分发。
 

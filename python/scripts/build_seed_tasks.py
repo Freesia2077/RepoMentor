@@ -4,6 +4,7 @@ import hashlib
 import json
 from pathlib import Path
 
+from repomentor.paths import data_root
 from repomentor.repository import SnapshotStore
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -340,7 +341,7 @@ SPEC = {
 def main():
     manifest = json.loads((ROOT / "experiments/p0/corpus.json").read_text(encoding="utf-8"))
     repos = {r["repository"]: r for r in manifest["repositories"]}
-    store = SnapshotStore(ROOT / "artifacts/corpus")
+    store = SnapshotStore(data_root() / "corpus")
     records = []
     for name, (path, specs) in SPEC.items():
         repo = repos[name]

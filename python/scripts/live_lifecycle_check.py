@@ -1,5 +1,6 @@
 """Explicit live cancellation/cleanup contract check, separate from report quality results."""
 
+import argparse
 import asyncio
 import json
 from pathlib import Path
@@ -7,6 +8,7 @@ from uuid import uuid4
 
 from repomentor.config import load_model_settings, write_json
 from repomentor.harness import RepositoryHarness
+from repomentor.paths import data_root
 from repomentor.repository import SnapshotStore
 from repomentor.runtimes.claude import ClaudeSdkRuntime
 from repomentor.skills import load_skill
@@ -16,14 +18,18 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 async def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--settings", type=Path, help="Python model settings override")
+    args = parser.parse_args()
+    settings = load_model_settings(args.settings)
     rows = json.loads((ROOT / "experiments/p0/corpus.json").read_text(encoding="utf-8"))["repositories"]
     row = next(r for r in rows if r["repository"] == "developit/mitt")
-    reader = SnapshotStore(ROOT / "artifacts/corpus").open(row["snapshot_id"])
-    store = RunStore(ROOT / "artifacts/live", uuid4().hex)
+    reader = SnapshotStore(data_root() / "corpus").open(row["snapshot_id"])
+    store = RunStore(data_root() / "live", uuid4().hex)
     h = RepositoryHarness(reader, store.emit)
     h.get_repository_map()
     h.activate_policy("explorer", load_skill([], "explorer")[0])
-    runtime = ClaudeSdkRuntime(load_model_settings(ROOT.parent / "data/model-settings.json"), emit=store.emit)
+    runtime = ClaudeSdkRuntime(settings, emit=store.emit)
     cwd_paths = []
     original = runtime.make_options
 

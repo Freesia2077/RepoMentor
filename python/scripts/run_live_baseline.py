@@ -8,6 +8,7 @@ from uuid import uuid4
 
 from repomentor.config import load_model_settings, write_json
 from repomentor.harness import RepositoryHarness
+from repomentor.paths import data_root
 from repomentor.report import run_report
 from repomentor.repository import SnapshotStore
 from repomentor.runtimes.claude import ClaudeSdkRuntime
@@ -24,6 +25,7 @@ async def main():
     parser.add_argument("--legacy", action="store_true")
     parser.add_argument("--stub", action="store_true")
     parser.add_argument("--refresh", action="store_true", help="explicitly replace an existing recorded run")
+    parser.add_argument("--settings", type=Path, help="Python model settings override")
     args = parser.parse_args()
     manifest = ROOT / "experiments/p0" / ("legacy-regression.json" if args.legacy else "corpus.json")
     rows = json.loads(manifest.read_text(encoding="utf-8"))["repositories"]
@@ -45,9 +47,10 @@ async def main():
             )
         )
         return
-    reader = SnapshotStore(ROOT / "artifacts/corpus").open(row["snapshot_id"])
+    settings = None if args.stub else load_model_settings(args.settings)
+    reader = SnapshotStore(data_root() / "corpus").open(row["snapshot_id"])
     run_id = uuid4().hex
-    store = RunStore(ROOT / "artifacts/live", run_id)
+    store = RunStore(data_root() / "live", run_id)
     if args.stub:
         from repomentor.runtimes.stub import StubRuntime
 
@@ -55,7 +58,6 @@ async def main():
         if args.discovery_only:
             parser.error("--discovery-only requires the SDK runtime")
     else:
-        settings = load_model_settings(ROOT.parent / "data/model-settings.json")
         runtime = ClaudeSdkRuntime(settings, emit=store.emit)
     if args.discovery_only:
         harness = RepositoryHarness(reader, store.emit)

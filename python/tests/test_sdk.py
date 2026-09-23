@@ -65,7 +65,8 @@ class FakeClient:
 
 
 @pytest.fixture
-def setup(reader):
+def setup(reader, tmp_path, monkeypatch):
+    monkeypatch.setenv("REPOMENTOR_PY_DATA_DIR", str(tmp_path / "python-data"))
     FakeClient.created = []
     FakeClient.messages = []
     FakeClient.delay = 0
@@ -110,6 +111,25 @@ async def test_restricted_options_hook_and_cleanup(setup):
         assert result["hookSpecificOutput"]["permissionDecision"] == expected
     denied_child = await hook({"tool_name": "StructuredOutput", "agent_id": "child"}, None, {})
     assert denied_child["hookSpecificOutput"]["permissionDecision"] == "deny"
+
+
+def test_sdk_model_env_is_mapped_from_python_settings_only(setup, monkeypatch):
+    h, runtime = setup
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "shared-key")
+    monkeypatch.setenv("ANTHROPIC_BASE_URL", "https://shared.example.invalid")
+    monkeypatch.setenv("ANTHROPIC_CUSTOM_HEADERS", "Authorization: shared-key")
+    monkeypatch.setenv("ANTHROPIC_DEFAULT_SONNET_MODEL", "shared-model")
+    monkeypatch.setenv("CLAUDE_CODE_USE_BEDROCK", "1")
+    options = runtime.make_options("python-session", "explorer", EvidencePlan, "system", h, True)
+    assert options.env["ANTHROPIC_API_KEY"] == "secret"
+    assert options.env["ANTHROPIC_BASE_URL"] == "https://example.invalid"
+    assert options.env["ANTHROPIC_MODEL"] == "test"
+    assert options.env["ANTHROPIC_DEFAULT_SONNET_MODEL"] == ""
+    assert options.env["ANTHROPIC_CUSTOM_HEADERS"] == ""
+    assert options.env["CLAUDE_CODE_USE_BEDROCK"] == "0"
+    import os
+
+    assert os.environ["ANTHROPIC_API_KEY"] == "shared-key"
 
 
 async def test_schema_repair_has_no_tools(setup):

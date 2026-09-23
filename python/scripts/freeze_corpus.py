@@ -9,11 +9,12 @@ from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
 from pathlib import Path
 
+from repomentor.paths import data_root
 from repomentor.repository import SnapshotStore, is_source, is_test
 
 ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / "experiments" / "p0"
-STORE = ROOT / "artifacts" / "corpus"
+STORE = data_root() / "corpus"
 REPOSITORIES = [
     ("train", "Python", "python-attrs/attrs"),
     ("train", "Python", "pypa/packaging"),
@@ -170,31 +171,9 @@ def deduplicate(entries):
 
 def main():
     if "--legacy" in sys.argv:
-        if (OUT / "legacy-regression.json").exists():
-            for row in json.loads((OUT / "legacy-regression.json").read_text(encoding="utf-8"))[
-                "repositories"
-            ]:
-                freeze(("legacy-regression", "legacy", row["repository"]))
-            return
-        old = json.loads((ROOT.parent / "eval/agentic-benchmark.json").read_text(encoding="utf-8"))
-        frozen = []
-        for row in old["repositories"]:
-            record = freeze(("legacy-regression", "legacy", row["repository"]))
-            reader = SnapshotStore(STORE).open(record["snapshot_id"])
-            record["original_gold"] = row["goldEvidence"]
-            record["gold_path_audit"] = {
-                kind: [
-                    {
-                        "path": p,
-                        "exists": p in reader.paths,
-                        "directory": any(f.startswith(p.rstrip("/") + "/") for f in reader.paths),
-                    }
-                    for p in paths
-                ]
-                for kind, paths in row["goldEvidence"].items()
-            }
-            frozen.append(record)
-        save("legacy-regression.json", {"version": "python-legacy-v1", "repositories": frozen})
+        # The Python-owned audited manifest is the source of truth, including original gold.
+        for row in json.loads((OUT / "legacy-regression.json").read_text(encoding="utf-8"))["repositories"]:
+            freeze(("legacy-regression", "legacy", row["repository"]))
         return
     if "--dedup" in sys.argv:
         deduplicate(json.loads((OUT / "corpus.json").read_text(encoding="utf-8"))["repositories"])

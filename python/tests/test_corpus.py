@@ -2,6 +2,7 @@ import hashlib
 import json
 from pathlib import Path
 
+from repomentor.paths import data_root
 from repomentor.repository import SnapshotStore
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -39,9 +40,9 @@ def test_pinned_seed_evidence_hashes():
     # Cache-optional integration test: portable unit suite must not download external repositories.
     import pytest
 
-    if not (ROOT / "artifacts/corpus/snapshots").exists():
+    if not (data_root() / "corpus/snapshots").exists():
         pytest.skip("downloaded P0 snapshots not available; run freeze_corpus first")
-    store = SnapshotStore(ROOT / "artifacts/corpus")
+    store = SnapshotStore(data_root() / "corpus")
     tasks = [
         json.loads(line)
         for line in (ROOT / "experiments/p0/validation-seed.jsonl").read_text(encoding="utf-8").splitlines()

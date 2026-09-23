@@ -9,8 +9,9 @@ import sys
 from pathlib import Path
 from uuid import uuid4
 
-from .config import load_model_settings, write_json
+from .config import ConfigurationError, load_model_settings, write_json
 from .harness import CancellationToken
+from .paths import data_root, model_settings_path, python_home, runtime_dir
 from .repository import SnapshotStore
 from .storage import RunStore
 
@@ -19,7 +20,9 @@ def parser():
     root = argparse.ArgumentParser(
         prog="repomentor", description="RepoMentor Python: headless repository reports"
     )
-    root.add_argument("--data-dir", type=Path, default=Path("artifacts/runtime"))
+    root.add_argument(
+        "--data-dir", type=Path, default=runtime_dir(), help="override this CLI run's storage directory"
+    )
     commands = root.add_subparsers(dest="command", required=True)
     commands.add_parser("doctor", help="print interpreter and SDK versions (no model calls)")
     snapshot = commands.add_parser("snapshot", help="freeze a Git repository")
@@ -32,10 +35,10 @@ def parser():
     report.add_argument("--revision", default="HEAD")
     report.add_argument("--runtime", choices=("claude", "stub"), default="claude")
     report.add_argument(
-        "--settings", type=Path, help="explicit trusted model settings JSON; never a target-repo config"
+        "--settings", type=Path, help="explicit Python model settings JSON; overrides REPOMENTOR_PY_* sources"
     )
     report.add_argument("--timeout", type=float, default=600)
-    report.add_argument("--call-timeout", type=float, default=180)
+    report.add_argument("--call-timeout", type=float, help="override the model configuration's call timeout")
     report.add_argument("--output", type=Path)
     export = commands.add_parser("export", help="export a previously saved run, without re-execution")
     export.add_argument("run_id")
@@ -56,6 +59,11 @@ async def async_main(args):
                     "python": sys.version,
                     "sdk": importlib.metadata.version("claude-agent-sdk"),
                     "bundled_cli": __cli_version__,
+                    "python_home": str(python_home()),
+                    "settings_path": str(model_settings_path()),
+                    "settings_file_exists": model_settings_path().is_file(),
+                    "data_root": str(data_root()),
+                    "runtime_dir": str(args.data_dir.resolve()),
                 },
                 indent=2,
             )
@@ -68,13 +76,20 @@ async def async_main(args):
         write_json(args.output, value)
         print(args.output)
         return 0
+    settings = None
+    if args.command == "report":
+        if args.timeout <= 0 or (args.call_timeout is not None and args.call_timeout <= 0):
+            raise ValueError("timeouts must be positive")
+        if args.runtime == "claude":
+            # Fail before any clone or run-directory creation when configuration is missing.
+            settings = load_model_settings(args.settings)
+            if args.call_timeout is not None:
+                settings.timeout_seconds = args.call_timeout
     snapshots = SnapshotStore(args.data_dir / "snapshots")
     if args.command == "snapshot":
         reader = snapshots.import_repository(args.repository, args.revision)
         print(reader.snapshot.model_dump_json(indent=2))
         return 0
-    if args.timeout <= 0 or args.call_timeout <= 0:
-        raise ValueError("timeouts must be positive")
     reader = (
         snapshots.open(args.snapshot_id)
         if args.snapshot_id
@@ -88,8 +103,6 @@ async def async_main(args):
         if args.runtime == "claude":
             from .runtimes.claude import ClaudeSdkRuntime
 
-            settings = load_model_settings(args.settings)
-            settings.timeout_seconds = args.call_timeout
             runtime = ClaudeSdkRuntime(settings, emit=store.emit)
             store.emit("report", "configuration", settings.public())
         else:
@@ -132,6 +145,7 @@ def main():
                     "status": "failed",
                     "code": getattr(exc, "code", "configuration_error"),
                     "error_type": type(exc).__name__,
+                    **({"message": str(exc)} if isinstance(exc, ConfigurationError) else {}),
                 }
             ),
             file=sys.stderr,

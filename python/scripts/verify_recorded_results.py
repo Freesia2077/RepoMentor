@@ -5,6 +5,7 @@ from pathlib import Path
 
 from repomentor.config import write_json
 from repomentor.contracts import ContributorOutput, ExplorerOutput, MentorOutput
+from repomentor.paths import data_root
 
 ROOT = Path(__file__).resolve().parents[1]
 legacy = json.loads((ROOT / "experiments/p0/legacy-regression.json").read_text(encoding="utf-8"))
@@ -31,7 +32,7 @@ for path in sorted((ROOT / "experiments/p2").glob("*-report.json")):
         for claim in value["evidenceClaims"]
         for ref in claim["evidence"]
     ]
-    event_path = ROOT / "artifacts/live/runs" / result["run_id"] / "events.jsonl"
+    event_path = data_root() / "live/runs" / result["run_id"] / "events.jsonl"
     events = (
         [json.loads(line) for line in event_path.read_text(encoding="utf-8").splitlines()]
         if event_path.exists()

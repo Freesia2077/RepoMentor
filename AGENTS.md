@@ -2,6 +2,7 @@
 
 - Active development targets `python/`. Preserve the original TypeScript application in `src/`, `web/`, and its root scripts. Do not modify or run the TS application/tests unless the user explicitly requests it.
 - Python is an independent package: its normal tests, runtime assets and CLI must not require Node, npm, the TS server, or the frontend. Historical parity checks are opt-in.
+- Python configuration and data are independent too: use `python/config/model-settings.json`, `REPOMENTOR_PY_*`, and Python-owned artifact paths. Never read or migrate the TS `data/model-settings.json` implicitly, and do not use shared `ANTHROPIC_*` variables as application configuration. SDK protocol variables are mapped internally.
 - On the owner's Windows machine, use `D:\anaconda\envs\repomentor\python.exe` with `-s` for every Python operation (`python/run.ps1` wraps it). Do not create another environment. On other machines use the explicitly configured project environment.
 - Default to offline pytest, the stub runtime, and recorded result verification. Reuse saved reports; real model calls need a concrete validation purpose and should be kept to a minimum.
 - Never commit credentials, model settings, runtime databases, repository caches, weights, or unrelated local documents.

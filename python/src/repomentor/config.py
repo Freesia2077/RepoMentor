@@ -7,6 +7,11 @@ from pathlib import Path
 from pydantic import Field, SecretStr
 
 from .contracts import Contract
+from .paths import model_settings_path
+
+
+class ConfigurationError(ValueError):
+    code = "model_configuration"
 
 
 class ModelSettings(Contract):
@@ -31,21 +36,51 @@ class ModelSettings(Contract):
 
 
 def load_model_settings(path: Path | None = None):
-    if path:
-        settings = ModelSettings.model_validate_json(path.read_text(encoding="utf-8"))
-    else:
-        settings = ModelSettings(
-            apiKey=os.environ.get("ANTHROPIC_API_KEY") or os.environ.get("ANTHROPIC_AUTH_TOKEN", ""),
-            baseUrl=os.environ.get("ANTHROPIC_BASE_URL", "https://api.anthropic.com"),
-            model=os.environ.get("ANTHROPIC_MODEL", ""),
-        )
+    """Whole-source precedence: explicit file > PY_SETTINGS > PY model env > default file.
+
+    Sources are not merged: a key from one service must not silently use another endpoint.
+    Generic ANTHROPIC_* variables and target-repository settings are never inputs.
+    """
+    fields = {
+        "REPOMENTOR_PY_API_KEY": "apiKey",
+        "REPOMENTOR_PY_BASE_URL": "baseUrl",
+        "REPOMENTOR_PY_MODEL": "model",
+        "REPOMENTOR_PY_PROVIDER": "provider",
+    }
+    try:
+        if path is not None or "REPOMENTOR_PY_SETTINGS" in os.environ:
+            selected = Path(path).expanduser() if path is not None else model_settings_path()
+            settings = ModelSettings.model_validate_json(selected.read_text(encoding="utf-8-sig"))
+        elif any(name in os.environ for name in fields):
+            values = {field: os.environ[name] for name, field in fields.items() if name in os.environ}
+            # Require endpoint together with credentials: no implicit provider fallback.
+            settings = ModelSettings.model_validate(values)
+        else:
+            settings = ModelSettings.model_validate_json(
+                model_settings_path().read_text(encoding="utf-8-sig")
+            )
+    except (OSError, ValueError):
+        raise ConfigurationError(
+            "Configure Python's config/model-settings.json, --settings, or the complete "
+            "REPOMENTOR_PY_API_KEY / REPOMENTOR_PY_BASE_URL / REPOMENTOR_PY_MODEL group. "
+            "Check the selected file exists and has valid fields."
+        ) from None  # Pydantic/JSON tracebacks may include credential-bearing input.
     from urllib.parse import urlparse
 
     url = urlparse(settings.baseUrl)
-    if url.scheme not in ("http", "https") or not url.netloc or url.username or url.password or url.query:
-        raise ValueError("model endpoint must be an HTTP(S) origin without embedded credentials/query")
-    if not settings.model or not settings.apiKey.get_secret_value():
-        raise ValueError("configure an explicit model and API key via --settings or ANTHROPIC_* variables")
+    if (
+        url.scheme not in ("http", "https")
+        or not url.netloc
+        or url.username
+        or url.password
+        or url.query
+        or url.fragment
+    ):
+        raise ConfigurationError("model endpoint must be HTTP(S) without embedded credentials/query/fragment")
+    if not settings.model.strip() or not settings.apiKey.get_secret_value().strip():
+        raise ConfigurationError(
+            "Fill in the model and API key in Python's own configuration before a live run"
+        )
     return settings
 
 

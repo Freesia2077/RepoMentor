@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import importlib.metadata
 import json
+import os
 import tempfile
 from dataclasses import asdict, is_dataclass
 from pathlib import Path
@@ -12,6 +13,7 @@ from pydantic import ValidationError
 
 from ..contracts import EvidencePlan, PathAction, SearchAction
 from ..harness import HarnessError
+from ..paths import data_root
 from ..skills import assets_path, stage_prompt
 from ..tools import TOOL_DESCRIPTIONS
 
@@ -142,6 +144,8 @@ class ClaudeSdkRuntime:
             return sdk.PermissionResultDeny(message="Unexpected tool permission", interrupt=False)
 
         env = {
+            # SDK merges options.env over the parent process; neutralize inherited model overrides.
+            **{name: "" for name in os.environ if name.startswith("ANTHROPIC_")},
             "ANTHROPIC_BASE_URL": self.settings.baseUrl,
             "ANTHROPIC_AUTH_TOKEN": self.settings.apiKey.get_secret_value(),
             "ANTHROPIC_API_KEY": self.settings.apiKey.get_secret_value(),
@@ -151,6 +155,9 @@ class ClaudeSdkRuntime:
             "CLAUDE_CODE_MAX_OUTPUT_TOKENS": "6500",
             "MAX_THINKING_TOKENS": "0",
             "ENABLE_TOOL_SEARCH": "false",
+            "CLAUDE_CODE_USE_BEDROCK": "0",
+            "CLAUDE_CODE_USE_VERTEX": "0",
+            "CLAUDE_CODE_USE_FOUNDRY": "0",
         }
         policy = harness.stages[phase].skillPolicy if phase in ("explorer", "mentor") else None
         return sdk.ClaudeAgentOptions(
@@ -183,7 +190,9 @@ class ClaudeSdkRuntime:
 
     async def _once(self, phase, model, system, payload, harness, discovery):
         harness.token.check()
-        with tempfile.TemporaryDirectory(prefix="repomentor-python-sdk-") as cwd:
+        temporary_root = data_root() / "sdk-tmp"
+        temporary_root.mkdir(parents=True, exist_ok=True)
+        with tempfile.TemporaryDirectory(prefix="session-", dir=temporary_root) as cwd:
             options = self.make_options(cwd, phase, model, system, harness, discovery)
             terminal = None
             try:

@@ -12,7 +12,7 @@ python -s -m repomentor.cli doctor
 python -s -m pytest -q
 ```
 
-运行 SDK 报告时，通过 `ANTHROPIC_API_KEY`（或 `ANTHROPIC_AUTH_TOKEN`）、`ANTHROPIC_BASE_URL`、`ANTHROPIC_MODEL` 配置兼容服务，或用 `--settings` 显式指定本地 JSON。配置字段见 `ModelSettings`，不要提交凭据。只验证核心可用 `--runtime stub`，无需模型或凭据。
+运行 SDK 报告前配置 Python 自己的 `config/model-settings.json`，或设置专属的 `REPOMENTOR_PY_*` 环境变量，见下文。Python 不读取 TS 配置或共享 `ANTHROPIC_*` 模型变量。只验证核心可用 `--runtime stub`，无需模型或凭据。
 
 ## 使用指定环境
 
@@ -34,18 +34,44 @@ cd 'D:\Edge Download\Coding\python'
 
 锁文件针对 Windows x64 / Python 3.12；Linux 训练机应重新解析平台依赖并记录新锁文件。P0 的 Torch、CUDA 和检索检查仅检查可用安装包元数据，没有安装训练依赖或验证 CUDA 算子。
 
-## 独立生成报告
+## Python 独立配置与数据
 
-现有模型配置可以显式复用；程序只读取该文件，不修改 TS 配置或数据库。
+首次配置，在 `python/` 下复制模板，填写 `apiKey`、`baseUrl`、`model`。本地配置被 Git 忽略；模板不含密钥。不要覆盖已有配置。
 
 ```powershell
-.\run.ps1 -m repomentor.cli report --repository https://github.com/developit/mitt --settings ..\data\model-settings.json
+Copy-Item config\model-settings.example.json config\model-settings.json
+```
+
+也可只用 Python 专属环境变量（三项一起设置）：
+
+```powershell
+$env:REPOMENTOR_PY_API_KEY = '<your-api-key>'
+$env:REPOMENTOR_PY_BASE_URL = 'https://your-provider.example/anthropic'
+$env:REPOMENTOR_PY_MODEL = '<your-model>'
+```
+
+配置来源按整体优先级选择：`--settings` 文件 → `REPOMENTOR_PY_SETTINGS` 文件 → 上述环境变量组 → 默认配置文件。不同来源不合并字段；选中的配置缺失或无效会报错，不回退到 TS 或其他来源。`.env` 文件不会自动加载。
+
+| 用途 | 源码版默认位置 | 可选覆盖 |
+| --- | --- | --- |
+| Python 主目录 | `python/`，与启动位置无关 | `REPOMENTOR_PY_HOME` |
+| 模型配置 | 主目录下 `config/model-settings.json` | `--settings` / `REPOMENTOR_PY_SETTINGS` |
+| 私有数据根目录 | 主目录下 `artifacts/` | `REPOMENTOR_PY_DATA_DIR` |
+| CLI 快照、数据库与报告 | 数据根目录下 `runtime/` | `--data-dir` 仅覆盖这次 CLI 存储位置 |
+| 语料缓存 / 实验轨迹 / SDK 临时目录 | 数据根目录下 `corpus/`、`live/`、`sdk-tmp/` | 随数据根目录移动 |
+
+路径类环境变量必须是绝对路径。独立 wheel 安装的默认主目录为 `~/.repomentor-python/`。已有 Python 数据仍在原位置，无需搬迁；模型配置需独立填写，不自动读取或复制旧 TS 配置。`doctor` 可查看解析后的路径，不读取或显示密钥。
+
+## 独立生成报告
+
+```powershell
+.\run.ps1 -m repomentor.cli report --repository https://github.com/developit/mitt
 ```
 
 首次使用 `HEAD` 解析当前提交；严肃实验使用冻结清单中的完整 SHA：
 
 ```powershell
-.\run.ps1 -m repomentor.cli report --repository https://github.com/developit/mitt --revision 6b41670516ed8e8b738612f60491995470aa63b3 --settings ..\data\model-settings.json --output artifacts\mitt-report.json
+.\run.ps1 -m repomentor.cli report --repository https://github.com/developit/mitt --revision 6b41670516ed8e8b738612f60491995470aa63b3 --output artifacts\mitt-report.json
 ```
 
 无模型调用的核心验证：
@@ -56,7 +82,7 @@ cd 'D:\Edge Download\Coding\python'
 
 本地仓库读取已提交版本，忽略未提交/未跟踪内容；stub 输出明确标记为测试结果。运行时不执行目标仓库的安装、构建、测试、脚本或指令。
 
-默认产物写入 `artifacts/runtime/`：
+默认 CLI 产物写入 Python 主目录的 `artifacts/runtime/`，从仓库根目录启动也不会写入 TS 的目录：
 
 - `snapshots/`：Git 对象缓存与固定 SHA 的文件 manifest，没有可变化的共享 checkout。
 - `runs/<run_id>/events.jsonl`：不含源码正文和密钥的工具、权限、状态、用量轨迹。
@@ -68,16 +94,16 @@ cd 'D:\Edge Download\Coding\python'
 ## 直接调用核心
 
 ```python
-from pathlib import Path
 from repomentor.config import load_model_settings
+from repomentor.paths import runtime_dir
 from repomentor.repository import SnapshotStore
 from repomentor.report import run_report
 from repomentor.runtimes.claude import ClaudeSdkRuntime
 
-reader = SnapshotStore(Path("artifacts/snapshots")).import_repository(
+reader = SnapshotStore(runtime_dir() / "snapshots").import_repository(
     "developit/mitt", "6b41670516ed8e8b738612f60491995470aa63b3"
 )
-runtime = ClaudeSdkRuntime(load_model_settings(Path("../data/model-settings.json")))
+runtime = ClaudeSdkRuntime(load_model_settings())
 # Notebook 中使用 await；普通脚本中使用 asyncio.run(...)
 result = await run_report(reader, runtime)
 ```
@@ -95,6 +121,7 @@ CLI、Notebook、未来 Web 层都调用同一业务函数，不依赖 FastAPI�
 默认测试只运行 Python，不访问模型或下载仓库。仓库快照核验测试在没有本地 P0 缓存时跳过。历史跨语言对照单独标为 `ts_parity`，只有明确需要对照时才执行 `pytest -m ts_parity`（另需原仓库 Node/tsx）；日常开发不运行。
 
 - [整体结构与 TS 对应关系](notes/architecture.md)
+- [配置与数据隔离规则](notes/configuration.md)
 - [后续路线图与两个项目的关联](notes/roadmap.md)
 - [阶段验收与已知限制](notes/p0-p2-acceptance.md)
 - [数据划分、标注与复核规范](notes/data-protocol.md)
