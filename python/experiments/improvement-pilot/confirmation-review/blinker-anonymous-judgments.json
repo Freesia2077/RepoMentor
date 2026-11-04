@@ -1,0 +1,745 @@
+[
+  {
+    "candidate_id": "candidate-1486d6d6adf405c5",
+    "correctness": "correct",
+    "citation_support": "not_applicable",
+    "completeness": "adequate",
+    "abstention": "appropriate",
+    "entry_scope": "not_applicable",
+    "consistency": "consistent",
+    "claims": [
+      {
+        "claim": "不能依据给定静态仓库回答公司过去24小时的订单发送次数和最慢回调耗时。",
+        "status": "unverifiable",
+        "rationale": "这是依据题干明确未提供运行日志或进程访问作出的信息边界判断，无需伪造仓库行号证明公司的私有状态。",
+        "evidence": []
+      },
+      {
+        "claim": "Blinker提供通用信号分发能力，并非题中生产运行记录。",
+        "status": "supported",
+        "rationale": "文档定位为信号分发库；没有把库函数的存在替代实际遥测。",
+        "evidence": [
+          {
+            "path": "docs/index.rst",
+            "start_line": 1,
+            "end_line": 28
+          }
+        ]
+      }
+    ],
+    "notes": "明确无法回答并指出缺少生产日志、信号计数和耗时数据，未编造数字；这已表达本题所需的具体运行信息缺口，insufficient_evidence=true。逻辑性拒答不依赖所附源码引文，不能把这些引文当公司遥测证据。",
+    "key_points": {
+      "no_private_numbers": true,
+      "specific_missing_runtime_data": true,
+      "insufficiency_flag_true": true
+    }
+  },
+  {
+    "candidate_id": "candidate-397e4a7722cb6924",
+    "correctness": "partially_correct",
+    "citation_support": "partial",
+    "completeness": "partial",
+    "abstention": "not_applicable",
+    "entry_scope": "correct",
+    "consistency": "consistent",
+    "claims": [
+      {
+        "claim": "本题默认注册不会一直强引用局部回调，无其他强引用时回调可被回收。",
+        "status": "supported",
+        "rationale": "默认weak=True，保存弱引用并在回收后断开；test_has_receivers中的删除和收集也支持接收器消失。",
+        "evidence": [
+          {
+            "path": "src/blinker/base.py",
+            "start_line": 91,
+            "end_line": 115
+          },
+          {
+            "path": "tests/test_signals.py",
+            "start_line": 417,
+            "end_line": 443
+          }
+        ]
+      },
+      {
+        "claim": "因使用弱引用便不会导致内存泄漏。",
+        "status": "unsupported",
+        "rationale": "弱引用避免这一条所有权保活，不足以保证不存在任何内存泄漏；所引测试也没有测量或证明该全局保证。",
+        "evidence": []
+      },
+      {
+        "claim": "回调闭包会强引用其捕获的外部对象，但信号不会强引用默认弱注册的回调对象。",
+        "status": "unverifiable",
+        "rationale": "后半的默认弱注册可由实现核验；闭包所有权是额外的Python语义论断，所引测试未验证此断言，不能用弱sender清理替代证明。",
+        "evidence": []
+      }
+    ],
+    "notes": "主要弱引用方向正确，但没有给出weak=False或业务持有强引用的修正，也没有解释弱/强接收器删除收集后的对照。123–158测的是sender回收，161–201测空桶；417–450提供部分弱接收器证据。附加“不会内存泄漏”的保证缺乏支持，不能按全事实正确评分。",
+    "key_points": {
+      "weak_default_and_cleanup": true,
+      "weak_false_or_preserve_owner": false,
+      "weak_strong_test_assertions": false
+    }
+  },
+  {
+    "candidate_id": "candidate-ee89113603d7600d",
+    "correctness": "correct",
+    "citation_support": "partial",
+    "completeness": "partial",
+    "abstention": "not_applicable",
+    "entry_scope": "correct",
+    "consistency": "consistent",
+    "claims": [
+      {
+        "claim": "同一回调同时连接ANY和123时，send(123)只调用一次。",
+        "status": "supported",
+        "rationale": "测试先send()使sentinel为[None]，再send(123)断言[None,123]。",
+        "evidence": [
+          {
+            "path": "tests/test_signals.py",
+            "start_line": 397,
+            "end_line": 414
+          }
+        ]
+      },
+      {
+        "claim": "connect对同一接收器的存储和相同关联使用标识与集合去重。",
+        "status": "supported",
+        "rationale": "receiver_id作为接收器字典键，_by_sender和_by_receiver保存集合；这只是部分机制，发送时还依赖集合并集。",
+        "evidence": [
+          {
+            "path": "src/blinker/base.py",
+            "start_line": 107,
+            "end_line": 118
+          }
+        ]
+      }
+    ],
+    "notes": "结论正确，connect的唯一接收器存储/重复相同关联可由真实实现核验；未把这部分概括当成否认多sender关联。但没有说明receivers_for合并ANY与123的接收器ID集合，也没解释题目要求的sentinel关键断言。唯一正式引文是测试，只支持发送结果，不足以支持所述connect内部机制；该实现也未出现在模型可见来源中。",
+    "key_points": {
+      "one_delivery": true,
+      "receiver_id_union": false,
+      "specific_test_assertion": false
+    }
+  },
+  {
+    "candidate_id": "candidate-9930a88352525ca2",
+    "correctness": "partially_correct",
+    "citation_support": "partial",
+    "completeness": "partial",
+    "abstention": "not_applicable",
+    "entry_scope": "correct",
+    "consistency": "consistent",
+    "claims": [
+      {
+        "claim": "局部回调不被默认注册持续强引用，回收后后续发送不再触发它。",
+        "status": "supported",
+        "rationale": "实现默认弱引用，test_has_receivers删除received并收集后接收器生成器为空。",
+        "evidence": [
+          {
+            "path": "src/blinker/base.py",
+            "start_line": 91,
+            "end_line": 115
+          },
+          {
+            "path": "tests/test_signals.py",
+            "start_line": 438,
+            "end_line": 443
+          }
+        ]
+      },
+      {
+        "claim": "可使用weak=False或保有持续强引用来避免回调丢失。",
+        "status": "supported",
+        "rationale": "weak=False直接保存receiver；测试以未另存的lambda用weak=False注册后仍有接收器。",
+        "evidence": [
+          {
+            "path": "src/blinker/base.py",
+            "start_line": 110,
+            "end_line": 115
+          },
+          {
+            "path": "tests/test_signals.py",
+            "start_line": 445,
+            "end_line": 450
+          }
+        ]
+      },
+      {
+        "claim": "只改成实例方法即可避免弱注册的生命周期问题。",
+        "status": "partial",
+        "rationale": "模块级/持久拥有者可以提供强引用，但实例方法本身也会经make_ref变成WeakMethod；若实例未被持有，单纯改成实例方法不保证存活。答案未明确这一条件。",
+        "evidence": [
+          {
+            "path": "src/blinker/_utilities.py",
+            "start_line": 60,
+            "end_line": 64
+          },
+          {
+            "path": "src/blinker/base.py",
+            "start_line": 110,
+            "end_line": 115
+          }
+        ]
+      }
+    ],
+    "notes": "已给出weak=False这一有效方案，test_has_receivers的438–450可作为弱/强存活差异的等价证据，不机械要求唯一参考测试。但“改用实例方法”缺少实例持有条件；正文没有实现位置/默认weak=True机制，并以“示例与验证位置见下文”结束而没有后文和断言说明。149–154仍是sender清理，不能支持receiver强弱差异。",
+    "key_points": {
+      "weak_default_and_cleanup": true,
+      "weak_false_or_preserve_owner": true,
+      "weak_strong_test_assertions": false
+    }
+  },
+  {
+    "candidate_id": "candidate-cada70c0556e7b4a",
+    "correctness": "correct",
+    "citation_support": "unsupported",
+    "completeness": "partial",
+    "abstention": "not_applicable",
+    "entry_scope": "correct",
+    "consistency": "consistent",
+    "claims": [
+      {
+        "claim": "connected_to在退出时清理临时连接，BaseException也不会使接收器遗留。",
+        "status": "supported",
+        "rationale": "contextmanager内yield由try/finally包围，finally执行disconnect；异常测试参数化Exception和BaseException，最后断言not sig.receivers。",
+        "evidence": [
+          {
+            "path": "src/blinker/base.py",
+            "start_line": 167,
+            "end_line": 189
+          },
+          {
+            "path": "tests/test_context.py",
+            "start_line": 43,
+            "end_line": 68
+          }
+        ]
+      }
+    ],
+    "notes": "以生成器上下文管理器的__exit__描述退出清理在语义上成立，不仅因其没说finally就判事实错误。但正式引文tests/test_signals.py:380–382是connect_via装饰器，与connected_to异常清理无关；真正实现和异常断言均未进入可见输入。未说明清理实现及对应参数化测试，完整性不通过。",
+    "key_points": {
+      "disconnect_after_baseexception": true,
+      "weak_false_try_finally_disconnect": false,
+      "parameterized_exception_assertions": false
+    }
+  },
+  {
+    "candidate_id": "candidate-23f5f0c7614c41a1",
+    "correctness": "correct",
+    "citation_support": "supported",
+    "completeness": "partial",
+    "abstention": "not_applicable",
+    "entry_scope": "correct",
+    "consistency": "consistent",
+    "claims": [
+      {
+        "claim": "离开connected_to后接收器不会保留，因为finally调用disconnect。",
+        "status": "supported",
+        "rationale": "正式引文包含进入时weak=False及try/yield/finally/disconnect，覆盖BaseException路径。",
+        "evidence": [
+          {
+            "path": "src/blinker/base.py",
+            "start_line": 167,
+            "end_line": 189
+          }
+        ]
+      }
+    ],
+    "notes": "当前结论和清理机制正确且有实际可见来源支持；正文没有说明Exception/BaseException参数化测试、canary==[2]和not sig.receivers。可见test_context仅57–58的回调体，没有异常路径与最终断言，不能由评审后补源码算成模型完成了该子问。",
+    "key_points": {
+      "disconnect_after_baseexception": true,
+      "weak_false_try_finally_disconnect": true,
+      "parameterized_exception_assertions": false
+    }
+  },
+  {
+    "candidate_id": "candidate-1572e503d85627e9",
+    "correctness": "unverifiable",
+    "citation_support": "not_applicable",
+    "completeness": "insufficient",
+    "abstention": "appropriate",
+    "entry_scope": "correct",
+    "consistency": "consistent",
+    "claims": [
+      {
+        "claim": "回答仅写不足，未作出可核验的异常清理结论。",
+        "status": "unverifiable",
+        "rationale": "insufficient_evidence=true与不足标记一致，但没有具体说明缺哪段实现或测试，也没有完成可由仓库回答的问题。",
+        "evidence": []
+      }
+    ],
+    "notes": "模型实际只见若干回调体/装饰器短片段，谨慎拒答不据此判成错误事实；它仍没有解决题目。所附引文不要求被当作拒答证明；缺少具体缺口与下一步位置，不能给核心或完整通过。",
+    "key_points": {
+      "disconnect_after_baseexception": false,
+      "weak_false_try_finally_disconnect": false,
+      "parameterized_exception_assertions": false
+    }
+  },
+  {
+    "candidate_id": "candidate-456ee1e836d24193",
+    "correctness": "unverifiable",
+    "citation_support": "not_applicable",
+    "completeness": "insufficient",
+    "abstention": "appropriate",
+    "entry_scope": "not_applicable",
+    "consistency": "consistent",
+    "claims": [
+      {
+        "claim": "仅用insufficient_evidence标记拒答，没有给出具体运行数据缺口。",
+        "status": "unverifiable",
+        "rationale": "未编造计数或耗时且标志为true，但单一标记不说明为什么静态仓库不足、应补什么日志或遥测。",
+        "evidence": []
+      }
+    ],
+    "notes": "拒答方向与insufficient_evidence=true一致，未编造生产数字；正文只有一个标记，缺必要解释与具体所需运行数据，因此内容不可视为完整业务回答。无可核验事实时用unverifiable，不能靠格式成功记成正确或完整。",
+    "key_points": {
+      "no_private_numbers": true,
+      "specific_missing_runtime_data": false,
+      "insufficiency_flag_true": true
+    }
+  },
+  {
+    "candidate_id": "candidate-1d1d3116fe69fc19",
+    "correctness": "correct",
+    "citation_support": "supported",
+    "completeness": "partial",
+    "abstention": "not_applicable",
+    "entry_scope": "correct",
+    "consistency": "consistent",
+    "claims": [
+      {
+        "claim": "直接sig.send()不会自动await异步接收器，存在异步接收器时会抛RuntimeError。",
+        "status": "supported",
+        "rationale": "按题中不传wrapper的直接调用理解；测试注册同步与异步回调后sig.send()触发RuntimeError。",
+        "evidence": [
+          {
+            "path": "tests/test_signals.py",
+            "start_line": 274,
+            "end_line": 283
+          },
+          {
+            "path": "src/blinker/base.py",
+            "start_line": 242,
+            "end_line": 249
+          }
+        ]
+      },
+      {
+        "claim": "在send_async中混合同步回调，需要_sync_wrapper把它变为awaitable。",
+        "status": "supported",
+        "rationale": "文档说明_sync_wrapper并给出async inner调用普通func的示例，测试await send_async后len(sentinel)==2。",
+        "evidence": [
+          {
+            "path": "docs/index.rst",
+            "start_line": 290,
+            "end_line": 312
+          },
+          {
+            "path": "tests/test_signals.py",
+            "start_line": 260,
+            "end_line": 280
+          }
+        ]
+      }
+    ],
+    "notes": "两个当前入口的主要结论正确，引文支持已答内容，也没有沿用历史全同步前提。遗漏同步send可通过_async_wrapper适配异步回调的实际条件；send_async对异步回调直接await的路径没有展开。必要条件未完整，不算fully_resolved。",
+    "key_points": {
+      "direct_send_no_autoawait": true,
+      "send_async_sync_wrapper": true,
+      "sync_send_async_wrapper_alternative": false
+    }
+  },
+  {
+    "candidate_id": "candidate-8584c0c03f23dbaa",
+    "correctness": "unverifiable",
+    "citation_support": "not_applicable",
+    "completeness": "insufficient",
+    "abstention": "appropriate",
+    "entry_scope": "not_applicable",
+    "consistency": "consistent",
+    "claims": [
+      {
+        "claim": "仅用不足标记拒答，没有给出具体运行数据缺口。",
+        "status": "unverifiable",
+        "rationale": "未编造计数或耗时且标志为true，但单一标记不说明为什么静态仓库不足、应补什么日志或遥测。",
+        "evidence": []
+      }
+    ],
+    "notes": "拒答方向与insufficient_evidence=true一致，未编造生产数字；正文只有一个标记，缺必要解释与具体所需运行数据，因此内容不可视为完整业务回答。无可核验事实时用unverifiable，不能靠格式成功记成正确或完整。",
+    "key_points": {
+      "no_private_numbers": true,
+      "specific_missing_runtime_data": false,
+      "insufficiency_flag_true": true
+    }
+  },
+  {
+    "candidate_id": "candidate-23c0d327a14242f5",
+    "correctness": "correct",
+    "citation_support": "supported",
+    "completeness": "partial",
+    "abstention": "not_applicable",
+    "entry_scope": "correct",
+    "consistency": "consistent",
+    "claims": [
+      {
+        "claim": "sig.send(123)不会对同一接收器调用两次。",
+        "status": "supported",
+        "rationale": "正式引文的测试同时连接123和ANY，send(123)只再追加一次123。",
+        "evidence": [
+          {
+            "path": "tests/test_signals.py",
+            "start_line": 397,
+            "end_line": 414
+          }
+        ]
+      }
+    ],
+    "notes": "主要结论正确且测试引文直接支持；正文完全没有去重实现或题目要求的关键断言解释。不能由参考里的集合并集或引文中未说明的sentinel值替模型补齐答案。",
+    "key_points": {
+      "one_delivery": true,
+      "receiver_id_union": false,
+      "specific_test_assertion": false
+    }
+  },
+  {
+    "candidate_id": "candidate-f7e4294d277c6f64",
+    "correctness": "partially_correct",
+    "citation_support": "partial",
+    "completeness": "partial",
+    "abstention": "not_applicable",
+    "entry_scope": "correct",
+    "consistency": "consistent",
+    "claims": [
+      {
+        "claim": "send(123)只触发该回调一次。",
+        "status": "supported",
+        "rationale": "测试的sentinel从[None]到[None,123]，结果正确。",
+        "evidence": [
+          {
+            "path": "tests/test_signals.py",
+            "start_line": 397,
+            "end_line": 414
+          }
+        ]
+      },
+      {
+        "claim": "用(回调函数,发送者)键去重同一sender的重复注册就保证ANY和123跨sender也只调用一次。",
+        "status": "contradicted",
+        "rationale": "ANY与123是两条不同sender关联，单按该二元关系去重不能解释跨关联合并；实际receivers字典按receiver_id保存，receivers_for对两个sender桶的receiver_id集合做并集再遍历。",
+        "evidence": [
+          {
+            "path": "src/blinker/base.py",
+            "start_line": 107,
+            "end_line": 118
+          },
+          {
+            "path": "src/blinker/base.py",
+            "start_line": 342,
+            "end_line": 349
+          }
+        ]
+      }
+    ],
+    "notes": "结论正确，但所说二元键及同sender去重并非本题跨ANY/123只发送一次的机制；应说明接收器ID集合并集。正式引文只证明测试结果，未支持内部键结构，正文也未交代[None,123]断言。此处保留机制事实错误而非只按遗漏计分。",
+    "key_points": {
+      "one_delivery": true,
+      "receiver_id_union": false,
+      "specific_test_assertion": false
+    }
+  },
+  {
+    "candidate_id": "candidate-daafc3a1ef0bbfcf",
+    "correctness": "correct",
+    "citation_support": "partial",
+    "completeness": "partial",
+    "abstention": "not_applicable",
+    "entry_scope": "correct",
+    "consistency": "consistent",
+    "claims": [
+      {
+        "claim": "同一回调同时连接ANY和123时，send(123)只调用一次。",
+        "status": "supported",
+        "rationale": "测试先send()使sentinel为[None]，再send(123)断言[None,123]。",
+        "evidence": [
+          {
+            "path": "tests/test_signals.py",
+            "start_line": 397,
+            "end_line": 414
+          }
+        ]
+      },
+      {
+        "claim": "connect对同一接收器的存储和相同关联使用标识与集合去重。",
+        "status": "supported",
+        "rationale": "receiver_id作为接收器字典键，_by_sender和_by_receiver保存集合；这只是部分机制，发送时还依赖集合并集。",
+        "evidence": [
+          {
+            "path": "src/blinker/base.py",
+            "start_line": 107,
+            "end_line": 118
+          }
+        ]
+      }
+    ],
+    "notes": "结论正确，connect的唯一接收器存储/重复相同关联可由真实实现核验；未把这部分概括当成否认多sender关联。但没有说明receivers_for合并ANY与123的接收器ID集合，也没解释题目要求的sentinel关键断言。唯一正式引文是测试，只支持发送结果，不足以支持所述connect内部机制；该实现也未出现在模型可见来源中。",
+    "key_points": {
+      "one_delivery": true,
+      "receiver_id_union": false,
+      "specific_test_assertion": false
+    }
+  },
+  {
+    "candidate_id": "candidate-f8421e3c94975d65",
+    "correctness": "partially_correct",
+    "citation_support": "partial",
+    "completeness": "partial",
+    "abstention": "not_applicable",
+    "entry_scope": "correct",
+    "consistency": "consistent",
+    "claims": [
+      {
+        "claim": "默认weak=True，以弱引用保存；回调回收时断开。",
+        "status": "supported",
+        "rationale": "connect签名/注释和weak分支直接支持，所引用102–105、110–115在实际输入。",
+        "evidence": [
+          {
+            "path": "src/blinker/base.py",
+            "start_line": 91,
+            "end_line": 115
+          }
+        ]
+      },
+      {
+        "claim": "注册时weak=False可以保活回调，另行保存对象也是安全的持有方式。",
+        "status": "supported",
+        "rationale": "weak=False将receiver直接保存；并保存回调是冗余建议，不把它误判成必须同时满足的库条件。",
+        "evidence": [
+          {
+            "path": "src/blinker/base.py",
+            "start_line": 110,
+            "end_line": 115
+          }
+        ]
+      },
+      {
+        "claim": "test_has_receivers可以显示局部接收器删除收集后的失效与weak=False保活。",
+        "status": "supported",
+        "rationale": "438–443是删除和空接收器断言，445–450是weak=False且仍有接收器；这段完整测试实际已见。",
+        "evidence": [
+          {
+            "path": "tests/test_signals.py",
+            "start_line": 417,
+            "end_line": 450
+          }
+        ]
+      },
+      {
+        "claim": "test_signal_signals_weak_sender验证本题receiver弱/强引用的差异。",
+        "status": "contradicted",
+        "rationale": "该测试以weak=False连接receiver，删除的是sender2，不是received；验证sender回收不能替代receiver保活对照。",
+        "evidence": [
+          {
+            "path": "tests/test_signals.py",
+            "start_line": 123,
+            "end_line": 158
+          }
+        ]
+      }
+    ],
+    "notes": "实现结论和weak=False方案正确；接受test_has_receivers作为等价测试，不机械限定219–257。另一处把weak_sender测试用作receiver强弱差异证据是实际定位错误，且正文没有说明任何具体删除/收集/发送或has_receivers断言。保留partial事实与引文，未视为完整解决。",
+    "key_points": {
+      "weak_default_and_cleanup": true,
+      "weak_false_or_preserve_owner": true,
+      "weak_strong_test_assertions": false
+    }
+  },
+  {
+    "candidate_id": "candidate-133b256ff863c79c",
+    "correctness": "partially_correct",
+    "citation_support": "partial",
+    "completeness": "partial",
+    "abstention": "not_applicable",
+    "entry_scope": "correct",
+    "consistency": "consistent",
+    "claims": [
+      {
+        "claim": "直接sig.send()不会自动await异步回调，当前不传wrapper的调用遇到异步接收器会RuntimeError。",
+        "status": "supported",
+        "rationale": "混用测试对直接sig.send()断言RuntimeError。",
+        "evidence": [
+          {
+            "path": "tests/test_signals.py",
+            "start_line": 274,
+            "end_line": 283
+          },
+          {
+            "path": "src/blinker/base.py",
+            "start_line": 242,
+            "end_line": 249
+          }
+        ]
+      },
+      {
+        "claim": "混用同步和异步回调必须改用send_async(_sync_wrapper=wrapper)。",
+        "status": "contradicted",
+        "rationale": "这是可行的一种路径，却不是唯一必要路径；同步send接受_async_wrapper并调用包装的异步receiver，文档313–316也明确等价用法。",
+        "evidence": [
+          {
+            "path": "src/blinker/base.py",
+            "start_line": 242,
+            "end_line": 249
+          },
+          {
+            "path": "docs/index.rst",
+            "start_line": 313,
+            "end_line": 316
+          }
+        ]
+      },
+      {
+        "claim": "给出的_sync_wrapper可以令异步入口调用普通同步函数。",
+        "status": "supported",
+        "rationale": "所引文档示例在async inner中调用func，再await send_async(_sync_wrapper=wrapper)。不要求额外运行示例。",
+        "evidence": [
+          {
+            "path": "docs/index.rst",
+            "start_line": 295,
+            "end_line": 311
+          }
+        ]
+      }
+    ],
+    "notes": "保留正确的直接调用结论与可行的异步包装方案，但“要混用必须通过send_async”把一种方案说成必要条件，忽略send的_async_wrapper。这里按明确“必须”表述判机制范围错误；同步调用普通函数的示例本身可行。正文也未说明send_async没有_sync_wrapper会抛出的分支。",
+    "key_points": {
+      "direct_send_no_autoawait": true,
+      "send_async_sync_wrapper": true,
+      "sync_send_async_wrapper_alternative": false
+    }
+  },
+  {
+    "candidate_id": "candidate-40db96aa5d4c19a4",
+    "correctness": "partially_correct",
+    "citation_support": "partial",
+    "completeness": "partial",
+    "abstention": "not_applicable",
+    "entry_scope": "correct",
+    "consistency": "consistent",
+    "claims": [
+      {
+        "claim": "send(123)只触发该回调一次。",
+        "status": "supported",
+        "rationale": "测试的sentinel从[None]到[None,123]，结果正确。",
+        "evidence": [
+          {
+            "path": "tests/test_signals.py",
+            "start_line": 397,
+            "end_line": 414
+          }
+        ]
+      },
+      {
+        "claim": "用(回调函数,发送者)键去重同一sender的重复注册就保证ANY和123跨sender也只调用一次。",
+        "status": "contradicted",
+        "rationale": "ANY与123是两条不同sender关联，单按该二元关系去重不能解释跨关联合并；实际receivers字典按receiver_id保存，receivers_for对两个sender桶的receiver_id集合做并集再遍历。",
+        "evidence": [
+          {
+            "path": "src/blinker/base.py",
+            "start_line": 107,
+            "end_line": 118
+          },
+          {
+            "path": "src/blinker/base.py",
+            "start_line": 342,
+            "end_line": 349
+          }
+        ]
+      }
+    ],
+    "notes": "结论正确，但所说二元键及同sender去重并非本题跨ANY/123只发送一次的机制；应说明接收器ID集合并集。正式引文只证明测试结果，未支持内部键结构，正文也未交代[None,123]断言。此处保留机制事实错误而非只按遗漏计分。",
+    "key_points": {
+      "one_delivery": true,
+      "receiver_id_union": false,
+      "specific_test_assertion": false
+    }
+  },
+  {
+    "candidate_id": "candidate-9d488e29aff306cd",
+    "correctness": "correct",
+    "citation_support": "supported",
+    "completeness": "partial",
+    "abstention": "not_applicable",
+    "entry_scope": "correct",
+    "consistency": "consistent",
+    "claims": [
+      {
+        "claim": "sig.send(123)不会对同一接收器调用两次。",
+        "status": "supported",
+        "rationale": "正式引文的测试同时连接123和ANY，send(123)只再追加一次123。",
+        "evidence": [
+          {
+            "path": "tests/test_signals.py",
+            "start_line": 397,
+            "end_line": 414
+          }
+        ]
+      }
+    ],
+    "notes": "主要结论正确且测试引文直接支持；正文完全没有去重实现或题目要求的关键断言解释。不能由参考里的集合并集或引文中未说明的sentinel值替模型补齐答案。",
+    "key_points": {
+      "one_delivery": true,
+      "receiver_id_union": false,
+      "specific_test_assertion": false
+    }
+  },
+  {
+    "candidate_id": "candidate-e6fcbe03068048d0",
+    "correctness": "correct",
+    "citation_support": "supported",
+    "completeness": "partial",
+    "abstention": "not_applicable",
+    "entry_scope": "correct",
+    "consistency": "consistent",
+    "claims": [
+      {
+        "claim": "题中的直接sig.send()不自动await，不能直接混用异步接收器。",
+        "status": "supported",
+        "rationale": "以不传wrapper的sig.send()为当前条件，该结论由测试RuntimeError与实现分支支持。没有据此扩张成任何带wrapper的send都不可用。",
+        "evidence": [
+          {
+            "path": "tests/test_signals.py",
+            "start_line": 274,
+            "end_line": 283
+          },
+          {
+            "path": "src/blinker/base.py",
+            "start_line": 242,
+            "end_line": 249
+          }
+        ]
+      },
+      {
+        "claim": "send_async直接await异步回调，混合同步回调需_sync_wrapper包装。",
+        "status": "supported",
+        "rationale": "文档277–288给异步接收器直接await路径，290–311给_sync_wrapper混用路径，实际输入包含这些部分。",
+        "evidence": [
+          {
+            "path": "docs/index.rst",
+            "start_line": 277,
+            "end_line": 311
+          },
+          {
+            "path": "src/blinker/base.py",
+            "start_line": 292,
+            "end_line": 299
+          }
+        ]
+      }
+    ],
+    "notes": "按照题中无参数的直接sig.send()理解“不能混用”，不额外推定其否认所有wrapper用法；已答内容正确。仍缺同步入口_async_wrapper替代以及异步入口缺_sync_wrapper时的RuntimeError实际条件，因此完整性partial。正式引文支持主要结论，异步直接await部分同文件可见文档277–288有轻微引用范围遗漏，但本题形式引文跨异步说明与示例，整体支持可核验。",
+    "key_points": {
+      "direct_send_no_autoawait": true,
+      "send_async_sync_wrapper": true,
+      "sync_send_async_wrapper_alternative": false
+    }
+  }
+]

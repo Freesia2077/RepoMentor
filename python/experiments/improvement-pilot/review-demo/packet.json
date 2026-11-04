@@ -1,0 +1,1531 @@
+[
+  {
+    "candidate_id": "candidate-c19577d36a3e4824",
+    "question": "仅凭 python-dotenv 源码，能知道我公司生产进程现在 DATABASE_URL 的值吗？",
+    "snapshot_id": "705ea1130e5977d38c11d5c7",
+    "commit_sha": "0b2880591780a426b0551436f47a17e7a76d954f",
+    "answer": {
+      "answer": "仅凭 python-dotenv 源码无法知道生产进程当前 DATABASE_URL 的值。",
+      "citations": [
+        {
+          "path": "src/dotenv/main.py",
+          "start_line": 431,
+          "end_line": 479
+        },
+        {
+          "path": "src/dotenv/main.py",
+          "start_line": 376,
+          "end_line": 428
+        }
+      ],
+      "insufficient_evidence": false
+    },
+    "observed_context": [
+      {
+        "path": "src/dotenv/main.py",
+        "start_line": 42,
+        "end_line": 97,
+        "content": "class DotEnv:\n    def __init__(\n        self,\n        dotenv_path: Optional[StrPath],\n        stream: Optional[IO[str]] = None,\n        verbose: bool = False,\n        encoding: Optional[str] = None,\n        interpolate: bool = True,\n        override: bool = True,\n    ) -> None:\n        self.dotenv_path: Optional[StrPath] = dotenv_path\n        if isinstance(dotenv_path, str):\n            self.dotenv_path = os.path.expanduser(dotenv_path)\n        elif dotenv_path is not None:\n            self.dotenv_path = pathlib.Path(dotenv_path).expanduser()\n        self.stream: Optional[IO[str]] = stream\n        self._dict: Optional[Dict[str, Optional[str]]] = None\n        self.verbose: bool = verbose\n        self.encoding: Optional[str] = encoding\n        self.interpolate: bool = interpolate\n        self.override: bool = override\n\n    @contextmanager\n    def _get_stream(self) -> Iterator[IO[str]]:\n        if self.dotenv_path and _is_file_or_fifo(self.dotenv_path):\n            with open(self.dotenv_path, encoding=self.encoding) as stream:\n                yield stream\n        elif self.stream is not None:\n            yield self.stream\n        else:\n            if self.verbose:\n                logger.info(\n                    \"python-dotenv could not find configuration file %s.\",\n                    self.dotenv_path or \".env\",\n                )\n            yield io.StringIO(\"\")\n\n    def dict(self) -> Dict[str, Optional[str]]:\n        \"\"\"Return dotenv as dict\"\"\"\n        if self._dict is not None:\n            return self._dict\n\n        raw_values = self.parse()\n\n        if self.interpolate:\n            self._dict = OrderedDict(\n                resolve_variables(raw_values, override=self.override)\n            )\n        else:\n            self._dict = OrderedDict(raw_values)\n\n        return self._dict\n\n    def parse(self) -> Iterator[Tuple[str, Optional[str]]]:\n        with self._get_stream() as stream:\n            for mapping in with_warn_for_invalid_lines(parse_stream(stream)):",
+        "content_sha256": "76068a96345a90abae24271c8501f87067b8f9a21392a4f7eb03cbdbebb6298e"
+      },
+      {
+        "path": "src/dotenv/ipython.py",
+        "start_line": 13,
+        "end_line": 45,
+        "content": "    @magic_arguments()\n    @argument(\n        \"-o\",\n        \"--override\",\n        action=\"store_true\",\n        help=\"Indicate to override existing variables\",\n    )\n    @argument(\n        \"-v\",\n        \"--verbose\",\n        action=\"store_true\",\n        help=\"Indicate function calls to be verbose\",\n    )\n    @argument(\n        \"dotenv_path\",\n        nargs=\"?\",\n        type=str,\n        default=\".env\",\n        help=\"Search in increasingly higher folders for the `dotenv_path`\",\n    )\n    @line_magic\n    def dotenv(self, line):\n        args = parse_argstring(self.dotenv, line)\n        # Locate the .env file\n        dotenv_path = args.dotenv_path\n        try:\n            dotenv_path = find_dotenv(dotenv_path, True, True)\n        except IOError:\n            print(\"cannot find .env file\")\n            return\n\n        # Load the .env file\n        load_dotenv(dotenv_path, verbose=args.verbose, override=args.override)",
+        "content_sha256": "66c10609391931cca3e1d06cccb6a15733823b329d7310f945b5b126b624345b"
+      },
+      {
+        "path": "src/dotenv/main.py",
+        "start_line": 431,
+        "end_line": 479,
+        "content": "def load_dotenv(\n    dotenv_path: Optional[StrPath] = None,\n    stream: Optional[IO[str]] = None,\n    verbose: bool = False,\n    override: bool = False,\n    interpolate: bool = True,\n    encoding: Optional[str] = \"utf-8\",\n) -> bool:\n    \"\"\"Parse a .env file and then load all the variables found as environment variables.\n\n    Parameters:\n        dotenv_path: Absolute or relative path to .env file. A leading `~` is\n            expanded to the user's home directory.\n        stream: Text stream (such as `io.StringIO`) with .env content, used if\n            `dotenv_path` is `None`.\n        verbose: Whether to output a warning the .env file is missing.\n        override: Whether to override the system environment variables with the variables\n            from the `.env` file.\n        interpolate: Whether to interpolate variables using POSIX variable expansion.\n        encoding: Encoding to be used to read the file.\n    Returns:\n        Bool: True if at least one environment variable is set else False\n\n    If both `dotenv_path` and `stream` are `None`, `find_dotenv()` is used to find the\n    .env file with its default parameters. If you need to change the default parameters\n    of `find_dotenv()`, you can explicitly call `find_dotenv()` and pass the result\n    to this function as `dotenv_path`.\n\n    If the environment variable `PYTHON_DOTENV_DISABLED` is set to a truthy value,\n    .env loading is disabled.\n    \"\"\"\n    if _load_dotenv_disabled():\n        logger.debug(\n            \"python-dotenv: .env loading disabled by PYTHON_DOTENV_DISABLED environment variable\"\n        )\n        return False\n\n    if dotenv_path is None and stream is None:\n        dotenv_path = find_dotenv()\n\n    dotenv = DotEnv(\n        dotenv_path=dotenv_path,\n        stream=stream,\n        verbose=verbose,\n        interpolate=interpolate,\n        override=override,\n        encoding=encoding,\n    )\n    return dotenv.set_as_environment_variables()",
+        "content_sha256": "a98919f338a48b77f7ca2577286c84cc694a6f9ea13af7d2e32bc97d870f3135"
+      },
+      {
+        "path": "src/dotenv/main.py",
+        "start_line": 376,
+        "end_line": 428,
+        "content": "def find_dotenv(\n    filename: str = \".env\",\n    raise_error_if_not_found: bool = False,\n    usecwd: bool = False,\n) -> str:\n    \"\"\"\n    Search in increasingly higher folders for the given file\n\n    A leading `~` in `filename` is expanded to the user's home directory, and\n    an absolute `filename` is returned as is if it exists.\n\n    Returns path to the file if found, or an empty string otherwise\n    \"\"\"\n    filename = os.path.expanduser(filename)\n\n    def _is_interactive():\n        \"\"\"Decide whether this is running in a REPL or IPython notebook\"\"\"\n        if hasattr(sys, \"ps1\") or hasattr(sys, \"ps2\"):\n            return True\n        try:\n            main = __import__(\"__main__\", None, None, fromlist=[\"__file__\"])\n        except ModuleNotFoundError:\n            return False\n        return not hasattr(main, \"__file__\")\n\n    def _is_debugger():\n        return sys.gettrace() is not None\n\n    if usecwd or _is_interactive() or _is_debugger() or getattr(sys, \"frozen\", False):\n        # Should work without __file__, e.g. in REPL or IPython notebook.\n        path = os.getcwd()\n    else:\n        # will work for .py files\n        frame = sys._getframe()\n        current_file = __file__\n\n        while frame.f_code.co_filename == current_file or not os.path.exists(\n            frame.f_code.co_filename\n        ):\n            assert frame.f_back is not None\n            frame = frame.f_back\n        frame_filename = frame.f_code.co_filename\n        path = os.path.dirname(os.path.abspath(frame_filename))\n\n    for dirname in _walk_to_root(path):\n        check_path = os.path.join(dirname, filename)\n        if _is_file_or_fifo(check_path):\n            return check_path\n\n    if raise_error_if_not_found:\n        raise IOError(\"File not found\")\n\n    return \"\"",
+        "content_sha256": "d9e0387342f784fcaadd58ca453e26f378009f4aa7a1f95f7ca3318ee3462261"
+      },
+      {
+        "path": "src/dotenv/cli.py",
+        "start_line": 1,
+        "end_line": 23,
+        "content": "import json\nimport os\nimport shlex\nimport sys\nfrom contextlib import contextmanager\nfrom typing import IO, Any, Dict, Iterator, List, Optional\n\nif sys.platform == \"win32\":\n    from subprocess import Popen\n\ntry:\n    import click\nexcept ImportError:\n    sys.stderr.write(\n        \"It seems python-dotenv is not installed with cli option. \\n\"\n        'Run pip install \"python-dotenv[cli]\" to fix this.'\n    )\n    sys.exit(1)\n\nfrom .main import DotEnv, dotenv_values, set_key, unset_key\nfrom .version import __version__\n\n",
+        "content_sha256": "b1545c76a04ef4f5cc9a7d9f3eefa21f6fe01b5deeb83dad61d3b8c179426a16"
+      },
+      {
+        "path": "src/dotenv/__init__.py",
+        "start_line": 1,
+        "end_line": 5,
+        "content": "from typing import Any, Optional\n\nfrom .main import dotenv_values, find_dotenv, get_key, load_dotenv, set_key, unset_key\n\n",
+        "content_sha256": "97117102a472a73c553b78009fbd73e0b87a7b0847e66706d151da7f836afffc"
+      }
+    ],
+    "completion_status": "success",
+    "required_points": [
+      "不能，需要实际进程配置；不能从库源码推出私有环境值"
+    ],
+    "evaluation_sources": []
+  },
+  {
+    "candidate_id": "candidate-d48ee05fda5a3ac4",
+    "question": "Option.choices(values) 会保存调用者数组本身吗？后续传入非法值如何处理？variadic选项的合法值如何收集？",
+    "snapshot_id": "8187c2678534ce06ab2499ed",
+    "commit_sha": "ba6d13ddb4243e5913367734f8c159089ffe7834",
+    "answer": {
+      "answer": "Option.choices(values) 不会保存调用者传入的数组本身，而是保存其浅拷贝（`values.slice()`）。后续若调用者修改原数组，`argChoices` 不受影响；若 `argChoices` 被修改，原数组也不受影响。传入非法值（不在 `argChoices` 中）时，解析器会抛出 `InvalidArgumentError`，错误信息列出当前允许的选项。variadic 选项的合法值收集由 `_collectValue` 处理：若前一个值等于默认值或不是数组，则返回 `[value]`；否则将 `value` 推入前一个数组并返回该数组。",
+      "insufficient_evidence": false,
+      "citations": [
+        {
+          "path": "lib/option.js",
+          "start_line": 182,
+          "end_line": 182
+        },
+        {
+          "path": "lib/option.js",
+          "start_line": 184,
+          "end_line": 187
+        },
+        {
+          "path": "lib/option.js",
+          "start_line": 165,
+          "end_line": 172
+        },
+        {
+          "path": "tests/options.choices.test.js",
+          "start_line": 36,
+          "end_line": 42
+        },
+        {
+          "path": "tests/options.choices.test.js",
+          "start_line": 44,
+          "end_line": 54
+        }
+      ]
+    },
+    "observed_context": [
+      {
+        "path": "lib/option.js",
+        "start_line": 181,
+        "end_line": 195,
+        "content": "  choices(values) {\n    this.argChoices = values.slice();\n    this.parseArg = (arg, previous) => {\n      if (!this.argChoices.includes(arg)) {\n        throw new InvalidArgumentError(\n          `Allowed choices are ${this.argChoices.join(', ')}.`,\n        );\n      }\n      if (this.variadic) {\n        return this._collectValue(arg, previous);\n      }\n      return arg;\n    };\n    return this;\n  }",
+        "content_sha256": "8e772aa89a532cf907d1727e6fd5dc5aeef25e6f3c958975893c3d8b80728f6c"
+      },
+      {
+        "path": "lib/option.js",
+        "start_line": 165,
+        "end_line": 172,
+        "content": "  _collectValue(value, previous) {\n    if (previous === this.defaultValue || !Array.isArray(previous)) {\n      return [value];\n    }\n\n    previous.push(value);\n    return previous;\n  }",
+        "content_sha256": "1c8d2f48b967aaae1864a9bccb9d122dee369b37fbf0467616e50c0e229faddc"
+      },
+      {
+        "path": "lib/argument.js",
+        "start_line": 98,
+        "end_line": 112,
+        "content": "  choices(values) {\n    this.argChoices = values.slice();\n    this.parseArg = (arg, previous) => {\n      if (!this.argChoices.includes(arg)) {\n        throw new InvalidArgumentError(\n          `Allowed choices are ${this.argChoices.join(', ')}.`,\n        );\n      }\n      if (this.variadic) {\n        return this._collectValue(arg, previous);\n      }\n      return arg;\n    };\n    return this;\n  }",
+        "content_sha256": "8e772aa89a532cf907d1727e6fd5dc5aeef25e6f3c958975893c3d8b80728f6c"
+      },
+      {
+        "path": "tests/options.choices.test.js",
+        "start_line": 36,
+        "end_line": 42,
+        "content": "    test('when choices called and argChoices later changed then parameter does not change', () => {\n      const original = ['red', 'blue', 'green'];\n      const param = original.slice();\n      const option = new commander.Option('--colour <shade>').choices(param);\n      option.argChoices.push('purple');\n      assert.deepEqual(param, original);\n    });",
+        "content_sha256": "9357b3e15748184cda4dfd3201ef01eb77db6c8b90d48b4486dc5124120e4e67"
+      },
+      {
+        "path": "tests/options.choices.test.js",
+        "start_line": 44,
+        "end_line": 54,
+        "content": "    test('when choices called and parameter changed the choices does not change', () => {\n      const program = createTestCommand();\n      const param = ['red', 'blue'];\n      program.addOption(\n        new commander.Option('--colour <shade>').choices(param),\n      );\n      param.push('orange');\n      assert.throws(() => {\n        program.parse(['--colour', 'orange'], { from: 'user' });\n      });\n    });",
+        "content_sha256": "2ad94c2d16cee39f209ad7f87a562db107f6653aad2b909fd80987e99a86c738"
+      },
+      {
+        "path": "tests/options.choices.test.js",
+        "start_line": 28,
+        "end_line": 34,
+        "content": "    test('when choices called then parameter does not change', () => {\n      // Unlikely this could break, but check the API we are declaring in TypeScript.\n      const original = ['red', 'blue', 'green'];\n      const param = original.slice();\n      new commander.Option('--colour <shade>').choices(param);\n      assert.deepEqual(param, original);\n    });",
+        "content_sha256": "640803c70455056b9b324bee8d3aa64be03140386b54793a87525273b1d01247"
+      }
+    ],
+    "completion_status": "success",
+    "required_points": [
+      "values.slice复制，非法值抛InvalidArgumentError",
+      "variadic委派_collectValue：初次或previous为defaultValue时新建数组，否则push"
+    ],
+    "evaluation_sources": [
+      {
+        "path": "lib/option.js",
+        "start_line": 165,
+        "end_line": 172,
+        "content": "  _collectValue(value, previous) {\n    if (previous === this.defaultValue || !Array.isArray(previous)) {\n      return [value];\n    }\n\n    previous.push(value);\n    return previous;\n  }",
+        "content_sha256": "1c8d2f48b967aaae1864a9bccb9d122dee369b37fbf0467616e50c0e229faddc"
+      },
+      {
+        "path": "lib/option.js",
+        "start_line": 181,
+        "end_line": 195,
+        "content": "  choices(values) {\n    this.argChoices = values.slice();\n    this.parseArg = (arg, previous) => {\n      if (!this.argChoices.includes(arg)) {\n        throw new InvalidArgumentError(\n          `Allowed choices are ${this.argChoices.join(', ')}.`,\n        );\n      }\n      if (this.variadic) {\n        return this._collectValue(arg, previous);\n      }\n      return arg;\n    };\n    return this;\n  }",
+        "content_sha256": "8e772aa89a532cf907d1727e6fd5dc5aeef25e6f3c958975893c3d8b80728f6c"
+      }
+    ]
+  },
+  {
+    "candidate_id": "candidate-083c9ba89f155da9",
+    "question": "仅凭 python-dotenv 源码，能知道我公司生产进程现在 DATABASE_URL 的值吗？",
+    "snapshot_id": "705ea1130e5977d38c11d5c7",
+    "commit_sha": "0b2880591780a426b0551436f47a17e7a76d954f",
+    "answer": {
+      "answer": "不能",
+      "insufficient_evidence": false,
+      "citations": [
+        {
+          "path": "src/dotenv/main.py",
+          "start_line": 431,
+          "end_line": 479
+        }
+      ]
+    },
+    "observed_context": [
+      {
+        "path": "src/dotenv/ipython.py",
+        "start_line": 13,
+        "end_line": 45,
+        "content": "    @magic_arguments()\n    @argument(\n        \"-o\",\n        \"--override\",\n        action=\"store_true\",\n        help=\"Indicate to override existing variables\",\n    )\n    @argument(\n        \"-v\",\n        \"--verbose\",\n        action=\"store_true\",\n        help=\"Indicate function calls to be verbose\",\n    )\n    @argument(\n        \"dotenv_path\",\n        nargs=\"?\",\n        type=str,\n        default=\".env\",\n        help=\"Search in increasingly higher folders for the `dotenv_path`\",\n    )\n    @line_magic\n    def dotenv(self, line):\n        args = parse_argstring(self.dotenv, line)\n        # Locate the .env file\n        dotenv_path = args.dotenv_path\n        try:\n            dotenv_path = find_dotenv(dotenv_path, True, True)\n        except IOError:\n            print(\"cannot find .env file\")\n            return\n\n        # Load the .env file\n        load_dotenv(dotenv_path, verbose=args.verbose, override=args.override)",
+        "content_sha256": "66c10609391931cca3e1d06cccb6a15733823b329d7310f945b5b126b624345b"
+      },
+      {
+        "path": "src/dotenv/main.py",
+        "start_line": 42,
+        "end_line": 97,
+        "content": "class DotEnv:\n    def __init__(\n        self,\n        dotenv_path: Optional[StrPath],\n        stream: Optional[IO[str]] = None,\n        verbose: bool = False,\n        encoding: Optional[str] = None,\n        interpolate: bool = True,\n        override: bool = True,\n    ) -> None:\n        self.dotenv_path: Optional[StrPath] = dotenv_path\n        if isinstance(dotenv_path, str):\n            self.dotenv_path = os.path.expanduser(dotenv_path)\n        elif dotenv_path is not None:\n            self.dotenv_path = pathlib.Path(dotenv_path).expanduser()\n        self.stream: Optional[IO[str]] = stream\n        self._dict: Optional[Dict[str, Optional[str]]] = None\n        self.verbose: bool = verbose\n        self.encoding: Optional[str] = encoding\n        self.interpolate: bool = interpolate\n        self.override: bool = override\n\n    @contextmanager\n    def _get_stream(self) -> Iterator[IO[str]]:\n        if self.dotenv_path and _is_file_or_fifo(self.dotenv_path):\n            with open(self.dotenv_path, encoding=self.encoding) as stream:\n                yield stream\n        elif self.stream is not None:\n            yield self.stream\n        else:\n            if self.verbose:\n                logger.info(\n                    \"python-dotenv could not find configuration file %s.\",\n                    self.dotenv_path or \".env\",\n                )\n            yield io.StringIO(\"\")\n\n    def dict(self) -> Dict[str, Optional[str]]:\n        \"\"\"Return dotenv as dict\"\"\"\n        if self._dict is not None:\n            return self._dict\n\n        raw_values = self.parse()\n\n        if self.interpolate:\n            self._dict = OrderedDict(\n                resolve_variables(raw_values, override=self.override)\n            )\n        else:\n            self._dict = OrderedDict(raw_values)\n\n        return self._dict\n\n    def parse(self) -> Iterator[Tuple[str, Optional[str]]]:\n        with self._get_stream() as stream:\n            for mapping in with_warn_for_invalid_lines(parse_stream(stream)):",
+        "content_sha256": "76068a96345a90abae24271c8501f87067b8f9a21392a4f7eb03cbdbebb6298e"
+      },
+      {
+        "path": "src/dotenv/main.py",
+        "start_line": 376,
+        "end_line": 428,
+        "content": "def find_dotenv(\n    filename: str = \".env\",\n    raise_error_if_not_found: bool = False,\n    usecwd: bool = False,\n) -> str:\n    \"\"\"\n    Search in increasingly higher folders for the given file\n\n    A leading `~` in `filename` is expanded to the user's home directory, and\n    an absolute `filename` is returned as is if it exists.\n\n    Returns path to the file if found, or an empty string otherwise\n    \"\"\"\n    filename = os.path.expanduser(filename)\n\n    def _is_interactive():\n        \"\"\"Decide whether this is running in a REPL or IPython notebook\"\"\"\n        if hasattr(sys, \"ps1\") or hasattr(sys, \"ps2\"):\n            return True\n        try:\n            main = __import__(\"__main__\", None, None, fromlist=[\"__file__\"])\n        except ModuleNotFoundError:\n            return False\n        return not hasattr(main, \"__file__\")\n\n    def _is_debugger():\n        return sys.gettrace() is not None\n\n    if usecwd or _is_interactive() or _is_debugger() or getattr(sys, \"frozen\", False):\n        # Should work without __file__, e.g. in REPL or IPython notebook.\n        path = os.getcwd()\n    else:\n        # will work for .py files\n        frame = sys._getframe()\n        current_file = __file__\n\n        while frame.f_code.co_filename == current_file or not os.path.exists(\n            frame.f_code.co_filename\n        ):\n            assert frame.f_back is not None\n            frame = frame.f_back\n        frame_filename = frame.f_code.co_filename\n        path = os.path.dirname(os.path.abspath(frame_filename))\n\n    for dirname in _walk_to_root(path):\n        check_path = os.path.join(dirname, filename)\n        if _is_file_or_fifo(check_path):\n            return check_path\n\n    if raise_error_if_not_found:\n        raise IOError(\"File not found\")\n\n    return \"\"",
+        "content_sha256": "d9e0387342f784fcaadd58ca453e26f378009f4aa7a1f95f7ca3318ee3462261"
+      },
+      {
+        "path": "src/dotenv/main.py",
+        "start_line": 431,
+        "end_line": 479,
+        "content": "def load_dotenv(\n    dotenv_path: Optional[StrPath] = None,\n    stream: Optional[IO[str]] = None,\n    verbose: bool = False,\n    override: bool = False,\n    interpolate: bool = True,\n    encoding: Optional[str] = \"utf-8\",\n) -> bool:\n    \"\"\"Parse a .env file and then load all the variables found as environment variables.\n\n    Parameters:\n        dotenv_path: Absolute or relative path to .env file. A leading `~` is\n            expanded to the user's home directory.\n        stream: Text stream (such as `io.StringIO`) with .env content, used if\n            `dotenv_path` is `None`.\n        verbose: Whether to output a warning the .env file is missing.\n        override: Whether to override the system environment variables with the variables\n            from the `.env` file.\n        interpolate: Whether to interpolate variables using POSIX variable expansion.\n        encoding: Encoding to be used to read the file.\n    Returns:\n        Bool: True if at least one environment variable is set else False\n\n    If both `dotenv_path` and `stream` are `None`, `find_dotenv()` is used to find the\n    .env file with its default parameters. If you need to change the default parameters\n    of `find_dotenv()`, you can explicitly call `find_dotenv()` and pass the result\n    to this function as `dotenv_path`.\n\n    If the environment variable `PYTHON_DOTENV_DISABLED` is set to a truthy value,\n    .env loading is disabled.\n    \"\"\"\n    if _load_dotenv_disabled():\n        logger.debug(\n            \"python-dotenv: .env loading disabled by PYTHON_DOTENV_DISABLED environment variable\"\n        )\n        return False\n\n    if dotenv_path is None and stream is None:\n        dotenv_path = find_dotenv()\n\n    dotenv = DotEnv(\n        dotenv_path=dotenv_path,\n        stream=stream,\n        verbose=verbose,\n        interpolate=interpolate,\n        override=override,\n        encoding=encoding,\n    )\n    return dotenv.set_as_environment_variables()",
+        "content_sha256": "a98919f338a48b77f7ca2577286c84cc694a6f9ea13af7d2e32bc97d870f3135"
+      },
+      {
+        "path": "src/dotenv/__init__.py",
+        "start_line": 1,
+        "end_line": 5,
+        "content": "from typing import Any, Optional\n\nfrom .main import dotenv_values, find_dotenv, get_key, load_dotenv, set_key, unset_key\n\n",
+        "content_sha256": "97117102a472a73c553b78009fbd73e0b87a7b0847e66706d151da7f836afffc"
+      },
+      {
+        "path": "src/dotenv/cli.py",
+        "start_line": 1,
+        "end_line": 23,
+        "content": "import json\nimport os\nimport shlex\nimport sys\nfrom contextlib import contextmanager\nfrom typing import IO, Any, Dict, Iterator, List, Optional\n\nif sys.platform == \"win32\":\n    from subprocess import Popen\n\ntry:\n    import click\nexcept ImportError:\n    sys.stderr.write(\n        \"It seems python-dotenv is not installed with cli option. \\n\"\n        'Run pip install \"python-dotenv[cli]\" to fix this.'\n    )\n    sys.exit(1)\n\nfrom .main import DotEnv, dotenv_values, set_key, unset_key\nfrom .version import __version__\n\n",
+        "content_sha256": "b1545c76a04ef4f5cc9a7d9f3eefa21f6fe01b5deeb83dad61d3b8c179426a16"
+      }
+    ],
+    "completion_status": "success",
+    "required_points": [
+      "不能，需要实际进程配置；不能从库源码推出私有环境值"
+    ],
+    "evaluation_sources": []
+  },
+  {
+    "candidate_id": "candidate-9ec2c394eb7eebaa",
+    "question": "我要理解Requests会话怎样发送一次请求，不执行网络。请以Session.request为入口给出主要阅读顺序：Request在哪里组装，怎样准备为PreparedRequest，timeout如何传到Session.send，最后由谁实际发送？",
+    "snapshot_id": "e82fdc78cb700c628d4286d6",
+    "commit_sha": "46e939b5525d9c72b677340985582b04b128478a",
+    "answer": null,
+    "observed_context": [
+      {
+        "path": "src/requests/sessions.py",
+        "start_line": 673,
+        "end_line": 723,
+        "content": "    def send(self, request, **kwargs):\n        \"\"\"Send a given PreparedRequest.\n\n        :rtype: requests.Response\n        \"\"\"\n        # Set defaults that the hooks can utilize to ensure they always have\n        # the correct parameters to reproduce the previous request.\n        kwargs.setdefault(\"stream\", self.stream)\n        kwargs.setdefault(\"verify\", self.verify)\n        kwargs.setdefault(\"cert\", self.cert)\n        if \"proxies\" not in kwargs:\n            kwargs[\"proxies\"] = resolve_proxies(request, self.proxies, self.trust_env)\n\n        # It's possible that users might accidentally send a Request object.\n        # Guard against that specific failure case.\n        if isinstance(request, Request):\n            raise ValueError(\"You can only send PreparedRequests.\")\n\n        # Set up variables needed for resolve_redirects and dispatching of hooks\n        allow_redirects = kwargs.pop(\"allow_redirects\", True)\n        stream = kwargs.get(\"stream\")\n        hooks = request.hooks\n\n        # Get the appropriate adapter to use\n        adapter = self.get_adapter(url=request.url)\n\n        # Start time (approximately) of the request\n        start = preferred_clock()\n\n        # Send the request\n        r = adapter.send(request, **kwargs)\n\n        # Total elapsed time of the request (approximately)\n        elapsed = preferred_clock() - start\n        r.elapsed = timedelta(seconds=elapsed)\n\n        # Response manipulation hooks\n        r = dispatch_hook(\"response\", hooks, r, **kwargs)\n\n        # Persist cookies\n        if r.history:\n            # If the hooks create history then we want those cookies too\n            for resp in r.history:\n                extract_cookies_to_jar(self.cookies, resp.request, resp.raw)\n\n        extract_cookies_to_jar(self.cookies, request, r.raw)\n\n        # Resolve redirects if allowed.\n        if allow_redirects:\n            # Redirect resolving generator.\n            gen = self.resolve_redirects(r, request, **kwargs)",
+        "content_sha256": "ecd19335fe94d4e29fadf6c6e8a22c3422298763288c61f00105e77db52cc1fc"
+      },
+      {
+        "path": "src/requests/models.py",
+        "start_line": 230,
+        "end_line": 266,
+        "content": "class Request(RequestHooksMixin):\n    \"\"\"A user-created :class:`Request <Request>` object.\n\n    Used to prepare a :class:`PreparedRequest <PreparedRequest>`, which is sent to the server.\n\n    :param method: HTTP method to use.\n    :param url: URL to send.\n    :param headers: dictionary of headers to send.\n    :param files: dictionary of {filename: fileobject} files to multipart upload.\n    :param data: the body to attach to the request. If a dictionary or\n        list of tuples ``[(key, value)]`` is provided, form-encoding will\n        take place.\n    :param json: json for the body to attach to the request (if files or data is not specified).\n    :param params: URL parameters to append to the URL. If a dictionary or\n        list of tuples ``[(key, value)]`` is provided, form-encoding will\n        take place.\n    :param auth: Auth handler or (user, pass) tuple.\n    :param cookies: dictionary or CookieJar of cookies to attach to this request.\n    :param hooks: dictionary of callback hooks, for internal usage.\n\n    Usage::\n\n      >>> import requests\n      >>> req = requests.Request('GET', 'https://httpbin.org/get')\n      >>> req.prepare()\n      <PreparedRequest [GET]>\n    \"\"\"\n\n    def __init__(\n        self,\n        method=None,\n        url=None,\n        headers=None,\n        files=None,\n        data=None,\n        params=None,\n        auth=None,",
+        "content_sha256": "7c41358bc54e49d91658f55a0eb26a9f8907c1cd17636368920e9c1e1834a125"
+      },
+      {
+        "path": "src/requests/sessions.py",
+        "start_line": 457,
+        "end_line": 498,
+        "content": "    def prepare_request(self, request):\n        \"\"\"Constructs a :class:`PreparedRequest <PreparedRequest>` for\n        transmission and returns it. The :class:`PreparedRequest` has settings\n        merged from the :class:`Request <Request>` instance and those of the\n        :class:`Session`.\n\n        :param request: :class:`Request` instance to prepare with this\n            session's settings.\n        :rtype: requests.PreparedRequest\n        \"\"\"\n        cookies = request.cookies or {}\n\n        # Bootstrap CookieJar.\n        if not isinstance(cookies, cookielib.CookieJar):\n            cookies = cookiejar_from_dict(cookies)\n\n        # Merge with session cookies\n        merged_cookies = merge_cookies(\n            merge_cookies(RequestsCookieJar(), self.cookies), cookies\n        )\n\n        # Set environment's basic authentication if not explicitly set.\n        auth = request.auth\n        if self.trust_env and not auth and not self.auth:\n            auth = get_netrc_auth(request.url)\n\n        p = PreparedRequest()\n        p.prepare(\n            method=request.method.upper(),\n            url=request.url,\n            files=request.files,\n            data=request.data,\n            json=request.json,\n            headers=merge_setting(\n                request.headers, self.headers, dict_class=CaseInsensitiveDict\n            ),\n            params=merge_setting(request.params, self.params),\n            auth=merge_setting(auth, self.auth),\n            cookies=merged_cookies,\n            hooks=merge_hooks(request.hooks, self.hooks),\n        )\n        return p",
+        "content_sha256": "baeb7869093ce107e16cdf41af8b32cdd478477acfaee3b39f1441d45c9c420c"
+      },
+      {
+        "path": "src/requests/sessions.py",
+        "start_line": 500,
+        "end_line": 546,
+        "content": "    def request(\n        self,\n        method,\n        url,\n        params=None,\n        data=None,\n        headers=None,\n        cookies=None,\n        files=None,\n        auth=None,\n        timeout=None,\n        allow_redirects=True,\n        proxies=None,\n        hooks=None,\n        stream=None,\n        verify=None,\n        cert=None,\n        json=None,\n    ):\n        \"\"\"Constructs a :class:`Request <Request>`, prepares it and sends it.\n        Returns :class:`Response <Response>` object.\n\n        :param method: method for the new :class:`Request` object.\n        :param url: URL for the new :class:`Request` object.\n        :param params: (optional) Dictionary or bytes to be sent in the query\n            string for the :class:`Request`.\n        :param data: (optional) Dictionary, list of tuples, bytes, or file-like\n            object to send in the body of the :class:`Request`.\n        :param json: (optional) json to send in the body of the\n            :class:`Request`.\n        :param headers: (optional) Dictionary of HTTP Headers to send with the\n            :class:`Request`.\n        :param cookies: (optional) Dict or CookieJar object to send with the\n            :class:`Request`.\n        :param files: (optional) Dictionary of ``'filename': file-like-objects``\n            for multipart encoding upload.\n        :param auth: (optional) Auth tuple or callable to enable\n            Basic/Digest/Custom HTTP Auth.\n        :param timeout: (optional) How many seconds to wait for the server to send\n            data before giving up, as a float, or a :ref:`(connect timeout,\n            read timeout) <timeouts>` tuple.\n        :type timeout: float or tuple\n        :param allow_redirects: (optional) Set to True by default.\n        :type allow_redirects: bool\n        :param proxies: (optional) Dictionary mapping protocol or protocol and\n            hostname to the URL of the proxy.\n        :param hooks: (optional) Dictionary mapping hook name to one event or",
+        "content_sha256": "a5d1b3a4935623e36619777356230778a029a68332ba314623e7bc66ee94a391"
+      },
+      {
+        "path": "src/requests/cookies.py",
+        "start_line": 124,
+        "end_line": 137,
+        "content": "def extract_cookies_to_jar(jar, request, response):\n    \"\"\"Extract the cookies from the response into a CookieJar.\n\n    :param jar: http.cookiejar.CookieJar (not necessarily a RequestsCookieJar)\n    :param request: our own requests.Request object\n    :param response: urllib3.HTTPResponse object\n    \"\"\"\n    if not (hasattr(response, \"_original_response\") and response._original_response):\n        return\n    # the _original_response field is the wrapped httplib.HTTPResponse object,\n    req = MockRequest(request)\n    # pull out the HTTPMessage with the headers and put it in the mock:\n    res = MockResponse(response._original_response.msg)\n    jar.extract_cookies(res, req)",
+        "content_sha256": "567a750dce49bcec9d4f21733dfb2ffed1d998048447442a05514852fa79d7a9"
+      },
+      {
+        "path": "src/requests/hooks.py",
+        "start_line": 22,
+        "end_line": 33,
+        "content": "def dispatch_hook(key, hooks, hook_data, **kwargs):\n    \"\"\"Dispatches a hook dictionary on a given piece of data.\"\"\"\n    hooks = hooks or {}\n    hooks = hooks.get(key)\n    if hooks:\n        if hasattr(hooks, \"__call__\"):\n            hooks = [hooks]\n        for hook in hooks:\n            _hook_data = hook(hook_data, **kwargs)\n            if _hook_data is not None:\n                hook_data = _hook_data\n    return hook_data",
+        "content_sha256": "3eb1efb0be129e9933ce575b94a799244ac0e1e00d671fc9707653b8e618de44"
+      }
+    ],
+    "completion_status": "failed",
+    "required_points": [
+      "request组装Request并prepare_request",
+      "timeout进入send_kwargs并调用self.send",
+      "Session.send按URL取adapter并adapter.send"
+    ],
+    "evaluation_sources": [
+      {
+        "path": "src/requests/sessions.py",
+        "start_line": 562,
+        "end_line": 591,
+        "content": "        # Create the Request.\n        req = Request(\n            method=method.upper(),\n            url=url,\n            headers=headers,\n            files=files,\n            data=data or {},\n            json=json,\n            params=params or {},\n            auth=auth,\n            cookies=cookies,\n            hooks=hooks,\n        )\n        prep = self.prepare_request(req)\n\n        proxies = proxies or {}\n\n        settings = self.merge_environment_settings(\n            prep.url, proxies, stream, verify, cert\n        )\n\n        # Send the request.\n        send_kwargs = {\n            \"timeout\": timeout,\n            \"allow_redirects\": allow_redirects,\n        }\n        send_kwargs.update(settings)\n        resp = self.send(prep, **send_kwargs)\n\n        return resp",
+        "content_sha256": "0315d5d482cf596222ddd8ce6d39bd7d74235600de48007879bc8526a44a355e"
+      },
+      {
+        "path": "src/requests/sessions.py",
+        "start_line": 696,
+        "end_line": 703,
+        "content": "        # Get the appropriate adapter to use\n        adapter = self.get_adapter(url=request.url)\n\n        # Start time (approximately) of the request\n        start = preferred_clock()\n\n        # Send the request\n        r = adapter.send(request, **kwargs)",
+        "content_sha256": "302f989ba13a428b3a263b394ccdbbaa34c931d0b0da1292518504099dd58ef5"
+      }
+    ]
+  },
+  {
+    "candidate_id": "candidate-611e5747062d1897",
+    "question": "createBuilder 对单个参数 null 与两个参数 null、undefined 的字符串转换相同吗？",
+    "snapshot_id": "cfb80e195a6d80153bc52326",
+    "commit_sha": "47fc05abd46171b235e24174cd2dba83d25bf037",
+    "answer": {
+      "answer": "不相同。当传入单个参数为 null 时，字符串转换为空字符串；当传入两个参数且均为 null 或 undefined 时，字符串转换为两个空字符串之间的空格（即 ' '）。",
+      "insufficient_evidence": false,
+      "citations": [
+        {
+          "path": "source/index.js",
+          "start_line": 177,
+          "end_line": 177
+        },
+        {
+          "path": "source/index.js",
+          "start_line": 182,
+          "end_line": 182
+        }
+      ]
+    },
+    "observed_context": [
+      {
+        "path": "source/index.js",
+        "start_line": 172,
+        "end_line": 198,
+        "content": "const createBuilder = (self, _styler, _isEmpty) => {\n\t// Single argument is hot path, implicit coercion is faster than anything\n\tconst builder = (...arguments_) => {\n\t\tif (arguments_.length === 1) {\n\t\t\t// eslint-disable-next-line no-implicit-coercion\n\t\t\treturn applyStyle(builder, '' + arguments_[0]);\n\t\t}\n\n\t\tif (arguments_.length === 2) {\n\t\t\t// The template literal matches `Array#join` coercion (`null` and `undefined` become empty, objects use `toString`) while being faster.\n\t\t\treturn applyStyle(builder, `${arguments_[0] ?? ''} ${arguments_[1] ?? ''}`);\n\t\t}\n\n\t\treturn applyStyle(builder, arguments_.join(' '));\n\t};\n\n\t// We alter the prototype because we must return a function, but there is\n\t// no way to create a function with a different prototype\n\tObject.setPrototypeOf(builder, proto);\n\n\t// Point every builder at the root generator instead of its immediate parent, so reading the level costs one property load rather than walking a `level` getter per link of the chain.\n\tbuilder[GENERATOR] = self[GENERATOR] ?? self;\n\tbuilder[STYLER] = _styler;\n\tbuilder[IS_EMPTY] = _isEmpty;\n\n\treturn builder;\n};",
+        "content_sha256": "1b703c8de35de3fa656fc86c18c2cba559634391612cd1cb200f3a30303188fc"
+      },
+      {
+        "path": "source/index.js",
+        "start_line": 79,
+        "end_line": 83,
+        "content": "\tget() {\n\t\tconst builder = createBuilder(this, this[STYLER], true);\n\t\tObject.defineProperty(this, 'visible', {value: builder});\n\t\treturn builder;\n\t},",
+        "content_sha256": "f64d73f5a23738aab15c3d4aec034511f53b2caa735876cc92be55fc4bb9658c"
+      },
+      {
+        "path": "source/index.js",
+        "start_line": 124,
+        "end_line": 127,
+        "content": "\t\t\t\tconst styleFunction = function (first, second, third) {\n\t\t\t\t\tconst open = converters[this.level](first, second, third);\n\t\t\t\t\treturn createBuilder(this, createStyler(open, close, this[STYLER]), this[IS_EMPTY]);\n\t\t\t\t};",
+        "content_sha256": "f6ba2224d28f20fe2aabe44b8ab14fa81e1f2b8499d72b77dbc6bbc33b9606a8"
+      },
+      {
+        "path": "source/index.js",
+        "start_line": 70,
+        "end_line": 74,
+        "content": "\t\tget() {\n\t\t\tconst builder = createBuilder(this, createStyler(style.open, style.close, this[STYLER]), this[IS_EMPTY]);\n\t\t\tObject.defineProperty(this, styleName, {value: builder});\n\t\t\treturn builder;\n\t\t},",
+        "content_sha256": "5298446ca9dabeb5e0db57504a6909b4f2da66f6f88b362170f152d14f1d838e"
+      },
+      {
+        "path": "test/chalk.js",
+        "start_line": 81,
+        "end_line": 92,
+        "content": "test('convert multiple arguments the same way regardless of their count', t => {\n\tconst object = {\n\t\tvalueOf: () => 42,\n\t\ttoString: () => 'string',\n\t};\n\n\tt.is(chalk.red(null, 'foo'), '\\u{1B}[31m foo\\u{1B}[39m');\n\tt.is(chalk.red('foo', undefined), '\\u{1B}[31mfoo \\u{1B}[39m');\n\tt.is(chalk.red('foo', object), '\\u{1B}[31mfoo string\\u{1B}[39m');\n\tt.is(chalk.red(null, 'foo', 'bar'), '\\u{1B}[31m foo bar\\u{1B}[39m');\n\tt.is(chalk.red('foo', object, 'bar'), '\\u{1B}[31mfoo string bar\\u{1B}[39m');\n});",
+        "content_sha256": "1002806b78e473a6a4834858cdca2fcaf3cbeff9a2aee2a02a3973e202cabe18"
+      }
+    ],
+    "completion_status": "success",
+    "required_points": [
+      "单参数隐式拼接得到'null'；双参数nullish变空后由一个空格连接"
+    ],
+    "evaluation_sources": [
+      {
+        "path": "source/index.js",
+        "start_line": 172,
+        "end_line": 185,
+        "content": "const createBuilder = (self, _styler, _isEmpty) => {\n\t// Single argument is hot path, implicit coercion is faster than anything\n\tconst builder = (...arguments_) => {\n\t\tif (arguments_.length === 1) {\n\t\t\t// eslint-disable-next-line no-implicit-coercion\n\t\t\treturn applyStyle(builder, '' + arguments_[0]);\n\t\t}\n\n\t\tif (arguments_.length === 2) {\n\t\t\t// The template literal matches `Array#join` coercion (`null` and `undefined` become empty, objects use `toString`) while being faster.\n\t\t\treturn applyStyle(builder, `${arguments_[0] ?? ''} ${arguments_[1] ?? ''}`);\n\t\t}\n\n\t\treturn applyStyle(builder, arguments_.join(' '));",
+        "content_sha256": "5bc07f8316259381c1b8c625b64f4877f75d19d419f700b5c4ea76e65caeebc9"
+      }
+    ]
+  },
+  {
+    "candidate_id": "candidate-e268ff2705953f4f",
+    "question": "Option.choices(values) 会保存调用者数组本身吗？后续传入非法值如何处理？variadic选项的合法值如何收集？",
+    "snapshot_id": "8187c2678534ce06ab2499ed",
+    "commit_sha": "ba6d13ddb4243e5913367734f8c159089ffe7834",
+    "answer": {
+      "answer": "Option.choices(values) 不会保存调用者数组本身，而是通过 values.slice() 创建副本；后续传入非法值会抛出 InvalidArgumentError 异常；variadic 选项的合法值通过 _collectValue 方法累积到同一个数组中。",
+      "citations": [
+        {
+          "path": "lib/option.js",
+          "start_line": 182,
+          "end_line": 182
+        },
+        {
+          "path": "lib/option.js",
+          "start_line": 184,
+          "end_line": 188
+        },
+        {
+          "path": "lib/option.js",
+          "start_line": 165,
+          "end_line": 172
+        }
+      ],
+      "insufficient_evidence": false
+    },
+    "observed_context": [
+      {
+        "path": "lib/option.js",
+        "start_line": 181,
+        "end_line": 195,
+        "content": "  choices(values) {\n    this.argChoices = values.slice();\n    this.parseArg = (arg, previous) => {\n      if (!this.argChoices.includes(arg)) {\n        throw new InvalidArgumentError(\n          `Allowed choices are ${this.argChoices.join(', ')}.`,\n        );\n      }\n      if (this.variadic) {\n        return this._collectValue(arg, previous);\n      }\n      return arg;\n    };\n    return this;\n  }",
+        "content_sha256": "8e772aa89a532cf907d1727e6fd5dc5aeef25e6f3c958975893c3d8b80728f6c"
+      },
+      {
+        "path": "lib/argument.js",
+        "start_line": 98,
+        "end_line": 112,
+        "content": "  choices(values) {\n    this.argChoices = values.slice();\n    this.parseArg = (arg, previous) => {\n      if (!this.argChoices.includes(arg)) {\n        throw new InvalidArgumentError(\n          `Allowed choices are ${this.argChoices.join(', ')}.`,\n        );\n      }\n      if (this.variadic) {\n        return this._collectValue(arg, previous);\n      }\n      return arg;\n    };\n    return this;\n  }",
+        "content_sha256": "8e772aa89a532cf907d1727e6fd5dc5aeef25e6f3c958975893c3d8b80728f6c"
+      },
+      {
+        "path": "lib/option.js",
+        "start_line": 165,
+        "end_line": 172,
+        "content": "  _collectValue(value, previous) {\n    if (previous === this.defaultValue || !Array.isArray(previous)) {\n      return [value];\n    }\n\n    previous.push(value);\n    return previous;\n  }",
+        "content_sha256": "1c8d2f48b967aaae1864a9bccb9d122dee369b37fbf0467616e50c0e229faddc"
+      },
+      {
+        "path": "tests/options.choices.test.js",
+        "start_line": 28,
+        "end_line": 34,
+        "content": "    test('when choices called then parameter does not change', () => {\n      // Unlikely this could break, but check the API we are declaring in TypeScript.\n      const original = ['red', 'blue', 'green'];\n      const param = original.slice();\n      new commander.Option('--colour <shade>').choices(param);\n      assert.deepEqual(param, original);\n    });",
+        "content_sha256": "640803c70455056b9b324bee8d3aa64be03140386b54793a87525273b1d01247"
+      },
+      {
+        "path": "tests/options.choices.test.js",
+        "start_line": 36,
+        "end_line": 42,
+        "content": "    test('when choices called and argChoices later changed then parameter does not change', () => {\n      const original = ['red', 'blue', 'green'];\n      const param = original.slice();\n      const option = new commander.Option('--colour <shade>').choices(param);\n      option.argChoices.push('purple');\n      assert.deepEqual(param, original);\n    });",
+        "content_sha256": "9357b3e15748184cda4dfd3201ef01eb77db6c8b90d48b4486dc5124120e4e67"
+      },
+      {
+        "path": "tests/options.choices.test.js",
+        "start_line": 44,
+        "end_line": 54,
+        "content": "    test('when choices called and parameter changed the choices does not change', () => {\n      const program = createTestCommand();\n      const param = ['red', 'blue'];\n      program.addOption(\n        new commander.Option('--colour <shade>').choices(param),\n      );\n      param.push('orange');\n      assert.throws(() => {\n        program.parse(['--colour', 'orange'], { from: 'user' });\n      });\n    });",
+        "content_sha256": "2ad94c2d16cee39f209ad7f87a562db107f6653aad2b909fd80987e99a86c738"
+      }
+    ],
+    "completion_status": "success",
+    "required_points": [
+      "values.slice复制，非法值抛InvalidArgumentError",
+      "variadic委派_collectValue：初次或previous为defaultValue时新建数组，否则push"
+    ],
+    "evaluation_sources": [
+      {
+        "path": "lib/option.js",
+        "start_line": 165,
+        "end_line": 172,
+        "content": "  _collectValue(value, previous) {\n    if (previous === this.defaultValue || !Array.isArray(previous)) {\n      return [value];\n    }\n\n    previous.push(value);\n    return previous;\n  }",
+        "content_sha256": "1c8d2f48b967aaae1864a9bccb9d122dee369b37fbf0467616e50c0e229faddc"
+      },
+      {
+        "path": "lib/option.js",
+        "start_line": 181,
+        "end_line": 195,
+        "content": "  choices(values) {\n    this.argChoices = values.slice();\n    this.parseArg = (arg, previous) => {\n      if (!this.argChoices.includes(arg)) {\n        throw new InvalidArgumentError(\n          `Allowed choices are ${this.argChoices.join(', ')}.`,\n        );\n      }\n      if (this.variadic) {\n        return this._collectValue(arg, previous);\n      }\n      return arg;\n    };\n    return this;\n  }",
+        "content_sha256": "8e772aa89a532cf907d1727e6fd5dc5aeef25e6f3c958975893c3d8b80728f6c"
+      }
+    ]
+  },
+  {
+    "candidate_id": "candidate-4b351db79767556b",
+    "question": "mitt 的 on 会把事件名统一转成小写吗？结合实现与 should NOT normalize case 测试说明。",
+    "snapshot_id": "dfdc0816797bf578d0363591",
+    "commit_sha": "6b41670516ed8e8b738612f60491995470aa63b3",
+    "answer": {
+      "answer": "否，mitt 的 on 方法不会把事件名统一转成小写。",
+      "citations": [
+        {
+          "path": "src/index.ts",
+          "start_line": 66,
+          "end_line": 73
+        }
+      ],
+      "insufficient_evidence": false
+    },
+    "observed_context": [
+      {
+        "path": "src/index.ts",
+        "start_line": 46,
+        "end_line": 123,
+        "content": "export default function mitt<Events extends Record<EventType, unknown>>(\n\tall?: EventHandlerMap<Events>\n): Emitter<Events> {\n\ttype GenericEventHandler =\n\t\t| Handler<Events[keyof Events]>\n\t\t| WildcardHandler<Events>;\n\tall = all || new Map();\n\n\treturn {\n\t\t/**\n\t\t * A Map of event names to registered handler functions.\n\t\t */\n\t\tall,\n\n\t\t/**\n\t\t * Register an event handler for the given type.\n\t\t * @param {string|symbol} type Type of event to listen for, or `'*'` for all events\n\t\t * @param {Function} handler Function to call in response to given event\n\t\t * @memberOf mitt\n\t\t */\n\t\ton<Key extends keyof Events>(type: Key, handler: GenericEventHandler) {\n\t\t\tconst handlers: Array<GenericEventHandler> | undefined = all!.get(type);\n\t\t\tif (handlers) {\n\t\t\t\thandlers.push(handler);\n\t\t\t} else {\n\t\t\t\tall!.set(type, [handler] as EventHandlerList<Events[keyof Events]>);\n\t\t\t}\n\t\t},\n\n\t\t/**\n\t\t * Remove an event handler for the given type.\n\t\t * If `handler` is omitted, all handlers of the given type are removed.\n\t\t * @param {string|symbol} type Type of event to unregister `handler` from (`'*'` to remove a wildcard handler)\n\t\t * @param {Function} [handler] Handler function to remove\n\t\t * @memberOf mitt\n\t\t */\n\t\toff<Key extends keyof Events>(type: Key, handler?: GenericEventHandler) {\n\t\t\tconst handlers: Array<GenericEventHandler> | undefined = all!.get(type);\n\t\t\tif (handlers) {\n\t\t\t\tif (handler) {\n\t\t\t\t\thandlers.splice(handlers.indexOf(handler) >>> 0, 1);\n\t\t\t\t} else {\n\t\t\t\t\tall!.set(type, []);\n\t\t\t\t}\n\t\t\t}\n\t\t},\n\n\t\t/**\n\t\t * Invoke all handlers for the given type.\n\t\t * If present, `'*'` handlers are invoked after type-matched handlers.\n\t\t *\n\t\t * Note: Manually firing '*' handlers is not supported.\n\t\t *\n\t\t * @param {string|symbol} type The event type to invoke\n\t\t * @param {Any} [evt] Any value (object is recommended and powerful), passed to each handler\n\t\t * @memberOf mitt\n\t\t */\n\t\temit<Key extends keyof Events>(type: Key, evt?: Events[Key]) {\n\t\t\tlet handlers = all!.get(type);\n\t\t\tif (handlers) {\n\t\t\t\t(handlers as EventHandlerList<Events[keyof Events]>)\n\t\t\t\t\t.slice()\n\t\t\t\t\t.map((handler) => {\n\t\t\t\t\t\thandler(evt!);\n\t\t\t\t\t});\n\t\t\t}\n\n\t\t\thandlers = all!.get('*');\n\t\t\tif (handlers) {\n\t\t\t\t(handlers as WildCardEventHandlerList<Events>)\n\t\t\t\t\t.slice()\n\t\t\t\t\t.map((handler) => {\n\t\t\t\t\t\thandler(type, evt!);\n\t\t\t\t\t});\n\t\t\t}\n\t\t}\n\t};\n}",
+        "content_sha256": "51d8ae8faff62c508cb6afbf52067bd295a2194ac7f0886486841900c5b12fb7"
+      },
+      {
+        "path": "test/index_test.ts",
+        "start_line": 51,
+        "end_line": 106,
+        "content": "\tdescribe('on()', () => {\n\t\tit('should be a function', () => {\n\t\t\texpect(inst).to.have.property('on').that.is.a('function');\n\t\t});\n\n\t\tit('should register handler for new type', () => {\n\t\t\tconst foo = () => {};\n\t\t\tinst.on('foo', foo);\n\n\t\t\texpect(events.get('foo')).to.deep.equal([foo]);\n\t\t});\n\n\t\tit('should register handlers for any type strings', () => {\n\t\t\tconst foo = () => {};\n\t\t\tinst.on('constructor', foo);\n\n\t\t\texpect(events.get('constructor')).to.deep.equal([foo]);\n\t\t});\n\n\t\tit('should append handler for existing type', () => {\n\t\t\tconst foo = () => {};\n\t\t\tconst bar = () => {};\n\t\t\tinst.on('foo', foo);\n\t\t\tinst.on('foo', bar);\n\n\t\t\texpect(events.get('foo')).to.deep.equal([foo, bar]);\n\t\t});\n\n\t\tit('should NOT normalize case', () => {\n\t\t\tconst foo = () => {};\n\t\t\tinst.on('FOO', foo);\n\t\t\tinst.on('Bar', foo);\n\t\t\tinst.on('baz:baT!', foo);\n\n\t\t\texpect(events.get('FOO')).to.deep.equal([foo]);\n\t\t\texpect(events.has('foo')).to.equal(false);\n\t\t\texpect(events.get('Bar')).to.deep.equal([foo]);\n\t\t\texpect(events.has('bar')).to.equal(false);\n\t\t\texpect(events.get('baz:baT!')).to.deep.equal([foo]);\n\t\t});\n\n\t\tit('can take symbols for event types', () => {\n\t\t\tconst foo = () => {};\n\t\t\tinst.on(eventType, foo);\n\t\t\texpect(events.get(eventType)).to.deep.equal([foo]);\n\t\t});\n\n\t\t// Adding the same listener multiple times should register it multiple times.\n\t\t// See https://nodejs.org/api/events.html#events_emitter_on_eventname_listener\n\t\tit('should add duplicate listeners', () => {\n\t\t\tconst foo = () => {};\n\t\t\tinst.on('foo', foo);\n\t\t\tinst.on('foo', foo);\n\t\t\texpect(events.get('foo')).to.deep.equal([foo, foo]);\n\t\t});\n\t});",
+        "content_sha256": "5ba78828043fa7e4f870804bfdcfa3362714d6d089e98d45781f11c0ef7ec182"
+      },
+      {
+        "path": "test/index_test.ts",
+        "start_line": 121,
+        "end_line": 136,
+        "content": "\t\tit('should NOT normalize case', () => {\n\t\t\tconst foo = () => {};\n\t\t\tinst.on('FOO', foo);\n\t\t\tinst.on('Bar', foo);\n\t\t\tinst.on('baz:bat!', foo);\n\n\t\t\tinst.off('FOO', foo);\n\t\t\tinst.off('Bar', foo);\n\t\t\tinst.off('baz:baT!', foo);\n\n\t\t\texpect(events.get('FOO')).to.be.empty;\n\t\t\texpect(events.has('foo')).to.equal(false);\n\t\t\texpect(events.get('Bar')).to.be.empty;\n\t\t\texpect(events.has('bar')).to.equal(false);\n\t\t\texpect(events.get('baz:bat!')).to.have.lengthOf(1);\n\t\t});",
+        "content_sha256": "0c8e4952c1c08847cd1045d3c53f4057129dd7591fb106c9fdb86a402f70d6a3"
+      },
+      {
+        "path": "test/index_test.ts",
+        "start_line": 176,
+        "end_line": 187,
+        "content": "\t\tit('should NOT ignore case', () => {\n\t\t\tconst onFoo = spy(),\n\t\t\t\tonFOO = spy();\n\t\t\tevents.set('Foo', [onFoo]);\n\t\t\tevents.set('FOO', [onFOO]);\n\n\t\t\tinst.emit('Foo', 'Foo arg');\n\t\t\tinst.emit('FOO', 'FOO arg');\n\n\t\t\texpect(onFoo).to.have.been.calledOnce.and.calledWith('Foo arg');\n\t\t\texpect(onFOO).to.have.been.calledOnce.and.calledWith('FOO arg');\n\t\t});",
+        "content_sha256": "a46a29e60735e70e1f3edbbcce03aceb8d10418981e3f70eb98d22faee9791e4"
+      }
+    ],
+    "completion_status": "success",
+    "required_points": [
+      "不转小写，原始事件键区分大小写",
+      "说明 FOO/foo 或 Bar/bar 的具体测试断言"
+    ],
+    "evaluation_sources": [
+      {
+        "path": "src/index.ts",
+        "start_line": 66,
+        "end_line": 73,
+        "content": "\t\ton<Key extends keyof Events>(type: Key, handler: GenericEventHandler) {\n\t\t\tconst handlers: Array<GenericEventHandler> | undefined = all!.get(type);\n\t\t\tif (handlers) {\n\t\t\t\thandlers.push(handler);\n\t\t\t} else {\n\t\t\t\tall!.set(type, [handler] as EventHandlerList<Events[keyof Events]>);\n\t\t\t}\n\t\t},",
+        "content_sha256": "0a5bf296ae849cd916f0b4eedbc3b3dbd431acb523f64fede2782b79ff119004"
+      },
+      {
+        "path": "test/index_test.ts",
+        "start_line": 79,
+        "end_line": 90,
+        "content": "\t\tit('should NOT normalize case', () => {\n\t\t\tconst foo = () => {};\n\t\t\tinst.on('FOO', foo);\n\t\t\tinst.on('Bar', foo);\n\t\t\tinst.on('baz:baT!', foo);\n\n\t\t\texpect(events.get('FOO')).to.deep.equal([foo]);\n\t\t\texpect(events.has('foo')).to.equal(false);\n\t\t\texpect(events.get('Bar')).to.deep.equal([foo]);\n\t\t\texpect(events.has('bar')).to.equal(false);\n\t\t\texpect(events.get('baz:baT!')).to.deep.equal([foo]);\n\t\t});",
+        "content_sha256": "7c7ae10f82f38319cf3cf181161ee7bfb29bde7819610b697836ace1ba119048"
+      }
+    ]
+  },
+  {
+    "candidate_id": "candidate-3f31ddb61167ce0f",
+    "question": "在 non-secure 入口，customAlphabet('ab', 2.9) 返回的生成器分别不传 size、传 0、传 -1 时，长度是多少？解释位运算与循环条件，不要套用 Node 安全入口的异常规则。",
+    "snapshot_id": "30e277e52d238ad871cb5684",
+    "commit_sha": "57009b5eb8d757ae39bf5f4361dd30c9f23391b7",
+    "answer": {
+      "answer": "在 non-secure 入口，customAlphabet('ab', 2.9) 返回的生成器：\n1. 不传 size 时，长度为 21（使用默认值）。\n2. 传 0 时，长度为 0。\n3. 传 -1 时，长度为 0。\n\n解释：\n- 源码 L5-L6 定义生成器，形参 size 默认值为 defaultSize（L5 中为 21）。不传 size 时，size 取 21。\n- L10 将 size 转为整数：i = size | 0。因此 2.9 变为 2，但本题只关心长度，不传 size 时仍用默认 21。\n- L11 循环条件为 while (i-- > 0)，当 i 为 0 或负数时立即停止，故 0 和 -1 都产生空字符串。\n- 位运算 | 0 用于截断小数并处理负数，避免负数导致死循环（L9-L10 注释说明）。\n- 测试 L126-L128 和 L73-L75 分别验证了 -1 和 0 时返回空字符串，与上述逻辑一致。",
+      "insufficient_evidence": false,
+      "citations": [
+        {
+          "path": "non-secure/index.js",
+          "start_line": 5,
+          "end_line": 17
+        },
+        {
+          "path": "test/non-secure.test.js",
+          "start_line": 125,
+          "end_line": 128
+        },
+        {
+          "path": "test/non-secure.test.js",
+          "start_line": 72,
+          "end_line": 75
+        }
+      ]
+    },
+    "observed_context": [
+      {
+        "path": "non-secure/index.js",
+        "start_line": 5,
+        "end_line": 17,
+        "content": "export let customAlphabet = (alphabet, defaultSize = 21) => {\n  return (size = defaultSize) => {\n    let id = ''\n    // A compact alternative for `for (var i = 0; i < step; i++)`.\n    // `> 0` stops a negative size from looping forever.\n    let i = size | 0\n    while (i-- > 0) {\n      // `| 0` is more compact and faster than `Math.floor()`.\n      id += alphabet[(Math.random() * alphabet.length) | 0]\n    }\n    return id\n  }\n}",
+        "content_sha256": "2c113cd0c7efeb52d28a5dcdfed1c6ad8ede5af8c85e850aa9252d2f3f3ddede"
+      },
+      {
+        "path": "non-secure/index.d.ts",
+        "start_line": 29,
+        "end_line": 48,
+        "content": "/**\n * Generate a unique ID based on a custom alphabet.\n * This method uses the non-secure predictable random generator\n * with bigger collision probability.\n *\n * @param alphabet Alphabet used to generate the ID.\n * @param defaultSize Size of the ID. The default size is 21.\n * @typeparam Type The ID type to replace `string` with some opaque type.\n * @returns A random string generator.\n *\n * ```js\n * import { customAlphabet } from 'nanoid/non-secure'\n * const nanoid = customAlphabet('0123456789абвгдеё', 5)\n * model.id = nanoid() //=> \"8ё56а\"\n * ```\n */\nexport function customAlphabet<Type extends string>(\n  alphabet: string,\n  defaultSize?: number\n): (size?: number) => Type",
+        "content_sha256": "99d935e0691d3ee54056df6e3de4e881cd9adbe677479721d3bf2877dfcf4269"
+      },
+      {
+        "path": "test/non-secure.test.js",
+        "start_line": 125,
+        "end_line": 128,
+        "content": "test('does not hang on negative size (customAlphabet)', () => {\n  equal(customAlphabet('abcdef')(-1), '')\n  equal(customAlphabet('abcdef', -5)(), '')\n})",
+        "content_sha256": "73e6dba91bfef6103d4f180bedf4b0cc47c5f34c12e5314481a904c5b1bf36a4"
+      },
+      {
+        "path": "README.md",
+        "start_line": 201,
+        "end_line": 216,
+        "content": "Alphabet must contain from 1 to 256 symbols.\nOtherwise, the security of the internal generator algorithm is not guaranteed,\nand a generator built from an empty or over-256-symbol alphabet\ncan loop forever instead of returning an ID.\n\nIn addition to setting a default size, you can change the ID size when calling\nthe function:\n\n```js\nimport { customAlphabet } from \"nanoid\";\nconst nanoid = customAlphabet(\"1234567890abcdef\", 10);\nmodel.id = nanoid(5); //=> \"f01a2\"\n```\n\n[`nanoid-dictionary`]: https://github.com/CyberAP/nanoid-dictionary\n",
+        "content_sha256": "0e4cda8976632b597fe1340d223a0a3e36b956b5fd787b234b7810f8019927c4"
+      },
+      {
+        "path": "test/non-secure.test.js",
+        "start_line": 72,
+        "end_line": 75,
+        "content": "    test('is ready for 0 size', () => {\n      equal(customAlphabet('abc')(0), '')\n      equal(customAlphabet('abc', 0)(0), '')\n    })",
+        "content_sha256": "936eec9df30831981f19c04edb768f578fabca563fd28e4272413c99cb6ec936"
+      },
+      {
+        "path": "test/non-secure.test.js",
+        "start_line": 1,
+        "end_line": 6,
+        "content": "import { equal, match, notEqual, ok } from 'node:assert'\nimport { describe, test } from 'node:test'\n\nimport { urlAlphabet } from '../index.js'\nimport { customAlphabet, nanoid } from '../non-secure/index.js'\n",
+        "content_sha256": "a140952acee71de1110924595a40aab3e1d13988bc2c99fa8beb009fe9cc6b64"
+      }
+    ],
+    "completion_status": "success",
+    "required_points": [
+      "长度依次为 2、0、0",
+      "size | 0 将 2.9 转成 2，while(i-- > 0) 不进入零或负数循环",
+      "此入口不按 Node 安全实现对负数抛 RangeError"
+    ],
+    "evaluation_sources": [
+      {
+        "path": "non-secure/index.js",
+        "start_line": 5,
+        "end_line": 17,
+        "content": "export let customAlphabet = (alphabet, defaultSize = 21) => {\n  return (size = defaultSize) => {\n    let id = ''\n    // A compact alternative for `for (var i = 0; i < step; i++)`.\n    // `> 0` stops a negative size from looping forever.\n    let i = size | 0\n    while (i-- > 0) {\n      // `| 0` is more compact and faster than `Math.floor()`.\n      id += alphabet[(Math.random() * alphabet.length) | 0]\n    }\n    return id\n  }\n}",
+        "content_sha256": "2c113cd0c7efeb52d28a5dcdfed1c6ad8ede5af8c85e850aa9252d2f3f3ddede"
+      }
+    ]
+  },
+  {
+    "candidate_id": "candidate-6c58399a6c3b279b",
+    "question": "CachingMiddleware.write 会每次直接写底层存储吗？修改次数达到 WRITE_CACHE_SIZE 及调用 close 时分别怎样刷新，重复 close 又如何？",
+    "snapshot_id": "bd44d7f726c12356160a3d54",
+    "commit_sha": "edff96aeb2616402e9489d46e90a592c05565621",
+    "answer": {
+      "answer": "CachingMiddleware.write 不会每次直接写底层存储，而是先将数据写入内存缓存（self.cache），仅在修改次数达到 WRITE_CACHE_SIZE 或调用 close 时通过 flush() 将缓存写入底层存储。重复调用 close 时，若已处于关闭状态（_closed=True），则直接返回，不再执行刷新或关闭底层存储的操作。",
+      "insufficient_evidence": false,
+      "citations": [
+        {
+          "path": "tinydb/middlewares.py",
+          "start_line": 108,
+          "end_line": 118
+        },
+        {
+          "path": "tinydb/middlewares.py",
+          "start_line": 132,
+          "end_line": 142
+        },
+        {
+          "path": "tinydb/middlewares.py",
+          "start_line": 120,
+          "end_line": 130
+        }
+      ]
+    },
+    "observed_context": [
+      {
+        "path": "tinydb/middlewares.py",
+        "start_line": 108,
+        "end_line": 118,
+        "content": "    def write(self, data):\n        if self._closed:\n            raise ValueError('I/O operation on closed storage')\n\n        # Store data in cache\n        self.cache = data\n        self._cache_modified_count += 1\n\n        # Check if we need to flush the cache\n        if self._cache_modified_count >= self.WRITE_CACHE_SIZE:\n            self.flush()",
+        "content_sha256": "f8217fbc2430dcbe3cd6bbee26f1c3a73d542d394afd633bf41a5337a6a037a2"
+      },
+      {
+        "path": "tinydb/middlewares.py",
+        "start_line": 132,
+        "end_line": 142,
+        "content": "    def close(self):\n        if self._closed:\n            return\n\n        # Flush potentially unwritten data\n        self.flush()\n\n        # Let the storage clean up too\n        self.storage.close()\n        self._closed = True\n        self.cache = None",
+        "content_sha256": "5cb0e556a8140a9acfae759731e888671c6bacf10aad1b2a74a6aab1537a3062"
+      },
+      {
+        "path": "tinydb/middlewares.py",
+        "start_line": 120,
+        "end_line": 130,
+        "content": "    def flush(self):\n        \"\"\"\n        Flush all unwritten data to disk.\n        \"\"\"\n        if self._closed:\n            raise ValueError('I/O operation on closed storage')\n\n        if self._cache_modified_count > 0:\n            # Force-flush the cache by writing the data to the storage\n            self.storage.write(self.cache)\n            self._cache_modified_count = 0",
+        "content_sha256": "9f55111eb68845c747c0ddd17aeb139554d67e7de60e4869c14241deaa8a2e42"
+      },
+      {
+        "path": "tinydb/database.py",
+        "start_line": 214,
+        "end_line": 230,
+        "content": "    def close(self) -> None:\n        \"\"\"\n        Close the database.\n\n        This may be needed if the storage instance used for this database\n        needs to perform cleanup operations like closing file handles.\n\n        To ensure this method is called, the TinyDB instance can be used as a\n        context manager::\n\n            with TinyDB('data.json') as db:\n                db.insert({'foo': 'bar'})\n\n        Upon leaving this context, the ``close`` method will be called.\n        \"\"\"\n        self._opened = False\n        self.storage.close()",
+        "content_sha256": "739236ef64be0f681df21d2c89500c0a3fa2ce51dde50d426991c1583c216d2c"
+      },
+      {
+        "path": "tinydb/storages.py",
+        "start_line": 71,
+        "end_line": 76,
+        "content": "    def close(self) -> None:\n        \"\"\"\n        Optional: Close open file handles, etc.\n        \"\"\"\n\n        pass",
+        "content_sha256": "7326b5f111fed34745d478a51207ee093041ff90d708b7ce0e22bca74380c706"
+      },
+      {
+        "path": "tinydb/storages.py",
+        "start_line": 122,
+        "end_line": 123,
+        "content": "    def close(self) -> None:\n        self._handle.close()",
+        "content_sha256": "c3b675cd82424ff6a6cef797ef8fcb0cfdde07aa9970e101d03930177b417188"
+      }
+    ],
+    "completion_status": "success",
+    "required_points": [
+      "先更新缓存并计数，达到阈值flush",
+      "flush在脏计数大于零时写底层并清零；close先flush再关闭，已关闭直接返回"
+    ],
+    "evaluation_sources": [
+      {
+        "path": "tinydb/middlewares.py",
+        "start_line": 108,
+        "end_line": 142,
+        "content": "    def write(self, data):\n        if self._closed:\n            raise ValueError('I/O operation on closed storage')\n\n        # Store data in cache\n        self.cache = data\n        self._cache_modified_count += 1\n\n        # Check if we need to flush the cache\n        if self._cache_modified_count >= self.WRITE_CACHE_SIZE:\n            self.flush()\n\n    def flush(self):\n        \"\"\"\n        Flush all unwritten data to disk.\n        \"\"\"\n        if self._closed:\n            raise ValueError('I/O operation on closed storage')\n\n        if self._cache_modified_count > 0:\n            # Force-flush the cache by writing the data to the storage\n            self.storage.write(self.cache)\n            self._cache_modified_count = 0\n\n    def close(self):\n        if self._closed:\n            return\n\n        # Flush potentially unwritten data\n        self.flush()\n\n        # Let the storage clean up too\n        self.storage.close()\n        self._closed = True\n        self.cache = None",
+        "content_sha256": "b3e98cb9d71ce6ddf79e0c646ad216c8786418d12b69f0582a3a2421d436b471"
+      }
+    ]
+  },
+  {
+    "candidate_id": "candidate-e3d735283f808899",
+    "question": "CachingMiddleware.write 会每次直接写底层存储吗？修改次数达到 WRITE_CACHE_SIZE 及调用 close 时分别怎样刷新，重复 close 又如何？",
+    "snapshot_id": "bd44d7f726c12356160a3d54",
+    "commit_sha": "edff96aeb2616402e9489d46e90a592c05565621",
+    "answer": {
+      "answer": "CachingMiddleware.write 不会每次直接写底层存储。它仅在修改次数达到 WRITE_CACHE_SIZE 或调用 close 时刷新。重复调用 close 不会再次刷新，因为 close 检测到已关闭状态会直接返回。",
+      "citations": [
+        {
+          "path": "tinydb/middlewares.py",
+          "start_line": 112,
+          "end_line": 114
+        },
+        {
+          "path": "tinydb/middlewares.py",
+          "start_line": 117,
+          "end_line": 118
+        },
+        {
+          "path": "tinydb/middlewares.py",
+          "start_line": 132,
+          "end_line": 142
+        }
+      ],
+      "insufficient_evidence": false
+    },
+    "observed_context": [
+      {
+        "path": "tinydb/middlewares.py",
+        "start_line": 108,
+        "end_line": 118,
+        "content": "    def write(self, data):\n        if self._closed:\n            raise ValueError('I/O operation on closed storage')\n\n        # Store data in cache\n        self.cache = data\n        self._cache_modified_count += 1\n\n        # Check if we need to flush the cache\n        if self._cache_modified_count >= self.WRITE_CACHE_SIZE:\n            self.flush()",
+        "content_sha256": "f8217fbc2430dcbe3cd6bbee26f1c3a73d542d394afd633bf41a5337a6a037a2"
+      },
+      {
+        "path": "tinydb/middlewares.py",
+        "start_line": 132,
+        "end_line": 142,
+        "content": "    def close(self):\n        if self._closed:\n            return\n\n        # Flush potentially unwritten data\n        self.flush()\n\n        # Let the storage clean up too\n        self.storage.close()\n        self._closed = True\n        self.cache = None",
+        "content_sha256": "5cb0e556a8140a9acfae759731e888671c6bacf10aad1b2a74a6aab1537a3062"
+      },
+      {
+        "path": "tinydb/database.py",
+        "start_line": 214,
+        "end_line": 230,
+        "content": "    def close(self) -> None:\n        \"\"\"\n        Close the database.\n\n        This may be needed if the storage instance used for this database\n        needs to perform cleanup operations like closing file handles.\n\n        To ensure this method is called, the TinyDB instance can be used as a\n        context manager::\n\n            with TinyDB('data.json') as db:\n                db.insert({'foo': 'bar'})\n\n        Upon leaving this context, the ``close`` method will be called.\n        \"\"\"\n        self._opened = False\n        self.storage.close()",
+        "content_sha256": "739236ef64be0f681df21d2c89500c0a3fa2ce51dde50d426991c1583c216d2c"
+      },
+      {
+        "path": "tinydb/middlewares.py",
+        "start_line": 120,
+        "end_line": 130,
+        "content": "    def flush(self):\n        \"\"\"\n        Flush all unwritten data to disk.\n        \"\"\"\n        if self._closed:\n            raise ValueError('I/O operation on closed storage')\n\n        if self._cache_modified_count > 0:\n            # Force-flush the cache by writing the data to the storage\n            self.storage.write(self.cache)\n            self._cache_modified_count = 0",
+        "content_sha256": "9f55111eb68845c747c0ddd17aeb139554d67e7de60e4869c14241deaa8a2e42"
+      },
+      {
+        "path": "tinydb/storages.py",
+        "start_line": 71,
+        "end_line": 76,
+        "content": "    def close(self) -> None:\n        \"\"\"\n        Optional: Close open file handles, etc.\n        \"\"\"\n\n        pass",
+        "content_sha256": "7326b5f111fed34745d478a51207ee093041ff90d708b7ce0e22bca74380c706"
+      },
+      {
+        "path": "tinydb/storages.py",
+        "start_line": 122,
+        "end_line": 123,
+        "content": "    def close(self) -> None:\n        self._handle.close()",
+        "content_sha256": "c3b675cd82424ff6a6cef797ef8fcb0cfdde07aa9970e101d03930177b417188"
+      }
+    ],
+    "completion_status": "success",
+    "required_points": [
+      "先更新缓存并计数，达到阈值flush",
+      "flush在脏计数大于零时写底层并清零；close先flush再关闭，已关闭直接返回"
+    ],
+    "evaluation_sources": [
+      {
+        "path": "tinydb/middlewares.py",
+        "start_line": 108,
+        "end_line": 142,
+        "content": "    def write(self, data):\n        if self._closed:\n            raise ValueError('I/O operation on closed storage')\n\n        # Store data in cache\n        self.cache = data\n        self._cache_modified_count += 1\n\n        # Check if we need to flush the cache\n        if self._cache_modified_count >= self.WRITE_CACHE_SIZE:\n            self.flush()\n\n    def flush(self):\n        \"\"\"\n        Flush all unwritten data to disk.\n        \"\"\"\n        if self._closed:\n            raise ValueError('I/O operation on closed storage')\n\n        if self._cache_modified_count > 0:\n            # Force-flush the cache by writing the data to the storage\n            self.storage.write(self.cache)\n            self._cache_modified_count = 0\n\n    def close(self):\n        if self._closed:\n            return\n\n        # Flush potentially unwritten data\n        self.flush()\n\n        # Let the storage clean up too\n        self.storage.close()\n        self._closed = True\n        self.cache = None",
+        "content_sha256": "b3e98cb9d71ce6ddf79e0c646ad216c8786418d12b69f0582a3a2421d436b471"
+      }
+    ]
+  },
+  {
+    "candidate_id": "candidate-93a7ed6a3049e103",
+    "question": "mitt 的 on 会把事件名统一转成小写吗？结合实现与 should NOT normalize case 测试说明。",
+    "snapshot_id": "dfdc0816797bf578d0363591",
+    "commit_sha": "6b41670516ed8e8b738612f60491995470aa63b3",
+    "answer": {
+      "answer": "mitt 的 on 方法不会把事件名统一转成小写。源码中 on 方法直接以传入的 type 字符串作为键存入 Map，不做任何大小写转换。测试 should NOT normalize case 验证了不同大小写和含特殊字符的事件名各自独立注册与查询，进一步证实 mitt 不统一事件名大小写。",
+      "insufficient_evidence": false,
+      "citations": [
+        {
+          "path": "src/index.ts",
+          "start_line": 66,
+          "end_line": 73
+        },
+        {
+          "path": "test/index_test.ts",
+          "start_line": 79,
+          "end_line": 90
+        }
+      ]
+    },
+    "observed_context": [
+      {
+        "path": "test/index_test.ts",
+        "start_line": 79,
+        "end_line": 90,
+        "content": "\t\tit('should NOT normalize case', () => {\n\t\t\tconst foo = () => {};\n\t\t\tinst.on('FOO', foo);\n\t\t\tinst.on('Bar', foo);\n\t\t\tinst.on('baz:baT!', foo);\n\n\t\t\texpect(events.get('FOO')).to.deep.equal([foo]);\n\t\t\texpect(events.has('foo')).to.equal(false);\n\t\t\texpect(events.get('Bar')).to.deep.equal([foo]);\n\t\t\texpect(events.has('bar')).to.equal(false);\n\t\t\texpect(events.get('baz:baT!')).to.deep.equal([foo]);\n\t\t});",
+        "content_sha256": "7c7ae10f82f38319cf3cf181161ee7bfb29bde7819610b697836ace1ba119048"
+      },
+      {
+        "path": "test/index_test.ts",
+        "start_line": 121,
+        "end_line": 136,
+        "content": "\t\tit('should NOT normalize case', () => {\n\t\t\tconst foo = () => {};\n\t\t\tinst.on('FOO', foo);\n\t\t\tinst.on('Bar', foo);\n\t\t\tinst.on('baz:bat!', foo);\n\n\t\t\tinst.off('FOO', foo);\n\t\t\tinst.off('Bar', foo);\n\t\t\tinst.off('baz:baT!', foo);\n\n\t\t\texpect(events.get('FOO')).to.be.empty;\n\t\t\texpect(events.has('foo')).to.equal(false);\n\t\t\texpect(events.get('Bar')).to.be.empty;\n\t\t\texpect(events.has('bar')).to.equal(false);\n\t\t\texpect(events.get('baz:bat!')).to.have.lengthOf(1);\n\t\t});",
+        "content_sha256": "0c8e4952c1c08847cd1045d3c53f4057129dd7591fb106c9fdb86a402f70d6a3"
+      },
+      {
+        "path": "src/index.ts",
+        "start_line": 46,
+        "end_line": 123,
+        "content": "export default function mitt<Events extends Record<EventType, unknown>>(\n\tall?: EventHandlerMap<Events>\n): Emitter<Events> {\n\ttype GenericEventHandler =\n\t\t| Handler<Events[keyof Events]>\n\t\t| WildcardHandler<Events>;\n\tall = all || new Map();\n\n\treturn {\n\t\t/**\n\t\t * A Map of event names to registered handler functions.\n\t\t */\n\t\tall,\n\n\t\t/**\n\t\t * Register an event handler for the given type.\n\t\t * @param {string|symbol} type Type of event to listen for, or `'*'` for all events\n\t\t * @param {Function} handler Function to call in response to given event\n\t\t * @memberOf mitt\n\t\t */\n\t\ton<Key extends keyof Events>(type: Key, handler: GenericEventHandler) {\n\t\t\tconst handlers: Array<GenericEventHandler> | undefined = all!.get(type);\n\t\t\tif (handlers) {\n\t\t\t\thandlers.push(handler);\n\t\t\t} else {\n\t\t\t\tall!.set(type, [handler] as EventHandlerList<Events[keyof Events]>);\n\t\t\t}\n\t\t},\n\n\t\t/**\n\t\t * Remove an event handler for the given type.\n\t\t * If `handler` is omitted, all handlers of the given type are removed.\n\t\t * @param {string|symbol} type Type of event to unregister `handler` from (`'*'` to remove a wildcard handler)\n\t\t * @param {Function} [handler] Handler function to remove\n\t\t * @memberOf mitt\n\t\t */\n\t\toff<Key extends keyof Events>(type: Key, handler?: GenericEventHandler) {\n\t\t\tconst handlers: Array<GenericEventHandler> | undefined = all!.get(type);\n\t\t\tif (handlers) {\n\t\t\t\tif (handler) {\n\t\t\t\t\thandlers.splice(handlers.indexOf(handler) >>> 0, 1);\n\t\t\t\t} else {\n\t\t\t\t\tall!.set(type, []);\n\t\t\t\t}\n\t\t\t}\n\t\t},\n\n\t\t/**\n\t\t * Invoke all handlers for the given type.\n\t\t * If present, `'*'` handlers are invoked after type-matched handlers.\n\t\t *\n\t\t * Note: Manually firing '*' handlers is not supported.\n\t\t *\n\t\t * @param {string|symbol} type The event type to invoke\n\t\t * @param {Any} [evt] Any value (object is recommended and powerful), passed to each handler\n\t\t * @memberOf mitt\n\t\t */\n\t\temit<Key extends keyof Events>(type: Key, evt?: Events[Key]) {\n\t\t\tlet handlers = all!.get(type);\n\t\t\tif (handlers) {\n\t\t\t\t(handlers as EventHandlerList<Events[keyof Events]>)\n\t\t\t\t\t.slice()\n\t\t\t\t\t.map((handler) => {\n\t\t\t\t\t\thandler(evt!);\n\t\t\t\t\t});\n\t\t\t}\n\n\t\t\thandlers = all!.get('*');\n\t\t\tif (handlers) {\n\t\t\t\t(handlers as WildCardEventHandlerList<Events>)\n\t\t\t\t\t.slice()\n\t\t\t\t\t.map((handler) => {\n\t\t\t\t\t\thandler(type, evt!);\n\t\t\t\t\t});\n\t\t\t}\n\t\t}\n\t};\n}",
+        "content_sha256": "51d8ae8faff62c508cb6afbf52067bd295a2194ac7f0886486841900c5b12fb7"
+      },
+      {
+        "path": "test/index_test.ts",
+        "start_line": 176,
+        "end_line": 187,
+        "content": "\t\tit('should NOT ignore case', () => {\n\t\t\tconst onFoo = spy(),\n\t\t\t\tonFOO = spy();\n\t\t\tevents.set('Foo', [onFoo]);\n\t\t\tevents.set('FOO', [onFOO]);\n\n\t\t\tinst.emit('Foo', 'Foo arg');\n\t\t\tinst.emit('FOO', 'FOO arg');\n\n\t\t\texpect(onFoo).to.have.been.calledOnce.and.calledWith('Foo arg');\n\t\t\texpect(onFOO).to.have.been.calledOnce.and.calledWith('FOO arg');\n\t\t});",
+        "content_sha256": "a46a29e60735e70e1f3edbbcce03aceb8d10418981e3f70eb98d22faee9791e4"
+      },
+      {
+        "path": "test/index_test.ts",
+        "start_line": 51,
+        "end_line": 106,
+        "content": "\tdescribe('on()', () => {\n\t\tit('should be a function', () => {\n\t\t\texpect(inst).to.have.property('on').that.is.a('function');\n\t\t});\n\n\t\tit('should register handler for new type', () => {\n\t\t\tconst foo = () => {};\n\t\t\tinst.on('foo', foo);\n\n\t\t\texpect(events.get('foo')).to.deep.equal([foo]);\n\t\t});\n\n\t\tit('should register handlers for any type strings', () => {\n\t\t\tconst foo = () => {};\n\t\t\tinst.on('constructor', foo);\n\n\t\t\texpect(events.get('constructor')).to.deep.equal([foo]);\n\t\t});\n\n\t\tit('should append handler for existing type', () => {\n\t\t\tconst foo = () => {};\n\t\t\tconst bar = () => {};\n\t\t\tinst.on('foo', foo);\n\t\t\tinst.on('foo', bar);\n\n\t\t\texpect(events.get('foo')).to.deep.equal([foo, bar]);\n\t\t});\n\n\t\tit('should NOT normalize case', () => {\n\t\t\tconst foo = () => {};\n\t\t\tinst.on('FOO', foo);\n\t\t\tinst.on('Bar', foo);\n\t\t\tinst.on('baz:baT!', foo);\n\n\t\t\texpect(events.get('FOO')).to.deep.equal([foo]);\n\t\t\texpect(events.has('foo')).to.equal(false);\n\t\t\texpect(events.get('Bar')).to.deep.equal([foo]);\n\t\t\texpect(events.has('bar')).to.equal(false);\n\t\t\texpect(events.get('baz:baT!')).to.deep.equal([foo]);\n\t\t});\n\n\t\tit('can take symbols for event types', () => {\n\t\t\tconst foo = () => {};\n\t\t\tinst.on(eventType, foo);\n\t\t\texpect(events.get(eventType)).to.deep.equal([foo]);\n\t\t});\n\n\t\t// Adding the same listener multiple times should register it multiple times.\n\t\t// See https://nodejs.org/api/events.html#events_emitter_on_eventname_listener\n\t\tit('should add duplicate listeners', () => {\n\t\t\tconst foo = () => {};\n\t\t\tinst.on('foo', foo);\n\t\t\tinst.on('foo', foo);\n\t\t\texpect(events.get('foo')).to.deep.equal([foo, foo]);\n\t\t});\n\t});",
+        "content_sha256": "5ba78828043fa7e4f870804bfdcfa3362714d6d089e98d45781f11c0ef7ec182"
+      }
+    ],
+    "completion_status": "success",
+    "required_points": [
+      "不转小写，原始事件键区分大小写",
+      "说明 FOO/foo 或 Bar/bar 的具体测试断言"
+    ],
+    "evaluation_sources": [
+      {
+        "path": "src/index.ts",
+        "start_line": 66,
+        "end_line": 73,
+        "content": "\t\ton<Key extends keyof Events>(type: Key, handler: GenericEventHandler) {\n\t\t\tconst handlers: Array<GenericEventHandler> | undefined = all!.get(type);\n\t\t\tif (handlers) {\n\t\t\t\thandlers.push(handler);\n\t\t\t} else {\n\t\t\t\tall!.set(type, [handler] as EventHandlerList<Events[keyof Events]>);\n\t\t\t}\n\t\t},",
+        "content_sha256": "0a5bf296ae849cd916f0b4eedbc3b3dbd431acb523f64fede2782b79ff119004"
+      },
+      {
+        "path": "test/index_test.ts",
+        "start_line": 79,
+        "end_line": 90,
+        "content": "\t\tit('should NOT normalize case', () => {\n\t\t\tconst foo = () => {};\n\t\t\tinst.on('FOO', foo);\n\t\t\tinst.on('Bar', foo);\n\t\t\tinst.on('baz:baT!', foo);\n\n\t\t\texpect(events.get('FOO')).to.deep.equal([foo]);\n\t\t\texpect(events.has('foo')).to.equal(false);\n\t\t\texpect(events.get('Bar')).to.deep.equal([foo]);\n\t\t\texpect(events.has('bar')).to.equal(false);\n\t\t\texpect(events.get('baz:baT!')).to.deep.equal([foo]);\n\t\t});",
+        "content_sha256": "7c7ae10f82f38319cf3cf181161ee7bfb29bde7819610b697836ace1ba119048"
+      }
+    ]
+  },
+  {
+    "candidate_id": "candidate-ea8533044d9a3fe0",
+    "question": "createBuilder 对单个参数 null 与两个参数 null、undefined 的字符串转换相同吗？",
+    "snapshot_id": "cfb80e195a6d80153bc52326",
+    "commit_sha": "47fc05abd46171b235e24174cd2dba83d25bf037",
+    "answer": {
+      "answer": "不相同。单个参数 null 转换为空字符串 ''，而两个参数 null 和 undefined 转换为包含一个空格的字符串 ' '。",
+      "citations": [
+        {
+          "path": "source/index.js",
+          "start_line": 175,
+          "end_line": 177
+        },
+        {
+          "path": "source/index.js",
+          "start_line": 180,
+          "end_line": 182
+        }
+      ],
+      "insufficient_evidence": false
+    },
+    "observed_context": [
+      {
+        "path": "source/index.js",
+        "start_line": 172,
+        "end_line": 198,
+        "content": "const createBuilder = (self, _styler, _isEmpty) => {\n\t// Single argument is hot path, implicit coercion is faster than anything\n\tconst builder = (...arguments_) => {\n\t\tif (arguments_.length === 1) {\n\t\t\t// eslint-disable-next-line no-implicit-coercion\n\t\t\treturn applyStyle(builder, '' + arguments_[0]);\n\t\t}\n\n\t\tif (arguments_.length === 2) {\n\t\t\t// The template literal matches `Array#join` coercion (`null` and `undefined` become empty, objects use `toString`) while being faster.\n\t\t\treturn applyStyle(builder, `${arguments_[0] ?? ''} ${arguments_[1] ?? ''}`);\n\t\t}\n\n\t\treturn applyStyle(builder, arguments_.join(' '));\n\t};\n\n\t// We alter the prototype because we must return a function, but there is\n\t// no way to create a function with a different prototype\n\tObject.setPrototypeOf(builder, proto);\n\n\t// Point every builder at the root generator instead of its immediate parent, so reading the level costs one property load rather than walking a `level` getter per link of the chain.\n\tbuilder[GENERATOR] = self[GENERATOR] ?? self;\n\tbuilder[STYLER] = _styler;\n\tbuilder[IS_EMPTY] = _isEmpty;\n\n\treturn builder;\n};",
+        "content_sha256": "1b703c8de35de3fa656fc86c18c2cba559634391612cd1cb200f3a30303188fc"
+      },
+      {
+        "path": "source/index.js",
+        "start_line": 70,
+        "end_line": 74,
+        "content": "\t\tget() {\n\t\t\tconst builder = createBuilder(this, createStyler(style.open, style.close, this[STYLER]), this[IS_EMPTY]);\n\t\t\tObject.defineProperty(this, styleName, {value: builder});\n\t\t\treturn builder;\n\t\t},",
+        "content_sha256": "5298446ca9dabeb5e0db57504a6909b4f2da66f6f88b362170f152d14f1d838e"
+      },
+      {
+        "path": "source/index.js",
+        "start_line": 79,
+        "end_line": 83,
+        "content": "\tget() {\n\t\tconst builder = createBuilder(this, this[STYLER], true);\n\t\tObject.defineProperty(this, 'visible', {value: builder});\n\t\treturn builder;\n\t},",
+        "content_sha256": "f64d73f5a23738aab15c3d4aec034511f53b2caa735876cc92be55fc4bb9658c"
+      },
+      {
+        "path": "source/index.js",
+        "start_line": 124,
+        "end_line": 127,
+        "content": "\t\t\t\tconst styleFunction = function (first, second, third) {\n\t\t\t\t\tconst open = converters[this.level](first, second, third);\n\t\t\t\t\treturn createBuilder(this, createStyler(open, close, this[STYLER]), this[IS_EMPTY]);\n\t\t\t\t};",
+        "content_sha256": "f6ba2224d28f20fe2aabe44b8ab14fa81e1f2b8499d72b77dbc6bbc33b9606a8"
+      },
+      {
+        "path": "test/chalk.js",
+        "start_line": 81,
+        "end_line": 92,
+        "content": "test('convert multiple arguments the same way regardless of their count', t => {\n\tconst object = {\n\t\tvalueOf: () => 42,\n\t\ttoString: () => 'string',\n\t};\n\n\tt.is(chalk.red(null, 'foo'), '\\u{1B}[31m foo\\u{1B}[39m');\n\tt.is(chalk.red('foo', undefined), '\\u{1B}[31mfoo \\u{1B}[39m');\n\tt.is(chalk.red('foo', object), '\\u{1B}[31mfoo string\\u{1B}[39m');\n\tt.is(chalk.red(null, 'foo', 'bar'), '\\u{1B}[31m foo bar\\u{1B}[39m');\n\tt.is(chalk.red('foo', object, 'bar'), '\\u{1B}[31mfoo string bar\\u{1B}[39m');\n});",
+        "content_sha256": "1002806b78e473a6a4834858cdca2fcaf3cbeff9a2aee2a02a3973e202cabe18"
+      }
+    ],
+    "completion_status": "success",
+    "required_points": [
+      "单参数隐式拼接得到'null'；双参数nullish变空后由一个空格连接"
+    ],
+    "evaluation_sources": [
+      {
+        "path": "source/index.js",
+        "start_line": 172,
+        "end_line": 185,
+        "content": "const createBuilder = (self, _styler, _isEmpty) => {\n\t// Single argument is hot path, implicit coercion is faster than anything\n\tconst builder = (...arguments_) => {\n\t\tif (arguments_.length === 1) {\n\t\t\t// eslint-disable-next-line no-implicit-coercion\n\t\t\treturn applyStyle(builder, '' + arguments_[0]);\n\t\t}\n\n\t\tif (arguments_.length === 2) {\n\t\t\t// The template literal matches `Array#join` coercion (`null` and `undefined` become empty, objects use `toString`) while being faster.\n\t\t\treturn applyStyle(builder, `${arguments_[0] ?? ''} ${arguments_[1] ?? ''}`);\n\t\t}\n\n\t\treturn applyStyle(builder, arguments_.join(' '));",
+        "content_sha256": "5bc07f8316259381c1b8c625b64f4877f75d19d419f700b5c4ea76e65caeebc9"
+      }
+    ]
+  },
+  {
+    "candidate_id": "candidate-711a1c6ec286b770",
+    "question": "服务要用cached(cache=LRUCache(...))缓存用户资料查询，采用默认key、无lock、无condition、info=False。请给出从cached到实际wrapper的阅读路径，说明相同参数命中、未命中回源和cache_clear分别怎样工作。",
+    "snapshot_id": "2bb0f63b6076d98a56eeb8e9",
+    "commit_sha": "6f23e2a7b75a42d30cb9d890ab3ca4059ee01bfd",
+    "answer": {
+      "answer": "从 cached 到实际 wrapper 的阅读路径为：src/cachetools/__init__.py L738-L766 定义 cached 装饰器，当 info=False 时直接返回 _wrapper（L764）；src/cachetools/_cached.py L68-L92 定义无 info 的 wrapper 实现。相同参数命中：在 lock 内尝试 cache[k]（L73），若成功则 hits+1 并返回（L74-L75）；未命中回源：catch KeyError 后 misses+1（L77），调用 func 计算结果（L78），再在 lock 内用 cache.setdefault(k, v) 写入并返回（L84），若写入失败（ValueError）则返回 v（L86）。cache_clear：在 lock 内调用 cache.clear() 并重置 hits/misses 为 0（L90-L91）。",
+      "insufficient_evidence": false,
+      "citations": [
+        {
+          "path": "src/cachetools/__init__.py",
+          "start_line": 738,
+          "end_line": 766
+        },
+        {
+          "path": "src/cachetools/_cached.py",
+          "start_line": 68,
+          "end_line": 92
+        },
+        {
+          "path": "src/cachetools/_cached.py",
+          "start_line": 49,
+          "end_line": 53
+        }
+      ]
+    },
+    "observed_context": [
+      {
+        "path": "src/cachetools/__init__.py",
+        "start_line": 738,
+        "end_line": 766,
+        "content": "def cached(cache, key=keys.hashkey, lock=None, condition=None, info=False):\n    \"\"\"Decorator to wrap a function with a memoizing callable that saves\n    results in a cache.\n\n    \"\"\"\n    from ._cached import _wrapper\n\n    def decorator(func):\n        if info:\n            if isinstance(cache, Cache):\n\n                def make_info(hits, misses):\n                    return _CacheInfo(hits, misses, cache.maxsize, cache.currsize)\n\n            elif isinstance(cache, collections.abc.Mapping):\n\n                def make_info(hits, misses):\n                    return _CacheInfo(hits, misses, None, len(cache))\n\n            else:\n\n                def make_info(hits, misses):\n                    return _CacheInfo(hits, misses, 0, 0)\n\n            return _wrapper(func, cache, key, lock, condition, info=make_info)\n        else:\n            return _wrapper(func, cache, key, lock, condition)\n\n    return decorator",
+        "content_sha256": "dab0ce624acc549c0c7fbd7e8fede2cf2fa16add1f7a15fc76b668712a971670"
+      },
+      {
+        "path": "src/cachetools/__init__.py",
+        "start_line": 287,
+        "end_line": 326,
+        "content": "class LRUCache(Cache):\n    \"\"\"Least Recently Used (LRU) cache implementation.\"\"\"\n\n    def __init__(self, maxsize, getsizeof=None):\n        Cache.__init__(self, maxsize, getsizeof)\n        self.__order = collections.OrderedDict()\n\n    def __getitem__(self, key, cache_getitem=Cache.__getitem__):\n        value = cache_getitem(self, key)\n        if key in self:  # __missing__ may not store item\n            self.__touch(key)\n        return value\n\n    def __setitem__(self, key, value, cache_setitem=Cache.__setitem__):\n        cache_setitem(self, key, value)\n        self.__touch(key)\n\n    def __delitem__(self, key, cache_delitem=Cache.__delitem__):\n        cache_delitem(self, key)\n        del self.__order[key]\n\n    def popitem(self):\n        \"\"\"Remove and return the `(key, value)` pair least recently used.\"\"\"\n        try:\n            key = next(iter(self.__order))\n        except StopIteration:\n            raise KeyError(\"%s is empty\" % type(self).__name__) from None\n        else:\n            return (key, self.pop(key))\n\n    def clear(self):\n        Cache.clear(self)\n        self.__order.clear()\n\n    def __touch(self, key):\n        \"\"\"Mark as recently used\"\"\"\n        try:\n            self.__order.move_to_end(key)\n        except KeyError:\n            self.__order[key] = None",
+        "content_sha256": "4ec7c42099d61cedacb6d06d7cd4688fa049cf67e26104e0be2ee14e779ba391"
+      },
+      {
+        "path": "src/cachetools/_cached.py",
+        "start_line": 24,
+        "end_line": 47,
+        "content": "    def wrapper(*args, **kwargs):\n        nonlocal hits, misses\n        k = key(*args, **kwargs)\n        with lock:\n            cond.wait_for(lambda: k not in pending)\n            try:\n                result = cache[k]\n                hits += 1\n                return result\n            except KeyError:\n                pending.add(k)\n                misses += 1\n        try:\n            v = func(*args, **kwargs)\n            with lock:\n                try:\n                    cache[k] = v\n                except ValueError:\n                    pass  # value too large\n                return v\n        finally:\n            with lock:\n                pending.remove(k)\n                cond.notify_all()",
+        "content_sha256": "99c1e25f3237398fcb32b4ecc5bc25d8c1619d544b1a68348eb33d2fcd5a50c8"
+      },
+      {
+        "path": "src/cachetools/_cached.py",
+        "start_line": 49,
+        "end_line": 53,
+        "content": "    def cache_clear():\n        nonlocal hits, misses\n        with lock:\n            cache.clear()\n            hits = misses = 0",
+        "content_sha256": "960d59c7347c385212e8bb8e9b3095c76e520a0b76f04e0fd8e53d5fb9c80d8b"
+      },
+      {
+        "path": "src/cachetools/_cached.py",
+        "start_line": 68,
+        "end_line": 86,
+        "content": "    def wrapper(*args, **kwargs):\n        nonlocal hits, misses\n        k = key(*args, **kwargs)\n        with lock:\n            try:\n                result = cache[k]\n                hits += 1\n                return result\n            except KeyError:\n                misses += 1\n        v = func(*args, **kwargs)\n        with lock:\n            try:\n                # In case of a race condition, i.e. if another thread\n                # stored a value for this key while we were calling\n                # func(), prefer the cached value.\n                return cache.setdefault(k, v)\n            except ValueError:\n                return v  # value too large",
+        "content_sha256": "1f01ad1d778050fee9e3beee33698fce758a036f103e524ce083b9e7fbbb6fcc"
+      },
+      {
+        "path": "src/cachetools/_cached.py",
+        "start_line": 88,
+        "end_line": 92,
+        "content": "    def cache_clear():\n        nonlocal hits, misses\n        with lock:\n            cache.clear()\n            hits = misses = 0",
+        "content_sha256": "960d59c7347c385212e8bb8e9b3095c76e520a0b76f04e0fd8e53d5fb9c80d8b"
+      }
+    ],
+    "completion_status": "success",
+    "required_points": [
+      "cached经_wrapper选择_unlocked",
+      "key(*args,**kwargs)后查cache，miss调用func再缓存",
+      "wrapper.cache_clear调用cache.clear"
+    ],
+    "evaluation_sources": [
+      {
+        "path": "src/cachetools/__init__.py",
+        "start_line": 738,
+        "end_line": 745,
+        "content": "def cached(cache, key=keys.hashkey, lock=None, condition=None, info=False):\n    \"\"\"Decorator to wrap a function with a memoizing callable that saves\n    results in a cache.\n\n    \"\"\"\n    from ._cached import _wrapper\n\n    def decorator(func):",
+        "content_sha256": "d7888f4bd28e10e6ddd94d43c704cf71ecee9976defe36614fa7bd93163a5db7"
+      },
+      {
+        "path": "src/cachetools/__init__.py",
+        "start_line": 762,
+        "end_line": 766,
+        "content": "            return _wrapper(func, cache, key, lock, condition, info=make_info)\n        else:\n            return _wrapper(func, cache, key, lock, condition)\n\n    return decorator",
+        "content_sha256": "b5886109655b7075d811d7462371759eba72912ce5dfc133307c66e1602cad4d"
+      },
+      {
+        "path": "src/cachetools/_cached.py",
+        "start_line": 263,
+        "end_line": 280,
+        "content": "    else:\n        if cache is None:\n            wrapper = _uncached(func)\n        elif cond is not None and lock is not None:\n            wrapper = _condition(func, cache, key, lock, cond)\n        elif cond is not None:\n            wrapper = _condition(func, cache, key, cond, cond)\n        elif lock is not None:\n            wrapper = _locked(func, cache, key, lock)\n        else:\n            wrapper = _unlocked(func, cache, key)\n        wrapper.cache_info = None\n\n    wrapper.cache = cache\n    wrapper.cache_key = key\n    wrapper.cache_lock = lock if lock is not None else cond\n    wrapper.cache_condition = cond\n    return wrapper",
+        "content_sha256": "4a818d1041713d454d0f7b8d33a785416e7db5fa9e958827e503bb1a42b58f92"
+      },
+      {
+        "path": "src/cachetools/_cached.py",
+        "start_line": 216,
+        "end_line": 232,
+        "content": "def _unlocked(func, cache, key):\n    def wrapper(*args, **kwargs):\n        k = key(*args, **kwargs)\n        try:\n            return cache[k]\n        except KeyError:\n            pass  # key not found\n        v = func(*args, **kwargs)\n        try:\n            cache[k] = v\n        except ValueError:\n            pass  # value too large\n        return v\n\n    functools.update_wrapper(wrapper, func)\n    wrapper.cache_clear = lambda: cache.clear()\n    return wrapper",
+        "content_sha256": "79bc0b99f2032e0c48e73ad58d413ffce26f91afb630f20918e3ea680faee469"
+      }
+    ]
+  },
+  {
+    "candidate_id": "candidate-cc7705c648894150",
+    "question": "LRUCache 对已有键执行 __getitem__ 与仅执行 key in cache，都会更新最近使用顺序吗？结合 __touch 和继承的 __contains__ 说明。",
+    "snapshot_id": "2bb0f63b6076d98a56eeb8e9",
+    "commit_sha": "6f23e2a7b75a42d30cb9d890ab3ca4059ee01bfd",
+    "answer": {
+      "answer": "LRUCache 对已有键执行 `__getitem__` 会更新最近使用顺序，但仅执行 `key in cache`（即调用 `__contains__`）不会更新顺序。",
+      "citations": [
+        {
+          "path": "src/cachetools/__init__.py",
+          "start_line": 294,
+          "end_line": 298
+        },
+        {
+          "path": "src/cachetools/__init__.py",
+          "start_line": 321,
+          "end_line": 326
+        },
+        {
+          "path": "src/cachetools/__init__.py",
+          "start_line": 103,
+          "end_line": 104
+        }
+      ],
+      "insufficient_evidence": false
+    },
+    "observed_context": [
+      {
+        "path": "src/cachetools/__init__.py",
+        "start_line": 287,
+        "end_line": 326,
+        "content": "class LRUCache(Cache):\n    \"\"\"Least Recently Used (LRU) cache implementation.\"\"\"\n\n    def __init__(self, maxsize, getsizeof=None):\n        Cache.__init__(self, maxsize, getsizeof)\n        self.__order = collections.OrderedDict()\n\n    def __getitem__(self, key, cache_getitem=Cache.__getitem__):\n        value = cache_getitem(self, key)\n        if key in self:  # __missing__ may not store item\n            self.__touch(key)\n        return value\n\n    def __setitem__(self, key, value, cache_setitem=Cache.__setitem__):\n        cache_setitem(self, key, value)\n        self.__touch(key)\n\n    def __delitem__(self, key, cache_delitem=Cache.__delitem__):\n        cache_delitem(self, key)\n        del self.__order[key]\n\n    def popitem(self):\n        \"\"\"Remove and return the `(key, value)` pair least recently used.\"\"\"\n        try:\n            key = next(iter(self.__order))\n        except StopIteration:\n            raise KeyError(\"%s is empty\" % type(self).__name__) from None\n        else:\n            return (key, self.pop(key))\n\n    def clear(self):\n        Cache.clear(self)\n        self.__order.clear()\n\n    def __touch(self, key):\n        \"\"\"Mark as recently used\"\"\"\n        try:\n            self.__order.move_to_end(key)\n        except KeyError:\n            self.__order[key] = None",
+        "content_sha256": "4ec7c42099d61cedacb6d06d7cd4688fa049cf67e26104e0be2ee14e779ba391"
+      },
+      {
+        "path": "src/cachetools/__init__.py",
+        "start_line": 71,
+        "end_line": 75,
+        "content": "    def __getitem__(self, key):\n        try:\n            return self.__data[key]\n        except KeyError:\n            return self.__missing__(key)",
+        "content_sha256": "ab28a489fec3e760131de50dba8c4fa69e41089879c369ea2628963577c38c21"
+      },
+      {
+        "path": "src/cachetools/__init__.py",
+        "start_line": 103,
+        "end_line": 104,
+        "content": "    def __contains__(self, key):\n        return key in self.__data",
+        "content_sha256": "4adc1029719bce8bf16121691ed41452e495257a8e3f28a654e8c4cee690795b"
+      },
+      {
+        "path": "src/cachetools/__init__.py",
+        "start_line": 32,
+        "end_line": 33,
+        "content": "    def __getitem__(self, _key):\n        return 1",
+        "content_sha256": "f181769a96d44455b4d94e4a6e6684b32276f02583517df182ab0c15c9a72801"
+      }
+    ],
+    "completion_status": "success",
+    "required_points": [
+      "getitem成功且键存在时touch",
+      "contains只查底层字典不touch；touch将键移到OrderedDict末尾"
+    ],
+    "evaluation_sources": [
+      {
+        "path": "src/cachetools/__init__.py",
+        "start_line": 103,
+        "end_line": 104,
+        "content": "    def __contains__(self, key):\n        return key in self.__data",
+        "content_sha256": "4adc1029719bce8bf16121691ed41452e495257a8e3f28a654e8c4cee690795b"
+      },
+      {
+        "path": "src/cachetools/__init__.py",
+        "start_line": 294,
+        "end_line": 298,
+        "content": "    def __getitem__(self, key, cache_getitem=Cache.__getitem__):\n        value = cache_getitem(self, key)\n        if key in self:  # __missing__ may not store item\n            self.__touch(key)\n        return value",
+        "content_sha256": "5ad59483f065104c2f24c4743c8ec6f05fdf6b357a01e453b1d0a77d0ae03935"
+      },
+      {
+        "path": "src/cachetools/__init__.py",
+        "start_line": 321,
+        "end_line": 326,
+        "content": "    def __touch(self, key):\n        \"\"\"Mark as recently used\"\"\"\n        try:\n            self.__order.move_to_end(key)\n        except KeyError:\n            self.__order[key] = None",
+        "content_sha256": "a2691d1e2bec417d646f645ce9460bb9d8f12675f5f77c3572816b910526a6ff"
+      }
+    ]
+  },
+  {
+    "candidate_id": "candidate-f160d215f994214f",
+    "question": "服务要用cached(cache=LRUCache(...))缓存用户资料查询，采用默认key、无lock、无condition、info=False。请给出从cached到实际wrapper的阅读路径，说明相同参数命中、未命中回源和cache_clear分别怎样工作。",
+    "snapshot_id": "2bb0f63b6076d98a56eeb8e9",
+    "commit_sha": "6f23e2a7b75a42d30cb9d890ab3ca4059ee01bfd",
+    "answer": {
+      "answer": "从 `cached` 到实际 `wrapper` 的路径为：`src/cachetools/__init__.py` 第 738 行的 `cached` 函数接收参数（本题 `info=False`），直接返回 `src/cachetools/_cached.py` 中导入的 `_wrapper` 闭包实例；该闭包在 `lock=None` 且 `condition=None` 时采用无锁、无 condition 的实现（第 68-86 行）。相同参数命中时，`cache[k]` 成功返回且 `hits` 加 1；未命中回源时，`cache[k]` 抛 `KeyError` 后调用原函数，再用 `setdefault` 存入缓存；`cache_clear` 直接清空缓存并重置 `hits/misses`。",
+      "citations": [
+        {
+          "path": "src/cachetools/__init__.py",
+          "start_line": 738,
+          "end_line": 766
+        },
+        {
+          "path": "src/cachetools/_cached.py",
+          "start_line": 68,
+          "end_line": 86
+        },
+        {
+          "path": "src/cachetools/_cached.py",
+          "start_line": 49,
+          "end_line": 53
+        }
+      ],
+      "insufficient_evidence": false
+    },
+    "observed_context": [
+      {
+        "path": "src/cachetools/__init__.py",
+        "start_line": 287,
+        "end_line": 326,
+        "content": "class LRUCache(Cache):\n    \"\"\"Least Recently Used (LRU) cache implementation.\"\"\"\n\n    def __init__(self, maxsize, getsizeof=None):\n        Cache.__init__(self, maxsize, getsizeof)\n        self.__order = collections.OrderedDict()\n\n    def __getitem__(self, key, cache_getitem=Cache.__getitem__):\n        value = cache_getitem(self, key)\n        if key in self:  # __missing__ may not store item\n            self.__touch(key)\n        return value\n\n    def __setitem__(self, key, value, cache_setitem=Cache.__setitem__):\n        cache_setitem(self, key, value)\n        self.__touch(key)\n\n    def __delitem__(self, key, cache_delitem=Cache.__delitem__):\n        cache_delitem(self, key)\n        del self.__order[key]\n\n    def popitem(self):\n        \"\"\"Remove and return the `(key, value)` pair least recently used.\"\"\"\n        try:\n            key = next(iter(self.__order))\n        except StopIteration:\n            raise KeyError(\"%s is empty\" % type(self).__name__) from None\n        else:\n            return (key, self.pop(key))\n\n    def clear(self):\n        Cache.clear(self)\n        self.__order.clear()\n\n    def __touch(self, key):\n        \"\"\"Mark as recently used\"\"\"\n        try:\n            self.__order.move_to_end(key)\n        except KeyError:\n            self.__order[key] = None",
+        "content_sha256": "4ec7c42099d61cedacb6d06d7cd4688fa049cf67e26104e0be2ee14e779ba391"
+      },
+      {
+        "path": "src/cachetools/__init__.py",
+        "start_line": 738,
+        "end_line": 766,
+        "content": "def cached(cache, key=keys.hashkey, lock=None, condition=None, info=False):\n    \"\"\"Decorator to wrap a function with a memoizing callable that saves\n    results in a cache.\n\n    \"\"\"\n    from ._cached import _wrapper\n\n    def decorator(func):\n        if info:\n            if isinstance(cache, Cache):\n\n                def make_info(hits, misses):\n                    return _CacheInfo(hits, misses, cache.maxsize, cache.currsize)\n\n            elif isinstance(cache, collections.abc.Mapping):\n\n                def make_info(hits, misses):\n                    return _CacheInfo(hits, misses, None, len(cache))\n\n            else:\n\n                def make_info(hits, misses):\n                    return _CacheInfo(hits, misses, 0, 0)\n\n            return _wrapper(func, cache, key, lock, condition, info=make_info)\n        else:\n            return _wrapper(func, cache, key, lock, condition)\n\n    return decorator",
+        "content_sha256": "dab0ce624acc549c0c7fbd7e8fede2cf2fa16add1f7a15fc76b668712a971670"
+      },
+      {
+        "path": "src/cachetools/_cached.py",
+        "start_line": 68,
+        "end_line": 86,
+        "content": "    def wrapper(*args, **kwargs):\n        nonlocal hits, misses\n        k = key(*args, **kwargs)\n        with lock:\n            try:\n                result = cache[k]\n                hits += 1\n                return result\n            except KeyError:\n                misses += 1\n        v = func(*args, **kwargs)\n        with lock:\n            try:\n                # In case of a race condition, i.e. if another thread\n                # stored a value for this key while we were calling\n                # func(), prefer the cached value.\n                return cache.setdefault(k, v)\n            except ValueError:\n                return v  # value too large",
+        "content_sha256": "1f01ad1d778050fee9e3beee33698fce758a036f103e524ce083b9e7fbbb6fcc"
+      },
+      {
+        "path": "src/cachetools/_cached.py",
+        "start_line": 24,
+        "end_line": 47,
+        "content": "    def wrapper(*args, **kwargs):\n        nonlocal hits, misses\n        k = key(*args, **kwargs)\n        with lock:\n            cond.wait_for(lambda: k not in pending)\n            try:\n                result = cache[k]\n                hits += 1\n                return result\n            except KeyError:\n                pending.add(k)\n                misses += 1\n        try:\n            v = func(*args, **kwargs)\n            with lock:\n                try:\n                    cache[k] = v\n                except ValueError:\n                    pass  # value too large\n                return v\n        finally:\n            with lock:\n                pending.remove(k)\n                cond.notify_all()",
+        "content_sha256": "99c1e25f3237398fcb32b4ecc5bc25d8c1619d544b1a68348eb33d2fcd5a50c8"
+      },
+      {
+        "path": "src/cachetools/_cached.py",
+        "start_line": 49,
+        "end_line": 53,
+        "content": "    def cache_clear():\n        nonlocal hits, misses\n        with lock:\n            cache.clear()\n            hits = misses = 0",
+        "content_sha256": "960d59c7347c385212e8bb8e9b3095c76e520a0b76f04e0fd8e53d5fb9c80d8b"
+      },
+      {
+        "path": "src/cachetools/_cached.py",
+        "start_line": 88,
+        "end_line": 92,
+        "content": "    def cache_clear():\n        nonlocal hits, misses\n        with lock:\n            cache.clear()\n            hits = misses = 0",
+        "content_sha256": "960d59c7347c385212e8bb8e9b3095c76e520a0b76f04e0fd8e53d5fb9c80d8b"
+      }
+    ],
+    "completion_status": "success",
+    "required_points": [
+      "cached经_wrapper选择_unlocked",
+      "key(*args,**kwargs)后查cache，miss调用func再缓存",
+      "wrapper.cache_clear调用cache.clear"
+    ],
+    "evaluation_sources": [
+      {
+        "path": "src/cachetools/__init__.py",
+        "start_line": 738,
+        "end_line": 745,
+        "content": "def cached(cache, key=keys.hashkey, lock=None, condition=None, info=False):\n    \"\"\"Decorator to wrap a function with a memoizing callable that saves\n    results in a cache.\n\n    \"\"\"\n    from ._cached import _wrapper\n\n    def decorator(func):",
+        "content_sha256": "d7888f4bd28e10e6ddd94d43c704cf71ecee9976defe36614fa7bd93163a5db7"
+      },
+      {
+        "path": "src/cachetools/__init__.py",
+        "start_line": 762,
+        "end_line": 766,
+        "content": "            return _wrapper(func, cache, key, lock, condition, info=make_info)\n        else:\n            return _wrapper(func, cache, key, lock, condition)\n\n    return decorator",
+        "content_sha256": "b5886109655b7075d811d7462371759eba72912ce5dfc133307c66e1602cad4d"
+      },
+      {
+        "path": "src/cachetools/_cached.py",
+        "start_line": 263,
+        "end_line": 280,
+        "content": "    else:\n        if cache is None:\n            wrapper = _uncached(func)\n        elif cond is not None and lock is not None:\n            wrapper = _condition(func, cache, key, lock, cond)\n        elif cond is not None:\n            wrapper = _condition(func, cache, key, cond, cond)\n        elif lock is not None:\n            wrapper = _locked(func, cache, key, lock)\n        else:\n            wrapper = _unlocked(func, cache, key)\n        wrapper.cache_info = None\n\n    wrapper.cache = cache\n    wrapper.cache_key = key\n    wrapper.cache_lock = lock if lock is not None else cond\n    wrapper.cache_condition = cond\n    return wrapper",
+        "content_sha256": "4a818d1041713d454d0f7b8d33a785416e7db5fa9e958827e503bb1a42b58f92"
+      },
+      {
+        "path": "src/cachetools/_cached.py",
+        "start_line": 216,
+        "end_line": 232,
+        "content": "def _unlocked(func, cache, key):\n    def wrapper(*args, **kwargs):\n        k = key(*args, **kwargs)\n        try:\n            return cache[k]\n        except KeyError:\n            pass  # key not found\n        v = func(*args, **kwargs)\n        try:\n            cache[k] = v\n        except ValueError:\n            pass  # value too large\n        return v\n\n    functools.update_wrapper(wrapper, func)\n    wrapper.cache_clear = lambda: cache.clear()\n    return wrapper",
+        "content_sha256": "79bc0b99f2032e0c48e73ad58d413ffce26f91afb630f20918e3ea680faee469"
+      }
+    ]
+  },
+  {
+    "candidate_id": "candidate-1d24be687837e148",
+    "question": "我要理解Requests会话怎样发送一次请求，不执行网络。请以Session.request为入口给出主要阅读顺序：Request在哪里组装，怎样准备为PreparedRequest，timeout如何传到Session.send，最后由谁实际发送？",
+    "snapshot_id": "e82fdc78cb700c628d4286d6",
+    "commit_sha": "46e939b5525d9c72b677340985582b04b128478a",
+    "answer": {
+      "answer": "Session.request 在 src/requests/sessions.py 的 L500-L546 处接收参数并构造 Request 对象；Session 在 L457-L498 的 prepare_request 中将 Request 组装为 PreparedRequest；timeout 通过 Session.request 的 timeout 参数传入，在 Session.send 的 L673-L723 中作为 kwargs 的一部分传递给 adapter.send；实际发送由 adapter.send 完成，adapter 在 L697 通过 get_adapter 获取并在 L703 调用。",
+      "insufficient_evidence": false,
+      "citations": [
+        {
+          "path": "src/requests/sessions.py",
+          "start_line": 500,
+          "end_line": 546
+        },
+        {
+          "path": "src/requests/sessions.py",
+          "start_line": 457,
+          "end_line": 498
+        },
+        {
+          "path": "src/requests/sessions.py",
+          "start_line": 673,
+          "end_line": 723
+        }
+      ]
+    },
+    "observed_context": [
+      {
+        "path": "src/requests/sessions.py",
+        "start_line": 500,
+        "end_line": 546,
+        "content": "    def request(\n        self,\n        method,\n        url,\n        params=None,\n        data=None,\n        headers=None,\n        cookies=None,\n        files=None,\n        auth=None,\n        timeout=None,\n        allow_redirects=True,\n        proxies=None,\n        hooks=None,\n        stream=None,\n        verify=None,\n        cert=None,\n        json=None,\n    ):\n        \"\"\"Constructs a :class:`Request <Request>`, prepares it and sends it.\n        Returns :class:`Response <Response>` object.\n\n        :param method: method for the new :class:`Request` object.\n        :param url: URL for the new :class:`Request` object.\n        :param params: (optional) Dictionary or bytes to be sent in the query\n            string for the :class:`Request`.\n        :param data: (optional) Dictionary, list of tuples, bytes, or file-like\n            object to send in the body of the :class:`Request`.\n        :param json: (optional) json to send in the body of the\n            :class:`Request`.\n        :param headers: (optional) Dictionary of HTTP Headers to send with the\n            :class:`Request`.\n        :param cookies: (optional) Dict or CookieJar object to send with the\n            :class:`Request`.\n        :param files: (optional) Dictionary of ``'filename': file-like-objects``\n            for multipart encoding upload.\n        :param auth: (optional) Auth tuple or callable to enable\n            Basic/Digest/Custom HTTP Auth.\n        :param timeout: (optional) How many seconds to wait for the server to send\n            data before giving up, as a float, or a :ref:`(connect timeout,\n            read timeout) <timeouts>` tuple.\n        :type timeout: float or tuple\n        :param allow_redirects: (optional) Set to True by default.\n        :type allow_redirects: bool\n        :param proxies: (optional) Dictionary mapping protocol or protocol and\n            hostname to the URL of the proxy.\n        :param hooks: (optional) Dictionary mapping hook name to one event or",
+        "content_sha256": "a5d1b3a4935623e36619777356230778a029a68332ba314623e7bc66ee94a391"
+      },
+      {
+        "path": "src/requests/sessions.py",
+        "start_line": 673,
+        "end_line": 723,
+        "content": "    def send(self, request, **kwargs):\n        \"\"\"Send a given PreparedRequest.\n\n        :rtype: requests.Response\n        \"\"\"\n        # Set defaults that the hooks can utilize to ensure they always have\n        # the correct parameters to reproduce the previous request.\n        kwargs.setdefault(\"stream\", self.stream)\n        kwargs.setdefault(\"verify\", self.verify)\n        kwargs.setdefault(\"cert\", self.cert)\n        if \"proxies\" not in kwargs:\n            kwargs[\"proxies\"] = resolve_proxies(request, self.proxies, self.trust_env)\n\n        # It's possible that users might accidentally send a Request object.\n        # Guard against that specific failure case.\n        if isinstance(request, Request):\n            raise ValueError(\"You can only send PreparedRequests.\")\n\n        # Set up variables needed for resolve_redirects and dispatching of hooks\n        allow_redirects = kwargs.pop(\"allow_redirects\", True)\n        stream = kwargs.get(\"stream\")\n        hooks = request.hooks\n\n        # Get the appropriate adapter to use\n        adapter = self.get_adapter(url=request.url)\n\n        # Start time (approximately) of the request\n        start = preferred_clock()\n\n        # Send the request\n        r = adapter.send(request, **kwargs)\n\n        # Total elapsed time of the request (approximately)\n        elapsed = preferred_clock() - start\n        r.elapsed = timedelta(seconds=elapsed)\n\n        # Response manipulation hooks\n        r = dispatch_hook(\"response\", hooks, r, **kwargs)\n\n        # Persist cookies\n        if r.history:\n            # If the hooks create history then we want those cookies too\n            for resp in r.history:\n                extract_cookies_to_jar(self.cookies, resp.request, resp.raw)\n\n        extract_cookies_to_jar(self.cookies, request, r.raw)\n\n        # Resolve redirects if allowed.\n        if allow_redirects:\n            # Redirect resolving generator.\n            gen = self.resolve_redirects(r, request, **kwargs)",
+        "content_sha256": "ecd19335fe94d4e29fadf6c6e8a22c3422298763288c61f00105e77db52cc1fc"
+      },
+      {
+        "path": "src/requests/sessions.py",
+        "start_line": 457,
+        "end_line": 498,
+        "content": "    def prepare_request(self, request):\n        \"\"\"Constructs a :class:`PreparedRequest <PreparedRequest>` for\n        transmission and returns it. The :class:`PreparedRequest` has settings\n        merged from the :class:`Request <Request>` instance and those of the\n        :class:`Session`.\n\n        :param request: :class:`Request` instance to prepare with this\n            session's settings.\n        :rtype: requests.PreparedRequest\n        \"\"\"\n        cookies = request.cookies or {}\n\n        # Bootstrap CookieJar.\n        if not isinstance(cookies, cookielib.CookieJar):\n            cookies = cookiejar_from_dict(cookies)\n\n        # Merge with session cookies\n        merged_cookies = merge_cookies(\n            merge_cookies(RequestsCookieJar(), self.cookies), cookies\n        )\n\n        # Set environment's basic authentication if not explicitly set.\n        auth = request.auth\n        if self.trust_env and not auth and not self.auth:\n            auth = get_netrc_auth(request.url)\n\n        p = PreparedRequest()\n        p.prepare(\n            method=request.method.upper(),\n            url=request.url,\n            files=request.files,\n            data=request.data,\n            json=request.json,\n            headers=merge_setting(\n                request.headers, self.headers, dict_class=CaseInsensitiveDict\n            ),\n            params=merge_setting(request.params, self.params),\n            auth=merge_setting(auth, self.auth),\n            cookies=merged_cookies,\n            hooks=merge_hooks(request.hooks, self.hooks),\n        )\n        return p",
+        "content_sha256": "baeb7869093ce107e16cdf41af8b32cdd478477acfaee3b39f1441d45c9c420c"
+      },
+      {
+        "path": "src/requests/cookies.py",
+        "start_line": 124,
+        "end_line": 137,
+        "content": "def extract_cookies_to_jar(jar, request, response):\n    \"\"\"Extract the cookies from the response into a CookieJar.\n\n    :param jar: http.cookiejar.CookieJar (not necessarily a RequestsCookieJar)\n    :param request: our own requests.Request object\n    :param response: urllib3.HTTPResponse object\n    \"\"\"\n    if not (hasattr(response, \"_original_response\") and response._original_response):\n        return\n    # the _original_response field is the wrapped httplib.HTTPResponse object,\n    req = MockRequest(request)\n    # pull out the HTTPMessage with the headers and put it in the mock:\n    res = MockResponse(response._original_response.msg)\n    jar.extract_cookies(res, req)",
+        "content_sha256": "567a750dce49bcec9d4f21733dfb2ffed1d998048447442a05514852fa79d7a9"
+      },
+      {
+        "path": "src/requests/hooks.py",
+        "start_line": 22,
+        "end_line": 33,
+        "content": "def dispatch_hook(key, hooks, hook_data, **kwargs):\n    \"\"\"Dispatches a hook dictionary on a given piece of data.\"\"\"\n    hooks = hooks or {}\n    hooks = hooks.get(key)\n    if hooks:\n        if hasattr(hooks, \"__call__\"):\n            hooks = [hooks]\n        for hook in hooks:\n            _hook_data = hook(hook_data, **kwargs)\n            if _hook_data is not None:\n                hook_data = _hook_data\n    return hook_data",
+        "content_sha256": "3eb1efb0be129e9933ce575b94a799244ac0e1e00d671fc9707653b8e618de44"
+      },
+      {
+        "path": "src/requests/models.py",
+        "start_line": 230,
+        "end_line": 266,
+        "content": "class Request(RequestHooksMixin):\n    \"\"\"A user-created :class:`Request <Request>` object.\n\n    Used to prepare a :class:`PreparedRequest <PreparedRequest>`, which is sent to the server.\n\n    :param method: HTTP method to use.\n    :param url: URL to send.\n    :param headers: dictionary of headers to send.\n    :param files: dictionary of {filename: fileobject} files to multipart upload.\n    :param data: the body to attach to the request. If a dictionary or\n        list of tuples ``[(key, value)]`` is provided, form-encoding will\n        take place.\n    :param json: json for the body to attach to the request (if files or data is not specified).\n    :param params: URL parameters to append to the URL. If a dictionary or\n        list of tuples ``[(key, value)]`` is provided, form-encoding will\n        take place.\n    :param auth: Auth handler or (user, pass) tuple.\n    :param cookies: dictionary or CookieJar of cookies to attach to this request.\n    :param hooks: dictionary of callback hooks, for internal usage.\n\n    Usage::\n\n      >>> import requests\n      >>> req = requests.Request('GET', 'https://httpbin.org/get')\n      >>> req.prepare()\n      <PreparedRequest [GET]>\n    \"\"\"\n\n    def __init__(\n        self,\n        method=None,\n        url=None,\n        headers=None,\n        files=None,\n        data=None,\n        params=None,\n        auth=None,",
+        "content_sha256": "7c41358bc54e49d91658f55a0eb26a9f8907c1cd17636368920e9c1e1834a125"
+      }
+    ],
+    "completion_status": "success",
+    "required_points": [
+      "request组装Request并prepare_request",
+      "timeout进入send_kwargs并调用self.send",
+      "Session.send按URL取adapter并adapter.send"
+    ],
+    "evaluation_sources": [
+      {
+        "path": "src/requests/sessions.py",
+        "start_line": 562,
+        "end_line": 591,
+        "content": "        # Create the Request.\n        req = Request(\n            method=method.upper(),\n            url=url,\n            headers=headers,\n            files=files,\n            data=data or {},\n            json=json,\n            params=params or {},\n            auth=auth,\n            cookies=cookies,\n            hooks=hooks,\n        )\n        prep = self.prepare_request(req)\n\n        proxies = proxies or {}\n\n        settings = self.merge_environment_settings(\n            prep.url, proxies, stream, verify, cert\n        )\n\n        # Send the request.\n        send_kwargs = {\n            \"timeout\": timeout,\n            \"allow_redirects\": allow_redirects,\n        }\n        send_kwargs.update(settings)\n        resp = self.send(prep, **send_kwargs)\n\n        return resp",
+        "content_sha256": "0315d5d482cf596222ddd8ce6d39bd7d74235600de48007879bc8526a44a355e"
+      },
+      {
+        "path": "src/requests/sessions.py",
+        "start_line": 696,
+        "end_line": 703,
+        "content": "        # Get the appropriate adapter to use\n        adapter = self.get_adapter(url=request.url)\n\n        # Start time (approximately) of the request\n        start = preferred_clock()\n\n        # Send the request\n        r = adapter.send(request, **kwargs)",
+        "content_sha256": "302f989ba13a428b3a263b394ccdbbaa34c931d0b0da1292518504099dd58ef5"
+      }
+    ]
+  },
+  {
+    "candidate_id": "candidate-aac41c601ade4789",
+    "question": "在 non-secure 入口，customAlphabet('ab', 2.9) 返回的生成器分别不传 size、传 0、传 -1 时，长度是多少？解释位运算与循环条件，不要套用 Node 安全入口的异常规则。",
+    "snapshot_id": "30e277e52d238ad871cb5684",
+    "commit_sha": "57009b5eb8d757ae39bf5f4361dd30c9f23391b7",
+    "answer": {
+      "answer": "在 non-secure 入口，customAlphabet('ab', 2.9) 返回的生成器：不传 size 时长度为 21；传 0 时长度为 0；传 -1 时长度为 0。",
+      "citations": [
+        {
+          "path": "non-secure/index.js",
+          "start_line": 5,
+          "end_line": 17
+        },
+        {
+          "path": "test/non-secure.test.js",
+          "start_line": 72,
+          "end_line": 75
+        },
+        {
+          "path": "test/non-secure.test.js",
+          "start_line": 125,
+          "end_line": 128
+        }
+      ],
+      "insufficient_evidence": false
+    },
+    "observed_context": [
+      {
+        "path": "non-secure/index.d.ts",
+        "start_line": 29,
+        "end_line": 48,
+        "content": "/**\n * Generate a unique ID based on a custom alphabet.\n * This method uses the non-secure predictable random generator\n * with bigger collision probability.\n *\n * @param alphabet Alphabet used to generate the ID.\n * @param defaultSize Size of the ID. The default size is 21.\n * @typeparam Type The ID type to replace `string` with some opaque type.\n * @returns A random string generator.\n *\n * ```js\n * import { customAlphabet } from 'nanoid/non-secure'\n * const nanoid = customAlphabet('0123456789абвгдеё', 5)\n * model.id = nanoid() //=> \"8ё56а\"\n * ```\n */\nexport function customAlphabet<Type extends string>(\n  alphabet: string,\n  defaultSize?: number\n): (size?: number) => Type",
+        "content_sha256": "99d935e0691d3ee54056df6e3de4e881cd9adbe677479721d3bf2877dfcf4269"
+      },
+      {
+        "path": "non-secure/index.js",
+        "start_line": 5,
+        "end_line": 17,
+        "content": "export let customAlphabet = (alphabet, defaultSize = 21) => {\n  return (size = defaultSize) => {\n    let id = ''\n    // A compact alternative for `for (var i = 0; i < step; i++)`.\n    // `> 0` stops a negative size from looping forever.\n    let i = size | 0\n    while (i-- > 0) {\n      // `| 0` is more compact and faster than `Math.floor()`.\n      id += alphabet[(Math.random() * alphabet.length) | 0]\n    }\n    return id\n  }\n}",
+        "content_sha256": "2c113cd0c7efeb52d28a5dcdfed1c6ad8ede5af8c85e850aa9252d2f3f3ddede"
+      },
+      {
+        "path": "test/non-secure.test.js",
+        "start_line": 1,
+        "end_line": 6,
+        "content": "import { equal, match, notEqual, ok } from 'node:assert'\nimport { describe, test } from 'node:test'\n\nimport { urlAlphabet } from '../index.js'\nimport { customAlphabet, nanoid } from '../non-secure/index.js'\n",
+        "content_sha256": "a140952acee71de1110924595a40aab3e1d13988bc2c99fa8beb009fe9cc6b64"
+      },
+      {
+        "path": "test/non-secure.test.js",
+        "start_line": 72,
+        "end_line": 75,
+        "content": "    test('is ready for 0 size', () => {\n      equal(customAlphabet('abc')(0), '')\n      equal(customAlphabet('abc', 0)(0), '')\n    })",
+        "content_sha256": "936eec9df30831981f19c04edb768f578fabca563fd28e4272413c99cb6ec936"
+      },
+      {
+        "path": "test/non-secure.test.js",
+        "start_line": 125,
+        "end_line": 128,
+        "content": "test('does not hang on negative size (customAlphabet)', () => {\n  equal(customAlphabet('abcdef')(-1), '')\n  equal(customAlphabet('abcdef', -5)(), '')\n})",
+        "content_sha256": "73e6dba91bfef6103d4f180bedf4b0cc47c5f34c12e5314481a904c5b1bf36a4"
+      },
+      {
+        "path": "README.md",
+        "start_line": 201,
+        "end_line": 216,
+        "content": "Alphabet must contain from 1 to 256 symbols.\nOtherwise, the security of the internal generator algorithm is not guaranteed,\nand a generator built from an empty or over-256-symbol alphabet\ncan loop forever instead of returning an ID.\n\nIn addition to setting a default size, you can change the ID size when calling\nthe function:\n\n```js\nimport { customAlphabet } from \"nanoid\";\nconst nanoid = customAlphabet(\"1234567890abcdef\", 10);\nmodel.id = nanoid(5); //=> \"f01a2\"\n```\n\n[`nanoid-dictionary`]: https://github.com/CyberAP/nanoid-dictionary\n",
+        "content_sha256": "0e4cda8976632b597fe1340d223a0a3e36b956b5fd787b234b7810f8019927c4"
+      }
+    ],
+    "completion_status": "success",
+    "required_points": [
+      "长度依次为 2、0、0",
+      "size | 0 将 2.9 转成 2，while(i-- > 0) 不进入零或负数循环",
+      "此入口不按 Node 安全实现对负数抛 RangeError"
+    ],
+    "evaluation_sources": [
+      {
+        "path": "non-secure/index.js",
+        "start_line": 5,
+        "end_line": 17,
+        "content": "export let customAlphabet = (alphabet, defaultSize = 21) => {\n  return (size = defaultSize) => {\n    let id = ''\n    // A compact alternative for `for (var i = 0; i < step; i++)`.\n    // `> 0` stops a negative size from looping forever.\n    let i = size | 0\n    while (i-- > 0) {\n      // `| 0` is more compact and faster than `Math.floor()`.\n      id += alphabet[(Math.random() * alphabet.length) | 0]\n    }\n    return id\n  }\n}",
+        "content_sha256": "2c113cd0c7efeb52d28a5dcdfed1c6ad8ede5af8c85e850aa9252d2f3f3ddede"
+      }
+    ]
+  },
+  {
+    "candidate_id": "candidate-1b44b71f98a4c716",
+    "question": "LRUCache 对已有键执行 __getitem__ 与仅执行 key in cache，都会更新最近使用顺序吗？结合 __touch 和继承的 __contains__ 说明。",
+    "snapshot_id": "2bb0f63b6076d98a56eeb8e9",
+    "commit_sha": "6f23e2a7b75a42d30cb9d890ab3ca4059ee01bfd",
+    "answer": {
+      "answer": "LRUCache 对已有键执行 `__getitem__` 会更新最近使用顺序，而仅执行 `key in cache` 不会更新顺序。",
+      "insufficient_evidence": false,
+      "citations": [
+        {
+          "path": "src/cachetools/__init__.py",
+          "start_line": 294,
+          "end_line": 298
+        },
+        {
+          "path": "src/cachetools/__init__.py",
+          "start_line": 321,
+          "end_line": 326
+        },
+        {
+          "path": "src/cachetools/__init__.py",
+          "start_line": 103,
+          "end_line": 104
+        }
+      ]
+    },
+    "observed_context": [
+      {
+        "path": "src/cachetools/__init__.py",
+        "start_line": 294,
+        "end_line": 298,
+        "content": "    def __getitem__(self, key, cache_getitem=Cache.__getitem__):\n        value = cache_getitem(self, key)\n        if key in self:  # __missing__ may not store item\n            self.__touch(key)\n        return value",
+        "content_sha256": "5ad59483f065104c2f24c4743c8ec6f05fdf6b357a01e453b1d0a77d0ae03935"
+      },
+      {
+        "path": "src/cachetools/__init__.py",
+        "start_line": 321,
+        "end_line": 326,
+        "content": "    def __touch(self, key):\n        \"\"\"Mark as recently used\"\"\"\n        try:\n            self.__order.move_to_end(key)\n        except KeyError:\n            self.__order[key] = None",
+        "content_sha256": "a2691d1e2bec417d646f645ce9460bb9d8f12675f5f77c3572816b910526a6ff"
+      },
+      {
+        "path": "src/cachetools/__init__.py",
+        "start_line": 287,
+        "end_line": 326,
+        "content": "class LRUCache(Cache):\n    \"\"\"Least Recently Used (LRU) cache implementation.\"\"\"\n\n    def __init__(self, maxsize, getsizeof=None):\n        Cache.__init__(self, maxsize, getsizeof)\n        self.__order = collections.OrderedDict()\n\n    def __getitem__(self, key, cache_getitem=Cache.__getitem__):\n        value = cache_getitem(self, key)\n        if key in self:  # __missing__ may not store item\n            self.__touch(key)\n        return value\n\n    def __setitem__(self, key, value, cache_setitem=Cache.__setitem__):\n        cache_setitem(self, key, value)\n        self.__touch(key)\n\n    def __delitem__(self, key, cache_delitem=Cache.__delitem__):\n        cache_delitem(self, key)\n        del self.__order[key]\n\n    def popitem(self):\n        \"\"\"Remove and return the `(key, value)` pair least recently used.\"\"\"\n        try:\n            key = next(iter(self.__order))\n        except StopIteration:\n            raise KeyError(\"%s is empty\" % type(self).__name__) from None\n        else:\n            return (key, self.pop(key))\n\n    def clear(self):\n        Cache.clear(self)\n        self.__order.clear()\n\n    def __touch(self, key):\n        \"\"\"Mark as recently used\"\"\"\n        try:\n            self.__order.move_to_end(key)\n        except KeyError:\n            self.__order[key] = None",
+        "content_sha256": "4ec7c42099d61cedacb6d06d7cd4688fa049cf67e26104e0be2ee14e779ba391"
+      },
+      {
+        "path": "src/cachetools/__init__.py",
+        "start_line": 103,
+        "end_line": 104,
+        "content": "    def __contains__(self, key):\n        return key in self.__data",
+        "content_sha256": "4adc1029719bce8bf16121691ed41452e495257a8e3f28a654e8c4cee690795b"
+      },
+      {
+        "path": "src/cachetools/__init__.py",
+        "start_line": 71,
+        "end_line": 75,
+        "content": "    def __getitem__(self, key):\n        try:\n            return self.__data[key]\n        except KeyError:\n            return self.__missing__(key)",
+        "content_sha256": "ab28a489fec3e760131de50dba8c4fa69e41089879c369ea2628963577c38c21"
+      },
+      {
+        "path": "src/cachetools/__init__.py",
+        "start_line": 32,
+        "end_line": 33,
+        "content": "    def __getitem__(self, _key):\n        return 1",
+        "content_sha256": "f181769a96d44455b4d94e4a6e6684b32276f02583517df182ab0c15c9a72801"
+      }
+    ],
+    "completion_status": "success",
+    "required_points": [
+      "getitem成功且键存在时touch",
+      "contains只查底层字典不touch；touch将键移到OrderedDict末尾"
+    ],
+    "evaluation_sources": [
+      {
+        "path": "src/cachetools/__init__.py",
+        "start_line": 103,
+        "end_line": 104,
+        "content": "    def __contains__(self, key):\n        return key in self.__data",
+        "content_sha256": "4adc1029719bce8bf16121691ed41452e495257a8e3f28a654e8c4cee690795b"
+      },
+      {
+        "path": "src/cachetools/__init__.py",
+        "start_line": 294,
+        "end_line": 298,
+        "content": "    def __getitem__(self, key, cache_getitem=Cache.__getitem__):\n        value = cache_getitem(self, key)\n        if key in self:  # __missing__ may not store item\n            self.__touch(key)\n        return value",
+        "content_sha256": "5ad59483f065104c2f24c4743c8ec6f05fdf6b357a01e453b1d0a77d0ae03935"
+      },
+      {
+        "path": "src/cachetools/__init__.py",
+        "start_line": 321,
+        "end_line": 326,
+        "content": "    def __touch(self, key):\n        \"\"\"Mark as recently used\"\"\"\n        try:\n            self.__order.move_to_end(key)\n        except KeyError:\n            self.__order[key] = None",
+        "content_sha256": "a2691d1e2bec417d646f645ce9460bb9d8f12675f5f77c3572816b910526a6ff"
+      }
+    ]
+  }
+]

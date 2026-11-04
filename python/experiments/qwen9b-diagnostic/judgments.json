@@ -1,0 +1,1288 @@
+[
+  {
+    "candidate_id": "4b--history-dev-03--oracle",
+    "correctness": "incorrect",
+    "citation_support": "unsupported",
+    "completeness": "adequate",
+    "abstention": "not_applicable",
+    "entry_scope": "correct",
+    "consistency": "consistent",
+    "claims": [
+      {
+        "claim": "non-secure 抛异常而 Node 返回空串",
+        "status": "contradicted",
+        "rationale": "两项结果与原始源码相反。",
+        "evidence": [
+          {
+            "path": "non-secure/index.js",
+            "start_line": 19,
+            "end_line": 29
+          },
+          {
+            "path": "index.js",
+            "start_line": 133,
+            "end_line": 138
+          }
+        ],
+        "verified_evidence": [
+          {
+            "path": "non-secure/index.js",
+            "start_line": 19,
+            "end_line": 29,
+            "content": "export let nanoid = (size = 21) => {\n  let id = ''\n  // A compact alternative for `for (var i = 0; i < step; i++)`.\n  // `> 0` stops a negative size from looping forever.\n  let i = size | 0\n  while (i-- > 0) {\n    // `| 0` is more compact and faster than `Math.floor()`.\n    id += urlAlphabet[(Math.random() * 64) | 0]\n  }\n  return id\n}",
+            "content_sha256": "b57574c83361e1fb043c39f15ed99b4b1062a181535e98a1a8e1f9b828dd6417",
+            "visible_to_generator": true
+          },
+          {
+            "path": "index.js",
+            "start_line": 133,
+            "end_line": 138,
+            "content": "  return (size = defaultSize) => {\n    // `|=` convert `size` to number to prevent `valueOf` abusing\n    // and pool offset pollution\n    size |= 0\n    if (size < 0) throw new RangeError('Wrong ID size')\n    if (size === 0) return ''",
+            "content_sha256": "a2cd1e5a3ee0815f52f8518c2ba5fe4a3358024401993d7b63baeff18d5ca89d",
+            "visible_to_generator": true
+          }
+        ]
+      }
+    ],
+    "notes": "给出关键源码后最终答案仍将入口行为说反。研究草稿最终自行纠正，整理时再次翻转。",
+    "key_points": null,
+    "candidate_sha256": "2af655172bcb2775a833c1f64ea4400b29822fee0441e5518694772af3026aff",
+    "reviewer": "Codex (current session)",
+    "review_type": "model_assisted_nonblind_development_review",
+    "human_approved": false,
+    "training_eligible": false,
+    "solved": false
+  },
+  {
+    "candidate_id": "4b--history-dev-03--sdk",
+    "correctness": "incorrect",
+    "citation_support": "unsupported",
+    "completeness": "adequate",
+    "abstention": "not_applicable",
+    "entry_scope": "correct",
+    "consistency": "consistent",
+    "claims": [
+      {
+        "claim": "non-secure 负数抛异常",
+        "status": "contradicted",
+        "rationale": "循环条件为假，返回初始化的空串。",
+        "evidence": [
+          {
+            "path": "non-secure/index.js",
+            "start_line": 19,
+            "end_line": 29
+          }
+        ],
+        "verified_evidence": [
+          {
+            "path": "non-secure/index.js",
+            "start_line": 19,
+            "end_line": 29,
+            "content": "export let nanoid = (size = 21) => {\n  let id = ''\n  // A compact alternative for `for (var i = 0; i < step; i++)`.\n  // `> 0` stops a negative size from looping forever.\n  let i = size | 0\n  while (i-- > 0) {\n    // `| 0` is more compact and faster than `Math.floor()`.\n    id += urlAlphabet[(Math.random() * 64) | 0]\n  }\n  return id\n}",
+            "content_sha256": "b57574c83361e1fb043c39f15ed99b4b1062a181535e98a1a8e1f9b828dd6417",
+            "visible_to_generator": true
+          }
+        ]
+      },
+      {
+        "claim": "Node 负数返回空串",
+        "status": "contradicted",
+        "rationale": "负数在该分支直接抛 RangeError。",
+        "evidence": [
+          {
+            "path": "index.js",
+            "start_line": 133,
+            "end_line": 138
+          }
+        ],
+        "verified_evidence": [
+          {
+            "path": "index.js",
+            "start_line": 133,
+            "end_line": 138,
+            "content": "  return (size = defaultSize) => {\n    // `|=` convert `size` to number to prevent `valueOf` abusing\n    // and pool offset pollution\n    size |= 0\n    if (size < 0) throw new RangeError('Wrong ID size')\n    if (size === 0) return ''",
+            "content_sha256": "a2cd1e5a3ee0815f52f8518c2ba5fe4a3358024401993d7b63baeff18d5ca89d",
+            "visible_to_generator": true
+          }
+        ]
+      }
+    ],
+    "notes": "把两个入口的结果说反；实际 non-secure 返回空串，Node 抛 RangeError。已补查仍错误。",
+    "key_points": null,
+    "candidate_sha256": "5a0f01419145764a2c3a427be233ef4e044c3f05329564997c316d8c5dce846d",
+    "reviewer": "Codex (current session)",
+    "review_type": "model_assisted_nonblind_development_review",
+    "human_approved": false,
+    "training_eligible": false,
+    "solved": false
+  },
+  {
+    "candidate_id": "4b--history-dev-04--oracle",
+    "correctness": "correct",
+    "citation_support": "supported",
+    "completeness": "partial",
+    "abstention": "not_applicable",
+    "entry_scope": "correct",
+    "consistency": "consistent",
+    "claims": [
+      {
+        "claim": "on 不把事件名变成小写",
+        "status": "supported",
+        "rationale": "方法体及大小写测试支持结论。",
+        "evidence": [
+          {
+            "path": "src/index.ts",
+            "start_line": 66,
+            "end_line": 73
+          },
+          {
+            "path": "test/index_test.ts",
+            "start_line": 79,
+            "end_line": 90
+          }
+        ],
+        "verified_evidence": [
+          {
+            "path": "src/index.ts",
+            "start_line": 66,
+            "end_line": 73,
+            "content": "\t\ton<Key extends keyof Events>(type: Key, handler: GenericEventHandler) {\n\t\t\tconst handlers: Array<GenericEventHandler> | undefined = all!.get(type);\n\t\t\tif (handlers) {\n\t\t\t\thandlers.push(handler);\n\t\t\t} else {\n\t\t\t\tall!.set(type, [handler] as EventHandlerList<Events[keyof Events]>);\n\t\t\t}\n\t\t},",
+            "content_sha256": "0a5bf296ae849cd916f0b4eedbc3b3dbd431acb523f64fede2782b79ff119004",
+            "visible_to_generator": true
+          },
+          {
+            "path": "test/index_test.ts",
+            "start_line": 79,
+            "end_line": 90,
+            "content": "\t\tit('should NOT normalize case', () => {\n\t\t\tconst foo = () => {};\n\t\t\tinst.on('FOO', foo);\n\t\t\tinst.on('Bar', foo);\n\t\t\tinst.on('baz:baT!', foo);\n\n\t\t\texpect(events.get('FOO')).to.deep.equal([foo]);\n\t\t\texpect(events.has('foo')).to.equal(false);\n\t\t\texpect(events.get('Bar')).to.deep.equal([foo]);\n\t\t\texpect(events.has('bar')).to.equal(false);\n\t\t\texpect(events.get('baz:baT!')).to.deep.equal([foo]);\n\t\t});",
+            "content_sha256": "7c7ae10f82f38319cf3cf181161ee7bfb29bde7819610b697836ace1ba119048",
+            "visible_to_generator": true
+          }
+        ]
+      }
+    ],
+    "notes": "充分测试源码已给出，最终正文仍只有大小写结论，缺少测试说明。",
+    "key_points": null,
+    "candidate_sha256": "1aaab3347f880182456a3525e4e0c2a046e680854af50886ec898ab97ba5f589",
+    "reviewer": "Codex (current session)",
+    "review_type": "model_assisted_nonblind_development_review",
+    "human_approved": false,
+    "training_eligible": false,
+    "solved": false
+  },
+  {
+    "candidate_id": "4b--history-dev-04--sdk",
+    "correctness": "correct",
+    "citation_support": "supported",
+    "completeness": "partial",
+    "abstention": "not_applicable",
+    "entry_scope": "correct",
+    "consistency": "consistent",
+    "claims": [
+      {
+        "claim": "on 保留原始大小写",
+        "status": "supported",
+        "rationale": "直接使用 type 作为键；测试保留 FOO 并断言 foo 不存在。",
+        "evidence": [
+          {
+            "path": "src/index.ts",
+            "start_line": 66,
+            "end_line": 73
+          },
+          {
+            "path": "test/index_test.ts",
+            "start_line": 79,
+            "end_line": 90
+          }
+        ],
+        "verified_evidence": [
+          {
+            "path": "src/index.ts",
+            "start_line": 66,
+            "end_line": 73,
+            "content": "\t\ton<Key extends keyof Events>(type: Key, handler: GenericEventHandler) {\n\t\t\tconst handlers: Array<GenericEventHandler> | undefined = all!.get(type);\n\t\t\tif (handlers) {\n\t\t\t\thandlers.push(handler);\n\t\t\t} else {\n\t\t\t\tall!.set(type, [handler] as EventHandlerList<Events[keyof Events]>);\n\t\t\t}\n\t\t},",
+            "content_sha256": "0a5bf296ae849cd916f0b4eedbc3b3dbd431acb523f64fede2782b79ff119004",
+            "visible_to_generator": true
+          },
+          {
+            "path": "test/index_test.ts",
+            "start_line": 79,
+            "end_line": 90,
+            "content": "\t\tit('should NOT normalize case', () => {\n\t\t\tconst foo = () => {};\n\t\t\tinst.on('FOO', foo);\n\t\t\tinst.on('Bar', foo);\n\t\t\tinst.on('baz:baT!', foo);\n\n\t\t\texpect(events.get('FOO')).to.deep.equal([foo]);\n\t\t\texpect(events.has('foo')).to.equal(false);\n\t\t\texpect(events.get('Bar')).to.deep.equal([foo]);\n\t\t\texpect(events.has('bar')).to.equal(false);\n\t\t\texpect(events.get('baz:baT!')).to.deep.equal([foo]);\n\t\t});",
+            "content_sha256": "7c7ae10f82f38319cf3cf181161ee7bfb29bde7819610b697836ace1ba119048",
+            "visible_to_generator": true
+          }
+        ]
+      }
+    ],
+    "notes": "大小写结论与引用正确，但正文没有解释题目明确要求的测试输入和断言。",
+    "key_points": null,
+    "candidate_sha256": "74b5f6a59c56041d6f49626d7e7114c1634cda43dde2b5405476203d98ae21a5",
+    "reviewer": "Codex (current session)",
+    "review_type": "model_assisted_nonblind_development_review",
+    "human_approved": false,
+    "training_eligible": false,
+    "solved": false
+  },
+  {
+    "candidate_id": "4b--history-dev-05--oracle",
+    "correctness": "correct",
+    "citation_support": "supported",
+    "completeness": "adequate",
+    "abstention": "not_applicable",
+    "entry_scope": "correct",
+    "consistency": "consistent",
+    "claims": [
+      {
+        "claim": "返回 self.jobs[:] 而非内部列表本身",
+        "status": "supported",
+        "rationale": "切片生成浅拷贝。",
+        "evidence": [
+          {
+            "path": "schedule/__init__.py",
+            "start_line": 130,
+            "end_line": 131
+          }
+        ],
+        "verified_evidence": [
+          {
+            "path": "schedule/__init__.py",
+            "start_line": 130,
+            "end_line": 131,
+            "content": "        if tag is None:\n            return self.jobs[:]",
+            "content_sha256": "3f14b89fa44857bca3edfd84c83343d97bdfd0c63012bc8bc5c3b336dff5dcf1",
+            "visible_to_generator": true
+          }
+        ]
+      }
+    ],
+    "notes": "准确区分内部列表本身与浅拷贝。",
+    "key_points": null,
+    "candidate_sha256": "49b9e5a1b7b839f0134f69795c386d443f707ccd6a7d3b2513309c0d69983625",
+    "reviewer": "Codex (current session)",
+    "review_type": "model_assisted_nonblind_development_review",
+    "human_approved": false,
+    "training_eligible": false,
+    "solved": true
+  },
+  {
+    "candidate_id": "4b--history-dev-05--sdk",
+    "correctness": "correct",
+    "citation_support": "supported",
+    "completeness": "adequate",
+    "abstention": "not_applicable",
+    "entry_scope": "correct",
+    "consistency": "consistent",
+    "claims": [
+      {
+        "claim": "不传 tag 返回浅拷贝",
+        "status": "supported",
+        "rationale": "None 分支返回 self.jobs[:]。",
+        "evidence": [
+          {
+            "path": "schedule/__init__.py",
+            "start_line": 130,
+            "end_line": 131
+          }
+        ],
+        "verified_evidence": [
+          {
+            "path": "schedule/__init__.py",
+            "start_line": 130,
+            "end_line": 131,
+            "content": "        if tag is None:\n            return self.jobs[:]",
+            "content_sha256": "3f14b89fa44857bca3edfd84c83343d97bdfd0c63012bc8bc5c3b336dff5dcf1",
+            "visible_to_generator": true
+          }
+        ]
+      }
+    ],
+    "notes": "准确回答新列表与浅拷贝，引用命中 None 分支和切片返回。",
+    "key_points": null,
+    "candidate_sha256": "610afbf3c5edd56305b83bcfeb25ddc18e2f762253bfdf73d32dff3027560e46",
+    "reviewer": "Codex (current session)",
+    "review_type": "model_assisted_nonblind_development_review",
+    "human_approved": false,
+    "training_eligible": false,
+    "solved": true
+  },
+  {
+    "candidate_id": "4b--history-dev-06--oracle",
+    "correctness": "unverifiable",
+    "citation_support": "unverifiable",
+    "completeness": "unverifiable",
+    "abstention": "unverifiable",
+    "entry_scope": "not_applicable",
+    "consistency": "consistent",
+    "claims": [
+      {
+        "claim": "没有可评审的已发布答案",
+        "status": "unverifiable",
+        "rationale": "工作流在最终引用验证失败；不把拒绝前的文本当成功答案。",
+        "evidence": [],
+        "verified_evidence": []
+      }
+    ],
+    "notes": "最终输出引用了未读取的源码，被 invalid_citations 拒绝；未发布答案，流程失败保留。",
+    "key_points": null,
+    "candidate_sha256": "28807db4297d78074eb39c8379639a63e9e5b5f1b9f0c85f9ec87724071a5d52",
+    "reviewer": "Codex (current session)",
+    "review_type": "model_assisted_nonblind_development_review",
+    "human_approved": false,
+    "training_eligible": false,
+    "solved": false
+  },
+  {
+    "candidate_id": "4b--history-dev-06--sdk",
+    "correctness": "correct",
+    "citation_support": "not_applicable",
+    "completeness": "adequate",
+    "abstention": "appropriate",
+    "entry_scope": "not_applicable",
+    "consistency": "consistent",
+    "claims": [
+      {
+        "claim": "不能从当前输入得知昨日实际生产统计",
+        "status": "unverifiable",
+        "rationale": "没有公司运行日志或实际统计；恰当说明信息缺口。",
+        "evidence": [],
+        "verified_evidence": []
+      }
+    ],
+    "notes": "明确说明当前提供源码缺少运行记录，不编造实际生产数字；附带源码引用不被当作生产统计证据。",
+    "key_points": null,
+    "candidate_sha256": "c09f671d7fe0f6255579c8e349d40f39951187d92986580d41eaa5c957e754f0",
+    "reviewer": "Codex (current session)",
+    "review_type": "model_assisted_nonblind_development_review",
+    "human_approved": false,
+    "training_eligible": false,
+    "solved": true
+  },
+  {
+    "candidate_id": "4b--sweqa-flask-002--oracle",
+    "correctness": "correct",
+    "citation_support": "supported",
+    "completeness": "adequate",
+    "abstention": "not_applicable",
+    "entry_scope": "correct",
+    "consistency": "consistent",
+    "claims": [
+      {
+        "claim": "标志约束注册后设置并要求注册前完成配置",
+        "status": "supported",
+        "rationale": "注册设置标志，检查方法抛异常并说明后续变更不能一致应用。",
+        "evidence": [
+          {
+            "path": "src/flask/sansio/blueprints.py",
+            "start_line": 213,
+            "end_line": 221
+          },
+          {
+            "path": "src/flask/sansio/blueprints.py",
+            "start_line": 319,
+            "end_line": 320
+          }
+        ],
+        "verified_evidence": [
+          {
+            "path": "src/flask/sansio/blueprints.py",
+            "start_line": 213,
+            "end_line": 221,
+            "content": "    def _check_setup_finished(self, f_name: str) -> None:\n        if self._got_registered_once:\n            raise AssertionError(\n                f\"The setup method '{f_name}' can no longer be called on the blueprint\"\n                f\" '{self.name}'. It has already been registered at least once, any\"\n                \" changes will not be applied consistently.\\n\"\n                \"Make sure all imports, decorators, functions, etc. needed to set up\"\n                \" the blueprint are done before registering it.\"\n            )",
+            "content_sha256": "b4c75a22b022e443069d149a3fa2bbd7039fe362fe691335625fc8f904e534ed",
+            "visible_to_generator": true
+          },
+          {
+            "path": "src/flask/sansio/blueprints.py",
+            "start_line": 319,
+            "end_line": 320,
+            "content": "        app.blueprints[name] = self\n        self._got_registered_once = True",
+            "content_sha256": "f4acbcd75ad97bd83df5c547bdf23f304f92e981c895177ccfffc5abef83d1c5",
+            "visible_to_generator": true
+          }
+        ]
+      }
+    ],
+    "notes": "正确解释注册后禁止继续设置及事先完成 imports/decorators 的顺序约束。问题询问目的，不因未逐字写 AssertionError 类型名否定等价解释。",
+    "key_points": null,
+    "candidate_sha256": "33b07e282ccafda1e0600dc0ff3713081f47219877947adfce7018a6d4653f62",
+    "reviewer": "Codex (current session)",
+    "review_type": "model_assisted_nonblind_development_review",
+    "human_approved": false,
+    "training_eligible": false,
+    "solved": true
+  },
+  {
+    "candidate_id": "4b--sweqa-flask-002--sdk",
+    "correctness": "partially_correct",
+    "citation_support": "partial",
+    "completeness": "insufficient",
+    "abstention": "inappropriate",
+    "entry_scope": "correct",
+    "consistency": "consistent",
+    "claims": [
+      {
+        "claim": "当前片段不足以解释目标注册标志",
+        "status": "partial",
+        "rationale": "仅返回类文档等无关片段；真实状态和检查方法在同一源码中。",
+        "evidence": [
+          {
+            "path": "src/flask/sansio/blueprints.py",
+            "start_line": 213,
+            "end_line": 221
+          },
+          {
+            "path": "src/flask/sansio/blueprints.py",
+            "start_line": 319,
+            "end_line": 320
+          }
+        ],
+        "verified_evidence": [
+          {
+            "path": "src/flask/sansio/blueprints.py",
+            "start_line": 213,
+            "end_line": 221,
+            "content": "    def _check_setup_finished(self, f_name: str) -> None:\n        if self._got_registered_once:\n            raise AssertionError(\n                f\"The setup method '{f_name}' can no longer be called on the blueprint\"\n                f\" '{self.name}'. It has already been registered at least once, any\"\n                \" changes will not be applied consistently.\\n\"\n                \"Make sure all imports, decorators, functions, etc. needed to set up\"\n                \" the blueprint are done before registering it.\"\n            )",
+            "content_sha256": "b4c75a22b022e443069d149a3fa2bbd7039fe362fe691335625fc8f904e534ed",
+            "visible_to_generator": false
+          },
+          {
+            "path": "src/flask/sansio/blueprints.py",
+            "start_line": 319,
+            "end_line": 320,
+            "content": "        app.blueprints[name] = self\n        self._got_registered_once = True",
+            "content_sha256": "f4acbcd75ad97bd83df5c547bdf23f304f92e981c895177ccfffc5abef83d1c5",
+            "visible_to_generator": false
+          }
+        ]
+      }
+    ],
+    "notes": "观察到的片段确实未展示目标标志，但仓库中存在并可定位；因检索失败拒答不算解决。",
+    "key_points": null,
+    "candidate_sha256": "0e1657eb487c8eeaae36ad3026b104ea1c188529b5769cb620e28e6f26097bd1",
+    "reviewer": "Codex (current session)",
+    "review_type": "model_assisted_nonblind_development_review",
+    "human_approved": false,
+    "training_eligible": false,
+    "solved": false
+  },
+  {
+    "candidate_id": "4b--sweqa-requests-001--oracle",
+    "correctness": "correct",
+    "citation_support": "supported",
+    "completeness": "adequate",
+    "abstention": "not_applicable",
+    "entry_scope": "correct",
+    "consistency": "consistent",
+    "claims": [
+      {
+        "claim": "显式 no_proxy 覆盖环境值",
+        "status": "supported",
+        "rationale": "只有 None 才读取环境设置。",
+        "evidence": [
+          {
+            "path": "src/requests/utils.py",
+            "start_line": 769,
+            "end_line": 771
+          }
+        ],
+        "verified_evidence": [
+          {
+            "path": "src/requests/utils.py",
+            "start_line": 769,
+            "end_line": 771,
+            "content": "    no_proxy_arg = no_proxy\n    if no_proxy is None:\n        no_proxy = get_proxy(\"no_proxy\")",
+            "content_sha256": "687c697bcb7b0ab5fbc3e58c992186e388ed4fd1ddde0266cd640aef6879d88b",
+            "visible_to_generator": true
+          }
+        ]
+      },
+      {
+        "claim": "非空返回表示未走绕过分支且取得代理配置",
+        "status": "supported",
+        "rationale": "否则分支返回 getproxies()；未断言实际连接成功。",
+        "evidence": [
+          {
+            "path": "src/requests/utils.py",
+            "start_line": 816,
+            "end_line": 825
+          }
+        ],
+        "verified_evidence": [
+          {
+            "path": "src/requests/utils.py",
+            "start_line": 816,
+            "end_line": 825,
+            "content": "def get_environ_proxies(url, no_proxy=None):\n    \"\"\"\n    Return a dict of environment proxies.\n\n    :rtype: dict\n    \"\"\"\n    if should_bypass_proxies(url, no_proxy=no_proxy):\n        return {}\n    else:\n        return getproxies()",
+            "content_sha256": "988e8929b6e4d2c33a504031023aa337574e2ea74a7acb00327a141ab2bd390d",
+            "visible_to_generator": true
+          }
+        ]
+      }
+    ],
+    "notes": "覆盖显式覆盖与非空代理配置两项主要问题。将 should proceed 理解为按配置选择代理，未声称已成功联网；接受语义等价表达，不强制额外写可达性免责声明。",
+    "key_points": null,
+    "candidate_sha256": "4bee32706f90fcdcede894b65bc69d4e69467fb756282ddae0064885e3ee58e6",
+    "reviewer": "Codex (current session)",
+    "review_type": "model_assisted_nonblind_development_review",
+    "human_approved": false,
+    "training_eligible": false,
+    "solved": true
+  },
+  {
+    "candidate_id": "4b--sweqa-requests-001--sdk",
+    "correctness": "correct",
+    "citation_support": "supported",
+    "completeness": "partial",
+    "abstention": "not_applicable",
+    "entry_scope": "correct",
+    "consistency": "consistent",
+    "claims": [
+      {
+        "claim": "显式 no_proxy 优先且匹配时返回空字典",
+        "status": "supported",
+        "rationale": "参数为 None 才回退环境变量；绕过分支返回 {}。",
+        "evidence": [
+          {
+            "path": "src/requests/utils.py",
+            "start_line": 769,
+            "end_line": 771
+          },
+          {
+            "path": "src/requests/utils.py",
+            "start_line": 822,
+            "end_line": 823
+          }
+        ],
+        "verified_evidence": [
+          {
+            "path": "src/requests/utils.py",
+            "start_line": 769,
+            "end_line": 771,
+            "content": "    no_proxy_arg = no_proxy\n    if no_proxy is None:\n        no_proxy = get_proxy(\"no_proxy\")",
+            "content_sha256": "687c697bcb7b0ab5fbc3e58c992186e388ed4fd1ddde0266cd640aef6879d88b",
+            "visible_to_generator": true
+          },
+          {
+            "path": "src/requests/utils.py",
+            "start_line": 822,
+            "end_line": 823,
+            "content": "    if should_bypass_proxies(url, no_proxy=no_proxy):\n        return {}",
+            "content_sha256": "2dafab3d1ed34827be172f679e5b3da526440976812a8d2b87178010fe846002",
+            "visible_to_generator": true
+          }
+        ]
+      }
+    ],
+    "notes": "所说显式优先级与命中列表返回空字典均正确，但没有回答题目询问的非空字典含义。",
+    "key_points": null,
+    "candidate_sha256": "08f2e2185897b13bab5bdefec1d46cb800331e8a5787e646da35bba8b6e5baff",
+    "reviewer": "Codex (current session)",
+    "review_type": "model_assisted_nonblind_development_review",
+    "human_approved": false,
+    "training_eligible": false,
+    "solved": false
+  },
+  {
+    "candidate_id": "9b--history-dev-03--oracle",
+    "correctness": "correct",
+    "citation_support": "partial",
+    "completeness": "insufficient",
+    "abstention": "not_applicable",
+    "entry_scope": "correct",
+    "consistency": "consistent",
+    "claims": [
+      {
+        "claim": "两个入口行为不同",
+        "status": "partial",
+        "rationale": "事实正确，但最终引用没有锚定 Node 异常分支，正文缺少差异。",
+        "evidence": [
+          {
+            "path": "non-secure/index.js",
+            "start_line": 19,
+            "end_line": 29
+          },
+          {
+            "path": "index.js",
+            "start_line": 133,
+            "end_line": 138
+          },
+          {
+            "path": "index.js",
+            "start_line": 177,
+            "end_line": 177
+          }
+        ],
+        "verified_evidence": [
+          {
+            "path": "non-secure/index.js",
+            "start_line": 19,
+            "end_line": 29,
+            "content": "export let nanoid = (size = 21) => {\n  let id = ''\n  // A compact alternative for `for (var i = 0; i < step; i++)`.\n  // `> 0` stops a negative size from looping forever.\n  let i = size | 0\n  while (i-- > 0) {\n    // `| 0` is more compact and faster than `Math.floor()`.\n    id += urlAlphabet[(Math.random() * 64) | 0]\n  }\n  return id\n}",
+            "content_sha256": "b57574c83361e1fb043c39f15ed99b4b1062a181535e98a1a8e1f9b828dd6417",
+            "visible_to_generator": true
+          },
+          {
+            "path": "index.js",
+            "start_line": 133,
+            "end_line": 138,
+            "content": "  return (size = defaultSize) => {\n    // `|=` convert `size` to number to prevent `valueOf` abusing\n    // and pool offset pollution\n    size |= 0\n    if (size < 0) throw new RangeError('Wrong ID size')\n    if (size === 0) return ''",
+            "content_sha256": "a2cd1e5a3ee0815f52f8518c2ba5fe4a3358024401993d7b63baeff18d5ca89d",
+            "visible_to_generator": true
+          },
+          {
+            "path": "index.js",
+            "start_line": 177,
+            "end_line": 177,
+            "content": "export const nanoid = customAlphabet(urlAlphabet)",
+            "content_sha256": "c360da0cbb0aa1c8336ed31a9e0e16ce867647e121e735f1574f9047535ded40",
+            "visible_to_generator": true
+          }
+        ]
+      }
+    ],
+    "notes": "只说不一样，未解释两方实际返回值或异常；Node 引用停在导出行。研究阶段已正确解释，整理阶段丢失。",
+    "key_points": null,
+    "candidate_sha256": "73272ad05f429ebc45f1c4c6ad74a89ad193858fe3d624ba38159351ba890384",
+    "reviewer": "Codex (current session)",
+    "review_type": "model_assisted_nonblind_development_review",
+    "human_approved": false,
+    "training_eligible": false,
+    "solved": false
+  },
+  {
+    "candidate_id": "9b--history-dev-03--sdk",
+    "correctness": "correct",
+    "citation_support": "supported",
+    "completeness": "adequate",
+    "abstention": "not_applicable",
+    "entry_scope": "correct",
+    "consistency": "consistent",
+    "claims": [
+      {
+        "claim": "non-secure 负数返回空串",
+        "status": "supported",
+        "rationale": "完整可见函数初始化空串，所引循环条件为假并返回 id。",
+        "evidence": [
+          {
+            "path": "non-secure/index.js",
+            "start_line": 19,
+            "end_line": 29
+          }
+        ],
+        "verified_evidence": [
+          {
+            "path": "non-secure/index.js",
+            "start_line": 19,
+            "end_line": 29,
+            "content": "export let nanoid = (size = 21) => {\n  let id = ''\n  // A compact alternative for `for (var i = 0; i < step; i++)`.\n  // `> 0` stops a negative size from looping forever.\n  let i = size | 0\n  while (i-- > 0) {\n    // `| 0` is more compact and faster than `Math.floor()`.\n    id += urlAlphabet[(Math.random() * 64) | 0]\n  }\n  return id\n}",
+            "content_sha256": "b57574c83361e1fb043c39f15ed99b4b1062a181535e98a1a8e1f9b828dd6417",
+            "visible_to_generator": true
+          }
+        ]
+      },
+      {
+        "claim": "Node 负数抛 RangeError",
+        "status": "supported",
+        "rationale": "所引分支明确检查 size < 0 并抛异常。",
+        "evidence": [
+          {
+            "path": "index.js",
+            "start_line": 136,
+            "end_line": 137
+          }
+        ],
+        "verified_evidence": [
+          {
+            "path": "index.js",
+            "start_line": 136,
+            "end_line": 137,
+            "content": "    size |= 0\n    if (size < 0) throw new RangeError('Wrong ID size')",
+            "content_sha256": "9168ab9525066ebd841d049b0163e6ed8d3c1b57676697350b9469cfbaf86eb8",
+            "visible_to_generator": true
+          }
+        ]
+      }
+    ],
+    "notes": "正确区分空串与 RangeError。引用锚定实际循环/返回与异常分支，结合本轮完整可见函数支持结果；不要求机械引用所有参考行段。",
+    "key_points": null,
+    "candidate_sha256": "710830178446647e48b9ab2e89af2f00c015c9a809faa6898e1f8ab46fd53e80",
+    "reviewer": "Codex (current session)",
+    "review_type": "model_assisted_nonblind_development_review",
+    "human_approved": false,
+    "training_eligible": false,
+    "solved": true
+  },
+  {
+    "candidate_id": "9b--history-dev-04--oracle",
+    "correctness": "correct",
+    "citation_support": "supported",
+    "completeness": "partial",
+    "abstention": "not_applicable",
+    "entry_scope": "correct",
+    "consistency": "consistent",
+    "claims": [
+      {
+        "claim": "on 不统一转小写",
+        "status": "supported",
+        "rationale": "原始方法和测试支持。",
+        "evidence": [
+          {
+            "path": "src/index.ts",
+            "start_line": 66,
+            "end_line": 73
+          },
+          {
+            "path": "test/index_test.ts",
+            "start_line": 79,
+            "end_line": 90
+          }
+        ],
+        "verified_evidence": [
+          {
+            "path": "src/index.ts",
+            "start_line": 66,
+            "end_line": 73,
+            "content": "\t\ton<Key extends keyof Events>(type: Key, handler: GenericEventHandler) {\n\t\t\tconst handlers: Array<GenericEventHandler> | undefined = all!.get(type);\n\t\t\tif (handlers) {\n\t\t\t\thandlers.push(handler);\n\t\t\t} else {\n\t\t\t\tall!.set(type, [handler] as EventHandlerList<Events[keyof Events]>);\n\t\t\t}\n\t\t},",
+            "content_sha256": "0a5bf296ae849cd916f0b4eedbc3b3dbd431acb523f64fede2782b79ff119004",
+            "visible_to_generator": true
+          },
+          {
+            "path": "test/index_test.ts",
+            "start_line": 79,
+            "end_line": 90,
+            "content": "\t\tit('should NOT normalize case', () => {\n\t\t\tconst foo = () => {};\n\t\t\tinst.on('FOO', foo);\n\t\t\tinst.on('Bar', foo);\n\t\t\tinst.on('baz:baT!', foo);\n\n\t\t\texpect(events.get('FOO')).to.deep.equal([foo]);\n\t\t\texpect(events.has('foo')).to.equal(false);\n\t\t\texpect(events.get('Bar')).to.deep.equal([foo]);\n\t\t\texpect(events.has('bar')).to.equal(false);\n\t\t\texpect(events.get('baz:baT!')).to.deep.equal([foo]);\n\t\t});",
+            "content_sha256": "7c7ae10f82f38319cf3cf181161ee7bfb29bde7819610b697836ace1ba119048",
+            "visible_to_generator": true
+          }
+        ]
+      }
+    ],
+    "notes": "额外给出测试仍只输出否定结论，没有题目要求的测试说明。",
+    "key_points": null,
+    "candidate_sha256": "b66ea9affba01d06a0f9e3006f83cce1848f4dea770fd42a95d2eeb67e77e7e1",
+    "reviewer": "Codex (current session)",
+    "review_type": "model_assisted_nonblind_development_review",
+    "human_approved": false,
+    "training_eligible": false,
+    "solved": false
+  },
+  {
+    "candidate_id": "9b--history-dev-04--sdk",
+    "correctness": "correct",
+    "citation_support": "supported",
+    "completeness": "partial",
+    "abstention": "not_applicable",
+    "entry_scope": "correct",
+    "consistency": "consistent",
+    "claims": [
+      {
+        "claim": "on 不统一转小写",
+        "status": "supported",
+        "rationale": "方法体直接使用 type；测试验证原大小写。",
+        "evidence": [
+          {
+            "path": "src/index.ts",
+            "start_line": 66,
+            "end_line": 73
+          },
+          {
+            "path": "test/index_test.ts",
+            "start_line": 79,
+            "end_line": 90
+          }
+        ],
+        "verified_evidence": [
+          {
+            "path": "src/index.ts",
+            "start_line": 66,
+            "end_line": 73,
+            "content": "\t\ton<Key extends keyof Events>(type: Key, handler: GenericEventHandler) {\n\t\t\tconst handlers: Array<GenericEventHandler> | undefined = all!.get(type);\n\t\t\tif (handlers) {\n\t\t\t\thandlers.push(handler);\n\t\t\t} else {\n\t\t\t\tall!.set(type, [handler] as EventHandlerList<Events[keyof Events]>);\n\t\t\t}\n\t\t},",
+            "content_sha256": "0a5bf296ae849cd916f0b4eedbc3b3dbd431acb523f64fede2782b79ff119004",
+            "visible_to_generator": true
+          },
+          {
+            "path": "test/index_test.ts",
+            "start_line": 79,
+            "end_line": 90,
+            "content": "\t\tit('should NOT normalize case', () => {\n\t\t\tconst foo = () => {};\n\t\t\tinst.on('FOO', foo);\n\t\t\tinst.on('Bar', foo);\n\t\t\tinst.on('baz:baT!', foo);\n\n\t\t\texpect(events.get('FOO')).to.deep.equal([foo]);\n\t\t\texpect(events.has('foo')).to.equal(false);\n\t\t\texpect(events.get('Bar')).to.deep.equal([foo]);\n\t\t\texpect(events.has('bar')).to.equal(false);\n\t\t\texpect(events.get('baz:baT!')).to.deep.equal([foo]);\n\t\t});",
+            "content_sha256": "7c7ae10f82f38319cf3cf181161ee7bfb29bde7819610b697836ace1ba119048",
+            "visible_to_generator": true
+          }
+        ]
+      }
+    ],
+    "notes": "结论正确、引用充分，未在正文解释测试。研究阶段已经具体解释 FOO/foo 断言，整理阶段省略。",
+    "key_points": null,
+    "candidate_sha256": "ee09e388a6646776358fbdc461864b2daf2a859b9bdcac62a031cbdd8474da48",
+    "reviewer": "Codex (current session)",
+    "review_type": "model_assisted_nonblind_development_review",
+    "human_approved": false,
+    "training_eligible": false,
+    "solved": false
+  },
+  {
+    "candidate_id": "9b--history-dev-05--oracle",
+    "correctness": "correct",
+    "citation_support": "supported",
+    "completeness": "adequate",
+    "abstention": "not_applicable",
+    "entry_scope": "correct",
+    "consistency": "consistent",
+    "claims": [
+      {
+        "claim": "返回浅拷贝而非原列表",
+        "status": "supported",
+        "rationale": "None 分支切片返回。",
+        "evidence": [
+          {
+            "path": "schedule/__init__.py",
+            "start_line": 130,
+            "end_line": 131
+          }
+        ],
+        "verified_evidence": [
+          {
+            "path": "schedule/__init__.py",
+            "start_line": 130,
+            "end_line": 131,
+            "content": "        if tag is None:\n            return self.jobs[:]",
+            "content_sha256": "3f14b89fa44857bca3edfd84c83343d97bdfd0c63012bc8bc5c3b336dff5dcf1",
+            "visible_to_generator": true
+          }
+        ]
+      }
+    ],
+    "notes": "完整正确且引用精确。",
+    "key_points": null,
+    "candidate_sha256": "00e16d4338db61369bb4c3f2b1e4f036cdd62ee63c4d11431b0429690ad10eeb",
+    "reviewer": "Codex (current session)",
+    "review_type": "model_assisted_nonblind_development_review",
+    "human_approved": false,
+    "training_eligible": false,
+    "solved": true
+  },
+  {
+    "candidate_id": "9b--history-dev-05--sdk",
+    "correctness": "correct",
+    "citation_support": "supported",
+    "completeness": "adequate",
+    "abstention": "not_applicable",
+    "entry_scope": "correct",
+    "consistency": "consistent",
+    "claims": [
+      {
+        "claim": "返回浅拷贝而非原列表",
+        "status": "supported",
+        "rationale": "None 分支使用 self.jobs[:]。",
+        "evidence": [
+          {
+            "path": "schedule/__init__.py",
+            "start_line": 130,
+            "end_line": 131
+          }
+        ],
+        "verified_evidence": [
+          {
+            "path": "schedule/__init__.py",
+            "start_line": 130,
+            "end_line": 131,
+            "content": "        if tag is None:\n            return self.jobs[:]",
+            "content_sha256": "3f14b89fa44857bca3edfd84c83343d97bdfd0c63012bc8bc5c3b336dff5dcf1",
+            "visible_to_generator": true
+          }
+        ]
+      }
+    ],
+    "notes": "准确说明 None 参数返回浅拷贝。",
+    "key_points": null,
+    "candidate_sha256": "e918057b8076386e5b8d552f04f7e900d49b28029d5e3bd467b22d2f699e771b",
+    "reviewer": "Codex (current session)",
+    "review_type": "model_assisted_nonblind_development_review",
+    "human_approved": false,
+    "training_eligible": false,
+    "solved": true
+  },
+  {
+    "candidate_id": "9b--history-dev-06--oracle",
+    "correctness": "correct",
+    "citation_support": "not_applicable",
+    "completeness": "adequate",
+    "abstention": "appropriate",
+    "entry_scope": "not_applicable",
+    "consistency": "consistent",
+    "claims": [
+      {
+        "claim": "不能确定昨日生产数据",
+        "status": "unverifiable",
+        "rationale": "实际生产记录不在输入中，未编造答案。",
+        "evidence": [],
+        "verified_evidence": []
+      }
+    ],
+    "notes": "从空起点仍进行三次检索，最终正确说明缺少运行日志。引用没有越界，但静态测试与文档不能充当生产指标。",
+    "key_points": null,
+    "candidate_sha256": "6af41939f96ec71c1a393478d9a55d62712e4cc6e6c932bf6b0849a1927240c3",
+    "reviewer": "Codex (current session)",
+    "review_type": "model_assisted_nonblind_development_review",
+    "human_approved": false,
+    "training_eligible": false,
+    "solved": true
+  },
+  {
+    "candidate_id": "9b--history-dev-06--sdk",
+    "correctness": "correct",
+    "citation_support": "not_applicable",
+    "completeness": "adequate",
+    "abstention": "appropriate",
+    "entry_scope": "not_applicable",
+    "consistency": "consistent",
+    "claims": [
+      {
+        "claim": "当前输入不足以给出实际生产数量和碰撞次数",
+        "status": "unverifiable",
+        "rationale": "缺少业务运行记录；这是恰当的拒答。",
+        "evidence": [],
+        "verified_evidence": []
+      }
+    ],
+    "notes": "明确限定当前 context 缺少生产记录，拒绝编造数字。多条实现引用不构成生产统计证据，额外检索成本另记。",
+    "key_points": null,
+    "candidate_sha256": "98edf7a2cb32c5f2dc1333923955d39d0b2f9a604a2fd2a97d29ab13ecbbad0a",
+    "reviewer": "Codex (current session)",
+    "review_type": "model_assisted_nonblind_development_review",
+    "human_approved": false,
+    "training_eligible": false,
+    "solved": true
+  },
+  {
+    "candidate_id": "9b--sweqa-flask-002--oracle",
+    "correctness": "correct",
+    "citation_support": "supported",
+    "completeness": "adequate",
+    "abstention": "not_applicable",
+    "entry_scope": "correct",
+    "consistency": "consistent",
+    "claims": [
+      {
+        "claim": "注册后禁止 setup 变更以保证配置一致",
+        "status": "supported",
+        "rationale": "标志初始 False，注册时置 True，后续检查抛异常并说明一致性原因。",
+        "evidence": [
+          {
+            "path": "src/flask/sansio/blueprints.py",
+            "start_line": 172,
+            "end_line": 172
+          },
+          {
+            "path": "src/flask/sansio/blueprints.py",
+            "start_line": 213,
+            "end_line": 221
+          },
+          {
+            "path": "src/flask/sansio/blueprints.py",
+            "start_line": 319,
+            "end_line": 320
+          }
+        ],
+        "verified_evidence": [
+          {
+            "path": "src/flask/sansio/blueprints.py",
+            "start_line": 172,
+            "end_line": 172,
+            "content": "    _got_registered_once = False",
+            "content_sha256": "2291e6dc4b61cced1c2e20dac34c9ad0c8b89f0684f921d49d70e84fdbec7d4e",
+            "visible_to_generator": true
+          },
+          {
+            "path": "src/flask/sansio/blueprints.py",
+            "start_line": 213,
+            "end_line": 221,
+            "content": "    def _check_setup_finished(self, f_name: str) -> None:\n        if self._got_registered_once:\n            raise AssertionError(\n                f\"The setup method '{f_name}' can no longer be called on the blueprint\"\n                f\" '{self.name}'. It has already been registered at least once, any\"\n                \" changes will not be applied consistently.\\n\"\n                \"Make sure all imports, decorators, functions, etc. needed to set up\"\n                \" the blueprint are done before registering it.\"\n            )",
+            "content_sha256": "b4c75a22b022e443069d149a3fa2bbd7039fe362fe691335625fc8f904e534ed",
+            "visible_to_generator": true
+          },
+          {
+            "path": "src/flask/sansio/blueprints.py",
+            "start_line": 319,
+            "end_line": 320,
+            "content": "        app.blueprints[name] = self\n        self._got_registered_once = True",
+            "content_sha256": "f4acbcd75ad97bd83df5c547bdf23f304f92e981c895177ccfffc5abef83d1c5",
+            "visible_to_generator": true
+          }
+        ]
+      }
+    ],
+    "notes": "准确命名 _got_registered_once，解释注册前完成配置及避免后续变更不一致；没有误称蓝图不可再次注册。",
+    "key_points": null,
+    "candidate_sha256": "f4f005e4deb700356db57a4bd6c337d5e52380ff244ada451c29efbe1ec35e37",
+    "reviewer": "Codex (current session)",
+    "review_type": "model_assisted_nonblind_development_review",
+    "human_approved": false,
+    "training_eligible": false,
+    "solved": true
+  },
+  {
+    "candidate_id": "9b--sweqa-flask-002--sdk",
+    "correctness": "incorrect",
+    "citation_support": "unsupported",
+    "completeness": "adequate",
+    "abstention": "not_applicable",
+    "entry_scope": "correct",
+    "consistency": "consistent",
+    "claims": [
+      {
+        "claim": "first_registration 是阻止注册后 setup 修改的标志",
+        "status": "contradicted",
+        "rationale": "该字段描述设置状态/重复注册；setup 检查使用另一个标志。",
+        "evidence": [
+          {
+            "path": "src/flask/sansio/blueprints.py",
+            "start_line": 58,
+            "end_line": 62
+          },
+          {
+            "path": "src/flask/sansio/blueprints.py",
+            "start_line": 213,
+            "end_line": 221
+          }
+        ],
+        "verified_evidence": [
+          {
+            "path": "src/flask/sansio/blueprints.py",
+            "start_line": 58,
+            "end_line": 62,
+            "content": "        #: as blueprints can be registered multiple times with the\n        #: application and not everything wants to be registered\n        #: multiple times on it, this attribute can be used to figure\n        #: out if the blueprint was registered in the past already.\n        self.first_registration = first_registration",
+            "content_sha256": "db514947871396beba4bce1735d5d9372295fb915c051649e9186d9d6a8e2bce",
+            "visible_to_generator": true
+          },
+          {
+            "path": "src/flask/sansio/blueprints.py",
+            "start_line": 213,
+            "end_line": 221,
+            "content": "    def _check_setup_finished(self, f_name: str) -> None:\n        if self._got_registered_once:\n            raise AssertionError(\n                f\"The setup method '{f_name}' can no longer be called on the blueprint\"\n                f\" '{self.name}'. It has already been registered at least once, any\"\n                \" changes will not be applied consistently.\\n\"\n                \"Make sure all imports, decorators, functions, etc. needed to set up\"\n                \" the blueprint are done before registering it.\"\n            )",
+            "content_sha256": "b4c75a22b022e443069d149a3fa2bbd7039fe362fe691335625fc8f904e534ed",
+            "visible_to_generator": false
+          }
+        ]
+      },
+      {
+        "claim": "检查该字段即可实现 setup 方法保护",
+        "status": "contradicted",
+        "rationale": "first_registration 在 record_once 包装回调里使用；setupmethod 通过 _check_setup_finished 保护。",
+        "evidence": [
+          {
+            "path": "src/flask/sansio/blueprints.py",
+            "start_line": 232,
+            "end_line": 244
+          },
+          {
+            "path": "src/flask/sansio/scaffold.py",
+            "start_line": 42,
+            "end_line": 49
+          }
+        ],
+        "verified_evidence": [
+          {
+            "path": "src/flask/sansio/blueprints.py",
+            "start_line": 232,
+            "end_line": 244,
+            "content": "    @setupmethod\n    def record_once(self, func: DeferredSetupFunction) -> None:\n        \"\"\"Works like :meth:`record` but wraps the function in another\n        function that will ensure the function is only called once.  If the\n        blueprint is registered a second time on the application, the\n        function passed is not called.\n        \"\"\"\n\n        def wrapper(state: BlueprintSetupState) -> None:\n            if state.first_registration:\n                func(state)\n\n        self.record(update_wrapper(wrapper, func))",
+            "content_sha256": "533190db1660ef5f3b6f544755292c367358780664281c118348e2cb1f73091c",
+            "visible_to_generator": false
+          },
+          {
+            "path": "src/flask/sansio/scaffold.py",
+            "start_line": 42,
+            "end_line": 49,
+            "content": "def setupmethod(f: F) -> F:\n    f_name = f.__name__\n\n    def wrapper_func(self: Scaffold, *args: t.Any, **kwargs: t.Any) -> t.Any:\n        self._check_setup_finished(f_name)\n        return f(self, *args, **kwargs)\n\n    return t.cast(F, update_wrapper(wrapper_func, f))",
+            "content_sha256": "bef14a46bf8ebc8fd2672d8b1939d041b7cb99d472b153cda9a4f5759b0526c2",
+            "visible_to_generator": false
+          }
+        ]
+      }
+    ],
+    "notes": "把 BlueprintSetupState.first_registration 当成禁止注册后设置的标志；实际目标是 Blueprint._got_registered_once。混淆 record_once 的回调去重与设置阶段保护。",
+    "key_points": null,
+    "candidate_sha256": "97bc309008eddd446ef45c7cd8f3164a88794bffb6e30cc70efa4bf33275c3b2",
+    "reviewer": "Codex (current session)",
+    "review_type": "model_assisted_nonblind_development_review",
+    "human_approved": false,
+    "training_eligible": false,
+    "solved": false
+  },
+  {
+    "candidate_id": "9b--sweqa-requests-001--oracle",
+    "correctness": "correct",
+    "citation_support": "supported",
+    "completeness": "adequate",
+    "abstention": "not_applicable",
+    "entry_scope": "correct",
+    "consistency": "consistent",
+    "claims": [
+      {
+        "claim": "显式参数优先，未提供时回退环境变量",
+        "status": "supported",
+        "rationale": "None 检查决定是否读取环境值。",
+        "evidence": [
+          {
+            "path": "src/requests/utils.py",
+            "start_line": 769,
+            "end_line": 771
+          }
+        ],
+        "verified_evidence": [
+          {
+            "path": "src/requests/utils.py",
+            "start_line": 769,
+            "end_line": 771,
+            "content": "    no_proxy_arg = no_proxy\n    if no_proxy is None:\n        no_proxy = get_proxy(\"no_proxy\")",
+            "content_sha256": "687c697bcb7b0ab5fbc3e58c992186e388ed4fd1ddde0266cd640aef6879d88b",
+            "visible_to_generator": true
+          }
+        ]
+      },
+      {
+        "claim": "非空结果表示未按给定列表绕过并有环境代理配置",
+        "status": "supported",
+        "rationale": "实现返回 getproxies()；测试设置 http_proxy 并断言非空。",
+        "evidence": [
+          {
+            "path": "src/requests/utils.py",
+            "start_line": 816,
+            "end_line": 825
+          },
+          {
+            "path": "tests/test_utils.py",
+            "start_line": 267,
+            "end_line": 272
+          }
+        ],
+        "verified_evidence": [
+          {
+            "path": "src/requests/utils.py",
+            "start_line": 816,
+            "end_line": 825,
+            "content": "def get_environ_proxies(url, no_proxy=None):\n    \"\"\"\n    Return a dict of environment proxies.\n\n    :rtype: dict\n    \"\"\"\n    if should_bypass_proxies(url, no_proxy=no_proxy):\n        return {}\n    else:\n        return getproxies()",
+            "content_sha256": "988e8929b6e4d2c33a504031023aa337574e2ea74a7acb00327a141ab2bd390d",
+            "visible_to_generator": true
+          },
+          {
+            "path": "tests/test_utils.py",
+            "start_line": 267,
+            "end_line": 272,
+            "content": "    def test_not_bypass_no_proxy_keyword(self, url, monkeypatch):\n        # This is testing that the 'no_proxy' argument overrides the\n        # environment variable 'no_proxy'\n        monkeypatch.setenv(\"http_proxy\", \"http://proxy.example.com:3128/\")\n        no_proxy = \"192.168.1.1,requests.com\"\n        assert get_environ_proxies(url, no_proxy=no_proxy) != {}",
+            "content_sha256": "35d84bc707b0f58055b8d91fdd8e48a91b5820149ebf94093d709bbe7850f15c",
+            "visible_to_generator": true
+          }
+        ]
+      }
+    ],
+    "notes": "说明显式优先、环境回退与非空代理配置，引用测试设置与断言；没有再次作出空字典必定匹配的错误逆推，也未声称代理实际可达。",
+    "key_points": null,
+    "candidate_sha256": "fff9e0f8e90148363764be3e3edcb790e1e1c48b2a5cdcb58e0b7a14a7058f5b",
+    "reviewer": "Codex (current session)",
+    "review_type": "model_assisted_nonblind_development_review",
+    "human_approved": false,
+    "training_eligible": false,
+    "solved": true
+  },
+  {
+    "candidate_id": "9b--sweqa-requests-001--sdk",
+    "correctness": "partially_correct",
+    "citation_support": "partial",
+    "completeness": "adequate",
+    "abstention": "not_applicable",
+    "entry_scope": "correct",
+    "consistency": "consistent",
+    "claims": [
+      {
+        "claim": "显式 no_proxy 优先于环境变量",
+        "status": "supported",
+        "rationale": "参数非 None 时保留显式值。",
+        "evidence": [
+          {
+            "path": "src/requests/utils.py",
+            "start_line": 769,
+            "end_line": 771
+          }
+        ],
+        "verified_evidence": [
+          {
+            "path": "src/requests/utils.py",
+            "start_line": 769,
+            "end_line": 771,
+            "content": "    no_proxy_arg = no_proxy\n    if no_proxy is None:\n        no_proxy = get_proxy(\"no_proxy\")",
+            "content_sha256": "687c697bcb7b0ab5fbc3e58c992186e388ed4fd1ddde0266cd640aef6879d88b",
+            "visible_to_generator": true
+          }
+        ]
+      },
+      {
+        "claim": "非空字典表示未绕过且有代理配置",
+        "status": "supported",
+        "rationale": "非绕过分支返回环境代理字典。",
+        "evidence": [
+          {
+            "path": "src/requests/utils.py",
+            "start_line": 816,
+            "end_line": 825
+          }
+        ],
+        "verified_evidence": [
+          {
+            "path": "src/requests/utils.py",
+            "start_line": 816,
+            "end_line": 825,
+            "content": "def get_environ_proxies(url, no_proxy=None):\n    \"\"\"\n    Return a dict of environment proxies.\n\n    :rtype: dict\n    \"\"\"\n    if should_bypass_proxies(url, no_proxy=no_proxy):\n        return {}\n    else:\n        return getproxies()",
+            "content_sha256": "988e8929b6e4d2c33a504031023aa337574e2ea74a7acb00327a141ab2bd390d",
+            "visible_to_generator": true
+          }
+        ]
+      },
+      {
+        "claim": "空字典必定表示 URL 匹配 no_proxy 列表",
+        "status": "contradicted",
+        "rationale": "无主机名也会直接绕过；否则 getproxies() 亦可返回空字典，不能作该逆向推断。",
+        "evidence": [
+          {
+            "path": "src/requests/utils.py",
+            "start_line": 774,
+            "end_line": 776
+          },
+          {
+            "path": "src/requests/utils.py",
+            "start_line": 816,
+            "end_line": 825
+          }
+        ],
+        "verified_evidence": [
+          {
+            "path": "src/requests/utils.py",
+            "start_line": 774,
+            "end_line": 776,
+            "content": "    if parsed.hostname is None:\n        # URLs don't always have hostnames, e.g. file:/// urls.\n        return True",
+            "content_sha256": "393dc80b0985cd18df767e5a5d8ae007fae0eed00efd0409469deba3fb17149a",
+            "visible_to_generator": true
+          },
+          {
+            "path": "src/requests/utils.py",
+            "start_line": 816,
+            "end_line": 825,
+            "content": "def get_environ_proxies(url, no_proxy=None):\n    \"\"\"\n    Return a dict of environment proxies.\n\n    :rtype: dict\n    \"\"\"\n    if should_bypass_proxies(url, no_proxy=no_proxy):\n        return {}\n    else:\n        return getproxies()",
+            "content_sha256": "988e8929b6e4d2c33a504031023aa337574e2ea74a7acb00327a141ab2bd390d",
+            "visible_to_generator": true
+          }
+        ]
+      }
+    ],
+    "notes": "显式优先级及非空分支基本正确，但额外把空字典等同于命中 no_proxy 列表；空字典还可能来自无主机名绕过或空代理配置。",
+    "key_points": null,
+    "candidate_sha256": "89b841f1dfb0d6bce8d78ca52b0487a6202a9f1e2ec0775c2e8362a30e48122f",
+    "reviewer": "Codex (current session)",
+    "review_type": "model_assisted_nonblind_development_review",
+    "human_approved": false,
+    "training_eligible": false,
+    "solved": false
+  }
+]

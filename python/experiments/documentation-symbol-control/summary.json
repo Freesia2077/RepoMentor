@@ -1,0 +1,163 @@
+{
+  "questions": 1,
+  "planned_answers": 1,
+  "records": 1,
+  "reviews": {
+    "q-0244a89b40349ca9--before-role-fix": {
+      "candidate_id": "q-0244a89b40349ca9--before-role-fix",
+      "correctness": "incorrect",
+      "citation_support": "unsupported",
+      "completeness": "partial",
+      "abstention": "not_applicable",
+      "entry_scope": "mixed",
+      "consistency": "consistent",
+      "claims": [
+        {
+          "claim": "题目注册保护旗标就是state.first_registration并令所有setup只首次执行",
+          "status": "contradicted",
+          "rationale": "目标_got_registered_once禁止注册后setup变更；record_once另一个机制只包装特定回调。",
+          "evidence": [
+            {
+              "path": "src/flask/sansio/blueprints.py",
+              "start_line": 213,
+              "end_line": 221
+            },
+            {
+              "path": "src/flask/sansio/blueprints.py",
+              "start_line": 232,
+              "end_line": 244
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "src/flask/sansio/blueprints.py",
+              "start_line": 213,
+              "end_line": 221,
+              "content": "    def _check_setup_finished(self, f_name: str) -> None:\n        if self._got_registered_once:\n            raise AssertionError(\n                f\"The setup method '{f_name}' can no longer be called on the blueprint\"\n                f\" '{self.name}'. It has already been registered at least once, any\"\n                \" changes will not be applied consistently.\\n\"\n                \"Make sure all imports, decorators, functions, etc. needed to set up\"\n                \" the blueprint are done before registering it.\"\n            )",
+              "content_sha256": "b4c75a22b022e443069d149a3fa2bbd7039fe362fe691335625fc8f904e534ed",
+              "visible_to_generator": false
+            },
+            {
+              "path": "src/flask/sansio/blueprints.py",
+              "start_line": 232,
+              "end_line": 244,
+              "content": "    @setupmethod\n    def record_once(self, func: DeferredSetupFunction) -> None:\n        \"\"\"Works like :meth:`record` but wraps the function in another\n        function that will ensure the function is only called once.  If the\n        blueprint is registered a second time on the application, the\n        function passed is not called.\n        \"\"\"\n\n        def wrapper(state: BlueprintSetupState) -> None:\n            if state.first_registration:\n                func(state)\n\n        self.record(update_wrapper(wrapper, func))",
+              "content_sha256": "533190db1660ef5f3b6f544755292c367358780664281c118348e2cb1f73091c",
+              "visible_to_generator": true
+            }
+          ]
+        }
+      ],
+      "notes": "当前固定RAG真实控制，仍把first_registration/record_once误认所问注册后禁止setup的保护。当前引用未包含实际_guard，旧SDK答案不能代替本次固定RAG匹配控制。",
+      "key_points": null,
+      "candidate_sha256": "802bf24e3bdea40a3781e6e5a6ccd27acfbc5bd85297ed40cd394d78ac4c4a5d",
+      "reviewer": "Codex (current session)",
+      "review_type": "model_assisted_nonblind_development_review",
+      "human_approved": false,
+      "training_eligible": false,
+      "result_sha256": "689e3d1c9194da10b75851ed88ce9c8105da104a480b5da2024d6138bca954c0"
+    }
+  },
+  "groups": {
+    "all/bm25_code": {
+      "records": 1,
+      "success": 1,
+      "model_requests": 1,
+      "tool_calls": 0,
+      "episodes_using_tools": 0,
+      "citation_ranges_valid": 1,
+      "initial_reference_complete": 0,
+      "final_reference_complete": 0,
+      "initial_nonblank_reference_complete": 0,
+      "final_nonblank_reference_complete": 0,
+      "requests_without_usage": 0,
+      "requests_without_elapsed": 0,
+      "prompt_tokens": 3488,
+      "completion_tokens": 155,
+      "generator_seconds": 17.125,
+      "reviewed": 1,
+      "factually_correct": 0,
+      "core_supported": 0,
+      "fully_resolved": 0
+    },
+    "documentation-role-known-development/bm25_code": {
+      "records": 1,
+      "success": 1,
+      "model_requests": 1,
+      "tool_calls": 0,
+      "episodes_using_tools": 0,
+      "citation_ranges_valid": 1,
+      "initial_reference_complete": 0,
+      "final_reference_complete": 0,
+      "initial_nonblank_reference_complete": 0,
+      "final_nonblank_reference_complete": 0,
+      "requests_without_usage": 0,
+      "requests_without_elapsed": 0,
+      "prompt_tokens": 3488,
+      "completion_tokens": 155,
+      "generator_seconds": 17.125,
+      "reviewed": 1,
+      "factually_correct": 0,
+      "core_supported": 0,
+      "fully_resolved": 0
+    },
+    "documentation-role-development-diagnostic/bm25_code": {
+      "records": 1,
+      "success": 1,
+      "model_requests": 1,
+      "tool_calls": 0,
+      "episodes_using_tools": 0,
+      "citation_ranges_valid": 1,
+      "initial_reference_complete": 0,
+      "final_reference_complete": 0,
+      "initial_nonblank_reference_complete": 0,
+      "final_nonblank_reference_complete": 0,
+      "requests_without_usage": 0,
+      "requests_without_elapsed": 0,
+      "prompt_tokens": 3488,
+      "completion_tokens": 155,
+      "generator_seconds": 17.125,
+      "reviewed": 1,
+      "factually_correct": 0,
+      "core_supported": 0,
+      "fully_resolved": 0
+    },
+    "answerable/bm25_code": {
+      "records": 1,
+      "success": 1,
+      "model_requests": 1,
+      "tool_calls": 0,
+      "episodes_using_tools": 0,
+      "citation_ranges_valid": 1,
+      "initial_reference_complete": 0,
+      "final_reference_complete": 0,
+      "initial_nonblank_reference_complete": 0,
+      "final_nonblank_reference_complete": 0,
+      "requests_without_usage": 0,
+      "requests_without_elapsed": 0,
+      "prompt_tokens": 3488,
+      "completion_tokens": 155,
+      "generator_seconds": 17.125,
+      "reviewed": 1,
+      "factually_correct": 0,
+      "core_supported": 0,
+      "fully_resolved": 0
+    }
+  },
+  "retrieval": {
+    "shared_initial": {
+      "answerable": 1,
+      "reference_complete": 0,
+      "nonblank_reference_complete": 0
+    }
+  },
+  "new_requests": 1,
+  "combined_requests": 1281,
+  "paid_requests": 0,
+  "human_approved": false,
+  "training_eligible": false,
+  "reporting_implementation": "4432a399824bc989792b734caf26caf8da5ada5fef0941d184fd5a00d4ae2e6b",
+  "usage_observation_note": "Token/time sums include observed values only. Missing usage and elapsed time remain unknown in raw records; reservations still count every sent or ambiguous request.",
+  "checks": {},
+  "scope": "One actual fixed-RAG control for the Flask docs/conf.py false exact-symbol boost. Daily profile, original question/system/schema/history; no SDK stages. A later matched fixed-RAG candidate will only change initial source selection via correct documentation role and existing explicit-file boundary. Reuse prior 70-question offline checks. No automatic retry, no training, known development only."
+}

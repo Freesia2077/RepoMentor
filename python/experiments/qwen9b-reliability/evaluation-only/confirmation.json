@@ -1,0 +1,243 @@
+[
+  {
+    "task_id": "reliability-confirm-01",
+    "expected": "本轮不会；on 修改原 handlers 数组，而 emit 在调用前使用 slice 快照，后续 emit 才会看到新增项。",
+    "references": [
+      {
+        "path": "src/index.ts",
+        "start_line": 66,
+        "end_line": 73,
+        "content": "\t\ton<Key extends keyof Events>(type: Key, handler: GenericEventHandler) {\n\t\t\tconst handlers: Array<GenericEventHandler> | undefined = all!.get(type);\n\t\t\tif (handlers) {\n\t\t\t\thandlers.push(handler);\n\t\t\t} else {\n\t\t\t\tall!.set(type, [handler] as EventHandlerList<Events[keyof Events]>);\n\t\t\t}\n\t\t},",
+        "content_sha256": "0a5bf296ae849cd916f0b4eedbc3b3dbd431acb523f64fede2782b79ff119004"
+      },
+      {
+        "path": "src/index.ts",
+        "start_line": 103,
+        "end_line": 110,
+        "content": "\t\temit<Key extends keyof Events>(type: Key, evt?: Events[Key]) {\n\t\t\tlet handlers = all!.get(type);\n\t\t\tif (handlers) {\n\t\t\t\t(handlers as EventHandlerList<Events[keyof Events]>)\n\t\t\t\t\t.slice()\n\t\t\t\t\t.map((handler) => {\n\t\t\t\t\t\thandler(evt!);\n\t\t\t\t\t});",
+        "content_sha256": "bbee530a904e9d605eaa018ff4b88ac44a4f30a6e667398622a79339f4e0f8be"
+      }
+    ],
+    "reviewer": "Codex source-reviewed before generation",
+    "human_approved": false,
+    "training_eligible": false
+  },
+  {
+    "task_id": "reliability-confirm-02",
+    "expected": "支持；on 直接以 type 为 Map 键，没有字符串转换；符号测试用同一个 eventType 查询 Map 并检查注册 handler。",
+    "references": [
+      {
+        "path": "src/index.ts",
+        "start_line": 66,
+        "end_line": 73,
+        "content": "\t\ton<Key extends keyof Events>(type: Key, handler: GenericEventHandler) {\n\t\t\tconst handlers: Array<GenericEventHandler> | undefined = all!.get(type);\n\t\t\tif (handlers) {\n\t\t\t\thandlers.push(handler);\n\t\t\t} else {\n\t\t\t\tall!.set(type, [handler] as EventHandlerList<Events[keyof Events]>);\n\t\t\t}\n\t\t},",
+        "content_sha256": "0a5bf296ae849cd916f0b4eedbc3b3dbd431acb523f64fede2782b79ff119004"
+      },
+      {
+        "path": "test/index_test.ts",
+        "start_line": 26,
+        "end_line": 26,
+        "content": "\tconst eventType = Symbol('eventType');",
+        "content_sha256": "8d857fead7ffb45098fb0679f0593d86421e30d77a9529b56c52cc267cc583dc"
+      },
+      {
+        "path": "test/index_test.ts",
+        "start_line": 92,
+        "end_line": 96,
+        "content": "\t\tit('can take symbols for event types', () => {\n\t\t\tconst foo = () => {};\n\t\t\tinst.on(eventType, foo);\n\t\t\texpect(events.get(eventType)).to.deep.equal([foo]);\n\t\t});",
+        "content_sha256": "34896f2cfae6a2101410934b087cd19efd03555116eec1faee1ea1c89e30d35e"
+      }
+    ],
+    "reviewer": "Codex source-reviewed before generation",
+    "human_approved": false,
+    "training_eligible": false
+  },
+  {
+    "task_id": "reliability-confirm-03",
+    "expected": "长度2走 safeByteCutoff=256 的 mask=1 分支，255 映射到索引1；长度3 cutoff=255，255被拒绝，合格字节取模3。",
+    "references": [
+      {
+        "path": "index.js",
+        "start_line": 29,
+        "end_line": 59,
+        "content": "export function customRandom(alphabet, defaultSize, getRandom) {\n  // Random bytes are 0-255. `random % alphabet.length` can waste\n  // that entropy by making some symbols more likely.\n  //\n  // `safeByteCutoff` will be divided by `alphabet.length` without remainder\n  // fixing issue of broken distribution.\n  //\n  // Example: with 17 symbols, `safeByteCutoff` is 255.\n  // Bytes 0-254 preserve entropy evenly: each symbol gets 15 source bytes.\n  // Byte 255 would map to `0` again, making one symbol slightly more likely.\n  // So we reject 255.\n  let safeByteCutoff = 256 - (256 % alphabet.length)\n\n  // Power-of-two alphabets can use `& mask` instead of modulo.\n  if (safeByteCutoff === 256) {\n    let mask = alphabet.length - 1\n\n    return (size = defaultSize) => {\n      if (!size) return ''\n      let id = ''\n      while (true) {\n        let bytes = getRandom(size)\n        // A compact alternative for `for (let i = 0; i < step; i++)`.\n        let i = size\n        while (i--) {\n          // Here, `& mask` is equivalent to `% alphabet.length`, but faster\n          id += alphabet[bytes[i] & mask]\n          if (id.length >= size) return id\n        }\n      }\n    }",
+        "content_sha256": "e881dc02c274fd98d4891683c218003472a9b1fceb2c00759157376b761797b2"
+      },
+      {
+        "path": "index.js",
+        "start_line": 68,
+        "end_line": 86,
+        "content": "  let step = Math.ceil((1.6 * 256 * defaultSize) / safeByteCutoff)\n\n  return (size = defaultSize) => {\n    if (!size) return ''\n    let id = ''\n    while (true) {\n      let bytes = getRandom(step)\n      // A compact alternative for `for (let i = 0; i < step; i++)`.\n      let i = step\n      while (i--) {\n        // Reject bytes >= `safeByteCutoff` to avoid modulo bias\n        // and give each symbol an equal chance.\n        if (bytes[i] < safeByteCutoff) {\n          id += alphabet[bytes[i] % alphabet.length]\n          if (id.length >= size) return id\n        }\n      }\n    }\n  }",
+        "content_sha256": "106c2bb1c2eea76a1b3ec8d54bc3a12d13ae62a94b1f3a9cada1ea33e895b2df"
+      }
+    ],
+    "reviewer": "Codex source-reviewed before generation",
+    "human_approved": false,
+    "training_eligible": false
+  },
+  {
+    "task_id": "reliability-confirm-04",
+    "expected": "长度依次4、2、0；闭包默认参数仅在未传时采用defaultSize，实际size控制poolOffset和substring，0提前返回空串。",
+    "references": [
+      {
+        "path": "index.js",
+        "start_line": 96,
+        "end_line": 110,
+        "content": "export function customAlphabet(alphabet, defaultSize = 21) {\n  if (\n    typeof alphabet !== 'string' ||\n    !alphabet ||\n    alphabet.length > 256\n  ) {\n    return customRandom(alphabet, defaultSize, random)\n  }\n  for (let i = 0; i < alphabet.length; i++) {\n    if (alphabet.charCodeAt(i) > 255) {\n      // The fast path below writes char codes to a byte buffer,\n      // so it supports only single-byte characters.\n      return customRandom(alphabet, defaultSize, random)\n    }\n  }",
+        "content_sha256": "48da7f3bfe0651cd773018e3ca9dfb5ae99ef6c6b0d42fa31308be8bad51d1a2"
+      },
+      {
+        "path": "index.js",
+        "start_line": 133,
+        "end_line": 173,
+        "content": "  return (size = defaultSize) => {\n    // `|=` convert `size` to number to prevent `valueOf` abusing\n    // and pool offset pollution\n    size |= 0\n    if (size < 0) throw new RangeError('Wrong ID size')\n    if (size === 0) return ''\n    if (poolOffset + size > pool.length) {\n      let target = Math.max(poolNext, size)\n      poolNext = Math.min(target * 16, POOL_MAX)\n      let buffer = Buffer.allocUnsafe(target)\n      if (mask === alphabetLen - 1) {\n        // Power-of-two alphabets like `urlAlphabet` accept every byte,\n        // so random bytes are translated in place without rejections.\n        fillRandom(buffer)\n        for (let i = 0; i < target; i++) {\n          buffer[i] = charCodes[buffer[i] & mask]\n        }\n      } else {\n        // Rejection sampling accepts `alphabetLen` of every `mask + 1`\n        // random bytes. `1.6` requests extra bytes to cover\n        // unlucky streaks in most fills.\n        let randomBytes = Buffer.allocUnsafe(\n          Math.ceil((1.6 * (mask + 1) * target) / alphabetLen)\n        )\n        let accepted = 0\n        while (accepted < target) {\n          fillRandom(randomBytes)\n          for (let i = 0; i < randomBytes.length; i++) {\n            let index = randomBytes[i] & mask\n            if (index < alphabetLen) {\n              buffer[accepted++] = charCodes[index]\n              if (accepted === target) break\n            }\n          }\n        }\n      }\n      pool = buffer.toString('latin1')\n      poolOffset = 0\n    }\n    poolOffset += size\n    return pool.substring(poolOffset - size, poolOffset)",
+        "content_sha256": "f8c7fecbf3f678d48d64cd38b485592ed74a30a6efb215e1f8765d6390684b71"
+      }
+    ],
+    "reviewer": "Codex source-reviewed before generation",
+    "human_approved": false,
+    "training_eligible": false
+  },
+  {
+    "task_id": "reliability-confirm-05",
+    "expected": "不会回退；get_jobs(tag)过滤，结果为空返回None；匹配成功返回min(jobs_filtered).next_run。",
+    "references": [
+      {
+        "path": "schedule/__init__.py",
+        "start_line": 122,
+        "end_line": 133,
+        "content": "    def get_jobs(self, tag: Optional[Hashable] = None) -> List[\"Job\"]:\n        \"\"\"\n        Gets scheduled jobs marked with the given tag, or all jobs\n        if tag is omitted.\n\n        :param tag: An identifier used to identify a subset of\n                    jobs to retrieve\n        \"\"\"\n        if tag is None:\n            return self.jobs[:]\n        else:\n            return [job for job in self.jobs if tag in job.tags]",
+        "content_sha256": "3b203d4e5005e3c3be275304e9fce13d28bb27a7128ad849faa7f33725e6e1be"
+      },
+      {
+        "path": "schedule/__init__.py",
+        "start_line": 177,
+        "end_line": 195,
+        "content": "    def get_next_run(\n        self, tag: Optional[Hashable] = None\n    ) -> Optional[datetime.datetime]:\n        \"\"\"\n        Datetime when the next job should run.\n\n        :param tag: Filter the next run for the given tag parameter\n\n        :return: A :class:`~datetime.datetime` object\n                 or None if no jobs scheduled\n        \"\"\"\n        if not self.jobs:\n            return None\n        jobs_filtered = self.get_jobs(tag)\n        if not jobs_filtered:\n            return None\n        return min(jobs_filtered).next_run\n\n    next_run = property(get_next_run)",
+        "content_sha256": "fb3cd2b2a25ab03d5ca8c2ee5614de99b0a5bc8577d4a5c95d6d0f4f68c1f78d"
+      }
+    ],
+    "reviewer": "Codex source-reviewed before generation",
+    "human_approved": false,
+    "training_eligible": false
+  },
+  {
+    "task_id": "reliability-confirm-06",
+    "expected": "every仅构造并返回Job；do用functools.partial绑定函数和参数，更新包装信息并计算next_run，追加自身到scheduler.jobs，返回自身。",
+    "references": [
+      {
+        "path": "schedule/__init__.py",
+        "start_line": 162,
+        "end_line": 170,
+        "content": "    def every(self, interval: int = 1) -> \"Job\":\n        \"\"\"\n        Schedule a new periodic job.\n\n        :param interval: A quantity of a certain time unit\n        :return: An unconfigured :class:`Job <Job>`\n        \"\"\"\n        job = Job(interval, self)\n        return job",
+        "content_sha256": "ffb91d9eadc493604edeceeb8cca8e71d1aa7f6d07e04af7a03a2089de23e80d"
+      },
+      {
+        "path": "schedule/__init__.py",
+        "start_line": 644,
+        "end_line": 664,
+        "content": "    def do(self, job_func: Callable, *args, **kwargs):\n        \"\"\"\n        Specifies the job_func that should be called every time the\n        job runs.\n\n        Any additional arguments are passed on to job_func when\n        the job runs.\n\n        :param job_func: The function to be scheduled\n        :return: The invoked job instance\n        \"\"\"\n        self.job_func = functools.partial(job_func, *args, **kwargs)\n        functools.update_wrapper(self.job_func, job_func)\n        self._schedule_next_run()\n        if self.scheduler is None:\n            raise ScheduleError(\n                \"Unable to a add job to schedule. \"\n                \"Job is not associated with an scheduler\"\n            )\n        self.scheduler.jobs.append(self)\n        return self",
+        "content_sha256": "29650fd7a5e028bcd3178da29d9b0b5c8f5e2896e67e38f88c1186d68c48ba18"
+      }
+    ],
+    "reviewer": "Codex source-reviewed before generation",
+    "human_approved": false,
+    "training_eligible": false
+  },
+  {
+    "task_id": "reliability-confirm-07",
+    "expected": "默认pred=None按真值筛选，返回2；显式谓词匹配首项0，filter根据谓词结果保留原项，next返回0，不再次判断其真值。",
+    "references": [
+      {
+        "path": "more_itertools/recipes.py",
+        "start_line": 571,
+        "end_line": 588,
+        "content": "def first_true(iterable, default=None, pred=None):\n    \"\"\"\n    Returns the first true value in the iterable.\n\n    If no true value is found, returns *default*\n\n    If *pred* is not None, returns the first item for which\n    ``pred(item) == True`` .\n\n        >>> first_true(range(10))\n        1\n        >>> first_true(range(10), pred=lambda x: x > 5)\n        6\n        >>> first_true(range(10), default='missing', pred=lambda x: x > 9)\n        'missing'\n\n    \"\"\"\n    return next(filter(pred, iterable), default)",
+        "content_sha256": "406048ff2d04fb0542a59badd30d7ceb1a5a97ca62f890dbe743e5d69a8d23e8"
+      }
+    ],
+    "reviewer": "Codex source-reviewed before generation",
+    "human_approved": false,
+    "training_eligible": false
+  },
+  {
+    "task_id": "reliability-confirm-08",
+    "expected": "均True；使用groupby(iterable,key)，发现第二组才False，不排序；空输入直接走最后return True。",
+    "references": [
+      {
+        "path": "more_itertools/recipes.py",
+        "start_line": 219,
+        "end_line": 242,
+        "content": "def all_equal(iterable, key=None):\n    \"\"\"\n    Returns ``True`` if all the elements are equal to each other.\n\n        >>> all_equal('aaaa')\n        True\n        >>> all_equal('aaab')\n        False\n\n    A function that accepts a single argument and returns a transformed version\n    of each input item can be specified with *key*:\n\n        >>> all_equal('AaaA', key=str.casefold)\n        True\n        >>> all_equal([1, 2, 3], key=lambda x: x < 10)\n        True\n\n    \"\"\"\n    iterator = groupby(iterable, key)\n    for first in iterator:\n        for second in iterator:\n            return False\n        return True\n    return True",
+        "content_sha256": "41d6a075670a2470e02d82df534a015abdf6ae8b7dc3fde407c2fb03ed3f6e51"
+      }
+    ],
+    "reviewer": "Codex source-reviewed before generation",
+    "human_approved": false,
+    "training_eligible": false
+  },
+  {
+    "task_id": "reliability-confirm-09",
+    "expected": "default是staticmethod(_default)；Decimal和UUID转str，未命中任何支持分支的普通对象抛TypeError，不返回None/null。",
+    "references": [
+      {
+        "path": "src/flask/json/provider.py",
+        "start_line": 108,
+        "end_line": 141,
+        "content": "def _default(o: t.Any) -> t.Any:\n    if isinstance(o, date):\n        return http_date(o)\n\n    if isinstance(o, (decimal.Decimal, uuid.UUID)):\n        return str(o)\n\n    if dataclasses and dataclasses.is_dataclass(o):\n        return dataclasses.asdict(o)  # type: ignore[arg-type]\n\n    if hasattr(o, \"__html__\"):\n        return str(o.__html__())\n\n    raise TypeError(f\"Object of type {type(o).__name__} is not JSON serializable\")\n\n\nclass DefaultJSONProvider(JSONProvider):\n    \"\"\"Provide JSON operations using Python's built-in :mod:`json`\n    library. Serializes the following additional data types:\n\n    -   :class:`datetime.datetime` and :class:`datetime.date` are\n        serialized to :rfc:`822` strings. This is the same as the HTTP\n        date format.\n    -   :class:`uuid.UUID` is serialized to a string.\n    -   :class:`dataclasses.dataclass` is passed to\n        :func:`dataclasses.asdict`.\n    -   :class:`~markupsafe.Markup` (or any object with a ``__html__``\n        method) will call the ``__html__`` method to get a string.\n    \"\"\"\n\n    default: t.Callable[[t.Any], t.Any] = staticmethod(_default)\n    \"\"\"Apply this function to any object that :meth:`json.dumps` does\n    not know how to serialize. It should return a valid JSON type or\n    raise a ``TypeError``.",
+        "content_sha256": "079be52cf6371c7196a9d05169c052f1bed3bab457c9217bfb22c40b13e627a1"
+      }
+    ],
+    "reviewer": "Codex source-reviewed before generation",
+    "human_approved": false,
+    "training_eligible": false
+  },
+  {
+    "task_id": "reliability-confirm-10",
+    "expected": "不立即执行func；record将包装器登记到deferred_functions；包装器在state.first_registration为真时调用func(state)，为假跳过。",
+    "references": [
+      {
+        "path": "src/flask/sansio/blueprints.py",
+        "start_line": 223,
+        "end_line": 244,
+        "content": "    @setupmethod\n    def record(self, func: DeferredSetupFunction) -> None:\n        \"\"\"Registers a function that is called when the blueprint is\n        registered on the application.  This function is called with the\n        state as argument as returned by the :meth:`make_setup_state`\n        method.\n        \"\"\"\n        self.deferred_functions.append(func)\n\n    @setupmethod\n    def record_once(self, func: DeferredSetupFunction) -> None:\n        \"\"\"Works like :meth:`record` but wraps the function in another\n        function that will ensure the function is only called once.  If the\n        blueprint is registered a second time on the application, the\n        function passed is not called.\n        \"\"\"\n\n        def wrapper(state: BlueprintSetupState) -> None:\n            if state.first_registration:\n                func(state)\n\n        self.record(update_wrapper(wrapper, func))",
+        "content_sha256": "4d6ae17f74b3c528558bc7d8655c1d02fbb9130758d4af9da7cbe8a702257fb6"
+      }
+    ],
+    "reviewer": "Codex source-reviewed before generation",
+    "human_approved": false,
+    "training_eligible": false
+  },
+  {
+    "task_id": "reliability-confirm-11",
+    "expected": "按scheme+host、scheme、all+host、all顺序；判断键存在而不是值真伪，第一个键值None也立即break返回None。",
+    "references": [
+      {
+        "path": "src/requests/utils.py",
+        "start_line": 828,
+        "end_line": 851,
+        "content": "def select_proxy(url, proxies):\n    \"\"\"Select a proxy for the url, if applicable.\n\n    :param url: The url being for the request\n    :param proxies: A dictionary of schemes or schemes and hosts to proxy URLs\n    \"\"\"\n    proxies = proxies or {}\n    urlparts = urlparse(url)\n    if urlparts.hostname is None:\n        return proxies.get(urlparts.scheme, proxies.get(\"all\"))\n\n    proxy_keys = [\n        urlparts.scheme + \"://\" + urlparts.hostname,\n        urlparts.scheme,\n        \"all://\" + urlparts.hostname,\n        \"all\",\n    ]\n    proxy = None\n    for proxy_key in proxy_keys:\n        if proxy_key in proxies:\n            proxy = proxies[proxy_key]\n            break\n\n    return proxy",
+        "content_sha256": "f00d768aa28acfa8c0a9d2b1d145bd69cc848cece250a0f913a1e99ac231c4c5"
+      }
+    ],
+    "reviewer": "Codex source-reviewed before generation",
+    "human_approved": false,
+    "training_eligible": false
+  },
+  {
+    "task_id": "reliability-confirm-12",
+    "expected": "False使短路条件跳过环境查询；返回proxies.copy副本；True且未绕过时取环境scheme/all并setdefault补全，已有scheme键不被覆盖。",
+    "references": [
+      {
+        "path": "src/requests/utils.py",
+        "start_line": 854,
+        "end_line": 878,
+        "content": "def resolve_proxies(request, proxies, trust_env=True):\n    \"\"\"This method takes proxy information from a request and configuration\n    input to resolve a mapping of target proxies. This will consider settings\n    such as NO_PROXY to strip proxy configurations.\n\n    :param request: Request or PreparedRequest\n    :param proxies: A dictionary of schemes or schemes and hosts to proxy URLs\n    :param trust_env: Boolean declaring whether to trust environment configs\n\n    :rtype: dict\n    \"\"\"\n    proxies = proxies if proxies is not None else {}\n    url = request.url\n    scheme = urlparse(url).scheme\n    no_proxy = proxies.get(\"no_proxy\")\n    new_proxies = proxies.copy()\n\n    if trust_env and not should_bypass_proxies(url, no_proxy=no_proxy):\n        environ_proxies = get_environ_proxies(url, no_proxy=no_proxy)\n\n        proxy = environ_proxies.get(scheme, environ_proxies.get(\"all\"))\n\n        if proxy:\n            new_proxies.setdefault(scheme, proxy)\n    return new_proxies",
+        "content_sha256": "2bb9d0f60e15fad9c50826ed39c358adda61c204965269d873f0248e1b8cdae1"
+      }
+    ],
+    "reviewer": "Codex source-reviewed before generation",
+    "human_approved": false,
+    "training_eligible": false
+  }
+]

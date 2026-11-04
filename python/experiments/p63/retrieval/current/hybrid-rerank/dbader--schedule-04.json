@@ -1,0 +1,250 @@
+{
+  "task_id": "dbader--schedule-04",
+  "repository": "dbader/schedule",
+  "split": "validation",
+  "index_id": "a0b78bee26f675e3ac28d9b7",
+  "base_index_id": "fe15cf902f547470400c953c",
+  "chunk_ids_sha256": "7d5cac1d40773160c08ef2c5e183972628798e505997a8ca03ce3fc0d5dd4951",
+  "retriever": "hybrid-rerank",
+  "metrics": {
+    "recall_at_6": 1.0,
+    "recall_at_20": 1.0,
+    "mrr": 1.0,
+    "target_overlap_recall_at_6": 1.0,
+    "target_overlap_recall_at_20": 1.0,
+    "line_coverage_at_6": 1.0
+  },
+  "first_query_seconds": 0.25551150000001144,
+  "warm_query_seconds": 0.0087124000001495,
+  "index_open_build_seconds": 0.11873540000010507,
+  "chunks": 328,
+  "candidates": [
+    {
+      "snapshot_id": "9999db891acf16c1a1fd96b5",
+      "chunk_id": "30f7cfd303dfdba80c3fe7b7",
+      "path": "schedule/__init__.py",
+      "start_line": 122,
+      "end_line": 133,
+      "content_hash": "3b203d4e5005e3c3be275304e9fce13d28bb27a7128ad849faa7f33725e6e1be",
+      "content": "    def get_jobs(self, tag: Optional[Hashable] = None) -> List[\"Job\"]:\n        \"\"\"\n        Gets scheduled jobs marked with the given tag, or all jobs\n        if tag is omitted.\n\n        :param tag: An identifier used to identify a subset of\n                    jobs to retrieve\n        \"\"\"\n        if tag is None:\n            return self.jobs[:]\n        else:\n            return [job for job in self.jobs if tag in job.tags]",
+      "symbol": "Scheduler.get_jobs",
+      "truncated": false
+    },
+    {
+      "snapshot_id": "9999db891acf16c1a1fd96b5",
+      "chunk_id": "37e11e2f55e8c47484bb348e",
+      "path": "schedule/__init__.py",
+      "start_line": 864,
+      "end_line": 868,
+      "content_hash": "7b80054b113eb8b5edb3654e8efdecae4f7040e4188b558d04c5560aa9d7b07f",
+      "content": "def get_jobs(tag: Optional[Hashable] = None) -> List[Job]:\n    \"\"\"Calls :meth:`get_jobs <Scheduler.get_jobs>` on the\n    :data:`default scheduler instance <default_scheduler>`.\n    \"\"\"\n    return default_scheduler.get_jobs(tag)",
+      "symbol": "get_jobs",
+      "truncated": false
+    },
+    {
+      "snapshot_id": "9999db891acf16c1a1fd96b5",
+      "chunk_id": "edd85c9aa55f195b3bc4f896",
+      "path": "schedule/__init__.py",
+      "start_line": 457,
+      "end_line": 469,
+      "content_hash": "158bded103b7fc7e0bec2d0f0cbb3b1150440d8959f80a0d37876580f6f7531e",
+      "content": "    def tag(self, *tags: Hashable):\n        \"\"\"\n        Tags the job with one or more unique identifiers.\n\n        Tags must be hashable. Duplicate tags are discarded.\n\n        :param tags: A unique list of ``Hashable`` tags.\n        :return: The invoked job instance\n        \"\"\"\n        if not all(isinstance(tag, Hashable) for tag in tags):\n            raise TypeError(\"Tags must be hashable\")\n        self.tags.update(tags)\n        return self",
+      "symbol": "Job.tag",
+      "truncated": false
+    },
+    {
+      "snapshot_id": "9999db891acf16c1a1fd96b5",
+      "chunk_id": "07497b7c1040cfa3cca6d256",
+      "path": "schedule/__init__.py",
+      "start_line": 135,
+      "end_line": 148,
+      "content_hash": "3528df63c6f64f860e00e0fff1bd2674e5c2219deac85d751fa2e0b83af8c7ee",
+      "content": "    def clear(self, tag: Optional[Hashable] = None) -> None:\n        \"\"\"\n        Deletes scheduled jobs marked with the given tag, or all jobs\n        if tag is omitted.\n\n        :param tag: An identifier used to identify a subset of\n                    jobs to delete\n        \"\"\"\n        if tag is None:\n            logger.debug(\"Deleting *all* jobs\")\n            del self.jobs[:]\n        else:\n            logger.debug('Deleting all jobs tagged \"%s\"', tag)\n            self.jobs[:] = (job for job in self.jobs if tag not in job.tags)",
+      "symbol": "Scheduler.clear",
+      "truncated": false
+    },
+    {
+      "snapshot_id": "9999db891acf16c1a1fd96b5",
+      "chunk_id": "95805fa5f2242500eb9d1a2d",
+      "path": "schedule/__init__.py",
+      "start_line": 177,
+      "end_line": 193,
+      "content_hash": "e1341bf8d11dd3ba879b90caef2ce14af739a367762c11330d21e3a9082db8c7",
+      "content": "    def get_next_run(\n        self, tag: Optional[Hashable] = None\n    ) -> Optional[datetime.datetime]:\n        \"\"\"\n        Datetime when the next job should run.\n\n        :param tag: Filter the next run for the given tag parameter\n\n        :return: A :class:`~datetime.datetime` object\n                 or None if no jobs scheduled\n        \"\"\"\n        if not self.jobs:\n            return None\n        jobs_filtered = self.get_jobs(tag)\n        if not jobs_filtered:\n            return None\n        return min(jobs_filtered).next_run",
+      "symbol": "Scheduler.get_next_run",
+      "truncated": false
+    },
+    {
+      "snapshot_id": "9999db891acf16c1a1fd96b5",
+      "chunk_id": "426ccb9cbdeae81f2e82ca09",
+      "path": "test_schedule.py",
+      "start_line": 1544,
+      "end_line": 1564,
+      "content_hash": "f8670f70e9a730f86c1f1fe5fa619168ab72f382066e98f4c2fa3d003cec1bca",
+      "content": "    def test_get_by_tag(self):\n        every().second.do(make_mock_job()).tag(\"job1\", \"tag1\")\n        every().second.do(make_mock_job()).tag(\"job2\", \"tag2\", \"tag4\")\n        every().second.do(make_mock_job()).tag(\"job3\", \"tag3\", \"tag4\")\n\n        # Test None input yields all 3\n        jobs = schedule.get_jobs()\n        assert len(jobs) == 3\n        assert {\"job1\", \"job2\", \"job3\"}.issubset(\n            {*jobs[0].tags, *jobs[1].tags, *jobs[2].tags}\n        )\n\n        # Test each 1:1 tag:job\n        jobs = schedule.get_jobs(\"tag1\")\n        assert len(jobs) == 1\n        assert \"job1\" in jobs[0].tags\n\n        # Test multiple jobs found.\n        jobs = schedule.get_jobs(\"tag4\")\n        assert len(jobs) == 2\n        assert \"job1\" not in {*jobs[0].tags, *jobs[1].tags}",
+      "symbol": "SchedulerTests.test_get_by_tag",
+      "truncated": false
+    },
+    {
+      "snapshot_id": "9999db891acf16c1a1fd96b5",
+      "chunk_id": "fdf9ab0567a28cd0883d2b3c",
+      "path": "schedule/__init__.py",
+      "start_line": 831,
+      "end_line": 842,
+      "content_hash": "e0a03952696acf8a86ed3956e75a3a286cd82d51b3c7b5cd08ce42287e89cb37",
+      "content": "\n\n# The following methods are shortcuts for not having to\n# create a Scheduler instance:\n\n#: Default :class:`Scheduler <Scheduler>` object\ndefault_scheduler = Scheduler()\n\n#: Default :class:`Jobs <Job>` list\njobs = default_scheduler.jobs  # todo: should this be a copy, e.g. jobs()?\n\n",
+      "symbol": null,
+      "truncated": false
+    },
+    {
+      "snapshot_id": "9999db891acf16c1a1fd96b5",
+      "chunk_id": "3c188ecaa3c37da9220b31db",
+      "path": "docs/examples.rst",
+      "start_line": 164,
+      "end_line": 187,
+      "content_hash": "66f64000a85125788ba438347a5c7607950987739de7e30cdf57178f17cd5bcf",
+      "content": "You can retrieve a group of jobs from the scheduler, selecting them by a unique identifier.\n\n.. code-block:: python\n\n    import schedule\n\n    def greet(name):\n        print('Hello {}'.format(name))\n\n    schedule.every().day.do(greet, 'Andrea').tag('daily-tasks', 'friend')\n    schedule.every().hour.do(greet, 'John').tag('hourly-tasks', 'friend')\n    schedule.every().hour.do(greet, 'Monica').tag('hourly-tasks', 'customer')\n    schedule.every().day.do(greet, 'Derek').tag('daily-tasks', 'guest')\n\n    friends = schedule.get_jobs('friend')\n\nWill return a list of every job tagged as ``friend``.\n\n\nCancel several jobs, filtered by tags\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n\nYou can cancel the scheduling of a group of jobs selecting them by a unique identifier.\n",
+      "symbol": null,
+      "truncated": false
+    },
+    {
+      "snapshot_id": "9999db891acf16c1a1fd96b5",
+      "chunk_id": "bf794ebcce2d1464d58a9946",
+      "path": "test_schedule.py",
+      "start_line": 1565,
+      "end_line": 1570,
+      "content_hash": "db0fed1c6f750a0cb79a5db68c297da9b893ec6efbb2179ca81d9df9bebe16ef",
+      "content": "\n        # Test no tag.\n        jobs = schedule.get_jobs(\"tag5\")\n        assert len(jobs) == 0\n        schedule.clear()\n        assert len(schedule.jobs) == 0",
+      "symbol": "SchedulerTests.test_get_by_tag",
+      "truncated": false
+    },
+    {
+      "snapshot_id": "9999db891acf16c1a1fd96b5",
+      "chunk_id": "fe865e7956b073f7022107f5",
+      "path": "docs/examples.rst",
+      "start_line": 122,
+      "end_line": 163,
+      "content_hash": "0b16ad134e15f2da316a72620d0dcdd4290c664d57e186df9f0b95a206b493a7",
+      "content": "    schedule.every().day.at('22:30').do(job_that_executes_once)\n\n    while True:\n        schedule.run_pending()\n        time.sleep(1)\n\n\nGet all jobs\n~~~~~~~~~~~~\nTo retrieve all jobs from the scheduler, use ``schedule.get_jobs()``\n\n.. code-block:: python\n\n    import schedule\n\n    def hello():\n        print('Hello world')\n\n    schedule.every().second.do(hello)\n\n    all_jobs = schedule.get_jobs()\n\n\nCancel all jobs\n~~~~~~~~~~~~~~~\nTo remove all jobs from the scheduler, use ``schedule.clear()``\n\n.. code-block:: python\n\n    import schedule\n\n    def greet(name):\n        print('Hello {}'.format(name))\n\n    schedule.every().second.do(greet)\n\n    schedule.clear()\n\n\nGet several jobs, filtered by tags\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n",
+      "symbol": null,
+      "truncated": false
+    },
+    {
+      "snapshot_id": "9999db891acf16c1a1fd96b5",
+      "chunk_id": "f9c29343bc2f20df6bdf835c",
+      "path": "schedule/__init__.py",
+      "start_line": 86,
+      "end_line": 87,
+      "content_hash": "29c3d5a414296fc2e72cdaca829e1e303aa0e6f9b1739fb31257e24dab428bdf",
+      "content": "    def __init__(self) -> None:\n        self.jobs: List[Job] = []",
+      "symbol": "Scheduler.__init__",
+      "truncated": false
+    },
+    {
+      "snapshot_id": "9999db891acf16c1a1fd96b5",
+      "chunk_id": "9f3420ebc1d0aff30a4c8304",
+      "path": "test_schedule.py",
+      "start_line": 1572,
+      "end_line": 1589,
+      "content_hash": "5de940a020a98c23d8281a5195d50e8dc3ed6c347e28f87ee53d7a8bc5d1f134",
+      "content": "    def test_clear_by_tag(self):\n        every().second.do(make_mock_job(name=\"job1\")).tag(\"tag1\")\n        every().second.do(make_mock_job(name=\"job2\")).tag(\"tag1\", \"tag2\")\n        every().second.do(make_mock_job(name=\"job3\")).tag(\n            \"tag3\", \"tag3\", \"tag3\", \"tag2\"\n        )\n        assert len(schedule.jobs) == 3\n        schedule.run_all()\n        assert len(schedule.jobs) == 3\n        schedule.clear(\"tag3\")\n        assert len(schedule.jobs) == 2\n        schedule.clear(\"tag1\")\n        assert len(schedule.jobs) == 0\n        every().second.do(make_mock_job(name=\"job1\"))\n        every().second.do(make_mock_job(name=\"job2\"))\n        every().second.do(make_mock_job(name=\"job3\"))\n        schedule.clear()\n        assert len(schedule.jobs) == 0",
+      "symbol": "SchedulerTests.test_clear_by_tag",
+      "truncated": false
+    },
+    {
+      "snapshot_id": "9999db891acf16c1a1fd96b5",
+      "chunk_id": "0224d475e4e8fd4b8d8fc956",
+      "path": "docs/reference.rst",
+      "start_line": 1,
+      "end_line": 39,
+      "content_hash": "2ac48df766e94f30d93f36830df09980b41393181c51fb8d0cdc110a46d549ee",
+      "content": "Reference\n=========\n\n.. module:: schedule\n\nThis part of the documentation covers all the interfaces of schedule.\n\nMain Interface\n--------------\n\n.. autodata:: default_scheduler\n.. autodata:: jobs\n\n.. autofunction:: every\n.. autofunction:: run_pending\n.. autofunction:: run_all\n.. autofunction:: get_jobs\n.. autofunction:: clear\n.. autofunction:: cancel_job\n.. autofunction:: next_run\n.. autofunction:: idle_seconds\n\n\nClasses\n-------\n\n.. autoclass:: schedule.Scheduler\n   :members:\n   :undoc-members:\n\n.. autoclass:: schedule.Job\n   :members:\n   :undoc-members:\n\n\nExceptions\n----------\n\n.. autoexception:: schedule.CancelJob",
+      "symbol": null,
+      "truncated": false
+    },
+    {
+      "snapshot_id": "9999db891acf16c1a1fd96b5",
+      "chunk_id": "1a4a3290f3e5f5d873fa8557",
+      "path": "test_schedule.py",
+      "start_line": 222,
+      "end_line": 234,
+      "content_hash": "cb0e3728ab65455018692a9853ea9ef2793eae2f5ba9811f797122aea1762ef0",
+      "content": "    def test_next_run_with_tag(self):\n        with mock_datetime(2014, 6, 28, 12, 0):\n            job1 = every(5).seconds.do(make_mock_job(name=\"job1\")).tag(\"tag1\")\n            job2 = every(2).hours.do(make_mock_job(name=\"job2\")).tag(\"tag1\", \"tag2\")\n            job3 = (\n                every(1)\n                .minutes.do(make_mock_job(name=\"job3\"))\n                .tag(\"tag1\", \"tag3\", \"tag2\")\n            )\n            assert schedule.next_run(\"tag1\") == job1.next_run\n            assert schedule.default_scheduler.get_next_run(\"tag2\") == job3.next_run\n            assert schedule.next_run(\"tag3\") == job3.next_run\n            assert schedule.next_run(\"tag4\") is None",
+      "symbol": "SchedulerTests.test_next_run_with_tag",
+      "truncated": false
+    },
+    {
+      "snapshot_id": "9999db891acf16c1a1fd96b5",
+      "chunk_id": "2564545f3ceaaddd7be116c1",
+      "path": "schedule/__init__.py",
+      "start_line": 885,
+      "end_line": 889,
+      "content_hash": "9f53744f2d602d3544617ec78a06adfb7961350549ef616b9ef3b972d96192c7",
+      "content": "def next_run(tag: Optional[Hashable] = None) -> Optional[datetime.datetime]:\n    \"\"\"Calls :meth:`next_run <Scheduler.next_run>` on the\n    :data:`default scheduler instance <default_scheduler>`.\n    \"\"\"\n    return default_scheduler.get_next_run(tag)",
+      "symbol": "next_run",
+      "truncated": false
+    },
+    {
+      "snapshot_id": "9999db891acf16c1a1fd96b5",
+      "chunk_id": "34b51a7681d3fb16226897ba",
+      "path": "HISTORY.rst",
+      "start_line": 28,
+      "end_line": 41,
+      "content_hash": "b7be6cbd457cb6a34358985b1d0f3900815903b7c2d7aa388a8898e0a29f70b2",
+      "content": "- Fix the re pattern of the 'days'. See #506 Thanks @sunpro108!\n- Fix test_until_time failure when run early. See #563. Thanks @emollier!\n- Fix crash repr on partially constructed job. See #569. Thanks @CPickens42!\n- Code cleanup and modernization. See #567, #536. Thanks @masa-08 and @SergBobrovsky!\n- Documentation improvements and fix typos. See #469, #479, #493, #519, #520. Thanks to @NaelsonDouglas, @chrimaho, @rudSarkar\n\n1.1.0 (2021-04-09)\n++++++++++++++++++\n\n- Added @repeat() decorator. See #148. Thanks @rhagenaars!\n- Added execute .until(). See #195. Thanks @fredthomsen!\n- Added job retrieval filtered by tags using get_jobs('tag'). See #419. Thanks @skenvy!\n- Added type annotations. See #427. Thanks @martinthoma!\n",
+      "symbol": null,
+      "truncated": false
+    },
+    {
+      "snapshot_id": "9999db891acf16c1a1fd96b5",
+      "chunk_id": "a02999602853d9edccf9581f",
+      "path": "docs/index.rst",
+      "start_line": 1,
+      "end_line": 15,
+      "content_hash": "7285c4260b8a67638bc8a99b6f154f6f7f682a1c513c96209dada5a6fb1b9474",
+      "content": "schedule\n========\n\n\n.. image:: https://github.com/dbader/schedule/workflows/Tests/badge.svg\n        :target: https://github.com/dbader/schedule/actions?query=workflow%3ATests+branch%3Amaster\n\n.. image:: https://coveralls.io/repos/dbader/schedule/badge.svg?branch=master\n        :target: https://coveralls.io/r/dbader/schedule\n\n.. image:: https://img.shields.io/pypi/v/schedule.svg\n        :target: https://pypi.python.org/pypi/schedule\n\nPython job scheduling for humans. Run Python functions (or any other callable) periodically using a friendly syntax.\n",
+      "symbol": null,
+      "truncated": false
+    },
+    {
+      "snapshot_id": "9999db891acf16c1a1fd96b5",
+      "chunk_id": "e08fd376500b026e7a267438",
+      "path": "HISTORY.rst",
+      "start_line": 97,
+      "end_line": 106,
+      "content_hash": "c8c76e1ac081f72b20c55d1bb5206cfedcb23213ac255c200c93e2f7211fdb5c",
+      "content": "- Add proper HTML (Sphinx) docs available at https://schedule.readthedocs.io/\n- CI builds now run against Python 2.7 and 3.5 (3.3 and 3.4 should work fine but are untested)\n- Fixed an issue with ``run_all()`` and having more than one job that deletes itself in the same iteration. Thanks @alaingilbert.\n- Add ability to tag jobs and to cancel jobs by tag. Thanks @Zerrossetto.\n- Improve schedule docs. Thanks @Zerrossetto.\n- Additional docs fixes by @fkromer and @yetingsky.\n\n0.3.2 (2015-07-02)\n++++++++++++++++++\n",
+      "symbol": null,
+      "truncated": false
+    },
+    {
+      "snapshot_id": "9999db891acf16c1a1fd96b5",
+      "chunk_id": "ba5a33bc3e2d4c03700c4355",
+      "path": "test_schedule.py",
+      "start_line": 1319,
+      "end_line": 1323,
+      "content_hash": "235b64d643e1ca5ea5b70221eba596cac21a6841626c94da07e20c07f40acbf2",
+      "content": "    def test_job_func_args_are_passed_on(self):\n        mock_job = make_mock_job()\n        every().second.do(mock_job, 1, 2, \"three\", foo=23, bar={})\n        schedule.run_all()\n        mock_job.assert_called_once_with(1, 2, \"three\", foo=23, bar={})",
+      "symbol": "SchedulerTests.test_job_func_args_are_passed_on",
+      "truncated": false
+    },
+    {
+      "snapshot_id": "9999db891acf16c1a1fd96b5",
+      "chunk_id": "efa79583d959688354e0a6e6",
+      "path": "docs/faq.rst",
+      "start_line": 60,
+      "end_line": 75,
+      "content_hash": "8702941d1ea56683f3bcb288b967c554a9eefc74be784c4c1cd996b527399b9f",
+      "content": "How can I run a job only once?\n------------------------------\nSee :doc:`Examples <examples>`.\n\nHow can I cancel several jobs at once?\n--------------------------------------\nSee :doc:`Examples <examples>`.\n\nHow to execute jobs in parallel?\n--------------------------------\nSee :doc:`Parallel Execution <parallel-execution>`.\n\nHow to continuously run the scheduler without blocking the main thread?\n-----------------------------------------------------------------------\n:doc:`Background Execution<background-execution>`.\n",
+      "symbol": null,
+      "truncated": false
+    }
+  ],
+  "neural_work": {
+    "embedding_hits": 4,
+    "embedding_new": 0,
+    "rerank_hits": 29,
+    "rerank_new": 51
+  },
+  "generation_requests": 0
+}

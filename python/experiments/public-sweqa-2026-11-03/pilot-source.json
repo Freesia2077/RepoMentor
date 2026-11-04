@@ -1,0 +1,51 @@
+{
+  "tasks": [
+    {
+      "task_id": "sweqa-flask-001",
+      "repository": "pallets/flask",
+      "snapshot_id": "b597a359a6ff4391d4f36ec2",
+      "commit_sha": "85c5d93cbd049c4bd0679c36fd1ddcae8c37b642",
+      "split": "external-development",
+      "input": {
+        "question": "Repository: pallets/flask\n\nWhat is the relationship between the ASCII-only encoding control parameter in the framework's JSON serialization provider and Unicode character representation in serialized output?"
+      },
+      "source_row": 1,
+      "question_sha256": "57dce721f1eddb206e2b4563bb7273e0c02c77b04352a4a662dc1dd0341db290",
+      "cohort": "public-development",
+      "answerable": true
+    },
+    {
+      "task_id": "sweqa-requests-001",
+      "repository": "psf/requests",
+      "snapshot_id": "e82fdc78cb700c628d4286d6",
+      "commit_sha": "46e939b5525d9c72b677340985582b04b128478a",
+      "split": "external-development",
+      "input": {
+        "question": "Repository: psf/requests\n\nWhat is the semantic significance of the `no_proxy` keyword argument in `get_environ_proxies` overriding environment variable precedence, and what does returning a non-empty dictionary when this override is applied indicate?"
+      },
+      "source_row": 1,
+      "question_sha256": "a8dff26fc9ffe01083dc4b993d092b366000d1de1afe9325c47ffc1b951eb4fe",
+      "cohort": "public-development",
+      "answerable": true
+    }
+  ],
+  "evaluation_only": {
+    "sweqa-flask-001": {
+      "reference_answer": "The `ensure_ascii` attribute on `DefaultJSONProvider` (defaults to `True`) controls whether non-ASCII characters are escaped as Unicode escape sequences in JSON output.\n\nIn `src/flask/json/provider.py` (lines 144-148), `ensure_ascii` is documented as: \"Replace non-ASCII characters with escape sequences. This may be more compatible with some clients, but can be disabled for better performance and size.\"\n\nThe `dumps` method (lines 166-179) passes this attribute to Python's standard library `json.dumps()` via `kwargs.setdefault(\"ensure_ascii\", self.ensure_ascii)`.\n\nWhen `ensure_ascii=True` (default): non-ASCII characters are escaped as `\\uXXXX` sequences. For example, the snowman character (☃, U+2603) becomes `\"\\\\u2603\"`.\n\nWhen `ensure_ascii=False`: non-ASCII characters are kept as literal characters. The same snowman character becomes `\"\\u2603\"` (the actual character).\n\nThis is demonstrated in `tests/test_json.py` (lines 48-54): setting `app.json.ensure_ascii = True` produces `'\"\\\\u2603\"'`, while `False` produces `'\"\\u2603\"'`.\n\nThe relationship: `ensure_ascii` directly controls the Unicode representation strategy — escaping for ASCII compatibility when `True`, or preserving literal characters when `False`.",
+      "source_row": 1,
+      "status": "dataset_reference_not_automatically_truth",
+      "human_approved": false,
+      "sources": [],
+      "answerable": true
+    },
+    "sweqa-requests-001": {
+      "reference_answer": "The semantic significance of the bypass exclusion keyword argument overriding environment variable precedence is that it enables **programmatic runtime control** over proxy bypass settings, taking priority over static environment configuration.\n\nIn the implementation (`src/requests/utils.py`), the function `get_environ_proxies` calls `should_bypass_proxies(url, no_proxy=no_proxy)`. Within `should_bypass_proxies` (lines 769-771), the precedence logic works as follows:\n\n```python\nno_proxy_arg = no_proxy\nif no_proxy is None:\n    no_proxy = get_proxy(\"no_proxy\")  # Falls back to environment variable\n```\n\nWhen the keyword argument is provided (non-None), it is used directly, bypassing the environment variable lookup. Additionally, at line 803, the code uses `with set_environ(\"no_proxy\", no_proxy_arg):` to temporarily override the environment variable for the `proxy_bypass` call, ensuring the argument value takes precedence even in lower-level proxy bypass checks.\n\nThis design allows:\n1. **Runtime flexibility**: Applications can programmatically control proxy bypass behavior per-request or per-session without modifying global environment variables\n2. **Explicit override**: The keyword argument provides a clear, explicit way to override environment settings when needed\n3. **Consistent behavior**: The temporary environment override ensures that both the custom bypass logic and the standard library's `proxy_bypass` function use the same override value\n\nThis is demonstrated in the test `test_not_bypass_no_proxy_keyword` (lines 267-272 in `tests/test_utils.py`), which explicitly tests that \"the 'no_proxy' argument overrides the environment variable 'no_proxy'\", showing that a URL not matching the keyword argument's bypass list will use proxies even if it would otherwise match an environment variable's bypass list.",
+      "source_row": 1,
+      "status": "dataset_reference_not_automatically_truth",
+      "human_approved": false,
+      "sources": [],
+      "answerable": true
+    }
+  },
+  "excluded_paths": {}
+}

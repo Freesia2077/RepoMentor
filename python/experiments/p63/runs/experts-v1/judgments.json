@@ -1,0 +1,188 @@
+[
+  {
+    "candidate_id": "16f436eccd92a4f00ef756a2",
+    "correctness": "correct",
+    "citation_support": "supported",
+    "completeness": "adequate",
+    "abstention": "not_applicable",
+    "entry_scope": "correct",
+    "consistency": "consistent",
+    "claims": [
+      {
+        "claim": "负数抛错且测试使用 throws 验证",
+        "status": "supported",
+        "rationale": "测试实际调用 nanoid(-10)，验证错误消息。",
+        "evidence": [
+          {
+            "path": "test/index.test.js",
+            "start_line": 87,
+            "end_line": 93
+          }
+        ],
+        "verified_evidence": [
+          {
+            "path": "test/index.test.js",
+            "start_line": 87,
+            "end_line": 93,
+            "content": "    test('throws on negative or too big ID length', () => {\n      throws(() => {\n        nanoid(2147483648)\n      }, /Wrong ID size|Invalid typed array length/)\n      throws(() => {\n        nanoid(-10)\n      }, /Wrong ID size|Invalid typed array length/)",
+            "content_sha256": "83c73323390e7346826ae581b72991ccada33b5471b4178e0eae644e435e8536",
+            "visible_to_generator": true
+          }
+        ]
+      }
+    ],
+    "notes": "负数抛错和 throws 测试验证均正确。SDK 附带浏览器构建引用不提供 Node 定位价值，但测试原文足以支持这两项结论。",
+    "key_points": null,
+    "candidate_sha256": "c136ff7de7291454681d68162e15b45cd7fa50b6e7680c2bf338e01bf7d8246d",
+    "reviewer": "Codex (current session)",
+    "review_type": "nonblind_model_development_review",
+    "human_approved": false,
+    "training_eligible": false,
+    "solved": true
+  },
+  {
+    "candidate_id": "8dc119291f45414e732291a0",
+    "correctness": "correct",
+    "citation_support": "supported",
+    "completeness": "partial",
+    "abstention": "not_applicable",
+    "entry_scope": "correct",
+    "consistency": "consistent",
+    "claims": [
+      {
+        "claim": "on 严格区分大小写",
+        "status": "supported",
+        "rationale": "测试断言 FOO/Bar 保留且 foo/bar 不存在。",
+        "evidence": [
+          {
+            "path": "test/index_test.ts",
+            "start_line": 79,
+            "end_line": 90
+          }
+        ],
+        "verified_evidence": [
+          {
+            "path": "test/index_test.ts",
+            "start_line": 79,
+            "end_line": 90,
+            "content": "\t\tit('should NOT normalize case', () => {\n\t\t\tconst foo = () => {};\n\t\t\tinst.on('FOO', foo);\n\t\t\tinst.on('Bar', foo);\n\t\t\tinst.on('baz:baT!', foo);\n\n\t\t\texpect(events.get('FOO')).to.deep.equal([foo]);\n\t\t\texpect(events.has('foo')).to.equal(false);\n\t\t\texpect(events.get('Bar')).to.deep.equal([foo]);\n\t\t\texpect(events.has('bar')).to.equal(false);\n\t\t\texpect(events.get('baz:baT!')).to.deep.equal([foo]);\n\t\t});",
+            "content_sha256": "7c7ae10f82f38319cf3cf181161ee7bfb29bde7819610b697836ace1ba119048",
+            "visible_to_generator": true
+          }
+        ]
+      }
+    ],
+    "notes": "不转小写结论和测试引用正确，但题目要求结合实现，未补查 on 实现，也未解释测试中的实际断言。",
+    "key_points": null,
+    "candidate_sha256": "f020e19bc588b78b87cf823fd44afe2f57268b0205712e7c4917f1eb568624c2",
+    "reviewer": "Codex (current session)",
+    "review_type": "nonblind_model_development_review",
+    "human_approved": false,
+    "training_eligible": false,
+    "solved": false
+  },
+  {
+    "candidate_id": "8df032fb1ac9215f93f8a219",
+    "correctness": "unverifiable",
+    "citation_support": "not_applicable",
+    "completeness": "insufficient",
+    "abstention": "inappropriate",
+    "entry_scope": "correct",
+    "consistency": "consistent",
+    "claims": [
+      {
+        "claim": "未回答蓝图静态资源缓存机制",
+        "status": "unverifiable",
+        "rationale": "源码存在 get_send_file_max_age 等路径。",
+        "evidence": [
+          {
+            "path": "src/flask/blueprints.py",
+            "start_line": 55,
+            "end_line": 102
+          }
+        ],
+        "verified_evidence": [
+          {
+            "path": "src/flask/blueprints.py",
+            "start_line": 55,
+            "end_line": 102,
+            "content": "    def get_send_file_max_age(self, filename: str | None) -> int | None:\n        \"\"\"Used by :func:`send_file` to determine the ``max_age`` cache\n        value for a given file path if it wasn't passed.\n\n        By default, this returns :data:`SEND_FILE_MAX_AGE_DEFAULT` from\n        the configuration of :data:`~flask.current_app`. This defaults\n        to ``None``, which tells the browser to use conditional requests\n        instead of a timed cache, which is usually preferable.\n\n        Note this is a duplicate of the same method in the Flask\n        class.\n\n        .. versionchanged:: 2.0\n            The default configuration is ``None`` instead of 12 hours.\n\n        .. versionadded:: 0.9\n        \"\"\"\n        value = current_app.config[\"SEND_FILE_MAX_AGE_DEFAULT\"]\n\n        if value is None:\n            return None\n\n        if isinstance(value, timedelta):\n            return int(value.total_seconds())\n\n        return value  # type: ignore[no-any-return]\n\n    def send_static_file(self, filename: str) -> Response:\n        \"\"\"The view function used to serve files from\n        :attr:`static_folder`. A route is automatically registered for\n        this view at :attr:`static_url_path` if :attr:`static_folder` is\n        set.\n\n        Note this is a duplicate of the same method in the Flask\n        class.\n\n        .. versionadded:: 0.5\n\n        \"\"\"\n        if not self.has_static_folder:\n            raise RuntimeError(\"'static_folder' must be set to serve static_files.\")\n\n        # send_file only knows to call get_send_file_max_age on the app,\n        # call it here so it works for blueprints too.\n        max_age = self.get_send_file_max_age(filename)\n        return send_from_directory(\n            t.cast(str, self.static_folder), filename, max_age=max_age\n        )",
+            "content_sha256": "1fedb2d2810223681b783f36fba1afd9c22445327f0764ac6c015f869f9afe7e",
+            "visible_to_generator": false
+          }
+        ]
+      }
+    ],
+    "notes": "工具可用但未委派，也未补查蓝图缓存实现，检索失败拒答不算解决。",
+    "key_points": null,
+    "candidate_sha256": "6895283753182479e447f42ccb1f94a4ad2e39860beba103fe5b08076a4856cd",
+    "reviewer": "Codex (current session)",
+    "review_type": "nonblind_model_development_review",
+    "human_approved": false,
+    "training_eligible": false,
+    "solved": false
+  },
+  {
+    "candidate_id": "2dec2f9fe141fb1f5868ce09",
+    "correctness": "correct",
+    "citation_support": "partial",
+    "completeness": "adequate",
+    "abstention": "not_applicable",
+    "entry_scope": "correct",
+    "consistency": "consistent",
+    "claims": [
+      {
+        "claim": "显式绕过参数优先于环境变量",
+        "status": "supported",
+        "rationale": "源码支持，但答案只引用 wrapper。",
+        "evidence": [
+          {
+            "path": "src/requests/utils.py",
+            "start_line": 769,
+            "end_line": 771
+          }
+        ],
+        "verified_evidence": [
+          {
+            "path": "src/requests/utils.py",
+            "start_line": 769,
+            "end_line": 771,
+            "content": "    no_proxy_arg = no_proxy\n    if no_proxy is None:\n        no_proxy = get_proxy(\"no_proxy\")",
+            "content_sha256": "687c697bcb7b0ab5fbc3e58c992186e388ed4fd1ddde0266cd640aef6879d88b",
+            "visible_to_generator": false
+          }
+        ]
+      },
+      {
+        "claim": "非空表明未绕过且有代理配置",
+        "status": "supported",
+        "rationale": "getproxies 分支支持，不证明代理连通。",
+        "evidence": [
+          {
+            "path": "src/requests/utils.py",
+            "start_line": 816,
+            "end_line": 825
+          }
+        ],
+        "verified_evidence": [
+          {
+            "path": "src/requests/utils.py",
+            "start_line": 816,
+            "end_line": 825,
+            "content": "def get_environ_proxies(url, no_proxy=None):\n    \"\"\"\n    Return a dict of environment proxies.\n\n    :rtype: dict\n    \"\"\"\n    if should_bypass_proxies(url, no_proxy=no_proxy):\n        return {}\n    else:\n        return getproxies()",
+            "content_sha256": "988e8929b6e4d2c33a504031023aa337574e2ea74a7acb00327a141ab2bd390d",
+            "visible_to_generator": true
+          }
+        ]
+      }
+    ],
+    "notes": "参数优先和非空字典含义均回答，但优先级引用缺少被调用函数的 None 分支。",
+    "key_points": null,
+    "candidate_sha256": "508ef12e66494baa48529285046821e51006b484afc7f1e33f6124df99e0e4cf",
+    "reviewer": "Codex (current session)",
+    "review_type": "nonblind_model_development_review",
+    "human_approved": false,
+    "training_eligible": false,
+    "solved": false
+  }
+]

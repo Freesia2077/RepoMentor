@@ -12,7 +12,7 @@ import claude_agent_sdk as sdk
 from pydantic import ValidationError
 
 from ..contracts import EvidencePlan, PathAction, SearchAction
-from ..harness import HarnessError
+from ..execution import HarnessError
 from ..paths import data_root
 from ..skills import assets_path, stage_prompt
 from ..tools import TOOL_DESCRIPTIONS

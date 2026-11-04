@@ -1,0 +1,1239 @@
+[
+  {
+    "candidate_id": "9b4fbb7788b8a686b54cca43",
+    "correctness": "incorrect",
+    "citation_support": "unsupported",
+    "completeness": "partial",
+    "abstention": "not_applicable",
+    "entry_scope": "correct",
+    "consistency": "consistent",
+    "claims": [
+      {
+        "claim": "Node nanoid 负数抛 TypeError",
+        "status": "contradicted",
+        "rationale": "负数分支显式 RangeError。",
+        "evidence": [
+          {
+            "path": "index.js",
+            "start_line": 133,
+            "end_line": 138
+          }
+        ],
+        "verified_evidence": [
+          {
+            "path": "index.js",
+            "start_line": 133,
+            "end_line": 138,
+            "content": "  return (size = defaultSize) => {\n    // `|=` convert `size` to number to prevent `valueOf` abusing\n    // and pool offset pollution\n    size |= 0\n    if (size < 0) throw new RangeError('Wrong ID size')\n    if (size === 0) return ''",
+            "content_sha256": "a2cd1e5a3ee0815f52f8518c2ba5fe4a3358024401993d7b63baeff18d5ca89d",
+            "visible_to_generator": false
+          }
+        ]
+      },
+      {
+        "claim": "0 长度测试间接证明负数行为",
+        "status": "unsupported",
+        "rationale": "应检查 -10 的 throws 断言。",
+        "evidence": [
+          {
+            "path": "test/index.test.js",
+            "start_line": 87,
+            "end_line": 93
+          }
+        ],
+        "verified_evidence": [
+          {
+            "path": "test/index.test.js",
+            "start_line": 87,
+            "end_line": 93,
+            "content": "    test('throws on negative or too big ID length', () => {\n      throws(() => {\n        nanoid(2147483648)\n      }, /Wrong ID size|Invalid typed array length/)\n      throws(() => {\n        nanoid(-10)\n      }, /Wrong ID size|Invalid typed array length/)",
+            "content_sha256": "83c73323390e7346826ae581b72991ccada33b5471b4178e0eae644e435e8536",
+            "visible_to_generator": false
+          }
+        ]
+      }
+    ],
+    "notes": "抛错种类写为 TypeError，实际 RangeError；0 长度的 customAlphabet 测试不证明 nanoid 负数行为。",
+    "key_points": null,
+    "candidate_sha256": "d5c36862d62a07380c583b74837636683e640bbffee642da2ba30e5aeaae7757",
+    "reviewer": "Codex (current session)",
+    "review_type": "nonblind_model_development_review",
+    "human_approved": false,
+    "training_eligible": false,
+    "solved": false
+  },
+  {
+    "candidate_id": "0c2c3f37a1c79e1f89abcbf2",
+    "correctness": "partially_correct",
+    "citation_support": "unsupported",
+    "completeness": "partial",
+    "abstention": "not_applicable",
+    "entry_scope": "correct",
+    "consistency": "consistent",
+    "claims": [
+      {
+        "claim": "负数抛错且 throws 断言验证",
+        "status": "partial",
+        "rationale": "真正的 nanoid 负数测试位于 87–93。",
+        "evidence": [
+          {
+            "path": "test/index.test.js",
+            "start_line": 87,
+            "end_line": 93
+          },
+          {
+            "path": "test/index.test.js",
+            "start_line": 257,
+            "end_line": 262
+          }
+        ],
+        "verified_evidence": [
+          {
+            "path": "test/index.test.js",
+            "start_line": 87,
+            "end_line": 93,
+            "content": "    test('throws on negative or too big ID length', () => {\n      throws(() => {\n        nanoid(2147483648)\n      }, /Wrong ID size|Invalid typed array length/)\n      throws(() => {\n        nanoid(-10)\n      }, /Wrong ID size|Invalid typed array length/)",
+            "content_sha256": "83c73323390e7346826ae581b72991ccada33b5471b4178e0eae644e435e8536",
+            "visible_to_generator": false
+          },
+          {
+            "path": "test/index.test.js",
+            "start_line": 257,
+            "end_line": 262,
+            "content": "      if (type === 'node') {\n        test(`does not fall in infinite loop`, () => {\n          equal(customAlphabet('abc')(0), '')\n          equal(customAlphabet('abc', 0)(0), '')\n        })\n      }",
+            "content_sha256": "1cdc23daf8874ee2a1595d74867a84936e8dc9596f990274331472a89eee274e",
+            "visible_to_generator": true
+          }
+        ]
+      }
+    ],
+    "notes": "负数抛错结论正确，但声称所引 258–261 有 throws，实际只验证 customAlphabet(0)。",
+    "key_points": null,
+    "candidate_sha256": "ccef9af73de44c62d745490bd2e29b09e1a55e8abaec8287baaf603fdc804fc3",
+    "reviewer": "Codex (current session)",
+    "review_type": "nonblind_model_development_review",
+    "human_approved": false,
+    "training_eligible": false,
+    "solved": false
+  },
+  {
+    "candidate_id": "c36d570710e1be2c39be8102",
+    "correctness": "correct",
+    "citation_support": "unsupported",
+    "completeness": "partial",
+    "abstention": "not_applicable",
+    "entry_scope": "correct",
+    "consistency": "consistent",
+    "claims": [
+      {
+        "claim": "负数抛错而零长度返回空串",
+        "status": "supported",
+        "rationale": "实现支持，模型引用测试 259 不能支持负数结论。",
+        "evidence": [
+          {
+            "path": "index.js",
+            "start_line": 133,
+            "end_line": 138
+          }
+        ],
+        "verified_evidence": [
+          {
+            "path": "index.js",
+            "start_line": 133,
+            "end_line": 138,
+            "content": "  return (size = defaultSize) => {\n    // `|=` convert `size` to number to prevent `valueOf` abusing\n    // and pool offset pollution\n    size |= 0\n    if (size < 0) throw new RangeError('Wrong ID size')\n    if (size === 0) return ''",
+            "content_sha256": "a2cd1e5a3ee0815f52f8518c2ba5fe4a3358024401993d7b63baeff18d5ca89d",
+            "visible_to_generator": false
+          }
+        ]
+      }
+    ],
+    "notes": "负数抛错结论正确，但没有沿实现给依据；所引行只验证零长度。",
+    "key_points": null,
+    "candidate_sha256": "067ac35c96e42231b3b377675cfc8a6544371ca54eb686bc06883541521f9883",
+    "reviewer": "Codex (current session)",
+    "review_type": "nonblind_model_development_review",
+    "human_approved": false,
+    "training_eligible": false,
+    "solved": false
+  },
+  {
+    "candidate_id": "b325df3148acf1f114cdb671",
+    "correctness": "correct",
+    "citation_support": "unsupported",
+    "completeness": "partial",
+    "abstention": "not_applicable",
+    "entry_scope": "correct",
+    "consistency": "consistent",
+    "claims": [
+      {
+        "claim": "Node nanoid 负数抛 RangeError",
+        "status": "supported",
+        "rationale": "真正路径是绑定 177 与 133–138；单独 random 的 21 行不足。",
+        "evidence": [
+          {
+            "path": "index.js",
+            "start_line": 133,
+            "end_line": 138
+          },
+          {
+            "path": "index.js",
+            "start_line": 177,
+            "end_line": 177
+          }
+        ],
+        "verified_evidence": [
+          {
+            "path": "index.js",
+            "start_line": 133,
+            "end_line": 138,
+            "content": "  return (size = defaultSize) => {\n    // `|=` convert `size` to number to prevent `valueOf` abusing\n    // and pool offset pollution\n    size |= 0\n    if (size < 0) throw new RangeError('Wrong ID size')\n    if (size === 0) return ''",
+            "content_sha256": "a2cd1e5a3ee0815f52f8518c2ba5fe4a3358024401993d7b63baeff18d5ca89d",
+            "visible_to_generator": false
+          },
+          {
+            "path": "index.js",
+            "start_line": 177,
+            "end_line": 177,
+            "content": "export const nanoid = customAlphabet(urlAlphabet)",
+            "content_sha256": "c360da0cbb0aa1c8336ed31a9e0e16ce867647e121e735f1574f9047535ded40",
+            "visible_to_generator": false
+          }
+        ]
+      }
+    ],
+    "notes": "RangeError 结论正确，却引用 random(bytes) 的分支替代 nanoid→customAlphabet 路径。",
+    "key_points": null,
+    "candidate_sha256": "ee1d80056777092999bedcad416ced37dab328629e81b02f9031038bdbbf22cc",
+    "reviewer": "Codex (current session)",
+    "review_type": "nonblind_model_development_review",
+    "human_approved": false,
+    "training_eligible": false,
+    "solved": false
+  },
+  {
+    "candidate_id": "d349d7d13b5e177900f6e7e9",
+    "correctness": "incorrect",
+    "citation_support": "unsupported",
+    "completeness": "insufficient",
+    "abstention": "not_applicable",
+    "entry_scope": "mixed",
+    "consistency": "consistent",
+    "claims": [
+      {
+        "claim": "non-secure 与 Node 负数相同",
+        "status": "contradicted",
+        "rationale": "前者循环不执行返回空串，后者 RangeError。",
+        "evidence": [
+          {
+            "path": "non-secure/index.js",
+            "start_line": 19,
+            "end_line": 29
+          },
+          {
+            "path": "index.js",
+            "start_line": 133,
+            "end_line": 138
+          }
+        ],
+        "verified_evidence": [
+          {
+            "path": "non-secure/index.js",
+            "start_line": 19,
+            "end_line": 29,
+            "content": "export let nanoid = (size = 21) => {\n  let id = ''\n  // A compact alternative for `for (var i = 0; i < step; i++)`.\n  // `> 0` stops a negative size from looping forever.\n  let i = size | 0\n  while (i-- > 0) {\n    // `| 0` is more compact and faster than `Math.floor()`.\n    id += urlAlphabet[(Math.random() * 64) | 0]\n  }\n  return id\n}",
+            "content_sha256": "b57574c83361e1fb043c39f15ed99b4b1062a181535e98a1a8e1f9b828dd6417",
+            "visible_to_generator": false
+          },
+          {
+            "path": "index.js",
+            "start_line": 133,
+            "end_line": 138,
+            "content": "  return (size = defaultSize) => {\n    // `|=` convert `size` to number to prevent `valueOf` abusing\n    // and pool offset pollution\n    size |= 0\n    if (size < 0) throw new RangeError('Wrong ID size')\n    if (size === 0) return ''",
+            "content_sha256": "a2cd1e5a3ee0815f52f8518c2ba5fe4a3358024401993d7b63baeff18d5ca89d",
+            "visible_to_generator": false
+          }
+        ]
+      }
+    ],
+    "notes": "误说两个入口结果相同，且没有引用 non-secure 源码。",
+    "key_points": null,
+    "candidate_sha256": "91f077ad9516cc51e64a7dbe32add0e53376e25e012e535a83561f4ead78ac86",
+    "reviewer": "Codex (current session)",
+    "review_type": "nonblind_model_development_review",
+    "human_approved": false,
+    "training_eligible": false,
+    "solved": false
+  },
+  {
+    "candidate_id": "e83319505430369821dfaadd",
+    "correctness": "incorrect",
+    "citation_support": "unsupported",
+    "completeness": "insufficient",
+    "abstention": "not_applicable",
+    "entry_scope": "correct",
+    "consistency": "consistent",
+    "claims": [
+      {
+        "claim": "non-secure 抛错而 Node 生成 10 字符",
+        "status": "contradicted",
+        "rationale": "代码分别返回空串与抛 RangeError。",
+        "evidence": [
+          {
+            "path": "non-secure/index.js",
+            "start_line": 19,
+            "end_line": 29
+          },
+          {
+            "path": "index.js",
+            "start_line": 133,
+            "end_line": 138
+          }
+        ],
+        "verified_evidence": [
+          {
+            "path": "non-secure/index.js",
+            "start_line": 19,
+            "end_line": 29,
+            "content": "export let nanoid = (size = 21) => {\n  let id = ''\n  // A compact alternative for `for (var i = 0; i < step; i++)`.\n  // `> 0` stops a negative size from looping forever.\n  let i = size | 0\n  while (i-- > 0) {\n    // `| 0` is more compact and faster than `Math.floor()`.\n    id += urlAlphabet[(Math.random() * 64) | 0]\n  }\n  return id\n}",
+            "content_sha256": "b57574c83361e1fb043c39f15ed99b4b1062a181535e98a1a8e1f9b828dd6417",
+            "visible_to_generator": true
+          },
+          {
+            "path": "index.js",
+            "start_line": 133,
+            "end_line": 138,
+            "content": "  return (size = defaultSize) => {\n    // `|=` convert `size` to number to prevent `valueOf` abusing\n    // and pool offset pollution\n    size |= 0\n    if (size < 0) throw new RangeError('Wrong ID size')\n    if (size === 0) return ''",
+            "content_sha256": "a2cd1e5a3ee0815f52f8518c2ba5fe4a3358024401993d7b63baeff18d5ca89d",
+            "visible_to_generator": true
+          }
+        ]
+      }
+    ],
+    "notes": "两入口原文均已进入最终输入，仍把分支结论写反并虚构正长度 10；属于提供信息后的模型误读。",
+    "key_points": null,
+    "candidate_sha256": "e55f9da5efdd8ea5b9f22eab81567a681db8d9b40081be930509d4eb00ca4f18",
+    "reviewer": "Codex (current session)",
+    "review_type": "nonblind_model_development_review",
+    "human_approved": false,
+    "training_eligible": false,
+    "solved": false
+  },
+  {
+    "candidate_id": "b9a6d0f3eafbb23bf68d709a",
+    "correctness": "incorrect",
+    "citation_support": "unsupported",
+    "completeness": "insufficient",
+    "abstention": "not_applicable",
+    "entry_scope": "correct",
+    "consistency": "consistent",
+    "claims": [
+      {
+        "claim": "on 将名字转成小写",
+        "status": "contradicted",
+        "rationale": "测试断言小写键不存在，on 原样使用 type。",
+        "evidence": [
+          {
+            "path": "test/index_test.ts",
+            "start_line": 79,
+            "end_line": 90
+          },
+          {
+            "path": "src/index.ts",
+            "start_line": 66,
+            "end_line": 73
+          }
+        ],
+        "verified_evidence": [
+          {
+            "path": "test/index_test.ts",
+            "start_line": 79,
+            "end_line": 90,
+            "content": "\t\tit('should NOT normalize case', () => {\n\t\t\tconst foo = () => {};\n\t\t\tinst.on('FOO', foo);\n\t\t\tinst.on('Bar', foo);\n\t\t\tinst.on('baz:baT!', foo);\n\n\t\t\texpect(events.get('FOO')).to.deep.equal([foo]);\n\t\t\texpect(events.has('foo')).to.equal(false);\n\t\t\texpect(events.get('Bar')).to.deep.equal([foo]);\n\t\t\texpect(events.has('bar')).to.equal(false);\n\t\t\texpect(events.get('baz:baT!')).to.deep.equal([foo]);\n\t\t});",
+            "content_sha256": "7c7ae10f82f38319cf3cf181161ee7bfb29bde7819610b697836ace1ba119048",
+            "visible_to_generator": true
+          },
+          {
+            "path": "src/index.ts",
+            "start_line": 66,
+            "end_line": 73,
+            "content": "\t\ton<Key extends keyof Events>(type: Key, handler: GenericEventHandler) {\n\t\t\tconst handlers: Array<GenericEventHandler> | undefined = all!.get(type);\n\t\t\tif (handlers) {\n\t\t\t\thandlers.push(handler);\n\t\t\t} else {\n\t\t\t\tall!.set(type, [handler] as EventHandlerList<Events[keyof Events]>);\n\t\t\t}\n\t\t},",
+            "content_sha256": "0a5bf296ae849cd916f0b4eedbc3b3dbd431acb523f64fede2782b79ff119004",
+            "visible_to_generator": false
+          }
+        ]
+      }
+    ],
+    "notes": "把 should NOT normalize case 的明确否定误读为转小写。",
+    "key_points": null,
+    "candidate_sha256": "bc3b753517fde8a2054a53001d3a277c16f2b1c03c6ecae0774e7f23e145cf5b",
+    "reviewer": "Codex (current session)",
+    "review_type": "nonblind_model_development_review",
+    "human_approved": false,
+    "training_eligible": false,
+    "solved": false
+  },
+  {
+    "candidate_id": "e253ed07a1020070e8c0fd2e",
+    "correctness": "correct",
+    "citation_support": "supported",
+    "completeness": "partial",
+    "abstention": "not_applicable",
+    "entry_scope": "correct",
+    "consistency": "consistent",
+    "claims": [
+      {
+        "claim": "on 严格区分大小写",
+        "status": "supported",
+        "rationale": "测试断言 FOO/Bar 保留且 foo/bar 不存在。",
+        "evidence": [
+          {
+            "path": "test/index_test.ts",
+            "start_line": 79,
+            "end_line": 90
+          }
+        ],
+        "verified_evidence": [
+          {
+            "path": "test/index_test.ts",
+            "start_line": 79,
+            "end_line": 90,
+            "content": "\t\tit('should NOT normalize case', () => {\n\t\t\tconst foo = () => {};\n\t\t\tinst.on('FOO', foo);\n\t\t\tinst.on('Bar', foo);\n\t\t\tinst.on('baz:baT!', foo);\n\n\t\t\texpect(events.get('FOO')).to.deep.equal([foo]);\n\t\t\texpect(events.has('foo')).to.equal(false);\n\t\t\texpect(events.get('Bar')).to.deep.equal([foo]);\n\t\t\texpect(events.has('bar')).to.equal(false);\n\t\t\texpect(events.get('baz:baT!')).to.deep.equal([foo]);\n\t\t});",
+            "content_sha256": "7c7ae10f82f38319cf3cf181161ee7bfb29bde7819610b697836ace1ba119048",
+            "visible_to_generator": true
+          }
+        ]
+      }
+    ],
+    "notes": "不转小写结论和测试引用正确，但题目要求结合实现，未补查 on 实现，也未解释测试中的实际断言。",
+    "key_points": null,
+    "candidate_sha256": "5ac1c307a9f22694f348c9416c3d410c79df9b5aa40adbbaa757b76f4bbbe900",
+    "reviewer": "Codex (current session)",
+    "review_type": "nonblind_model_development_review",
+    "human_approved": false,
+    "training_eligible": false,
+    "solved": false
+  },
+  {
+    "candidate_id": "fc45bbebf35daf97a112a0a2",
+    "correctness": "partially_correct",
+    "citation_support": "partial",
+    "completeness": "adequate",
+    "abstention": "not_applicable",
+    "entry_scope": "correct",
+    "consistency": "contradictory",
+    "claims": [
+      {
+        "claim": "开头肯定列表本身，后文又否定",
+        "status": "partial",
+        "rationale": "切片确实创建浅拷贝。",
+        "evidence": [
+          {
+            "path": "schedule/__init__.py",
+            "start_line": 122,
+            "end_line": 133
+          }
+        ],
+        "verified_evidence": [
+          {
+            "path": "schedule/__init__.py",
+            "start_line": 122,
+            "end_line": 133,
+            "content": "    def get_jobs(self, tag: Optional[Hashable] = None) -> List[\"Job\"]:\n        \"\"\"\n        Gets scheduled jobs marked with the given tag, or all jobs\n        if tag is omitted.\n\n        :param tag: An identifier used to identify a subset of\n                    jobs to retrieve\n        \"\"\"\n        if tag is None:\n            return self.jobs[:]\n        else:\n            return [job for job in self.jobs if tag in job.tags]",
+            "content_sha256": "3b203d4e5005e3c3be275304e9fce13d28bb27a7128ad849faa7f33725e6e1be",
+            "visible_to_generator": true
+          }
+        ]
+      }
+    ],
+    "notes": "后文 self.jobs[:] 副本解释正确，但对“返回内部列表本身吗”开头答“是的”，前后冲突。",
+    "key_points": null,
+    "candidate_sha256": "52d4f7d4c5ef464788a7ee69c8c5a8421a00445d445e0a68e891f53023ba3197",
+    "reviewer": "Codex (current session)",
+    "review_type": "nonblind_model_development_review",
+    "human_approved": false,
+    "training_eligible": false,
+    "solved": false
+  },
+  {
+    "candidate_id": "bceabb70d3e6e91f0e861d90",
+    "correctness": "partially_correct",
+    "citation_support": "partial",
+    "completeness": "adequate",
+    "abstention": "not_applicable",
+    "entry_scope": "correct",
+    "consistency": "contradictory",
+    "claims": [
+      {
+        "claim": "开头肯定列表本身，后文又否定",
+        "status": "partial",
+        "rationale": "切片确实创建浅拷贝。",
+        "evidence": [
+          {
+            "path": "schedule/__init__.py",
+            "start_line": 122,
+            "end_line": 133
+          }
+        ],
+        "verified_evidence": [
+          {
+            "path": "schedule/__init__.py",
+            "start_line": 122,
+            "end_line": 133,
+            "content": "    def get_jobs(self, tag: Optional[Hashable] = None) -> List[\"Job\"]:\n        \"\"\"\n        Gets scheduled jobs marked with the given tag, or all jobs\n        if tag is omitted.\n\n        :param tag: An identifier used to identify a subset of\n                    jobs to retrieve\n        \"\"\"\n        if tag is None:\n            return self.jobs[:]\n        else:\n            return [job for job in self.jobs if tag in job.tags]",
+            "content_sha256": "3b203d4e5005e3c3be275304e9fce13d28bb27a7128ad849faa7f33725e6e1be",
+            "visible_to_generator": true
+          }
+        ]
+      }
+    ],
+    "notes": "后文 self.jobs[:] 副本解释正确，但对“返回内部列表本身吗”开头答“是的”，前后冲突。",
+    "key_points": null,
+    "candidate_sha256": "d49d988dbf51462a5765c667f78e9d859e13625fc632336b17d48666f76b5f33",
+    "reviewer": "Codex (current session)",
+    "review_type": "nonblind_model_development_review",
+    "human_approved": false,
+    "training_eligible": false,
+    "solved": false
+  },
+  {
+    "candidate_id": "9f1816c646fc3189255045be",
+    "correctness": "correct",
+    "citation_support": "not_applicable",
+    "completeness": "partial",
+    "abstention": "appropriate",
+    "entry_scope": "not_applicable",
+    "consistency": "consistent",
+    "claims": [
+      {
+        "claim": "不能给出未提供的生产统计",
+        "status": "unverifiable",
+        "rationale": "仓库实现不能确认用户公司的昨日运行统计。",
+        "evidence": [],
+        "verified_evidence": []
+      }
+    ],
+    "notes": "适当拒答且不编造生产统计，但未解释需要生产日志或遥测的具体缺口。",
+    "key_points": null,
+    "candidate_sha256": "d6fc1204ef232d1f0e5daf6bf2e33c3dc96b9ba52226194f9e76ec44d78b5ec4",
+    "reviewer": "Codex (current session)",
+    "review_type": "nonblind_model_development_review",
+    "human_approved": false,
+    "training_eligible": false,
+    "solved": false
+  },
+  {
+    "candidate_id": "6119e4b20bdf84d979156acf",
+    "correctness": "correct",
+    "citation_support": "not_applicable",
+    "completeness": "partial",
+    "abstention": "appropriate",
+    "entry_scope": "not_applicable",
+    "consistency": "consistent",
+    "claims": [
+      {
+        "claim": "不能给出未提供的生产统计",
+        "status": "unverifiable",
+        "rationale": "仓库实现不能确认用户公司的昨日运行统计。",
+        "evidence": [],
+        "verified_evidence": []
+      }
+    ],
+    "notes": "适当拒答且不编造生产统计，但未解释需要生产日志或遥测的具体缺口。",
+    "key_points": null,
+    "candidate_sha256": "96fb80ee1816b8f2b51b4aa209158782c989fa4c0b2e90160e9e0af84b86cd12",
+    "reviewer": "Codex (current session)",
+    "review_type": "nonblind_model_development_review",
+    "human_approved": false,
+    "training_eligible": false,
+    "solved": false
+  },
+  {
+    "candidate_id": "1476f093245a9b7adfafc442",
+    "correctness": "correct",
+    "citation_support": "partial",
+    "completeness": "partial",
+    "abstention": "not_applicable",
+    "entry_scope": "correct",
+    "consistency": "consistent",
+    "claims": [
+      {
+        "claim": "ensure_ascii 控制非 ASCII 转义",
+        "status": "supported",
+        "rationale": "参数注释支持，但模型引用 176–178 本身不足以支持具体转换含义。",
+        "evidence": [
+          {
+            "path": "src/flask/json/provider.py",
+            "start_line": 144,
+            "end_line": 148
+          }
+        ],
+        "verified_evidence": [
+          {
+            "path": "src/flask/json/provider.py",
+            "start_line": 144,
+            "end_line": 148,
+            "content": "    ensure_ascii = True\n    \"\"\"Replace non-ASCII characters with escape sequences. This may be\n    more compatible with some clients, but can be disabled for better\n    performance and size.\n    \"\"\"",
+            "content_sha256": "ee092b2a487a1f1330c288514c7523b7bf64a98400affa02027cb584358f7847",
+            "visible_to_generator": false
+          }
+        ]
+      }
+    ],
+    "notes": "说明控制转义/原字符，但未说明 True/False 对应关系；引用只是 setdefault 参数传递，缺参数语义注释或测试。",
+    "key_points": null,
+    "candidate_sha256": "7ac4a97f62a155029648cc46f107daa44d1c1944c461201ddecc61d113117cfa",
+    "reviewer": "Codex (current session)",
+    "review_type": "nonblind_model_development_review",
+    "human_approved": false,
+    "training_eligible": false,
+    "solved": false
+  },
+  {
+    "candidate_id": "f054884e97d13c91fce809ee",
+    "correctness": "correct",
+    "citation_support": "partial",
+    "completeness": "partial",
+    "abstention": "not_applicable",
+    "entry_scope": "correct",
+    "consistency": "consistent",
+    "claims": [
+      {
+        "claim": "ensure_ascii 控制非 ASCII 转义",
+        "status": "supported",
+        "rationale": "参数注释支持，但模型引用 176–178 本身不足以支持具体转换含义。",
+        "evidence": [
+          {
+            "path": "src/flask/json/provider.py",
+            "start_line": 144,
+            "end_line": 148
+          }
+        ],
+        "verified_evidence": [
+          {
+            "path": "src/flask/json/provider.py",
+            "start_line": 144,
+            "end_line": 148,
+            "content": "    ensure_ascii = True\n    \"\"\"Replace non-ASCII characters with escape sequences. This may be\n    more compatible with some clients, but can be disabled for better\n    performance and size.\n    \"\"\"",
+            "content_sha256": "ee092b2a487a1f1330c288514c7523b7bf64a98400affa02027cb584358f7847",
+            "visible_to_generator": false
+          }
+        ]
+      }
+    ],
+    "notes": "说明控制转义/原字符，但未说明 True/False 对应关系；引用只是 setdefault 参数传递，缺参数语义注释或测试。",
+    "key_points": null,
+    "candidate_sha256": "9693273ae771af4120fc72e26b84c3be8d39f0c5ddb11807fc5d3854cbebfd42",
+    "reviewer": "Codex (current session)",
+    "review_type": "nonblind_model_development_review",
+    "human_approved": false,
+    "training_eligible": false,
+    "solved": false
+  },
+  {
+    "candidate_id": "47b58571fea72b851263ab53",
+    "correctness": "unverifiable",
+    "citation_support": "not_applicable",
+    "completeness": "insufficient",
+    "abstention": "inappropriate",
+    "entry_scope": "correct",
+    "consistency": "consistent",
+    "claims": [
+      {
+        "claim": "未回答注册后为何拒绝 setup",
+        "status": "unverifiable",
+        "rationale": "实际源码包含注册标志与一致性解释。",
+        "evidence": [
+          {
+            "path": "src/flask/sansio/blueprints.py",
+            "start_line": 213,
+            "end_line": 221
+          },
+          {
+            "path": "src/flask/sansio/blueprints.py",
+            "start_line": 319,
+            "end_line": 335
+          }
+        ],
+        "verified_evidence": [
+          {
+            "path": "src/flask/sansio/blueprints.py",
+            "start_line": 213,
+            "end_line": 221,
+            "content": "    def _check_setup_finished(self, f_name: str) -> None:\n        if self._got_registered_once:\n            raise AssertionError(\n                f\"The setup method '{f_name}' can no longer be called on the blueprint\"\n                f\" '{self.name}'. It has already been registered at least once, any\"\n                \" changes will not be applied consistently.\\n\"\n                \"Make sure all imports, decorators, functions, etc. needed to set up\"\n                \" the blueprint are done before registering it.\"\n            )",
+            "content_sha256": "b4c75a22b022e443069d149a3fa2bbd7039fe362fe691335625fc8f904e534ed",
+            "visible_to_generator": false
+          },
+          {
+            "path": "src/flask/sansio/blueprints.py",
+            "start_line": 319,
+            "end_line": 335,
+            "content": "        app.blueprints[name] = self\n        self._got_registered_once = True\n        state = self.make_setup_state(app, options, first_bp_registration)\n\n        if self.has_static_folder:\n            state.add_url_rule(\n                f\"{self.static_url_path}/<path:filename>\",\n                view_func=self.send_static_file,  # type: ignore[attr-defined]\n                endpoint=\"static\",\n            )\n\n        # Merge blueprint data into parent.\n        if first_bp_registration or first_name_registration:\n            self._merge_blueprint_funcs(app, name)\n\n        for deferred in self.deferred_functions:\n            deferred(state)",
+            "content_sha256": "1d7fa8270eeb5a8f36d962c677248ac5e7863e278cf7e18792697655253c4cb2",
+            "visible_to_generator": false
+          }
+        ]
+      }
+    ],
+    "notes": "拒答是检索未取得相关守卫，不是仓库缺少答案；不算解决。",
+    "key_points": null,
+    "candidate_sha256": "52ef37436e27e3eb7a1761f9b9feb1cd6f9221e07c81b9810b9651770774c59e",
+    "reviewer": "Codex (current session)",
+    "review_type": "nonblind_model_development_review",
+    "human_approved": false,
+    "training_eligible": false,
+    "solved": false
+  },
+  {
+    "candidate_id": "574c383e4c2b6ebb69b722fc",
+    "correctness": "unverifiable",
+    "citation_support": "not_applicable",
+    "completeness": "insufficient",
+    "abstention": "inappropriate",
+    "entry_scope": "correct",
+    "consistency": "consistent",
+    "claims": [
+      {
+        "claim": "未回答注册后为何拒绝 setup",
+        "status": "unverifiable",
+        "rationale": "实际源码包含注册标志与一致性解释。",
+        "evidence": [
+          {
+            "path": "src/flask/sansio/blueprints.py",
+            "start_line": 213,
+            "end_line": 221
+          },
+          {
+            "path": "src/flask/sansio/blueprints.py",
+            "start_line": 319,
+            "end_line": 335
+          }
+        ],
+        "verified_evidence": [
+          {
+            "path": "src/flask/sansio/blueprints.py",
+            "start_line": 213,
+            "end_line": 221,
+            "content": "    def _check_setup_finished(self, f_name: str) -> None:\n        if self._got_registered_once:\n            raise AssertionError(\n                f\"The setup method '{f_name}' can no longer be called on the blueprint\"\n                f\" '{self.name}'. It has already been registered at least once, any\"\n                \" changes will not be applied consistently.\\n\"\n                \"Make sure all imports, decorators, functions, etc. needed to set up\"\n                \" the blueprint are done before registering it.\"\n            )",
+            "content_sha256": "b4c75a22b022e443069d149a3fa2bbd7039fe362fe691335625fc8f904e534ed",
+            "visible_to_generator": false
+          },
+          {
+            "path": "src/flask/sansio/blueprints.py",
+            "start_line": 319,
+            "end_line": 335,
+            "content": "        app.blueprints[name] = self\n        self._got_registered_once = True\n        state = self.make_setup_state(app, options, first_bp_registration)\n\n        if self.has_static_folder:\n            state.add_url_rule(\n                f\"{self.static_url_path}/<path:filename>\",\n                view_func=self.send_static_file,  # type: ignore[attr-defined]\n                endpoint=\"static\",\n            )\n\n        # Merge blueprint data into parent.\n        if first_bp_registration or first_name_registration:\n            self._merge_blueprint_funcs(app, name)\n\n        for deferred in self.deferred_functions:\n            deferred(state)",
+            "content_sha256": "1d7fa8270eeb5a8f36d962c677248ac5e7863e278cf7e18792697655253c4cb2",
+            "visible_to_generator": false
+          }
+        ]
+      }
+    ],
+    "notes": "拒答是检索未取得相关守卫，不是仓库缺少答案；不算解决。",
+    "key_points": null,
+    "candidate_sha256": "989da6911afc464b29897e526558d943d180361e6e843516db352eb49acb7f90",
+    "reviewer": "Codex (current session)",
+    "review_type": "nonblind_model_development_review",
+    "human_approved": false,
+    "training_eligible": false,
+    "solved": false
+  },
+  {
+    "candidate_id": "87df2cdac4ab399394b82869",
+    "correctness": "partially_correct",
+    "citation_support": "partial",
+    "completeness": "partial",
+    "abstention": "not_applicable",
+    "entry_scope": "correct",
+    "consistency": "consistent",
+    "claims": [
+      {
+        "claim": "蓝图分离组件与静态资源",
+        "status": "supported",
+        "rationale": "蓝图文档和静态资源函数支持。",
+        "evidence": [
+          {
+            "path": "docs/blueprints.rst",
+            "start_line": 8,
+            "end_line": 14
+          },
+          {
+            "path": "src/flask/blueprints.py",
+            "start_line": 82,
+            "end_line": 102
+          }
+        ],
+        "verified_evidence": [
+          {
+            "path": "docs/blueprints.rst",
+            "start_line": 8,
+            "end_line": 14,
+            "content": "Flask uses a concept of *blueprints* for making application components and\nsupporting common patterns within an application or across applications.\nBlueprints can greatly simplify how large applications work and provide a\ncentral means for Flask extensions to register operations on applications.\nA :class:`Blueprint` object works similarly to a :class:`Flask`\napplication object, but it is not actually an application.  Rather it is a\n*blueprint* of how to construct or extend an application.",
+            "content_sha256": "6e9087831f6206f08199a2cc83cc6ef5c1cbc87fb4f43373252475cbbdd334cd",
+            "visible_to_generator": true
+          },
+          {
+            "path": "src/flask/blueprints.py",
+            "start_line": 82,
+            "end_line": 102,
+            "content": "    def send_static_file(self, filename: str) -> Response:\n        \"\"\"The view function used to serve files from\n        :attr:`static_folder`. A route is automatically registered for\n        this view at :attr:`static_url_path` if :attr:`static_folder` is\n        set.\n\n        Note this is a duplicate of the same method in the Flask\n        class.\n\n        .. versionadded:: 0.5\n\n        \"\"\"\n        if not self.has_static_folder:\n            raise RuntimeError(\"'static_folder' must be set to serve static_files.\")\n\n        # send_file only knows to call get_send_file_max_age on the app,\n        # call it here so it works for blueprints too.\n        max_age = self.get_send_file_max_age(filename)\n        return send_from_directory(\n            t.cast(str, self.static_folder), filename, max_age=max_age\n        )",
+            "content_sha256": "6945c7d88aa5a05e052717dd02b70b21aa883a9916d3a4a7ac0bbd79485ffdaa",
+            "visible_to_generator": false
+          }
+        ]
+      },
+      {
+        "claim": "一致缓存机制",
+        "status": "partial",
+        "rationale": "需说明 get_send_file_max_age/SEND_FILE_MAX_AGE_DEFAULT，而答案只有概括。",
+        "evidence": [
+          {
+            "path": "src/flask/blueprints.py",
+            "start_line": 55,
+            "end_line": 102
+          },
+          {
+            "path": "src/flask/app.py",
+            "start_line": 281,
+            "end_line": 328
+          }
+        ],
+        "verified_evidence": [
+          {
+            "path": "src/flask/blueprints.py",
+            "start_line": 55,
+            "end_line": 102,
+            "content": "    def get_send_file_max_age(self, filename: str | None) -> int | None:\n        \"\"\"Used by :func:`send_file` to determine the ``max_age`` cache\n        value for a given file path if it wasn't passed.\n\n        By default, this returns :data:`SEND_FILE_MAX_AGE_DEFAULT` from\n        the configuration of :data:`~flask.current_app`. This defaults\n        to ``None``, which tells the browser to use conditional requests\n        instead of a timed cache, which is usually preferable.\n\n        Note this is a duplicate of the same method in the Flask\n        class.\n\n        .. versionchanged:: 2.0\n            The default configuration is ``None`` instead of 12 hours.\n\n        .. versionadded:: 0.9\n        \"\"\"\n        value = current_app.config[\"SEND_FILE_MAX_AGE_DEFAULT\"]\n\n        if value is None:\n            return None\n\n        if isinstance(value, timedelta):\n            return int(value.total_seconds())\n\n        return value  # type: ignore[no-any-return]\n\n    def send_static_file(self, filename: str) -> Response:\n        \"\"\"The view function used to serve files from\n        :attr:`static_folder`. A route is automatically registered for\n        this view at :attr:`static_url_path` if :attr:`static_folder` is\n        set.\n\n        Note this is a duplicate of the same method in the Flask\n        class.\n\n        .. versionadded:: 0.5\n\n        \"\"\"\n        if not self.has_static_folder:\n            raise RuntimeError(\"'static_folder' must be set to serve static_files.\")\n\n        # send_file only knows to call get_send_file_max_age on the app,\n        # call it here so it works for blueprints too.\n        max_age = self.get_send_file_max_age(filename)\n        return send_from_directory(\n            t.cast(str, self.static_folder), filename, max_age=max_age\n        )",
+            "content_sha256": "1fedb2d2810223681b783f36fba1afd9c22445327f0764ac6c015f869f9afe7e",
+            "visible_to_generator": false
+          },
+          {
+            "path": "src/flask/app.py",
+            "start_line": 281,
+            "end_line": 328,
+            "content": "    def get_send_file_max_age(self, filename: str | None) -> int | None:\n        \"\"\"Used by :func:`send_file` to determine the ``max_age`` cache\n        value for a given file path if it wasn't passed.\n\n        By default, this returns :data:`SEND_FILE_MAX_AGE_DEFAULT` from\n        the configuration of :data:`~flask.current_app`. This defaults\n        to ``None``, which tells the browser to use conditional requests\n        instead of a timed cache, which is usually preferable.\n\n        Note this is a duplicate of the same method in the Flask\n        class.\n\n        .. versionchanged:: 2.0\n            The default configuration is ``None`` instead of 12 hours.\n\n        .. versionadded:: 0.9\n        \"\"\"\n        value = current_app.config[\"SEND_FILE_MAX_AGE_DEFAULT\"]\n\n        if value is None:\n            return None\n\n        if isinstance(value, timedelta):\n            return int(value.total_seconds())\n\n        return value  # type: ignore[no-any-return]\n\n    def send_static_file(self, filename: str) -> Response:\n        \"\"\"The view function used to serve files from\n        :attr:`static_folder`. A route is automatically registered for\n        this view at :attr:`static_url_path` if :attr:`static_folder` is\n        set.\n\n        Note this is a duplicate of the same method in the Flask\n        class.\n\n        .. versionadded:: 0.5\n\n        \"\"\"\n        if not self.has_static_folder:\n            raise RuntimeError(\"'static_folder' must be set to serve static_files.\")\n\n        # send_file only knows to call get_send_file_max_age on the app,\n        # call it here so it works for blueprints too.\n        max_age = self.get_send_file_max_age(filename)\n        return send_from_directory(\n            t.cast(str, self.static_folder), filename, max_age=max_age\n        )",
+            "content_sha256": "1fedb2d2810223681b783f36fba1afd9c22445327f0764ac6c015f869f9afe7e",
+            "visible_to_generator": false
+          }
+        ]
+      }
+    ],
+    "notes": "定位蓝图概念但未解释共享缓存钩子、配置项及显式 max_age 传递；引用不支持统一缓存细节。",
+    "key_points": null,
+    "candidate_sha256": "889a0381ff780d5062cf19f494fb02c0e1fa3dea135c4c1691e41cf79431c068",
+    "reviewer": "Codex (current session)",
+    "review_type": "nonblind_model_development_review",
+    "human_approved": false,
+    "training_eligible": false,
+    "solved": false
+  },
+  {
+    "candidate_id": "d0f9f3e00a356d07ccef3ed1",
+    "correctness": "partially_correct",
+    "citation_support": "partial",
+    "completeness": "partial",
+    "abstention": "not_applicable",
+    "entry_scope": "correct",
+    "consistency": "consistent",
+    "claims": [
+      {
+        "claim": "蓝图分离组件与静态资源",
+        "status": "supported",
+        "rationale": "蓝图文档和静态资源函数支持。",
+        "evidence": [
+          {
+            "path": "docs/blueprints.rst",
+            "start_line": 8,
+            "end_line": 14
+          },
+          {
+            "path": "src/flask/blueprints.py",
+            "start_line": 82,
+            "end_line": 102
+          }
+        ],
+        "verified_evidence": [
+          {
+            "path": "docs/blueprints.rst",
+            "start_line": 8,
+            "end_line": 14,
+            "content": "Flask uses a concept of *blueprints* for making application components and\nsupporting common patterns within an application or across applications.\nBlueprints can greatly simplify how large applications work and provide a\ncentral means for Flask extensions to register operations on applications.\nA :class:`Blueprint` object works similarly to a :class:`Flask`\napplication object, but it is not actually an application.  Rather it is a\n*blueprint* of how to construct or extend an application.",
+            "content_sha256": "6e9087831f6206f08199a2cc83cc6ef5c1cbc87fb4f43373252475cbbdd334cd",
+            "visible_to_generator": true
+          },
+          {
+            "path": "src/flask/blueprints.py",
+            "start_line": 82,
+            "end_line": 102,
+            "content": "    def send_static_file(self, filename: str) -> Response:\n        \"\"\"The view function used to serve files from\n        :attr:`static_folder`. A route is automatically registered for\n        this view at :attr:`static_url_path` if :attr:`static_folder` is\n        set.\n\n        Note this is a duplicate of the same method in the Flask\n        class.\n\n        .. versionadded:: 0.5\n\n        \"\"\"\n        if not self.has_static_folder:\n            raise RuntimeError(\"'static_folder' must be set to serve static_files.\")\n\n        # send_file only knows to call get_send_file_max_age on the app,\n        # call it here so it works for blueprints too.\n        max_age = self.get_send_file_max_age(filename)\n        return send_from_directory(\n            t.cast(str, self.static_folder), filename, max_age=max_age\n        )",
+            "content_sha256": "6945c7d88aa5a05e052717dd02b70b21aa883a9916d3a4a7ac0bbd79485ffdaa",
+            "visible_to_generator": false
+          }
+        ]
+      },
+      {
+        "claim": "一致缓存机制",
+        "status": "partial",
+        "rationale": "需说明 get_send_file_max_age/SEND_FILE_MAX_AGE_DEFAULT，而答案只有概括。",
+        "evidence": [
+          {
+            "path": "src/flask/blueprints.py",
+            "start_line": 55,
+            "end_line": 102
+          },
+          {
+            "path": "src/flask/app.py",
+            "start_line": 281,
+            "end_line": 328
+          }
+        ],
+        "verified_evidence": [
+          {
+            "path": "src/flask/blueprints.py",
+            "start_line": 55,
+            "end_line": 102,
+            "content": "    def get_send_file_max_age(self, filename: str | None) -> int | None:\n        \"\"\"Used by :func:`send_file` to determine the ``max_age`` cache\n        value for a given file path if it wasn't passed.\n\n        By default, this returns :data:`SEND_FILE_MAX_AGE_DEFAULT` from\n        the configuration of :data:`~flask.current_app`. This defaults\n        to ``None``, which tells the browser to use conditional requests\n        instead of a timed cache, which is usually preferable.\n\n        Note this is a duplicate of the same method in the Flask\n        class.\n\n        .. versionchanged:: 2.0\n            The default configuration is ``None`` instead of 12 hours.\n\n        .. versionadded:: 0.9\n        \"\"\"\n        value = current_app.config[\"SEND_FILE_MAX_AGE_DEFAULT\"]\n\n        if value is None:\n            return None\n\n        if isinstance(value, timedelta):\n            return int(value.total_seconds())\n\n        return value  # type: ignore[no-any-return]\n\n    def send_static_file(self, filename: str) -> Response:\n        \"\"\"The view function used to serve files from\n        :attr:`static_folder`. A route is automatically registered for\n        this view at :attr:`static_url_path` if :attr:`static_folder` is\n        set.\n\n        Note this is a duplicate of the same method in the Flask\n        class.\n\n        .. versionadded:: 0.5\n\n        \"\"\"\n        if not self.has_static_folder:\n            raise RuntimeError(\"'static_folder' must be set to serve static_files.\")\n\n        # send_file only knows to call get_send_file_max_age on the app,\n        # call it here so it works for blueprints too.\n        max_age = self.get_send_file_max_age(filename)\n        return send_from_directory(\n            t.cast(str, self.static_folder), filename, max_age=max_age\n        )",
+            "content_sha256": "1fedb2d2810223681b783f36fba1afd9c22445327f0764ac6c015f869f9afe7e",
+            "visible_to_generator": false
+          },
+          {
+            "path": "src/flask/app.py",
+            "start_line": 281,
+            "end_line": 328,
+            "content": "    def get_send_file_max_age(self, filename: str | None) -> int | None:\n        \"\"\"Used by :func:`send_file` to determine the ``max_age`` cache\n        value for a given file path if it wasn't passed.\n\n        By default, this returns :data:`SEND_FILE_MAX_AGE_DEFAULT` from\n        the configuration of :data:`~flask.current_app`. This defaults\n        to ``None``, which tells the browser to use conditional requests\n        instead of a timed cache, which is usually preferable.\n\n        Note this is a duplicate of the same method in the Flask\n        class.\n\n        .. versionchanged:: 2.0\n            The default configuration is ``None`` instead of 12 hours.\n\n        .. versionadded:: 0.9\n        \"\"\"\n        value = current_app.config[\"SEND_FILE_MAX_AGE_DEFAULT\"]\n\n        if value is None:\n            return None\n\n        if isinstance(value, timedelta):\n            return int(value.total_seconds())\n\n        return value  # type: ignore[no-any-return]\n\n    def send_static_file(self, filename: str) -> Response:\n        \"\"\"The view function used to serve files from\n        :attr:`static_folder`. A route is automatically registered for\n        this view at :attr:`static_url_path` if :attr:`static_folder` is\n        set.\n\n        Note this is a duplicate of the same method in the Flask\n        class.\n\n        .. versionadded:: 0.5\n\n        \"\"\"\n        if not self.has_static_folder:\n            raise RuntimeError(\"'static_folder' must be set to serve static_files.\")\n\n        # send_file only knows to call get_send_file_max_age on the app,\n        # call it here so it works for blueprints too.\n        max_age = self.get_send_file_max_age(filename)\n        return send_from_directory(\n            t.cast(str, self.static_folder), filename, max_age=max_age\n        )",
+            "content_sha256": "1fedb2d2810223681b783f36fba1afd9c22445327f0764ac6c015f869f9afe7e",
+            "visible_to_generator": false
+          }
+        ]
+      }
+    ],
+    "notes": "定位蓝图概念但未解释共享缓存钩子、配置项及显式 max_age 传递；引用不支持统一缓存细节。",
+    "key_points": null,
+    "candidate_sha256": "58e8ad3bcff1d51de16119e977f45469cb92065ab17513b9208417ab81c63a72",
+    "reviewer": "Codex (current session)",
+    "review_type": "nonblind_model_development_review",
+    "human_approved": false,
+    "training_eligible": false,
+    "solved": false
+  },
+  {
+    "candidate_id": "103309f9a0814cba85490848",
+    "correctness": "incorrect",
+    "citation_support": "partial",
+    "completeness": "partial",
+    "abstention": "not_applicable",
+    "entry_scope": "correct",
+    "consistency": "consistent",
+    "claims": [
+      {
+        "claim": "no_proxy 不覆盖环境变量优先级",
+        "status": "contradicted",
+        "rationale": "只有显式参数为 None 时才读取环境 no_proxy。",
+        "evidence": [
+          {
+            "path": "src/requests/utils.py",
+            "start_line": 769,
+            "end_line": 771
+          }
+        ],
+        "verified_evidence": [
+          {
+            "path": "src/requests/utils.py",
+            "start_line": 769,
+            "end_line": 771,
+            "content": "    no_proxy_arg = no_proxy\n    if no_proxy is None:\n        no_proxy = get_proxy(\"no_proxy\")",
+            "content_sha256": "687c697bcb7b0ab5fbc3e58c992186e388ed4fd1ddde0266cd640aef6879d88b",
+            "visible_to_generator": false
+          }
+        ]
+      },
+      {
+        "claim": "非空表明匹配 HTTP_PROXY",
+        "status": "unsupported",
+        "rationale": "getproxies 返回配置，URL 代理选择还在后续步骤。",
+        "evidence": [
+          {
+            "path": "src/requests/utils.py",
+            "start_line": 816,
+            "end_line": 825
+          }
+        ],
+        "verified_evidence": [
+          {
+            "path": "src/requests/utils.py",
+            "start_line": 816,
+            "end_line": 825,
+            "content": "def get_environ_proxies(url, no_proxy=None):\n    \"\"\"\n    Return a dict of environment proxies.\n\n    :rtype: dict\n    \"\"\"\n    if should_bypass_proxies(url, no_proxy=no_proxy):\n        return {}\n    else:\n        return getproxies()",
+            "content_sha256": "988e8929b6e4d2c33a504031023aa337574e2ea74a7acb00327a141ab2bd390d",
+            "visible_to_generator": true
+          }
+        ]
+      }
+    ],
+    "notes": "否定参数优先级与实现相反；非空字典也不证明 URL 匹配某个环境代理规则，仅说明未绕过且代理配置非空。",
+    "key_points": null,
+    "candidate_sha256": "c57eec3d491e0dd9645d3580cae96c909f97a48d56c40606547739db939bde84",
+    "reviewer": "Codex (current session)",
+    "review_type": "nonblind_model_development_review",
+    "human_approved": false,
+    "training_eligible": false,
+    "solved": false
+  },
+  {
+    "candidate_id": "73016feba3f84cc30e1cc3c5",
+    "correctness": "partially_correct",
+    "citation_support": "partial",
+    "completeness": "partial",
+    "abstention": "not_applicable",
+    "entry_scope": "correct",
+    "consistency": "consistent",
+    "claims": [
+      {
+        "claim": "参数优先且非空表示未绕过",
+        "status": "partial",
+        "rationale": "核心结论方向正确，优先级需要 769–771 支持，而引用仅 822–825。",
+        "evidence": [
+          {
+            "path": "src/requests/utils.py",
+            "start_line": 769,
+            "end_line": 771
+          },
+          {
+            "path": "src/requests/utils.py",
+            "start_line": 816,
+            "end_line": 825
+          }
+        ],
+        "verified_evidence": [
+          {
+            "path": "src/requests/utils.py",
+            "start_line": 769,
+            "end_line": 771,
+            "content": "    no_proxy_arg = no_proxy\n    if no_proxy is None:\n        no_proxy = get_proxy(\"no_proxy\")",
+            "content_sha256": "687c697bcb7b0ab5fbc3e58c992186e388ed4fd1ddde0266cd640aef6879d88b",
+            "visible_to_generator": false
+          },
+          {
+            "path": "src/requests/utils.py",
+            "start_line": 816,
+            "end_line": 825,
+            "content": "def get_environ_proxies(url, no_proxy=None):\n    \"\"\"\n    Return a dict of environment proxies.\n\n    :rtype: dict\n    \"\"\"\n    if should_bypass_proxies(url, no_proxy=no_proxy):\n        return {}\n    else:\n        return getproxies()",
+            "content_sha256": "988e8929b6e4d2c33a504031023aa337574e2ea74a7acb00327a141ab2bd390d",
+            "visible_to_generator": true
+          }
+        ]
+      }
+    ],
+    "notes": "知道绕过与非空含义，但将调用 should_bypass_proxies 本身当作参数优先级机制，未看到 None 分支。",
+    "key_points": null,
+    "candidate_sha256": "e2b2422317be1ac21d6fdd97b3f2a5ed9018053f9ef5ab7806dcd4a2bdf29616",
+    "reviewer": "Codex (current session)",
+    "review_type": "nonblind_model_development_review",
+    "human_approved": false,
+    "training_eligible": false,
+    "solved": false
+  },
+  {
+    "candidate_id": "be52145b9ff1622fd2072bff",
+    "correctness": "partially_correct",
+    "citation_support": "partial",
+    "completeness": "partial",
+    "abstention": "not_applicable",
+    "entry_scope": "correct",
+    "consistency": "consistent",
+    "claims": [
+      {
+        "claim": "每个样例恰有一个编码",
+        "status": "supported",
+        "rationale": "实际断言在 390–392；模型只引用 368–384 样例列表。",
+        "evidence": [
+          {
+            "path": "tests/test_utils.py",
+            "start_line": 368,
+            "end_line": 392
+          }
+        ],
+        "verified_evidence": [
+          {
+            "path": "tests/test_utils.py",
+            "start_line": 368,
+            "end_line": 392,
+            "content": "    @pytest.mark.parametrize(\n        \"content\",\n        (\n            # HTML5 meta charset attribute\n            '<meta charset=\"UTF-8\">',\n            # HTML4 pragma directive\n            '<meta http-equiv=\"Content-type\" content=\"text/html;charset=UTF-8\">',\n            # XHTML 1.x served with text/html MIME type\n            '<meta http-equiv=\"Content-type\" content=\"text/html;charset=UTF-8\" />',\n            # XHTML 1.x served as XML\n            '<?xml version=\"1.0\" encoding=\"UTF-8\"?>',\n        ),\n    )\n    def test_pragmas(self, content):\n        encodings = get_encodings_from_content(content)\n        assert len(encodings) == 1\n        assert encodings[0] == \"UTF-8\"\n\n    def test_precedence(self):\n        content = \"\"\"\n        <?xml version=\"1.0\" encoding=\"XML\"?>\n        <meta charset=\"HTML5\">\n        <meta http-equiv=\"Content-type\" content=\"text/html;charset=HTML4\" />\n        \"\"\".strip()\n        assert get_encodings_from_content(content) == [\"HTML5\", \"HTML4\", \"XML\"]",
+            "content_sha256": "01af3a279a1e9839e2437237dea7554c97aa23f55a821d60b465d21b684b6f8e",
+            "visible_to_generator": false
+          }
+        ]
+      }
+    ],
+    "notes": "仅回答单一编码，遗漏大小写原样保留、未做规范化和题干 HTTP headers 纠偏。引用还未到 len 断言。",
+    "key_points": null,
+    "candidate_sha256": "eb836d3c67f20f9afe8033a2bb65947deb3bba8c23fea48f54d4ca4a82c07529",
+    "reviewer": "Codex (current session)",
+    "review_type": "nonblind_model_development_review",
+    "human_approved": false,
+    "training_eligible": false,
+    "solved": false
+  },
+  {
+    "candidate_id": "3e83c68bc969e9f402f95245",
+    "correctness": "incorrect",
+    "citation_support": "unsupported",
+    "completeness": "insufficient",
+    "abstention": "not_applicable",
+    "entry_scope": "correct",
+    "consistency": "consistent",
+    "claims": [
+      {
+        "claim": "无论输入都规范成大写",
+        "status": "contradicted",
+        "rationale": "findall 后直接拼接结果，没有 upper/lower。",
+        "evidence": [
+          {
+            "path": "src/requests/utils.py",
+            "start_line": 493,
+            "end_line": 501
+          },
+          {
+            "path": "tests/test_utils.py",
+            "start_line": 368,
+            "end_line": 392
+          }
+        ],
+        "verified_evidence": [
+          {
+            "path": "src/requests/utils.py",
+            "start_line": 493,
+            "end_line": 501,
+            "content": "    charset_re = re.compile(r'<meta.*?charset=[\"\\']*(.+?)[\"\\'>]', flags=re.I)\n    pragma_re = re.compile(r'<meta.*?content=[\"\\']*;?charset=(.+?)[\"\\'>]', flags=re.I)\n    xml_re = re.compile(r'^<\\?xml.*?encoding=[\"\\']*(.+?)[\"\\'>]')\n\n    return (\n        charset_re.findall(content)\n        + pragma_re.findall(content)\n        + xml_re.findall(content)\n    )",
+            "content_sha256": "001e4703104d74018e3f3dfdf5d39ca4cfc41bdea307b15d7c90234e2dd56b91",
+            "visible_to_generator": true
+          },
+          {
+            "path": "tests/test_utils.py",
+            "start_line": 368,
+            "end_line": 392,
+            "content": "    @pytest.mark.parametrize(\n        \"content\",\n        (\n            # HTML5 meta charset attribute\n            '<meta charset=\"UTF-8\">',\n            # HTML4 pragma directive\n            '<meta http-equiv=\"Content-type\" content=\"text/html;charset=UTF-8\">',\n            # XHTML 1.x served with text/html MIME type\n            '<meta http-equiv=\"Content-type\" content=\"text/html;charset=UTF-8\" />',\n            # XHTML 1.x served as XML\n            '<?xml version=\"1.0\" encoding=\"UTF-8\"?>',\n        ),\n    )\n    def test_pragmas(self, content):\n        encodings = get_encodings_from_content(content)\n        assert len(encodings) == 1\n        assert encodings[0] == \"UTF-8\"\n\n    def test_precedence(self):\n        content = \"\"\"\n        <?xml version=\"1.0\" encoding=\"XML\"?>\n        <meta charset=\"HTML5\">\n        <meta http-equiv=\"Content-type\" content=\"text/html;charset=HTML4\" />\n        \"\"\".strip()\n        assert get_encodings_from_content(content) == [\"HTML5\", \"HTML4\", \"XML\"]",
+            "content_sha256": "01af3a279a1e9839e2437237dea7554c97aa23f55a821d60b465d21b684b6f8e",
+            "visible_to_generator": false
+          }
+        ]
+      }
+    ],
+    "notes": "把测试预设的大写示例误当作函数执行大写规范化，源码仅返回正则捕获值。",
+    "key_points": null,
+    "candidate_sha256": "c96d6865b63a95b7f8819c2df3673bd93a20ad165cb8ca9cce776f82e1230fe7",
+    "reviewer": "Codex (current session)",
+    "review_type": "nonblind_model_development_review",
+    "human_approved": false,
+    "training_eligible": false,
+    "solved": false
+  },
+  {
+    "candidate_id": "8b25cf90551b6ab2181bd317",
+    "correctness": "correct",
+    "citation_support": "supported",
+    "completeness": "adequate",
+    "abstention": "not_applicable",
+    "entry_scope": "correct",
+    "consistency": "consistent",
+    "claims": [
+      {
+        "claim": "RequestException 提供 request/response 上下文，ValueError 表示输入问题",
+        "status": "supported",
+        "rationale": "父类声明及初始化支持。",
+        "evidence": [
+          {
+            "path": "src/requests/exceptions.py",
+            "start_line": 12,
+            "end_line": 24
+          },
+          {
+            "path": "src/requests/exceptions.py",
+            "start_line": 99,
+            "end_line": 104
+          }
+        ],
+        "verified_evidence": [
+          {
+            "path": "src/requests/exceptions.py",
+            "start_line": 12,
+            "end_line": 24,
+            "content": "class RequestException(IOError):\n    \"\"\"There was an ambiguous exception that occurred while handling your\n    request.\n    \"\"\"\n\n    def __init__(self, *args, **kwargs):\n        \"\"\"Initialize RequestException with `request` and `response` objects.\"\"\"\n        response = kwargs.pop(\"response\", None)\n        self.response = response\n        self.request = kwargs.pop(\"request\", None)\n        if response is not None and not self.request and hasattr(response, \"request\"):\n            self.request = self.response.request\n        super().__init__(*args, **kwargs)",
+            "content_sha256": "3a5464dda05aa61d56458b0ce5331f5a02597db22b315c365f73c9ebb13c3a3b",
+            "visible_to_generator": true
+          },
+          {
+            "path": "src/requests/exceptions.py",
+            "start_line": 99,
+            "end_line": 104,
+            "content": "class MissingSchema(RequestException, ValueError):\n    \"\"\"The URL scheme (e.g. http or https) is missing.\"\"\"\n\n\nclass InvalidSchema(RequestException, ValueError):\n    \"\"\"The URL scheme provided is either invalid or unsupported.\"\"\"",
+            "content_sha256": "6753d7a23cdeb46c6755050ef927584ba09f5dc30f8e4ab26a703447423bb15e",
+            "visible_to_generator": false
+          }
+        ]
+      }
+    ],
+    "notes": "双重继承、输入错误与请求异常上下文的区别均正确；额外 MissingSchema 说明虽冗余但未改变结论。",
+    "key_points": null,
+    "candidate_sha256": "8e60fdcb1ac187e33c9894af53e30171a22c7b1555de56d9ca793a4faf652b04",
+    "reviewer": "Codex (current session)",
+    "review_type": "nonblind_model_development_review",
+    "human_approved": false,
+    "training_eligible": false,
+    "solved": true
+  },
+  {
+    "candidate_id": "924c448a11911904acf4ed5c",
+    "correctness": "incorrect",
+    "citation_support": "unsupported",
+    "completeness": "partial",
+    "abstention": "not_applicable",
+    "entry_scope": "correct",
+    "consistency": "consistent",
+    "claims": [
+      {
+        "claim": "MissingSchema 不具备 RequestException 行为",
+        "status": "contradicted",
+        "rationale": "二者继承列表相同且都未重写行为。",
+        "evidence": [
+          {
+            "path": "src/requests/exceptions.py",
+            "start_line": 99,
+            "end_line": 104
+          },
+          {
+            "path": "src/requests/exceptions.py",
+            "start_line": 12,
+            "end_line": 24
+          }
+        ],
+        "verified_evidence": [
+          {
+            "path": "src/requests/exceptions.py",
+            "start_line": 99,
+            "end_line": 104,
+            "content": "class MissingSchema(RequestException, ValueError):\n    \"\"\"The URL scheme (e.g. http or https) is missing.\"\"\"\n\n\nclass InvalidSchema(RequestException, ValueError):\n    \"\"\"The URL scheme provided is either invalid or unsupported.\"\"\"",
+            "content_sha256": "6753d7a23cdeb46c6755050ef927584ba09f5dc30f8e4ab26a703447423bb15e",
+            "visible_to_generator": false
+          },
+          {
+            "path": "src/requests/exceptions.py",
+            "start_line": 12,
+            "end_line": 24,
+            "content": "class RequestException(IOError):\n    \"\"\"There was an ambiguous exception that occurred while handling your\n    request.\n    \"\"\"\n\n    def __init__(self, *args, **kwargs):\n        \"\"\"Initialize RequestException with `request` and `response` objects.\"\"\"\n        response = kwargs.pop(\"response\", None)\n        self.response = response\n        self.request = kwargs.pop(\"request\", None)\n        if response is not None and not self.request and hasattr(response, \"request\"):\n            self.request = self.response.request\n        super().__init__(*args, **kwargs)",
+            "content_sha256": "3a5464dda05aa61d56458b0ce5331f5a02597db22b315c365f73c9ebb13c3a3b",
+            "visible_to_generator": true
+          }
+        ]
+      }
+    ],
+    "notes": "误称 MissingSchema 没有 RequestException 特定行为，并转而比较两个子类，未回答父类的语义差异。",
+    "key_points": null,
+    "candidate_sha256": "41eb34c7e84a0473c2468ed8ee5838b4933bd3ebe86f9b09fbfe336dda57b00b",
+    "reviewer": "Codex (current session)",
+    "review_type": "nonblind_model_development_review",
+    "human_approved": false,
+    "training_eligible": false,
+    "solved": false
+  }
+]

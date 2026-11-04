@@ -1,0 +1,101 @@
+{
+  "scope": "Python repository ingestion, chunking, retrieval factory, lexical/neural search, code augmentation, source packing, SDK tools/runtime, benchmark wiring and offline regression tests. Historical experiment scripts are archival, not separate active engines.",
+  "runtime_module_count": 57,
+  "runtime_line_count": 10142,
+  "new_runtime_modules": 0,
+  "changed_runtime_modules": [
+    "src/repomentor/benchmark.py",
+    "src/repomentor/code_navigation.py",
+    "src/repomentor/code_retrieval.py"
+  ],
+  "findings": [
+    {
+      "problem": "Declared plans copied one retriever to every condition; code_aware alone differed. A vector/hybrid/agentic label could therefore run BM25.",
+      "change": "Use the existing policy_for condition mapping; identical knobs and correctly selected retriever/code_aware for each condition. Remove the redundant shared-initial preparation.",
+      "effect_on_old_90": "Both old conditions intentionally used BM25, so this wiring bug did not cause their negative difference. Their missing conditions remain a scope error."
+    },
+    {
+      "problem": "The term fixed RAG obscured which retrieval method was measured.",
+      "change": "Document it as single-retrieval execution, with BM25/code/hybrid as separate named conditions."
+    },
+    {
+      "problem": "Previous public evaluation omitted ordinary BM25 and SDK Agentic RAG.",
+      "change": "Freeze 20 other public questions for all five conditions before any generation."
+    },
+    {
+      "problem": "Ordinary English words were promoted as exact symbols; priority/61 then displaced BM25/dense candidates, making ten of twenty code and hybrid contexts identical. Weak class/name matches also displaced relevant implementation.",
+      "change": "Filter long prose to code-marked names; retain short symbol queries. Do not add weak names as a new retrieval channel unless a path or direct identifier is explicit.",
+      "validation": "20 raw candidate lists unchanged, 40 closed-book/BM25 control messages identical, 17 hybrid contexts changed; explicit navigation/constructor defaults regression tests retained."
+    }
+  ],
+  "storage": {
+    "source_chunks": "Versioned JSON and in-memory BM25 postings",
+    "embeddings": "Content/model-identity cached 1024-dimensional vectors, L2 normalized",
+    "vector_search": "FAISS IndexFlatIP, persisted NumPy matrix and provenance metadata; cosine similarity for unit vectors",
+    "fusion": "BM25 + dense RRF k=60, Qwen yes/no reranker",
+    "sqlite": "Run/events/request ledger, not a vector database",
+    "external_vector_database": false
+  },
+  "bounds": {
+    "chunk_size": "768 UTF-8 bytes, not model tokens",
+    "max_index_files": 2000,
+    "max_index_bytes": 20000000,
+    "initial_source_units": 6,
+    "initial_source_bytes": 8000,
+    "candidate_k": 20,
+    "agent_max_decisions": 6,
+    "agent_max_repository_tools": 6
+  },
+  "not_changed": [
+    "RAG generation prompt",
+    "Embedding/reranker models",
+    "Qwen generator profile",
+    "SDK iteration",
+    "Original result archives",
+    "Final-test repositories"
+  ],
+  "closed_book_wire_audit": {
+    "old_answers": 90,
+    "actual_context_empty": 90,
+    "messages_per_answer": 2,
+    "repository_source_in_input": false,
+    "reference_answer_in_input": false,
+    "knowledge_policy": "Pretraining knowledge allowed; RAG source-grounded constraints are a product policy difference, not a pure source-only ablation."
+  },
+  "known_limits": [
+    "Large repositories may hit lexical file/byte admission caps. Omissions must be counted and are not evidence of source absence.",
+    "Gold source spans are not provided by SWE-QA; no automatic gold Recall@K claim.",
+    "Current grading is Codex model-assisted and nonblind, not the paper judge or human approval."
+  ],
+  "training_eligible": false,
+  "main_implementation": {
+    "rag": "c2b6cff11dc2b0f3978a63bf227a2394c24c7597200b7a5e638dd35220343f1f",
+    "sdk": {
+      "openai_agents": "0.23.1",
+      "openai": "3.24.0",
+      "implementation": "eecbadc0b1f281f2d8095252e8e89dd996a0f8e7cf0e4b28d9b0cbcff8de28fe",
+      "loop": "agents.Runner.run",
+      "transport": "chat-completions-nonstream",
+      "tracing": "disabled",
+      "http_retries": 0,
+      "output": "sdk-source-grounded-submit-finalize-v5"
+    },
+    "baselines": "89823c28936a75721cb6319869672b138eccbf834072563e13112305eef7793e",
+    "benchmark": "adadb7952db34f1ccd1887cfd01ef084e85f7f3957a143ebd2671526fda91d4e"
+  },
+  "repair_implementation": {
+    "rag": "61718a2581737f1ed64e14731dfd0e185a8505cbc0091a032f8e3714632f282c",
+    "sdk": {
+      "openai_agents": "0.23.1",
+      "openai": "3.24.0",
+      "implementation": "2f4209111bcaa62f3994c43e0dd0797080d20b76dde4fd889a353817583a4ea7",
+      "loop": "agents.Runner.run",
+      "transport": "chat-completions-nonstream",
+      "tracing": "disabled",
+      "http_retries": 0,
+      "output": "sdk-source-grounded-submit-finalize-v5"
+    },
+    "baselines": "89823c28936a75721cb6319869672b138eccbf834072563e13112305eef7793e",
+    "benchmark": "adadb7952db34f1ccd1887cfd01ef084e85f7f3957a143ebd2671526fda91d4e"
+  }
+}

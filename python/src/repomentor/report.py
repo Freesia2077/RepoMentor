@@ -6,7 +6,8 @@ from uuid import uuid4
 
 from . import __version__
 from .contracts import ContributorOutput, ExplorerOutput, MentorOutput, RunResult
-from .harness import HarnessError, RepositoryHarness
+from .execution import HarnessError
+from .harness import ReportHarness
 from .repository import RepositoryError
 from .runtimes.claude import RuntimeFailure
 from .skills import load_skill
@@ -18,7 +19,7 @@ async def run_report(
     started = time.monotonic()
     usage_start = len(runtime.usage)
     run_id = run_id or uuid4().hex
-    harness = RepositoryHarness(reader, emit, token)
+    harness = ReportHarness(reader, emit, token)
     outputs = {}
     status, reason, error = "success", "report_completed", None
     try:
@@ -45,7 +46,7 @@ async def run_report(
                     **{k + "Output": v for k, v in outputs.items()},
                 }
                 output = await runtime.synthesize(phase, model, payload, harness, skill)
-                output = harness.verify_output(phase, output)
+                output = harness.verify_output(phase, output, getattr(runtime, "provided_paths", None))
                 outputs[phase] = output.model_dump()
                 harness.complete_stage(phase)
                 emit(phase, "completed", {"stage": phase})
@@ -57,7 +58,9 @@ async def run_report(
                 **{k + "Output": v for k, v in outputs.items()},
             }
             output = await runtime.synthesize("contributor", ContributorOutput, payload, harness)
-            outputs["contributor"] = harness.verify_output("contributor", output).model_dump()
+            outputs["contributor"] = harness.verify_output(
+                "contributor", output, getattr(runtime, "provided_paths", None)
+            ).model_dump()
             harness.complete_stage("contributor")
             emit("contributor", "completed", {"stage": "contributor"})
     except asyncio.CancelledError:

@@ -1,7 +1,9 @@
 # RepoMentor development scope
 
 - Active development targets `python/`. Preserve the original TypeScript application in `src/`, `web/`, and its root scripts. Do not modify or run the TS application/tests unless the user explicitly requests it.
+- Default working directory is `python/`. Keep Python documentation there: `python/项目文档.md` describes current implementation; `python/notes/repomentor-python-and-minimind-plan.md` is the detailed plan. Prefer `python/notes/` for new plans/notes rather than root `docs/`. Root-level Git metadata and shared repository instructions may still be maintained when necessary.
 - Python is an independent package: its normal tests, runtime assets and CLI must not require Node, npm, the TS server, or the frontend. Historical parity checks are opt-in.
+- Build agent iteration, tool dispatch and future agent capabilities on the installed SDKs. OpenAI Agents SDK is the primary Python agent runtime; do not restore a custom agent loop. Fixed retrieval baselines and historical result verification are separate from agent execution.
 - Python configuration and data are independent too: use `python/config/model-settings.json`, `REPOMENTOR_PY_*`, and Python-owned artifact paths. Never read or migrate the TS `data/model-settings.json` implicitly, and do not use shared `ANTHROPIC_*` variables as application configuration. SDK protocol variables are mapped internally.
 - On the owner's Windows machine, use `D:\anaconda\envs\repomentor\python.exe` with `-s` for every Python operation (`python/run.ps1` wraps it). Do not create another environment. On other machines use the explicitly configured project environment.
 - Default to offline pytest, the stub runtime, and recorded result verification. Reuse saved reports; real model calls need a concrete validation purpose and should be kept to a minimum.

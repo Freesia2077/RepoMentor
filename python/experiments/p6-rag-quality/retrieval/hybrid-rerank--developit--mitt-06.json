@@ -1,0 +1,201 @@
+{
+  "task_id": "developit--mitt-06",
+  "mode": "hybrid-rerank",
+  "index_id": "157aa2919455dfed4afd5d2e",
+  "observation": {
+    "action": {
+      "call_id": "diagnostic",
+      "tool": "search_code",
+      "arguments": {
+        "query": "off 传入从未注册的 handler 为什么不会误删最后一个？"
+      }
+    },
+    "action_hash": "66778c067b19f6898bb3872d68afb078bf4cc35cbc527089448958f9b015ce66",
+    "observation": {
+      "status": "ok",
+      "error_code": null,
+      "hits": [
+        {
+          "path": "test/index_test.ts",
+          "start_line": 108,
+          "end_line": 158,
+          "score": 0.9828232526779175,
+          "chunk_id": "7e66f485723695c29a021b55",
+          "unit": {
+            "start_line": 108,
+            "end_line": 158,
+            "symbol": "describe:'mitt#'.describe:'off()'",
+            "kind": "call_expression",
+            "parser": "tree_sitter"
+          },
+          "truncated": true,
+          "next_line": 144
+        },
+        {
+          "path": "src/index.ts",
+          "start_line": 23,
+          "end_line": 39,
+          "score": 0.9324532747268677,
+          "chunk_id": "d6ef6eebb30a21dd71220814",
+          "unit": {
+            "start_line": 23,
+            "end_line": 39,
+            "symbol": "Emitter",
+            "kind": "interface_declaration",
+            "parser": "tree_sitter"
+          },
+          "truncated": false,
+          "next_line": null
+        },
+        {
+          "path": "src/index.ts",
+          "start_line": 46,
+          "end_line": 123,
+          "score": 0.8539127111434937,
+          "chunk_id": "46769116e901657e0399e385",
+          "unit": {
+            "start_line": 82,
+            "end_line": 91,
+            "symbol": "mitt.off",
+            "kind": "method_definition",
+            "parser": "tree_sitter"
+          },
+          "truncated": false,
+          "next_line": null
+        }
+      ],
+      "spans": [
+        {
+          "path": "test/index_test.ts",
+          "start_line": 108,
+          "end_line": 143,
+          "content_sha256": "f79f3db3e35425d4d52390e84595ce47837ef184480d70517d23bb841635ad07",
+          "lines": [
+            "L108: \tdescribe('off()', () => {",
+            "L109: \t\tit('should be a function', () => {",
+            "L110: \t\t\texpect(inst).to.have.property('off').that.is.a('function');",
+            "L111: \t\t});",
+            "L112: ",
+            "L113: \t\tit('should remove handler for type', () => {",
+            "L114: \t\t\tconst foo = () => {};",
+            "L115: \t\t\tinst.on('foo', foo);",
+            "L116: \t\t\tinst.off('foo', foo);",
+            "L117: ",
+            "L118: \t\t\texpect(events.get('foo')).to.be.empty;",
+            "L119: \t\t});",
+            "L120: ",
+            "L121: \t\tit('should NOT normalize case', () => {",
+            "L122: \t\t\tconst foo = () => {};",
+            "L123: \t\t\tinst.on('FOO', foo);",
+            "L124: \t\t\tinst.on('Bar', foo);",
+            "L125: \t\t\tinst.on('baz:bat!', foo);",
+            "L126: ",
+            "L127: \t\t\tinst.off('FOO', foo);",
+            "L128: \t\t\tinst.off('Bar', foo);",
+            "L129: \t\t\tinst.off('baz:baT!', foo);",
+            "L130: ",
+            "L131: \t\t\texpect(events.get('FOO')).to.be.empty;",
+            "L132: \t\t\texpect(events.has('foo')).to.equal(false);",
+            "L133: \t\t\texpect(events.get('Bar')).to.be.empty;",
+            "L134: \t\t\texpect(events.has('bar')).to.equal(false);",
+            "L135: \t\t\texpect(events.get('baz:bat!')).to.have.lengthOf(1);",
+            "L136: \t\t});",
+            "L137: ",
+            "L138: \t\tit('should remove only the first matching listener', () => {",
+            "L139: \t\t\tconst foo = () => {};",
+            "L140: \t\t\tinst.on('foo', foo);",
+            "L141: \t\t\tinst.on('foo', foo);",
+            "L142: \t\t\tinst.off('foo', foo);",
+            "L143: \t\t\texpect(events.get('foo')).to.deep.equal([foo]);"
+          ]
+        },
+        {
+          "path": "src/index.ts",
+          "start_line": 23,
+          "end_line": 39,
+          "content_sha256": "76bc8b689bae2167e97ea3d097d3809919e6f251e86daa5ae2377d8a7b9c6cce",
+          "lines": [
+            "L23: export interface Emitter<Events extends Record<EventType, unknown>> {",
+            "L24: \tall: EventHandlerMap<Events>;",
+            "L25: ",
+            "L26: \ton<Key extends keyof Events>(type: Key, handler: Handler<Events[Key]>): void;",
+            "L27: \ton(type: '*', handler: WildcardHandler<Events>): void;",
+            "L28: ",
+            "L29: \toff<Key extends keyof Events>(",
+            "L30: \t\ttype: Key,",
+            "L31: \t\thandler?: Handler<Events[Key]>",
+            "L32: \t): void;",
+            "L33: \toff(type: '*', handler: WildcardHandler<Events>): void;",
+            "L34: ",
+            "L35: \temit<Key extends keyof Events>(type: Key, event: Events[Key]): void;",
+            "L36: \temit<Key extends keyof Events>(",
+            "L37: \t\ttype: undefined extends Events[Key] ? Key : never",
+            "L38: \t): void;",
+            "L39: }"
+          ]
+        },
+        {
+          "path": "src/index.ts",
+          "start_line": 82,
+          "end_line": 91,
+          "content_sha256": "3999fdef36669b69849c862d08047c5ed32691b99d7e2ba932a515e43d3324e0",
+          "lines": [
+            "L82: \t\toff<Key extends keyof Events>(type: Key, handler?: GenericEventHandler) {",
+            "L83: \t\t\tconst handlers: Array<GenericEventHandler> | undefined = all!.get(type);",
+            "L84: \t\t\tif (handlers) {",
+            "L85: \t\t\t\tif (handler) {",
+            "L86: \t\t\t\t\thandlers.splice(handlers.indexOf(handler) >>> 0, 1);",
+            "L87: \t\t\t\t} else {",
+            "L88: \t\t\t\t\tall!.set(type, []);",
+            "L89: \t\t\t\t}",
+            "L90: \t\t\t}",
+            "L91: \t\t},"
+          ]
+        }
+      ],
+      "candidate_limit": 20,
+      "scope": "indexed candidates only; no match does not establish absence",
+      "search_scope": {
+        "kind": "code",
+        "path": null,
+        "path_prefix": null
+      }
+    },
+    "visible_json": "{\"status\":\"ok\",\"error_code\":null,\"hits\":[{\"path\":\"test/index_test.ts\",\"start_line\":108,\"end_line\":158,\"score\":0.9828232526779175,\"chunk_id\":\"7e66f485723695c29a021b55\",\"unit\":{\"start_line\":108,\"end_line\":158,\"symbol\":\"describe:'mitt#'.describe:'off()'\",\"kind\":\"call_expression\",\"parser\":\"tree_sitter\"},\"truncated\":true,\"next_line\":144},{\"path\":\"src/index.ts\",\"start_line\":23,\"end_line\":39,\"score\":0.9324532747268677,\"chunk_id\":\"d6ef6eebb30a21dd71220814\",\"unit\":{\"start_line\":23,\"end_line\":39,\"symbol\":\"Emitter\",\"kind\":\"interface_declaration\",\"parser\":\"tree_sitter\"},\"truncated\":false,\"next_line\":null},{\"path\":\"src/index.ts\",\"start_line\":46,\"end_line\":123,\"score\":0.8539127111434937,\"chunk_id\":\"46769116e901657e0399e385\",\"unit\":{\"start_line\":82,\"end_line\":91,\"symbol\":\"mitt.off\",\"kind\":\"method_definition\",\"parser\":\"tree_sitter\"},\"truncated\":false,\"next_line\":null}],\"spans\":[{\"path\":\"test/index_test.ts\",\"start_line\":108,\"end_line\":143,\"content_sha256\":\"f79f3db3e35425d4d52390e84595ce47837ef184480d70517d23bb841635ad07\",\"lines\":[\"L108: \\tdescribe('off()', () => {\",\"L109: \\t\\tit('should be a function', () => {\",\"L110: \\t\\t\\texpect(inst).to.have.property('off').that.is.a('function');\",\"L111: \\t\\t});\",\"L112: \",\"L113: \\t\\tit('should remove handler for type', () => {\",\"L114: \\t\\t\\tconst foo = () => {};\",\"L115: \\t\\t\\tinst.on('foo', foo);\",\"L116: \\t\\t\\tinst.off('foo', foo);\",\"L117: \",\"L118: \\t\\t\\texpect(events.get('foo')).to.be.empty;\",\"L119: \\t\\t});\",\"L120: \",\"L121: \\t\\tit('should NOT normalize case', () => {\",\"L122: \\t\\t\\tconst foo = () => {};\",\"L123: \\t\\t\\tinst.on('FOO', foo);\",\"L124: \\t\\t\\tinst.on('Bar', foo);\",\"L125: \\t\\t\\tinst.on('baz:bat!', foo);\",\"L126: \",\"L127: \\t\\t\\tinst.off('FOO', foo);\",\"L128: \\t\\t\\tinst.off('Bar', foo);\",\"L129: \\t\\t\\tinst.off('baz:baT!', foo);\",\"L130: \",\"L131: \\t\\t\\texpect(events.get('FOO')).to.be.empty;\",\"L132: \\t\\t\\texpect(events.has('foo')).to.equal(false);\",\"L133: \\t\\t\\texpect(events.get('Bar')).to.be.empty;\",\"L134: \\t\\t\\texpect(events.has('bar')).to.equal(false);\",\"L135: \\t\\t\\texpect(events.get('baz:bat!')).to.have.lengthOf(1);\",\"L136: \\t\\t});\",\"L137: \",\"L138: \\t\\tit('should remove only the first matching listener', () => {\",\"L139: \\t\\t\\tconst foo = () => {};\",\"L140: \\t\\t\\tinst.on('foo', foo);\",\"L141: \\t\\t\\tinst.on('foo', foo);\",\"L142: \\t\\t\\tinst.off('foo', foo);\",\"L143: \\t\\t\\texpect(events.get('foo')).to.deep.equal([foo]);\"]},{\"path\":\"src/index.ts\",\"start_line\":23,\"end_line\":39,\"content_sha256\":\"76bc8b689bae2167e97ea3d097d3809919e6f251e86daa5ae2377d8a7b9c6cce\",\"lines\":[\"L23: export interface Emitter<Events extends Record<EventType, unknown>> {\",\"L24: \\tall: EventHandlerMap<Events>;\",\"L25: \",\"L26: \\ton<Key extends keyof Events>(type: Key, handler: Handler<Events[Key]>): void;\",\"L27: \\ton(type: '*', handler: WildcardHandler<Events>): void;\",\"L28: \",\"L29: \\toff<Key extends keyof Events>(\",\"L30: \\t\\ttype: Key,\",\"L31: \\t\\thandler?: Handler<Events[Key]>\",\"L32: \\t): void;\",\"L33: \\toff(type: '*', handler: WildcardHandler<Events>): void;\",\"L34: \",\"L35: \\temit<Key extends keyof Events>(type: Key, event: Events[Key]): void;\",\"L36: \\temit<Key extends keyof Events>(\",\"L37: \\t\\ttype: undefined extends Events[Key] ? Key : never\",\"L38: \\t): void;\",\"L39: }\"]},{\"path\":\"src/index.ts\",\"start_line\":82,\"end_line\":91,\"content_sha256\":\"3999fdef36669b69849c862d08047c5ed32691b99d7e2ba932a515e43d3324e0\",\"lines\":[\"L82: \\t\\toff<Key extends keyof Events>(type: Key, handler?: GenericEventHandler) {\",\"L83: \\t\\t\\tconst handlers: Array<GenericEventHandler> | undefined = all!.get(type);\",\"L84: \\t\\t\\tif (handlers) {\",\"L85: \\t\\t\\t\\tif (handler) {\",\"L86: \\t\\t\\t\\t\\thandlers.splice(handlers.indexOf(handler) >>> 0, 1);\",\"L87: \\t\\t\\t\\t} else {\",\"L88: \\t\\t\\t\\t\\tall!.set(type, []);\",\"L89: \\t\\t\\t\\t}\",\"L90: \\t\\t\\t}\",\"L91: \\t\\t},\"]}],\"candidate_limit\":20,\"scope\":\"indexed candidates only; no match does not establish absence\",\"search_scope\":{\"kind\":\"code\",\"path\":null,\"path_prefix\":null}}",
+    "source_spans": [
+      {
+        "path": "test/index_test.ts",
+        "start_line": 108,
+        "end_line": 143,
+        "content": "\tdescribe('off()', () => {\n\t\tit('should be a function', () => {\n\t\t\texpect(inst).to.have.property('off').that.is.a('function');\n\t\t});\n\n\t\tit('should remove handler for type', () => {\n\t\t\tconst foo = () => {};\n\t\t\tinst.on('foo', foo);\n\t\t\tinst.off('foo', foo);\n\n\t\t\texpect(events.get('foo')).to.be.empty;\n\t\t});\n\n\t\tit('should NOT normalize case', () => {\n\t\t\tconst foo = () => {};\n\t\t\tinst.on('FOO', foo);\n\t\t\tinst.on('Bar', foo);\n\t\t\tinst.on('baz:bat!', foo);\n\n\t\t\tinst.off('FOO', foo);\n\t\t\tinst.off('Bar', foo);\n\t\t\tinst.off('baz:baT!', foo);\n\n\t\t\texpect(events.get('FOO')).to.be.empty;\n\t\t\texpect(events.has('foo')).to.equal(false);\n\t\t\texpect(events.get('Bar')).to.be.empty;\n\t\t\texpect(events.has('bar')).to.equal(false);\n\t\t\texpect(events.get('baz:bat!')).to.have.lengthOf(1);\n\t\t});\n\n\t\tit('should remove only the first matching listener', () => {\n\t\t\tconst foo = () => {};\n\t\t\tinst.on('foo', foo);\n\t\t\tinst.on('foo', foo);\n\t\t\tinst.off('foo', foo);\n\t\t\texpect(events.get('foo')).to.deep.equal([foo]);",
+        "content_sha256": "f79f3db3e35425d4d52390e84595ce47837ef184480d70517d23bb841635ad07"
+      },
+      {
+        "path": "src/index.ts",
+        "start_line": 23,
+        "end_line": 39,
+        "content": "export interface Emitter<Events extends Record<EventType, unknown>> {\n\tall: EventHandlerMap<Events>;\n\n\ton<Key extends keyof Events>(type: Key, handler: Handler<Events[Key]>): void;\n\ton(type: '*', handler: WildcardHandler<Events>): void;\n\n\toff<Key extends keyof Events>(\n\t\ttype: Key,\n\t\thandler?: Handler<Events[Key]>\n\t): void;\n\toff(type: '*', handler: WildcardHandler<Events>): void;\n\n\temit<Key extends keyof Events>(type: Key, event: Events[Key]): void;\n\temit<Key extends keyof Events>(\n\t\ttype: undefined extends Events[Key] ? Key : never\n\t): void;\n}",
+        "content_sha256": "76bc8b689bae2167e97ea3d097d3809919e6f251e86daa5ae2377d8a7b9c6cce"
+      },
+      {
+        "path": "src/index.ts",
+        "start_line": 82,
+        "end_line": 91,
+        "content": "\t\toff<Key extends keyof Events>(type: Key, handler?: GenericEventHandler) {\n\t\t\tconst handlers: Array<GenericEventHandler> | undefined = all!.get(type);\n\t\t\tif (handlers) {\n\t\t\t\tif (handler) {\n\t\t\t\t\thandlers.splice(handlers.indexOf(handler) >>> 0, 1);\n\t\t\t\t} else {\n\t\t\t\t\tall!.set(type, []);\n\t\t\t\t}\n\t\t\t}\n\t\t},",
+        "content_sha256": "3999fdef36669b69849c862d08047c5ed32691b99d7e2ba932a515e43d3324e0"
+      }
+    ],
+    "elapsed_seconds": 3.296,
+    "tool_calls_used": 1,
+    "source_bytes": 1831,
+    "replayed": false
+  },
+  "gold_observed_coverage": 1.0,
+  "neural_work": {
+    "embedding_hits": 1,
+    "embedding_new": 0,
+    "rerank_hits": 12,
+    "rerank_new": 8
+  },
+  "new_generation_requests": 0
+}

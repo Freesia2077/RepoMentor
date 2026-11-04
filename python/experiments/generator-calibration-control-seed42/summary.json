@@ -1,0 +1,427 @@
+{
+  "questions": 8,
+  "planned_answers": 5,
+  "records": 5,
+  "reviews": {
+    "improvement-confirm-tenacity-01--control-seed42": {
+      "candidate_id": "improvement-confirm-tenacity-01--control-seed42",
+      "correctness": "correct",
+      "citation_support": "supported",
+      "completeness": "partial",
+      "abstention": "not_applicable",
+      "entry_scope": "correct",
+      "consistency": "consistent",
+      "claims": [
+        {
+          "claim": "stop_after_delay 不能保证不睡到第12秒，更严格计入下一次等待应选 stop_before_delay。",
+          "status": "supported",
+          "rationale": "前者只比较已耗时，后者比较已耗时加 upcoming_sleep；所给建议和否定结论正确。",
+          "evidence": [
+            {
+              "path": "tenacity/stop.py",
+              "start_line": 100,
+              "end_line": 138
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "tenacity/stop.py",
+              "start_line": 100,
+              "end_line": 138,
+              "content": "class stop_after_delay(stop_base):\n    \"\"\"\n    Stop when the time from the first attempt >= limit.\n\n    Note: `max_delay` will be exceeded, so when used with a `wait`, the actual total delay will be greater\n    than `max_delay` by some of the final sleep period before `max_delay` is exceeded.\n\n    If you need stricter timing with waits, consider `stop_before_delay` instead.\n    \"\"\"\n\n    def __init__(self, max_delay: _utils.time_unit_type) -> None:\n        self.max_delay = _utils.to_seconds(max_delay)\n\n    @override\n    def __call__(self, retry_state: \"RetryCallState\") -> bool:\n        if retry_state.seconds_since_start is None:\n            raise RuntimeError(\"__call__() called but seconds_since_start is not set\")\n        return retry_state.seconds_since_start >= self.max_delay\n\n\nclass stop_before_delay(stop_base):\n    \"\"\"\n    Stop right before the next attempt would take place after the time from the first attempt >= limit.\n\n    Most useful when you are using with a `wait` function like wait_random_exponential, but need to make\n    sure that the max_delay is not exceeded.\n    \"\"\"\n\n    def __init__(self, max_delay: _utils.time_unit_type) -> None:\n        self.max_delay = _utils.to_seconds(max_delay)\n\n    @override\n    def __call__(self, retry_state: \"RetryCallState\") -> bool:\n        if retry_state.seconds_since_start is None:\n            raise RuntimeError(\"__call__() called but seconds_since_start is not set\")\n        return (\n            retry_state.seconds_since_start + retry_state.upcoming_sleep\n            >= self.max_delay\n        )",
+              "content_sha256": "1f027dcd7e0088d8b26d42444cb21985b699280b38cb8a38476330600cb4f607",
+              "visible_to_generator": true
+            }
+          ]
+        },
+        {
+          "claim": "先计算 upcoming_sleep，再判断 stop。",
+          "status": "supported",
+          "rationale": "动作入队顺序为 _run_wait、_run_stop；iter 顺序执行。",
+          "evidence": [
+            {
+              "path": "tenacity/__init__.py",
+              "start_line": 436,
+              "end_line": 441
+            },
+            {
+              "path": "tenacity/__init__.py",
+              "start_line": 465,
+              "end_line": 470
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "tenacity/__init__.py",
+              "start_line": 436,
+              "end_line": 441,
+              "content": "    def iter(self, retry_state: \"RetryCallState\") -> DoAttempt | DoSleep | t.Any:\n        self._begin_iter(retry_state)\n        result = None\n        for action in self.iter_state.actions:\n            result = action(retry_state)\n        return result",
+              "content_sha256": "600f803e805093b5fa54a66ec1b1aab369f5692eee640b04ed985d1ce7f0b606",
+              "visible_to_generator": true
+            },
+            {
+              "path": "tenacity/__init__.py",
+              "start_line": 465,
+              "end_line": 470,
+              "content": "        if self.after is not None:\n            self._add_action_func(self.after)\n\n        self._add_action_func(self._run_wait)\n        self._add_action_func(self._run_stop)\n        self._add_action_func(self._post_stop_check_actions)",
+              "content_sha256": "3476e7888eca76b0e0bac5d1f6ee5a6ff1f147a072f7dc844dad0df677c167d7",
+              "visible_to_generator": true
+            }
+          ]
+        }
+      ],
+      "notes": "结论、策略建议和顺序正确，引用支持；未解释9<10与9+3>=10这两个条件及为何仍会睡3秒，所需机制解释不完整。",
+      "key_points": null,
+      "candidate_sha256": "f2ff4c26f2d69879c2d6635e0b56fa7e770efaf92f05aab8f1bb0c3a8a88afc7",
+      "reviewer": "Codex (current session)",
+      "review_type": "model_assisted_nonblind_development_review",
+      "human_approved": false,
+      "training_eligible": false,
+      "result_sha256": "308bdfd2bebe84af6cdcc7c578b9aadf71c0ab403df04e850ffed19e2596921f"
+    },
+    "improvement-confirm-blinker-05--control-seed42": {
+      "candidate_id": "improvement-confirm-blinker-05--control-seed42",
+      "correctness": "correct",
+      "citation_support": "not_applicable",
+      "completeness": "partial",
+      "abstention": "appropriate",
+      "entry_scope": "not_applicable",
+      "consistency": "consistent",
+      "claims": [
+        {
+          "claim": "只返回不足证据标记，不编造生产事件数字。",
+          "status": "unverifiable",
+          "rationale": "私有运行数据在本轮空源码输入中不可核实；正文为不足证据标记且 insufficient_evidence=True，无引文和虚构数字。",
+          "evidence": [],
+          "verified_evidence": []
+        }
+      ],
+      "notes": "拒答及字段适当，但正文仅 insufficient_evidence，未解释需要生产日志/遥测，完整性为 partial。",
+      "key_points": null,
+      "candidate_sha256": "68e0989956585b762915c80a73c5922baacfd344728644d8f38af919f1acebf9",
+      "reviewer": "Codex (current session)",
+      "review_type": "model_assisted_nonblind_development_review",
+      "human_approved": false,
+      "training_eligible": false,
+      "result_sha256": "e8caaaa17e617d80bc2e7d6597426122a1efa6882c55c60f590659c8481e1d06"
+    },
+    "improvement-confirm-blinker-01--control-seed42": {
+      "candidate_id": "improvement-confirm-blinker-01--control-seed42",
+      "correctness": "partially_correct",
+      "citation_support": "partial",
+      "completeness": "partial",
+      "abstention": "not_applicable",
+      "entry_scope": "correct",
+      "consistency": "consistent",
+      "claims": [
+        {
+          "claim": "默认 weak=True，局部回调没有其他强引用时可被回收并断开。",
+          "status": "supported",
+          "rationale": "connect 的默认参数、弱引用分支和清理函数支持；不将精确回收时刻作为本题硬性要求。",
+          "evidence": [
+            {
+              "path": "src/blinker/base.py",
+              "start_line": 91,
+              "end_line": 118
+            },
+            {
+              "path": "src/blinker/base.py",
+              "start_line": 399,
+              "end_line": 413
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "src/blinker/base.py",
+              "start_line": 91,
+              "end_line": 118,
+              "content": "    def connect(self, receiver: F, sender: t.Any = ANY, weak: bool = True) -> F:\n        \"\"\"Connect ``receiver`` to be called when the signal is sent by\n        ``sender``.\n\n        :param receiver: The callable to call when :meth:`send` is called with\n            the given ``sender``, passing ``sender`` as a positional argument\n            along with any extra keyword arguments.\n        :param sender: Any object or :data:`ANY`. ``receiver`` will only be\n            called when :meth:`send` is called with this sender. If ``ANY``, the\n            receiver will be called for any sender. A receiver may be connected\n            to multiple senders by calling :meth:`connect` multiple times.\n        :param weak: Track the receiver with a :mod:`weakref`. The receiver will\n            be automatically disconnected when it is garbage collected. When\n            connecting a receiver defined within a function, set to ``False``,\n            otherwise it will be disconnected when the function scope ends.\n        \"\"\"\n        receiver_id = make_id(receiver)\n        sender_id = ANY_ID if sender is ANY else make_id(sender)\n\n        if weak:\n            self.receivers[receiver_id] = make_ref(\n                receiver, self._make_cleanup_receiver(receiver_id)\n            )\n        else:\n            self.receivers[receiver_id] = receiver\n\n        self._by_sender[sender_id].add(receiver_id)\n        self._by_receiver[receiver_id].add(sender_id)",
+              "content_sha256": "1c852afdeb9e7b0b2aa8dd2a8f72b3ff0760618d9b7950e28e5b956ce41e2f66",
+              "visible_to_generator": true
+            },
+            {
+              "path": "src/blinker/base.py",
+              "start_line": 399,
+              "end_line": 413,
+              "content": "    def _make_cleanup_receiver(\n        self, receiver_id: c.Hashable\n    ) -> c.Callable[[weakref.ref[c.Callable[..., t.Any]]], None]:\n        \"\"\"Create a callback function to disconnect a weakly referenced\n        receiver when it is garbage collected.\n        \"\"\"\n\n        def cleanup(ref: weakref.ref[c.Callable[..., t.Any]]) -> None:\n            # If the interpreter is shutting down, disconnecting can result in a\n            # weird ignored exception. Don't call it in that case.\n            if not sys.is_finalizing():\n                self._disconnect(receiver_id, ANY_ID)\n\n        return cleanup\n",
+              "content_sha256": "c8c4cb6814a963572885d38357f0ac8190ea907c962df5b1a63e041799756a33",
+              "visible_to_generator": true
+            }
+          ]
+        },
+        {
+          "claim": "必须显式 weak=False 并保存回调对象引用才能保留回调。",
+          "status": "contradicted",
+          "rationale": "weak=False 直接把回调对象存入 receivers；强引用测试删除外部引用后仍触发，所以两者不需要同时满足。",
+          "evidence": [
+            {
+              "path": "src/blinker/base.py",
+              "start_line": 110,
+              "end_line": 115
+            },
+            {
+              "path": "tests/test_signals.py",
+              "start_line": 240,
+              "end_line": 257
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "src/blinker/base.py",
+              "start_line": 110,
+              "end_line": 115,
+              "content": "        if weak:\n            self.receivers[receiver_id] = make_ref(\n                receiver, self._make_cleanup_receiver(receiver_id)\n            )\n        else:\n            self.receivers[receiver_id] = receiver",
+              "content_sha256": "9fc71690fcea6be81ef3707b11f4f58dbc90a10344a578d0a7c544b86c0ea8d1",
+              "visible_to_generator": true
+            },
+            {
+              "path": "tests/test_signals.py",
+              "start_line": 240,
+              "end_line": 257,
+              "content": "def test_strong_receiver() -> None:\n    sentinel = []\n\n    def received(sender: t.Any) -> None:\n        sentinel.append(sender)\n\n    fn_id = id(received)\n\n    sig = blinker.Signal()\n    sig.connect(received, weak=False)\n\n    del received\n    collect_acyclic_refs()\n\n    assert not sentinel\n    sig.send()\n    assert sentinel\n    assert [id(fn) for fn in sig.receivers.values()] == [fn_id]",
+              "content_sha256": "6f2a86a68f184101743716fe34c5aab9c70242b4c07b0574ac5305a7fd34af6f",
+              "visible_to_generator": true
+            }
+          ]
+        }
+      ],
+      "notes": "错误地把 weak=False 和外部保留引用写成必须同时满足；虽列出两段测试，未说明删除引用、回收后 send 的不同断言。",
+      "key_points": null,
+      "candidate_sha256": "486bfae352eab540df21a1645a7b7f517713efb06f121d15bed4cc8575c64371",
+      "reviewer": "Codex (current session)",
+      "review_type": "model_assisted_nonblind_development_review",
+      "human_approved": false,
+      "training_eligible": false,
+      "result_sha256": "f74b419bf306a7405d67044518f51ab9020c83176cfb0043f9c423d2b78b960e"
+    },
+    "improvement-confirm-tenacity-05--control-seed42": {
+      "candidate_id": "improvement-confirm-tenacity-05--control-seed42",
+      "correctness": "correct",
+      "citation_support": "not_applicable",
+      "completeness": "partial",
+      "abstention": "appropriate",
+      "entry_scope": "not_applicable",
+      "consistency": "consistent",
+      "claims": [
+        {
+          "claim": "无法提供准确重试次数、每次等待及最后异常堆栈。",
+          "status": "unverifiable",
+          "rationale": "私有运行记录未提供，拒绝编造且 insufficient_evidence=True，没有源码引文或额外未经支持的库事实。",
+          "evidence": [],
+          "verified_evidence": []
+        }
+      ],
+      "notes": "正确拒答；未明确列出需要调用配置和日志/跟踪等外部数据，完整性为 partial。",
+      "key_points": null,
+      "candidate_sha256": "81c372a231e3c46d5140050e631eb7aef8e61b2c0a40c34005f171237311b312",
+      "reviewer": "Codex (current session)",
+      "review_type": "model_assisted_nonblind_development_review",
+      "human_approved": false,
+      "training_eligible": false,
+      "result_sha256": "8e7f039c21bb481a6fcf7a4f7db058569d69b002e1834209a184cb849b64d752"
+    },
+    "improvement-confirm-tenacity-02--control-seed42": {
+      "candidate_id": "improvement-confirm-tenacity-02--control-seed42",
+      "correctness": "incorrect",
+      "citation_support": "unsupported",
+      "completeness": "insufficient",
+      "abstention": "not_applicable",
+      "entry_scope": "correct",
+      "consistency": "consistent",
+      "claims": [
+        {
+          "claim": "默认异常重试策略下首次成功也执行 after。",
+          "status": "contradicted",
+          "rationale": "成功的 outcome 使 retry_if_exception 返回 False；_post_retry_check_actions 在 after 前提前返回结果动作。",
+          "evidence": [
+            {
+              "path": "tenacity/retry.py",
+              "start_line": 88,
+              "end_line": 119
+            },
+            {
+              "path": "tenacity/__init__.py",
+              "start_line": 460,
+              "end_line": 466
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "tenacity/retry.py",
+              "start_line": 88,
+              "end_line": 119,
+              "content": "class retry_if_exception(retry_base):\n    \"\"\"Retry strategy that retries if an exception verifies a predicate.\"\"\"\n\n    def __init__(self, predicate: typing.Callable[[BaseException], bool]) -> None:\n        self.predicate = predicate\n\n    @override\n    def __call__(self, retry_state: \"RetryCallState\") -> bool:\n        if retry_state.outcome is None:\n            raise RuntimeError(\"__call__() called before outcome was set\")\n\n        if retry_state.outcome.failed:\n            exception = retry_state.outcome.exception()\n            if exception is None:\n                raise RuntimeError(\"outcome failed but the exception is None\")\n            return self.predicate(exception)\n        return False\n\n\nclass retry_if_exception_type(retry_if_exception):\n    \"\"\"Retries if an exception has been raised of one or more types.\"\"\"\n\n    def __init__(\n        self,\n        exception_types: type[BaseException]\n        | tuple[type[BaseException], ...] = Exception,\n    ) -> None:\n        self.exception_types = exception_types\n        super().__init__(self._check)\n\n    def _check(self, e: BaseException) -> bool:\n        return isinstance(e, self.exception_types)",
+              "content_sha256": "2d8353e948161cb807d054e581c2b1eb5ab251027e22b0fea37858a0e4d4990c",
+              "visible_to_generator": true
+            },
+            {
+              "path": "tenacity/__init__.py",
+              "start_line": 460,
+              "end_line": 466,
+              "content": "    def _post_retry_check_actions(self, retry_state: \"RetryCallState\") -> None:\n        if not (self.iter_state.is_explicit_retry or self.iter_state.retry_run_result):\n            self._add_action_func(lambda rs: rs.outcome.result())\n            return\n\n        if self.after is not None:\n            self._add_action_func(self.after)",
+              "content_sha256": "ed98cb68710d5153075623d1b5d46f0946b3a12ebdb32ae76395ede8c3ebf1d0",
+              "visible_to_generator": true
+            }
+          ]
+        },
+        {
+          "claim": "前两次异常第三次成功时 after 记录 attempt_number=3。",
+          "status": "contradicted",
+          "rationale": "测试明确断言记录为2；第三次成功不再调用 after。答案引用的测试直接反驳正文。",
+          "evidence": [
+            {
+              "path": "tests/test_tenacity.py",
+              "start_line": 1853,
+              "end_line": 1870
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "tests/test_tenacity.py",
+              "start_line": 1853,
+              "end_line": 1870,
+              "content": "    def test_after_attempts(self) -> None:\n        TestBeforeAfterAttempts._attempt_number = 0\n\n        def _after(retry_state: RetryCallState) -> None:\n            TestBeforeAfterAttempts._attempt_number = retry_state.attempt_number\n\n        @retry(\n            wait=tenacity.wait_fixed(0.1),\n            stop=tenacity.stop_after_attempt(3),\n            after=_after,\n        )\n        def _test_after() -> None:\n            if TestBeforeAfterAttempts._attempt_number < 2:\n                raise Exception(\"testing after_attempts handler\")\n\n        _test_after()\n\n        self.assertTrue(TestBeforeAfterAttempts._attempt_number == 2)",
+              "content_sha256": "a1325d17a55b7019d349cfaf8c5c45a3b194635dac22914f8632662e8d599a2b",
+              "visible_to_generator": true
+            }
+          ]
+        }
+      ],
+      "notes": "两个核心结论均错误；即使充分输入包含默认策略、提前返回和测试断言，也仍将 after 当作每次完成钩子。",
+      "key_points": null,
+      "candidate_sha256": "7e8214769c0de547e1dcbdab601d818a9b09af938e7fb753bf97a287e35c0b48",
+      "reviewer": "Codex (current session)",
+      "review_type": "model_assisted_nonblind_development_review",
+      "human_approved": false,
+      "training_eligible": false,
+      "result_sha256": "9f59ba827efc8d11713a581a4d890def3838735fe27835373f3d38776bbced96"
+    }
+  },
+  "groups": {
+    "all/oracle": {
+      "records": 5,
+      "success": 5,
+      "model_requests": 5,
+      "tool_calls": 0,
+      "episodes_using_tools": 0,
+      "citation_ranges_valid": 5,
+      "initial_reference_complete": 3,
+      "final_reference_complete": 3,
+      "initial_nonblank_reference_complete": 3,
+      "final_nonblank_reference_complete": 3,
+      "requests_without_usage": 0,
+      "requests_without_elapsed": 0,
+      "prompt_tokens": 6540,
+      "completion_tokens": 825,
+      "generator_seconds": 47.408,
+      "reviewed": 5,
+      "factually_correct": 3,
+      "core_supported": 3,
+      "fully_resolved": 0,
+      "insufficiency_flag_true": 2,
+      "insufficiency_flag_false": 0
+    },
+    "generator-calibration-known-development/oracle": {
+      "records": 5,
+      "success": 5,
+      "model_requests": 5,
+      "tool_calls": 0,
+      "episodes_using_tools": 0,
+      "citation_ranges_valid": 5,
+      "initial_reference_complete": 3,
+      "final_reference_complete": 3,
+      "initial_nonblank_reference_complete": 3,
+      "final_nonblank_reference_complete": 3,
+      "requests_without_usage": 0,
+      "requests_without_elapsed": 0,
+      "prompt_tokens": 6540,
+      "completion_tokens": 825,
+      "generator_seconds": 47.408,
+      "reviewed": 5,
+      "factually_correct": 3,
+      "core_supported": 3,
+      "fully_resolved": 0,
+      "insufficiency_flag_true": 2,
+      "insufficiency_flag_false": 0
+    },
+    "generator-calibration-development-diagnostic/oracle": {
+      "records": 5,
+      "success": 5,
+      "model_requests": 5,
+      "tool_calls": 0,
+      "episodes_using_tools": 0,
+      "citation_ranges_valid": 5,
+      "initial_reference_complete": 3,
+      "final_reference_complete": 3,
+      "initial_nonblank_reference_complete": 3,
+      "final_nonblank_reference_complete": 3,
+      "requests_without_usage": 0,
+      "requests_without_elapsed": 0,
+      "prompt_tokens": 6540,
+      "completion_tokens": 825,
+      "generator_seconds": 47.408,
+      "reviewed": 5,
+      "factually_correct": 3,
+      "core_supported": 3,
+      "fully_resolved": 0,
+      "insufficiency_flag_true": 2,
+      "insufficiency_flag_false": 0
+    },
+    "answerable/oracle": {
+      "records": 3,
+      "success": 3,
+      "model_requests": 3,
+      "tool_calls": 0,
+      "episodes_using_tools": 0,
+      "citation_ranges_valid": 3,
+      "initial_reference_complete": 3,
+      "final_reference_complete": 3,
+      "initial_nonblank_reference_complete": 3,
+      "final_nonblank_reference_complete": 3,
+      "requests_without_usage": 0,
+      "requests_without_elapsed": 0,
+      "prompt_tokens": 5897,
+      "completion_tokens": 751,
+      "generator_seconds": 43.516999999999996,
+      "reviewed": 3,
+      "factually_correct": 1,
+      "core_supported": 1,
+      "fully_resolved": 0
+    },
+    "unanswerable/oracle": {
+      "records": 2,
+      "success": 2,
+      "model_requests": 2,
+      "tool_calls": 0,
+      "episodes_using_tools": 0,
+      "citation_ranges_valid": 2,
+      "insufficiency_flag_true": 2,
+      "insufficiency_flag_false": 0,
+      "requests_without_usage": 0,
+      "requests_without_elapsed": 0,
+      "prompt_tokens": 643,
+      "completion_tokens": 74,
+      "generator_seconds": 3.891,
+      "reviewed": 2,
+      "factually_correct": 2,
+      "core_supported": 2,
+      "fully_resolved": 0
+    }
+  },
+  "retrieval": {
+    "shared_initial": {
+      "answerable": 6,
+      "reference_complete": 1,
+      "nonblank_reference_complete": 1
+    }
+  },
+  "new_requests": 5,
+  "combined_requests": 1251,
+  "paid_requests": 0,
+  "human_approved": false,
+  "training_eligible": false,
+  "reporting_implementation": "ead64970deecd462fdecc492d12c97094342c2f1a9fb96871086210deb60b9a7",
+  "usage_observation_note": "Token/time sums include observed values only. Missing usage and elapsed time remain unknown in raw records; reservations still count every sent or ambiguous request.",
+  "checks": {},
+  "scope": "Eight already opened development questions: six answerable and two missing-private-state protections. Source-sufficient fixed RAG only, unchanged prompt/schema/model/output cap. The temperature/top_p pair is one candidate configuration, not separate-factor attribution. Known questions and any seed repeats are not unseen confirmation; no training or human approval. Owner removed the numeric model-request restriction on 2026-10-25. The value 1275 is the execution ceiling for this predeclared diagnostic, not an owner-imposed limit."
+}

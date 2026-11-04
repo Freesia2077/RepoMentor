@@ -1,0 +1,1253 @@
+[
+  {
+    "candidate_id": "4b--history-dev-03--oracle",
+    "source_file": "experiments/qwen9b-diagnostic/cases/4b--history-dev-03--oracle.json",
+    "snapshot_id": "30e277e52d238ad871cb5684",
+    "task_id": "history-dev-03",
+    "model": "4b",
+    "condition": "oracle",
+    "question": "切换到 non-secure 入口，nanoid(-10) 的结果与 Node 默认入口一样吗？",
+    "answer": {
+      "answer": "不一样，切换到 non-secure 入口时 nanoid(-10) 会抛出 RangeError 异常，而 Node 默认入口（index.js）会直接返回空字符串 ''。",
+      "citations": [
+        {
+          "path": "non-secure/index.js",
+          "start_line": 23,
+          "end_line": 23
+        },
+        {
+          "path": "index.js",
+          "start_line": 137,
+          "end_line": 137
+        }
+      ],
+      "insufficient_evidence": false
+    },
+    "status": "success",
+    "record_sha256": "32a0299d16ed42862c53c58480da244b1cf2186102c4a23391f99bb647b4766f",
+    "observed_context": [
+      {
+        "path": "non-secure/index.js",
+        "start_line": 19,
+        "end_line": 29,
+        "content": "export let nanoid = (size = 21) => {\n  let id = ''\n  // A compact alternative for `for (var i = 0; i < step; i++)`.\n  // `> 0` stops a negative size from looping forever.\n  let i = size | 0\n  while (i-- > 0) {\n    // `| 0` is more compact and faster than `Math.floor()`.\n    id += urlAlphabet[(Math.random() * 64) | 0]\n  }\n  return id\n}",
+        "content_sha256": "b57574c83361e1fb043c39f15ed99b4b1062a181535e98a1a8e1f9b828dd6417"
+      },
+      {
+        "path": "index.js",
+        "start_line": 133,
+        "end_line": 138,
+        "content": "  return (size = defaultSize) => {\n    // `|=` convert `size` to number to prevent `valueOf` abusing\n    // and pool offset pollution\n    size |= 0\n    if (size < 0) throw new RangeError('Wrong ID size')\n    if (size === 0) return ''",
+        "content_sha256": "a2cd1e5a3ee0815f52f8518c2ba5fe4a3358024401993d7b63baeff18d5ca89d"
+      },
+      {
+        "path": "index.js",
+        "start_line": 177,
+        "end_line": 177,
+        "content": "export const nanoid = customAlphabet(urlAlphabet)",
+        "content_sha256": "c360da0cbb0aa1c8336ed31a9e0e16ce867647e121e735f1574f9047535ded40"
+      }
+    ]
+  },
+  {
+    "candidate_id": "4b--history-dev-03--sdk",
+    "source_file": "experiments/qwen9b-diagnostic/cases/4b--history-dev-03--sdk.json",
+    "snapshot_id": "30e277e52d238ad871cb5684",
+    "task_id": "history-dev-03",
+    "model": "4b",
+    "condition": "sdk",
+    "question": "切换到 non-secure 入口，nanoid(-10) 的结果与 Node 默认入口一样吗？",
+    "answer": {
+      "answer": "不一样。切换到 non-secure 入口时，nanoid(-10) 会抛出 RangeError 异常，而 Node 默认入口（index.js）会返回一个长度为 0 的空字符串。",
+      "citations": [
+        {
+          "path": "non-secure/index.js",
+          "start_line": 23,
+          "end_line": 24
+        },
+        {
+          "path": "index.js",
+          "start_line": 136,
+          "end_line": 137
+        }
+      ],
+      "insufficient_evidence": false
+    },
+    "status": "success",
+    "record_sha256": "0a2211d087dd792756e2b2629b4695b8c42607358a6276d46d6555078fa280bb",
+    "observed_context": [
+      {
+        "path": "non-secure/index.js",
+        "start_line": 19,
+        "end_line": 29,
+        "content": "export let nanoid = (size = 21) => {\n  let id = ''\n  // A compact alternative for `for (var i = 0; i < step; i++)`.\n  // `> 0` stops a negative size from looping forever.\n  let i = size | 0\n  while (i-- > 0) {\n    // `| 0` is more compact and faster than `Math.floor()`.\n    id += urlAlphabet[(Math.random() * 64) | 0]\n  }\n  return id\n}",
+        "content_sha256": "b57574c83361e1fb043c39f15ed99b4b1062a181535e98a1a8e1f9b828dd6417"
+      },
+      {
+        "path": "index.js",
+        "start_line": 96,
+        "end_line": 177,
+        "content": "export function customAlphabet(alphabet, defaultSize = 21) {\n  if (\n    typeof alphabet !== 'string' ||\n    !alphabet ||\n    alphabet.length > 256\n  ) {\n    return customRandom(alphabet, defaultSize, random)\n  }\n  for (let i = 0; i < alphabet.length; i++) {\n    if (alphabet.charCodeAt(i) > 255) {\n      // The fast path below writes char codes to a byte buffer,\n      // so it supports only single-byte characters.\n      return customRandom(alphabet, defaultSize, random)\n    }\n  }\n\n  // Alphabet char codes to write IDs into a byte buffer directly.\n  let charCodes = Uint8Array.from(alphabet, str => {\n    return str.charCodeAt(0)\n  })\n  let alphabetLen = alphabet.length\n  // The smallest `2^n - 1` covering all alphabet indexes. Rejecting\n  // `byte & mask >= alphabetLen` avoids modulo bias without `%` operation.\n  let mask = (2 << (31 - Math.clz32((alphabetLen - 1) | 1))) - 1\n\n  // IDs are pre-generated into a string pool: accepted alphabet chars are\n  // written to a byte buffer, converted to a string with one\n  // `Buffer#toString()` call, and every ID is a cheap `String#substring()`.\n  // It avoids per-character string concatenations and pays string\n  // allocation cost once per refill.\n  //\n  // The pool starts at the first requested size and grows geometrically,\n  // so short-living generators do not pay for a full pool.\n  let pool = ''\n  let poolOffset = 0\n  let poolNext = 0\n\n  return (size = defaultSize) => {\n    // `|=` convert `size` to number to prevent `valueOf` abusing\n    // and pool offset pollution\n    size |= 0\n    if (size < 0) throw new RangeError('Wrong ID size')\n    if (size === 0) return ''\n    if (poolOffset + size > pool.length) {\n      let target = Math.max(poolNext, size)\n      poolNext = Math.min(target * 16, POOL_MAX)\n      let buffer = Buffer.allocUnsafe(target)\n      if (mask === alphabetLen - 1) {\n        // Power-of-two alphabets like `urlAlphabet` accept every byte,\n        // so random bytes are translated in place without rejections.\n        fillRandom(buffer)\n        for (let i = 0; i < target; i++) {\n          buffer[i] = charCodes[buffer[i] & mask]\n        }\n      } else {\n        // Rejection sampling accepts `alphabetLen` of every `mask + 1`\n        // random bytes. `1.6` requests extra bytes to cover\n        // unlucky streaks in most fills.\n        let randomBytes = Buffer.allocUnsafe(\n          Math.ceil((1.6 * (mask + 1) * target) / alphabetLen)\n        )\n        let accepted = 0\n        while (accepted < target) {\n          fillRandom(randomBytes)\n          for (let i = 0; i < randomBytes.length; i++) {\n            let index = randomBytes[i] & mask\n            if (index < alphabetLen) {\n              buffer[accepted++] = charCodes[index]\n              if (accepted === target) break\n            }\n          }\n        }\n      }\n      pool = buffer.toString('latin1')\n      poolOffset = 0\n    }\n    poolOffset += size\n    return pool.substring(poolOffset - size, poolOffset)\n  }\n}\n\nexport const nanoid = customAlphabet(urlAlphabet)",
+        "content_sha256": "ae682ae026c4b885b593a92cd7d01c47bec33470dddfccf950f90b52adfc4927"
+      },
+      {
+        "path": "index.browser.js",
+        "start_line": 75,
+        "end_line": 84,
+        "content": "export let nanoid = (size = 21) => {\n  let id = ''\n  let bytes = crypto.getRandomValues(new Uint8Array((size |= 0)))\n  while (size--) {\n    // The following mask reduces the random byte in the 0-255 value\n    // range to the 0-63 value range.\n    id += urlAlphabet[bytes[size] & 63]\n  }\n  return id\n}",
+        "content_sha256": "68dfc33bd5a7aabf8d6c4a7a1da1ed25e25e0f5232e69e6091a51e65e98425f0"
+      }
+    ]
+  },
+  {
+    "candidate_id": "4b--history-dev-04--oracle",
+    "source_file": "experiments/qwen9b-diagnostic/cases/4b--history-dev-04--oracle.json",
+    "snapshot_id": "dfdc0816797bf578d0363591",
+    "task_id": "history-dev-04",
+    "model": "4b",
+    "condition": "oracle",
+    "question": "mitt 的 on 会把事件名统一转成小写吗？结合实现与 should NOT normalize case 测试说明。",
+    "answer": {
+      "answer": "mitt 的 on 方法不会将事件名统一转成小写，而是严格保留传入的原始事件名字符串。",
+      "citations": [
+        {
+          "path": "src/index.ts",
+          "start_line": 66,
+          "end_line": 73
+        },
+        {
+          "path": "test/index_test.ts",
+          "start_line": 79,
+          "end_line": 90
+        }
+      ],
+      "insufficient_evidence": false
+    },
+    "status": "success",
+    "record_sha256": "54a27bf0a5f6f42985fe8f00696f4f97537fb2ffe09a7a61925422b09521f166",
+    "observed_context": [
+      {
+        "path": "test/index_test.ts",
+        "start_line": 79,
+        "end_line": 90,
+        "content": "\t\tit('should NOT normalize case', () => {\n\t\t\tconst foo = () => {};\n\t\t\tinst.on('FOO', foo);\n\t\t\tinst.on('Bar', foo);\n\t\t\tinst.on('baz:baT!', foo);\n\n\t\t\texpect(events.get('FOO')).to.deep.equal([foo]);\n\t\t\texpect(events.has('foo')).to.equal(false);\n\t\t\texpect(events.get('Bar')).to.deep.equal([foo]);\n\t\t\texpect(events.has('bar')).to.equal(false);\n\t\t\texpect(events.get('baz:baT!')).to.deep.equal([foo]);\n\t\t});",
+        "content_sha256": "7c7ae10f82f38319cf3cf181161ee7bfb29bde7819610b697836ace1ba119048"
+      },
+      {
+        "path": "src/index.ts",
+        "start_line": 66,
+        "end_line": 73,
+        "content": "\t\ton<Key extends keyof Events>(type: Key, handler: GenericEventHandler) {\n\t\t\tconst handlers: Array<GenericEventHandler> | undefined = all!.get(type);\n\t\t\tif (handlers) {\n\t\t\t\thandlers.push(handler);\n\t\t\t} else {\n\t\t\t\tall!.set(type, [handler] as EventHandlerList<Events[keyof Events]>);\n\t\t\t}\n\t\t},",
+        "content_sha256": "0a5bf296ae849cd916f0b4eedbc3b3dbd431acb523f64fede2782b79ff119004"
+      }
+    ]
+  },
+  {
+    "candidate_id": "4b--history-dev-04--sdk",
+    "source_file": "experiments/qwen9b-diagnostic/cases/4b--history-dev-04--sdk.json",
+    "snapshot_id": "dfdc0816797bf578d0363591",
+    "task_id": "history-dev-04",
+    "model": "4b",
+    "condition": "sdk",
+    "question": "mitt 的 on 会把事件名统一转成小写吗？结合实现与 should NOT normalize case 测试说明。",
+    "answer": {
+      "answer": "mitt 的 on 方法不会将事件名统一转成小写，而是严格保持传入的原始字符串形式进行存储和匹配。",
+      "citations": [
+        {
+          "path": "src/index.ts",
+          "start_line": 66,
+          "end_line": 73
+        },
+        {
+          "path": "test/index_test.ts",
+          "start_line": 79,
+          "end_line": 90
+        }
+      ],
+      "insufficient_evidence": false
+    },
+    "status": "success",
+    "record_sha256": "a3b00c056ae16f92572b199d9cb0fe3277b3ce282d007974ccb91ad2d7585b23",
+    "observed_context": [
+      {
+        "path": "src/index.ts",
+        "start_line": 46,
+        "end_line": 77,
+        "content": "export default function mitt<Events extends Record<EventType, unknown>>(\n\tall?: EventHandlerMap<Events>\n): Emitter<Events> {\n\ttype GenericEventHandler =\n\t\t| Handler<Events[keyof Events]>\n\t\t| WildcardHandler<Events>;\n\tall = all || new Map();\n\n\treturn {\n\t\t/**\n\t\t * A Map of event names to registered handler functions.\n\t\t */\n\t\tall,\n\n\t\t/**\n\t\t * Register an event handler for the given type.\n\t\t * @param {string|symbol} type Type of event to listen for, or `'*'` for all events\n\t\t * @param {Function} handler Function to call in response to given event\n\t\t * @memberOf mitt\n\t\t */\n\t\ton<Key extends keyof Events>(type: Key, handler: GenericEventHandler) {\n\t\t\tconst handlers: Array<GenericEventHandler> | undefined = all!.get(type);\n\t\t\tif (handlers) {\n\t\t\t\thandlers.push(handler);\n\t\t\t} else {\n\t\t\t\tall!.set(type, [handler] as EventHandlerList<Events[keyof Events]>);\n\t\t\t}\n\t\t},\n\n\t\t/**\n\t\t * Remove an event handler for the given type.\n\t\t * If `handler` is omitted, all handlers of the given type are removed.",
+        "content_sha256": "28f76797a19cd4ce5ed2a766ff2a57ab0fbcc39ae8c1448b56e5e2f7f29f4c4c"
+      },
+      {
+        "path": "test/index_test.ts",
+        "start_line": 79,
+        "end_line": 90,
+        "content": "\t\tit('should NOT normalize case', () => {\n\t\t\tconst foo = () => {};\n\t\t\tinst.on('FOO', foo);\n\t\t\tinst.on('Bar', foo);\n\t\t\tinst.on('baz:baT!', foo);\n\n\t\t\texpect(events.get('FOO')).to.deep.equal([foo]);\n\t\t\texpect(events.has('foo')).to.equal(false);\n\t\t\texpect(events.get('Bar')).to.deep.equal([foo]);\n\t\t\texpect(events.has('bar')).to.equal(false);\n\t\t\texpect(events.get('baz:baT!')).to.deep.equal([foo]);\n\t\t});",
+        "content_sha256": "7c7ae10f82f38319cf3cf181161ee7bfb29bde7819610b697836ace1ba119048"
+      }
+    ]
+  },
+  {
+    "candidate_id": "4b--history-dev-05--oracle",
+    "source_file": "experiments/qwen9b-diagnostic/cases/4b--history-dev-05--oracle.json",
+    "snapshot_id": "9999db891acf16c1a1fd96b5",
+    "task_id": "history-dev-05",
+    "model": "4b",
+    "condition": "oracle",
+    "question": "get_jobs() 不传 tag 返回内部列表本身吗？",
+    "answer": {
+      "answer": "不，当 `get_jobs()` 不传 `tag` 参数时，它返回的是内部列表的**浅拷贝**（即 `self.jobs[:]`），而非内部列表本身。",
+      "citations": [
+        {
+          "path": "schedule/__init__.py",
+          "start_line": 130,
+          "end_line": 131
+        }
+      ],
+      "insufficient_evidence": false
+    },
+    "status": "success",
+    "record_sha256": "e57cc07d3d31c96eed3357d91575037c29935a362104dfcab204cd95f256a6e3",
+    "observed_context": [
+      {
+        "path": "schedule/__init__.py",
+        "start_line": 122,
+        "end_line": 133,
+        "content": "    def get_jobs(self, tag: Optional[Hashable] = None) -> List[\"Job\"]:\n        \"\"\"\n        Gets scheduled jobs marked with the given tag, or all jobs\n        if tag is omitted.\n\n        :param tag: An identifier used to identify a subset of\n                    jobs to retrieve\n        \"\"\"\n        if tag is None:\n            return self.jobs[:]\n        else:\n            return [job for job in self.jobs if tag in job.tags]",
+        "content_sha256": "3b203d4e5005e3c3be275304e9fce13d28bb27a7128ad849faa7f33725e6e1be"
+      },
+      {
+        "path": "schedule/__init__.py",
+        "start_line": 864,
+        "end_line": 868,
+        "content": "def get_jobs(tag: Optional[Hashable] = None) -> List[Job]:\n    \"\"\"Calls :meth:`get_jobs <Scheduler.get_jobs>` on the\n    :data:`default scheduler instance <default_scheduler>`.\n    \"\"\"\n    return default_scheduler.get_jobs(tag)",
+        "content_sha256": "7b80054b113eb8b5edb3654e8efdecae4f7040e4188b558d04c5560aa9d7b07f"
+      }
+    ]
+  },
+  {
+    "candidate_id": "4b--history-dev-05--sdk",
+    "source_file": "experiments/qwen9b-diagnostic/cases/4b--history-dev-05--sdk.json",
+    "snapshot_id": "9999db891acf16c1a1fd96b5",
+    "task_id": "history-dev-05",
+    "model": "4b",
+    "condition": "sdk",
+    "question": "get_jobs() 不传 tag 返回内部列表本身吗？",
+    "answer": {
+      "answer": "不，当 `get_jobs()` 不传 `tag` 参数时，它返回的是内部列表的**浅拷贝**（副本），而非内部列表本身。",
+      "citations": [
+        {
+          "path": "schedule/__init__.py",
+          "start_line": 130,
+          "end_line": 131
+        }
+      ],
+      "insufficient_evidence": false
+    },
+    "status": "success",
+    "record_sha256": "6e65e37c407514d264680ea1ae836f5fed3e374fef15ba9a9b1fd63db98445d9",
+    "observed_context": [
+      {
+        "path": "schedule/__init__.py",
+        "start_line": 122,
+        "end_line": 133,
+        "content": "    def get_jobs(self, tag: Optional[Hashable] = None) -> List[\"Job\"]:\n        \"\"\"\n        Gets scheduled jobs marked with the given tag, or all jobs\n        if tag is omitted.\n\n        :param tag: An identifier used to identify a subset of\n                    jobs to retrieve\n        \"\"\"\n        if tag is None:\n            return self.jobs[:]\n        else:\n            return [job for job in self.jobs if tag in job.tags]",
+        "content_sha256": "3b203d4e5005e3c3be275304e9fce13d28bb27a7128ad849faa7f33725e6e1be"
+      },
+      {
+        "path": "schedule/__init__.py",
+        "start_line": 864,
+        "end_line": 868,
+        "content": "def get_jobs(tag: Optional[Hashable] = None) -> List[Job]:\n    \"\"\"Calls :meth:`get_jobs <Scheduler.get_jobs>` on the\n    :data:`default scheduler instance <default_scheduler>`.\n    \"\"\"\n    return default_scheduler.get_jobs(tag)",
+        "content_sha256": "7b80054b113eb8b5edb3654e8efdecae4f7040e4188b558d04c5560aa9d7b07f"
+      },
+      {
+        "path": "schedule/__init__.py",
+        "start_line": 457,
+        "end_line": 469,
+        "content": "    def tag(self, *tags: Hashable):\n        \"\"\"\n        Tags the job with one or more unique identifiers.\n\n        Tags must be hashable. Duplicate tags are discarded.\n\n        :param tags: A unique list of ``Hashable`` tags.\n        :return: The invoked job instance\n        \"\"\"\n        if not all(isinstance(tag, Hashable) for tag in tags):\n            raise TypeError(\"Tags must be hashable\")\n        self.tags.update(tags)\n        return self",
+        "content_sha256": "158bded103b7fc7e0bec2d0f0cbb3b1150440d8959f80a0d37876580f6f7531e"
+      }
+    ]
+  },
+  {
+    "candidate_id": "4b--history-dev-06--oracle",
+    "source_file": "experiments/qwen9b-diagnostic/cases/4b--history-dev-06--oracle.json",
+    "snapshot_id": "30e277e52d238ad871cb5684",
+    "task_id": "history-dev-06",
+    "model": "4b",
+    "condition": "oracle",
+    "question": "我们公司生产环境昨天用 nanoid 生成了多少个 ID，碰撞次数是多少？",
+    "answer": null,
+    "status": "failed",
+    "record_sha256": "a23be628a0df2e0fa7ea6d2346dc4aadd39088fb44b0e6c6b0c2e4188fd85152",
+    "observed_context": []
+  },
+  {
+    "candidate_id": "4b--history-dev-06--sdk",
+    "source_file": "experiments/qwen9b-diagnostic/cases/4b--history-dev-06--sdk.json",
+    "snapshot_id": "30e277e52d238ad871cb5684",
+    "task_id": "history-dev-06",
+    "model": "4b",
+    "condition": "sdk",
+    "question": "我们公司生产环境昨天用 nanoid 生成了多少个 ID，碰撞次数是多少？",
+    "answer": {
+      "answer": "无法回答该公司生产环境昨天生成的 ID 数量及碰撞次数，因为提供的源码中不包含任何生产日志、统计记录或碰撞检测机制。",
+      "citations": [
+        {
+          "path": "index.js",
+          "start_line": 96,
+          "end_line": 121
+        },
+        {
+          "path": "index.browser.js",
+          "start_line": 75,
+          "end_line": 84
+        }
+      ],
+      "insufficient_evidence": true
+    },
+    "status": "success",
+    "record_sha256": "7ab8a29efc0ac93b88f61e8acbadd77e9f7b3deaad5ce940269ce4c2adca296e",
+    "observed_context": [
+      {
+        "path": "index.js",
+        "start_line": 96,
+        "end_line": 121,
+        "content": "export function customAlphabet(alphabet, defaultSize = 21) {\n  if (\n    typeof alphabet !== 'string' ||\n    !alphabet ||\n    alphabet.length > 256\n  ) {\n    return customRandom(alphabet, defaultSize, random)\n  }\n  for (let i = 0; i < alphabet.length; i++) {\n    if (alphabet.charCodeAt(i) > 255) {\n      // The fast path below writes char codes to a byte buffer,\n      // so it supports only single-byte characters.\n      return customRandom(alphabet, defaultSize, random)\n    }\n  }\n\n  // Alphabet char codes to write IDs into a byte buffer directly.\n  let charCodes = Uint8Array.from(alphabet, str => {\n    return str.charCodeAt(0)\n  })\n  let alphabetLen = alphabet.length\n  // The smallest `2^n - 1` covering all alphabet indexes. Rejecting\n  // `byte & mask >= alphabetLen` avoids modulo bias without `%` operation.\n  let mask = (2 << (31 - Math.clz32((alphabetLen - 1) | 1))) - 1\n\n  // IDs are pre-generated into a string pool: accepted alphabet chars are",
+        "content_sha256": "6a390d775062bd51a03e093f3df233c9c61ac0eb48987b6403feb600ca808145"
+      },
+      {
+        "path": "index.browser.js",
+        "start_line": 75,
+        "end_line": 84,
+        "content": "export let nanoid = (size = 21) => {\n  let id = ''\n  let bytes = crypto.getRandomValues(new Uint8Array((size |= 0)))\n  while (size--) {\n    // The following mask reduces the random byte in the 0-255 value\n    // range to the 0-63 value range.\n    id += urlAlphabet[bytes[size] & 63]\n  }\n  return id\n}",
+        "content_sha256": "68dfc33bd5a7aabf8d6c4a7a1da1ed25e25e0f5232e69e6091a51e65e98425f0"
+      },
+      {
+        "path": "index.js",
+        "start_line": 176,
+        "end_line": 177,
+        "content": "\nexport const nanoid = customAlphabet(urlAlphabet)",
+        "content_sha256": "8f0b7ffb697af46ffe8173dba49bd3edc15d524c2d3c3377d86be53509ed420d"
+      }
+    ]
+  },
+  {
+    "candidate_id": "4b--sweqa-flask-002--oracle",
+    "source_file": "experiments/qwen9b-diagnostic/cases/4b--sweqa-flask-002--oracle.json",
+    "snapshot_id": "b597a359a6ff4391d4f36ec2",
+    "task_id": "sweqa-flask-002",
+    "model": "4b",
+    "condition": "oracle",
+    "question": "What is the purpose of the registration tracking flag in the blueprint collection class that prevents setup methods from being called after the blueprint has been registered once?",
+    "answer": {
+      "answer": "The purpose of the `_got_registered_once` flag is to enforce a strict ordering constraint that prevents setup methods from being called after the blueprint has been registered, ensuring all necessary imports and decorators are finalized before registration occurs.",
+      "citations": [
+        {
+          "path": "src/flask/sansio/blueprints.py",
+          "start_line": 172,
+          "end_line": 172
+        },
+        {
+          "path": "src/flask/sansio/blueprints.py",
+          "start_line": 213,
+          "end_line": 221
+        },
+        {
+          "path": "src/flask/sansio/blueprints.py",
+          "start_line": 320,
+          "end_line": 320
+        }
+      ],
+      "insufficient_evidence": false
+    },
+    "status": "success",
+    "record_sha256": "784e2d450b242bedf34da0b54c148f5cf4c0c2155ce694a2318642d51963b7de",
+    "observed_context": [
+      {
+        "path": "src/flask/sansio/blueprints.py",
+        "start_line": 213,
+        "end_line": 230,
+        "content": "    def _check_setup_finished(self, f_name: str) -> None:\n        if self._got_registered_once:\n            raise AssertionError(\n                f\"The setup method '{f_name}' can no longer be called on the blueprint\"\n                f\" '{self.name}'. It has already been registered at least once, any\"\n                \" changes will not be applied consistently.\\n\"\n                \"Make sure all imports, decorators, functions, etc. needed to set up\"\n                \" the blueprint are done before registering it.\"\n            )\n\n    @setupmethod\n    def record(self, func: DeferredSetupFunction) -> None:\n        \"\"\"Registers a function that is called when the blueprint is\n        registered on the application.  This function is called with the\n        state as argument as returned by the :meth:`make_setup_state`\n        method.\n        \"\"\"\n        self.deferred_functions.append(func)",
+        "content_sha256": "ed01493a5a4f660ec97c8e611f621d7a7e800108ed743b195eb78e4e429aa537"
+      },
+      {
+        "path": "src/flask/sansio/blueprints.py",
+        "start_line": 316,
+        "end_line": 335,
+        "content": "        first_bp_registration = not any(bp is self for bp in app.blueprints.values())\n        first_name_registration = name not in app.blueprints\n\n        app.blueprints[name] = self\n        self._got_registered_once = True\n        state = self.make_setup_state(app, options, first_bp_registration)\n\n        if self.has_static_folder:\n            state.add_url_rule(\n                f\"{self.static_url_path}/<path:filename>\",\n                view_func=self.send_static_file,  # type: ignore[attr-defined]\n                endpoint=\"static\",\n            )\n\n        # Merge blueprint data into parent.\n        if first_bp_registration or first_name_registration:\n            self._merge_blueprint_funcs(app, name)\n\n        for deferred in self.deferred_functions:\n            deferred(state)",
+        "content_sha256": "b454fcceb34c5c3246f7f8cc40df0ae5593f29e3910e78cb8b483f7bb65c3a6b"
+      },
+      {
+        "path": "src/flask/sansio/scaffold.py",
+        "start_line": 42,
+        "end_line": 49,
+        "content": "def setupmethod(f: F) -> F:\n    f_name = f.__name__\n\n    def wrapper_func(self: Scaffold, *args: t.Any, **kwargs: t.Any) -> t.Any:\n        self._check_setup_finished(f_name)\n        return f(self, *args, **kwargs)\n\n    return t.cast(F, update_wrapper(wrapper_func, f))",
+        "content_sha256": "bef14a46bf8ebc8fd2672d8b1939d041b7cb99d472b153cda9a4f5759b0526c2"
+      },
+      {
+        "path": "src/flask/sansio/blueprints.py",
+        "start_line": 172,
+        "end_line": 172,
+        "content": "    _got_registered_once = False",
+        "content_sha256": "2291e6dc4b61cced1c2e20dac34c9ad0c8b89f0684f921d49d70e84fdbec7d4e"
+      }
+    ]
+  },
+  {
+    "candidate_id": "4b--sweqa-flask-002--sdk",
+    "source_file": "experiments/qwen9b-diagnostic/cases/4b--sweqa-flask-002--sdk.json",
+    "snapshot_id": "b597a359a6ff4391d4f36ec2",
+    "task_id": "sweqa-flask-002",
+    "model": "4b",
+    "condition": "sdk",
+    "question": "What is the purpose of the registration tracking flag in the blueprint collection class that prevents setup methods from being called after the blueprint has been registered once?",
+    "answer": {
+      "answer": "The provided context does not contain information about a 'registration tracking flag' in the blueprint collection class that prevents setup methods from being called after registration.",
+      "citations": [
+        {
+          "path": "src/flask/sansio/blueprints.py",
+          "start_line": 120,
+          "end_line": 140
+        }
+      ],
+      "insufficient_evidence": true
+    },
+    "status": "success",
+    "record_sha256": "06262e3232fb2f4275838fba6654cb6d17fb393c5019ba6489387a7a53ee9bd3",
+    "observed_context": [
+      {
+        "path": "src/flask/sansio/blueprints.py",
+        "start_line": 120,
+        "end_line": 140,
+        "content": "    \"\"\"Represents a blueprint, a collection of routes and other\n    app-related functions that can be registered on a real application\n    later.\n\n    A blueprint is an object that allows defining application functions\n    without requiring an application object ahead of time. It uses the\n    same decorators as :class:`~flask.Flask`, but defers the need for an\n    application by recording them for later registration.\n\n    Decorating a function with a blueprint creates a deferred function\n    that is called with :class:`~flask.blueprints.BlueprintSetupState`\n    when the blueprint is registered on an application.\n\n    See :doc:`/blueprints` for more information.\n\n    :param name: The name of the blueprint. Will be prepended to each\n        endpoint name.\n    :param import_name: The name of the blueprint package, usually\n        ``__name__``. This helps locate the ``root_path`` for the\n        blueprint.\n    :param static_folder: A folder with static files that should be",
+        "content_sha256": "937b6e50b6508e43e4f627f708b7cf342dc8754b01869742d5af969b8a304336"
+      },
+      {
+        "path": "src/flask/wrappers.py",
+        "start_line": 161,
+        "end_line": 178,
+        "content": "    @property\n    def blueprint(self) -> str | None:\n        \"\"\"The registered name of the current blueprint.\n\n        This will be ``None`` if the endpoint is not part of a\n        blueprint, or if URL matching failed or has not been performed\n        yet.\n\n        This does not necessarily match the name the blueprint was\n        created with. It may have been nested, or registered with a\n        different name.\n        \"\"\"\n        endpoint = self.endpoint\n\n        if endpoint is not None and \".\" in endpoint:\n            return endpoint.rpartition(\".\")[0]\n\n        return None",
+        "content_sha256": "762b7a9df5937a5e43f946722eecddda4725643dba306d2c04d50f03855c7114"
+      },
+      {
+        "path": "docs/conf.py",
+        "start_line": 100,
+        "end_line": 101,
+        "content": "def setup(app):\n    app.add_role(\"gh\", github_link)",
+        "content_sha256": "8c6867f5df7b7fa8bf67ea138071c197674e9f79e00738f8a9be5f6948c64b6e"
+      }
+    ]
+  },
+  {
+    "candidate_id": "4b--sweqa-requests-001--oracle",
+    "source_file": "experiments/qwen9b-diagnostic/cases/4b--sweqa-requests-001--oracle.json",
+    "snapshot_id": "e82fdc78cb700c628d4286d6",
+    "task_id": "sweqa-requests-001",
+    "model": "4b",
+    "condition": "oracle",
+    "question": "What is the semantic significance of the `no_proxy` keyword argument in `get_environ_proxies` overriding environment variable precedence, and what does returning a non-empty dictionary when this override is applied indicate?",
+    "answer": {
+      "answer": "The `no_proxy` keyword argument in `get_environ_proxies` overrides environment variable precedence by explicitly passing the provided value to `should_bypass_proxies`, which then uses this argument instead of checking `os.environ` for `no_proxy` or `NO_PROXY`. Returning a non-empty dictionary indicates that the proxy bypass logic failed (i.e., the URL was not matched by the `no_proxy` list), meaning the request should proceed using the system's configured proxies.",
+      "citations": [
+        {
+          "path": "src/requests/utils.py",
+          "start_line": 769,
+          "end_line": 771
+        },
+        {
+          "path": "src/requests/utils.py",
+          "start_line": 778,
+          "end_line": 801
+        },
+        {
+          "path": "src/requests/utils.py",
+          "start_line": 822,
+          "end_line": 825
+        }
+      ],
+      "insufficient_evidence": false
+    },
+    "status": "success",
+    "record_sha256": "b8973b32f1eebe941bb13801adf7cac9271368ad35debfb8cf0efa6316bf2daf",
+    "observed_context": [
+      {
+        "path": "src/requests/utils.py",
+        "start_line": 755,
+        "end_line": 825,
+        "content": "def should_bypass_proxies(url, no_proxy):\n    \"\"\"\n    Returns whether we should bypass proxies or not.\n\n    :rtype: bool\n    \"\"\"\n\n    # Prioritize lowercase environment variables over uppercase\n    # to keep a consistent behaviour with other http projects (curl, wget).\n    def get_proxy(key):\n        return os.environ.get(key) or os.environ.get(key.upper())\n\n    # First check whether no_proxy is defined. If it is, check that the URL\n    # we're getting isn't in the no_proxy list.\n    no_proxy_arg = no_proxy\n    if no_proxy is None:\n        no_proxy = get_proxy(\"no_proxy\")\n    parsed = urlparse(url)\n\n    if parsed.hostname is None:\n        # URLs don't always have hostnames, e.g. file:/// urls.\n        return True\n\n    if no_proxy:\n        # We need to check whether we match here. We need to see if we match\n        # the end of the hostname, both with and without the port.\n        no_proxy = (host for host in no_proxy.replace(\" \", \"\").split(\",\") if host)\n\n        if is_ipv4_address(parsed.hostname):\n            for proxy_ip in no_proxy:\n                if is_valid_cidr(proxy_ip):\n                    if address_in_network(parsed.hostname, proxy_ip):\n                        return True\n                elif parsed.hostname == proxy_ip:\n                    # If no_proxy ip was defined in plain IP notation instead of cidr notation &\n                    # matches the IP of the index\n                    return True\n        else:\n            host_with_port = parsed.hostname\n            if parsed.port:\n                host_with_port += f\":{parsed.port}\"\n\n            for host in no_proxy:\n                if parsed.hostname.endswith(host) or host_with_port.endswith(host):\n                    # The URL does match something in no_proxy, so we don't want\n                    # to apply the proxies on this URL.\n                    return True\n\n    with set_environ(\"no_proxy\", no_proxy_arg):\n        # parsed.hostname can be `None` in cases such as a file URI.\n        try:\n            bypass = proxy_bypass(parsed.hostname)\n        except (TypeError, socket.gaierror):\n            bypass = False\n\n    if bypass:\n        return True\n\n    return False\n\n\ndef get_environ_proxies(url, no_proxy=None):\n    \"\"\"\n    Return a dict of environment proxies.\n\n    :rtype: dict\n    \"\"\"\n    if should_bypass_proxies(url, no_proxy=no_proxy):\n        return {}\n    else:\n        return getproxies()",
+        "content_sha256": "1470d8eebd3461f2e49881427c7e72735c82f201da142e2de296bb6300548276"
+      },
+      {
+        "path": "tests/test_utils.py",
+        "start_line": 257,
+        "end_line": 272,
+        "content": "    @pytest.mark.parametrize(\n        \"url\",\n        (\n            \"http://192.168.0.1:5000/\",\n            \"http://192.168.0.1/\",\n            \"http://172.16.1.1/\",\n            \"http://172.16.1.1:5000/\",\n            \"http://localhost.localdomain:5000/v1.0/\",\n        ),\n    )\n    def test_not_bypass_no_proxy_keyword(self, url, monkeypatch):\n        # This is testing that the 'no_proxy' argument overrides the\n        # environment variable 'no_proxy'\n        monkeypatch.setenv(\"http_proxy\", \"http://proxy.example.com:3128/\")\n        no_proxy = \"192.168.1.1,requests.com\"\n        assert get_environ_proxies(url, no_proxy=no_proxy) != {}",
+        "content_sha256": "e1496b0fb63c6fdf016b1639e1a26bf1b4ee20e8da8ecd158e8d99de6ab3fb5f"
+      }
+    ]
+  },
+  {
+    "candidate_id": "4b--sweqa-requests-001--sdk",
+    "source_file": "experiments/qwen9b-diagnostic/cases/4b--sweqa-requests-001--sdk.json",
+    "snapshot_id": "e82fdc78cb700c628d4286d6",
+    "task_id": "sweqa-requests-001",
+    "model": "4b",
+    "condition": "sdk",
+    "question": "What is the semantic significance of the `no_proxy` keyword argument in `get_environ_proxies` overriding environment variable precedence, and what does returning a non-empty dictionary when this override is applied indicate?",
+    "answer": {
+      "answer": "The `no_proxy` keyword argument in `get_environ_proxies` overrides the standard environment variable precedence by allowing an explicit list of hosts to bypass proxies, which takes priority over the `no_proxy` environment variable if provided. When this override is applied and the URL matches an entry in the `no_proxy` list, the function returns an empty dictionary `{}`, indicating that no proxy should be used for that request.",
+      "citations": [
+        {
+          "path": "src/requests/utils.py",
+          "start_line": 822,
+          "end_line": 823
+        },
+        {
+          "path": "src/requests/utils.py",
+          "start_line": 769,
+          "end_line": 771
+        }
+      ],
+      "insufficient_evidence": false
+    },
+    "status": "success",
+    "record_sha256": "25b5f8fd566dd475a050a3fb72553810ed78264ef06ab19a137ef3aec94a8685",
+    "observed_context": [
+      {
+        "path": "src/requests/utils.py",
+        "start_line": 816,
+        "end_line": 825,
+        "content": "def get_environ_proxies(url, no_proxy=None):\n    \"\"\"\n    Return a dict of environment proxies.\n\n    :rtype: dict\n    \"\"\"\n    if should_bypass_proxies(url, no_proxy=no_proxy):\n        return {}\n    else:\n        return getproxies()",
+        "content_sha256": "988e8929b6e4d2c33a504031023aa337574e2ea74a7acb00327a141ab2bd390d"
+      },
+      {
+        "path": "src/requests/utils.py",
+        "start_line": 755,
+        "end_line": 781,
+        "content": "def should_bypass_proxies(url, no_proxy):\n    \"\"\"\n    Returns whether we should bypass proxies or not.\n\n    :rtype: bool\n    \"\"\"\n\n    # Prioritize lowercase environment variables over uppercase\n    # to keep a consistent behaviour with other http projects (curl, wget).\n    def get_proxy(key):\n        return os.environ.get(key) or os.environ.get(key.upper())\n\n    # First check whether no_proxy is defined. If it is, check that the URL\n    # we're getting isn't in the no_proxy list.\n    no_proxy_arg = no_proxy\n    if no_proxy is None:\n        no_proxy = get_proxy(\"no_proxy\")\n    parsed = urlparse(url)\n\n    if parsed.hostname is None:\n        # URLs don't always have hostnames, e.g. file:/// urls.\n        return True\n\n    if no_proxy:\n        # We need to check whether we match here. We need to see if we match\n        # the end of the hostname, both with and without the port.\n        no_proxy = (host for host in no_proxy.replace(\" \", \"\").split(\",\") if host)",
+        "content_sha256": "756b2048a949d4c96fd4f7cb5146cde74d1e52e823aeed2502383937127e2e14"
+      },
+      {
+        "path": "tests/test_utils.py",
+        "start_line": 215,
+        "end_line": 219,
+        "content": "    @pytest.fixture(autouse=True, params=[\"no_proxy\", \"NO_PROXY\"])\n    def no_proxy(self, request, monkeypatch):\n        monkeypatch.setenv(\n            request.param, \"192.168.0.0/24,127.0.0.1,localhost.localdomain,172.16.1.1\"\n        )",
+        "content_sha256": "c00da8883e760ed68a342156fa75c7b74cebc15beeebe28507ee6c502e8a7fed"
+      }
+    ]
+  },
+  {
+    "candidate_id": "9b--history-dev-03--oracle",
+    "source_file": "experiments/qwen9b-diagnostic/cases/9b--history-dev-03--oracle.json",
+    "snapshot_id": "30e277e52d238ad871cb5684",
+    "task_id": "history-dev-03",
+    "model": "9b",
+    "condition": "oracle",
+    "question": "切换到 non-secure 入口，nanoid(-10) 的结果与 Node 默认入口一样吗？",
+    "answer": {
+      "answer": "不一样。",
+      "citations": [
+        {
+          "path": "non-secure/index.js",
+          "start_line": 19,
+          "end_line": 29
+        },
+        {
+          "path": "index.js",
+          "start_line": 177,
+          "end_line": 177
+        }
+      ],
+      "insufficient_evidence": false
+    },
+    "status": "success",
+    "record_sha256": "6220c5aecd87b254821bdfb3a29c6871af4d3bc36ecd3d216a9945862b1caf03",
+    "observed_context": [
+      {
+        "path": "non-secure/index.js",
+        "start_line": 19,
+        "end_line": 29,
+        "content": "export let nanoid = (size = 21) => {\n  let id = ''\n  // A compact alternative for `for (var i = 0; i < step; i++)`.\n  // `> 0` stops a negative size from looping forever.\n  let i = size | 0\n  while (i-- > 0) {\n    // `| 0` is more compact and faster than `Math.floor()`.\n    id += urlAlphabet[(Math.random() * 64) | 0]\n  }\n  return id\n}",
+        "content_sha256": "b57574c83361e1fb043c39f15ed99b4b1062a181535e98a1a8e1f9b828dd6417"
+      },
+      {
+        "path": "index.js",
+        "start_line": 96,
+        "end_line": 175,
+        "content": "export function customAlphabet(alphabet, defaultSize = 21) {\n  if (\n    typeof alphabet !== 'string' ||\n    !alphabet ||\n    alphabet.length > 256\n  ) {\n    return customRandom(alphabet, defaultSize, random)\n  }\n  for (let i = 0; i < alphabet.length; i++) {\n    if (alphabet.charCodeAt(i) > 255) {\n      // The fast path below writes char codes to a byte buffer,\n      // so it supports only single-byte characters.\n      return customRandom(alphabet, defaultSize, random)\n    }\n  }\n\n  // Alphabet char codes to write IDs into a byte buffer directly.\n  let charCodes = Uint8Array.from(alphabet, str => {\n    return str.charCodeAt(0)\n  })\n  let alphabetLen = alphabet.length\n  // The smallest `2^n - 1` covering all alphabet indexes. Rejecting\n  // `byte & mask >= alphabetLen` avoids modulo bias without `%` operation.\n  let mask = (2 << (31 - Math.clz32((alphabetLen - 1) | 1))) - 1\n\n  // IDs are pre-generated into a string pool: accepted alphabet chars are\n  // written to a byte buffer, converted to a string with one\n  // `Buffer#toString()` call, and every ID is a cheap `String#substring()`.\n  // It avoids per-character string concatenations and pays string\n  // allocation cost once per refill.\n  //\n  // The pool starts at the first requested size and grows geometrically,\n  // so short-living generators do not pay for a full pool.\n  let pool = ''\n  let poolOffset = 0\n  let poolNext = 0\n\n  return (size = defaultSize) => {\n    // `|=` convert `size` to number to prevent `valueOf` abusing\n    // and pool offset pollution\n    size |= 0\n    if (size < 0) throw new RangeError('Wrong ID size')\n    if (size === 0) return ''\n    if (poolOffset + size > pool.length) {\n      let target = Math.max(poolNext, size)\n      poolNext = Math.min(target * 16, POOL_MAX)\n      let buffer = Buffer.allocUnsafe(target)\n      if (mask === alphabetLen - 1) {\n        // Power-of-two alphabets like `urlAlphabet` accept every byte,\n        // so random bytes are translated in place without rejections.\n        fillRandom(buffer)\n        for (let i = 0; i < target; i++) {\n          buffer[i] = charCodes[buffer[i] & mask]\n        }\n      } else {\n        // Rejection sampling accepts `alphabetLen` of every `mask + 1`\n        // random bytes. `1.6` requests extra bytes to cover\n        // unlucky streaks in most fills.\n        let randomBytes = Buffer.allocUnsafe(\n          Math.ceil((1.6 * (mask + 1) * target) / alphabetLen)\n        )\n        let accepted = 0\n        while (accepted < target) {\n          fillRandom(randomBytes)\n          for (let i = 0; i < randomBytes.length; i++) {\n            let index = randomBytes[i] & mask\n            if (index < alphabetLen) {\n              buffer[accepted++] = charCodes[index]\n              if (accepted === target) break\n            }\n          }\n        }\n      }\n      pool = buffer.toString('latin1')\n      poolOffset = 0\n    }\n    poolOffset += size\n    return pool.substring(poolOffset - size, poolOffset)\n  }\n}",
+        "content_sha256": "e4f9b99b7e8a891c08d269961d4aa170855539b3484a90ec62561cb6fb67f988"
+      },
+      {
+        "path": "index.js",
+        "start_line": 177,
+        "end_line": 177,
+        "content": "export const nanoid = customAlphabet(urlAlphabet)",
+        "content_sha256": "c360da0cbb0aa1c8336ed31a9e0e16ce867647e121e735f1574f9047535ded40"
+      }
+    ]
+  },
+  {
+    "candidate_id": "9b--history-dev-03--sdk",
+    "source_file": "experiments/qwen9b-diagnostic/cases/9b--history-dev-03--sdk.json",
+    "snapshot_id": "30e277e52d238ad871cb5684",
+    "task_id": "history-dev-03",
+    "model": "9b",
+    "condition": "sdk",
+    "question": "切换到 non-secure 入口，nanoid(-10) 的结果与 Node 默认入口一样吗？",
+    "answer": {
+      "answer": "不一样。切换到 non-secure 入口时，nanoid(-10) 返回空字符串，而 Node 默认入口会抛出 RangeError 异常。",
+      "citations": [
+        {
+          "path": "non-secure/index.js",
+          "start_line": 23,
+          "end_line": 28
+        },
+        {
+          "path": "index.js",
+          "start_line": 136,
+          "end_line": 137
+        }
+      ],
+      "insufficient_evidence": false
+    },
+    "status": "success",
+    "record_sha256": "b819317af3b11bb35d415d96676cba213cd64f4b51eff0ef35e374589494e498",
+    "observed_context": [
+      {
+        "path": "non-secure/index.js",
+        "start_line": 1,
+        "end_line": 29,
+        "content": "/* @ts-self-types=\"./index.d.ts\" */\n\nimport { urlAlphabet } from '../url-alphabet/index.js'\n\nexport let customAlphabet = (alphabet, defaultSize = 21) => {\n  return (size = defaultSize) => {\n    let id = ''\n    // A compact alternative for `for (var i = 0; i < step; i++)`.\n    // `> 0` stops a negative size from looping forever.\n    let i = size | 0\n    while (i-- > 0) {\n      // `| 0` is more compact and faster than `Math.floor()`.\n      id += alphabet[(Math.random() * alphabet.length) | 0]\n    }\n    return id\n  }\n}\n\nexport let nanoid = (size = 21) => {\n  let id = ''\n  // A compact alternative for `for (var i = 0; i < step; i++)`.\n  // `> 0` stops a negative size from looping forever.\n  let i = size | 0\n  while (i-- > 0) {\n    // `| 0` is more compact and faster than `Math.floor()`.\n    id += urlAlphabet[(Math.random() * 64) | 0]\n  }\n  return id\n}",
+        "content_sha256": "b1739b9e897dbb2335512b227293fa4602f6e49f96130a25189fb8a9d4af5181"
+      },
+      {
+        "path": "index.js",
+        "start_line": 1,
+        "end_line": 168,
+        "content": "import { urlAlphabet } from './url-alphabet/index.js'\n\nexport { urlAlphabet }\n\n// `crypto.getRandomValues` rejects requests over 65536 bytes,\n// so bigger buffers are filled by chunks.\nconst GET_RANDOM_LIMIT = 65536\n\nfunction fillRandom(buffer) {\n  let from = 0\n  while (from < buffer.length) {\n    let to = Math.min(from + GET_RANDOM_LIMIT, buffer.length)\n    crypto.getRandomValues(buffer.subarray(from, to))\n    from = to\n  }\n}\n\nexport function random(bytes) {\n  // `|=` convert `bytes` to number to prevent `valueOf` abusing\n  bytes |= 0\n  if (bytes < 0) throw new RangeError('Wrong ID size')\n  // `random()` is used rarely and not in hot paths, so it makes\n  // a direct crypto call instead of using a byte pool.\n  let buffer = Buffer.allocUnsafe(bytes)\n  fillRandom(buffer)\n  return buffer\n}\n\nexport function customRandom(alphabet, defaultSize, getRandom) {\n  // Random bytes are 0-255. `random % alphabet.length` can waste\n  // that entropy by making some symbols more likely.\n  //\n  // `safeByteCutoff` will be divided by `alphabet.length` without remainder\n  // fixing issue of broken distribution.\n  //\n  // Example: with 17 symbols, `safeByteCutoff` is 255.\n  // Bytes 0-254 preserve entropy evenly: each symbol gets 15 source bytes.\n  // Byte 255 would map to `0` again, making one symbol slightly more likely.\n  // So we reject 255.\n  let safeByteCutoff = 256 - (256 % alphabet.length)\n\n  // Power-of-two alphabets can use `& mask` instead of modulo.\n  if (safeByteCutoff === 256) {\n    let mask = alphabet.length - 1\n\n    return (size = defaultSize) => {\n      if (!size) return ''\n      let id = ''\n      while (true) {\n        let bytes = getRandom(size)\n        // A compact alternative for `for (let i = 0; i < step; i++)`.\n        let i = size\n        while (i--) {\n          // Here, `& mask` is equivalent to `% alphabet.length`, but faster\n          id += alphabet[bytes[i] & mask]\n          if (id.length >= size) return id\n        }\n      }\n    }\n  }\n\n  // Secure random calls are expensive because system calls\n  // for entropy collection take time. To avoid extra calls,\n  // extra bytes are requested in advance to cover rejections.\n  //\n  // `step` determines how many random bytes to request.\n  // `1.6` is a magic number chosen from benchmarks.\n  let step = Math.ceil((1.6 * 256 * defaultSize) / safeByteCutoff)\n\n  return (size = defaultSize) => {\n    if (!size) return ''\n    let id = ''\n    while (true) {\n      let bytes = getRandom(step)\n      // A compact alternative for `for (let i = 0; i < step; i++)`.\n      let i = step\n      while (i--) {\n        // Reject bytes >= `safeByteCutoff` to avoid modulo bias\n        // and give each symbol an equal chance.\n        if (bytes[i] < safeByteCutoff) {\n          id += alphabet[bytes[i] % alphabet.length]\n          if (id.length >= size) return id\n        }\n      }\n    }\n  }\n}\n\n// The string pool optimizations in `customAlphabet()` and `nanoid()`\n// were ported from the nope-id project by Orhan Aydoğdu:\n// https://github.com/orhanayd/nope-id\n\n// Maximum size of the pre-generated string pool in `customAlphabet()`.\nconst POOL_MAX = GET_RANDOM_LIMIT / 2\n\nexport function customAlphabet(alphabet, defaultSize = 21) {\n  if (\n    typeof alphabet !== 'string' ||\n    !alphabet ||\n    alphabet.length > 256\n  ) {\n    return customRandom(alphabet, defaultSize, random)\n  }\n  for (let i = 0; i < alphabet.length; i++) {\n    if (alphabet.charCodeAt(i) > 255) {\n      // The fast path below writes char codes to a byte buffer,\n      // so it supports only single-byte characters.\n      return customRandom(alphabet, defaultSize, random)\n    }\n  }\n\n  // Alphabet char codes to write IDs into a byte buffer directly.\n  let charCodes = Uint8Array.from(alphabet, str => {\n    return str.charCodeAt(0)\n  })\n  let alphabetLen = alphabet.length\n  // The smallest `2^n - 1` covering all alphabet indexes. Rejecting\n  // `byte & mask >= alphabetLen` avoids modulo bias without `%` operation.\n  let mask = (2 << (31 - Math.clz32((alphabetLen - 1) | 1))) - 1\n\n  // IDs are pre-generated into a string pool: accepted alphabet chars are\n  // written to a byte buffer, converted to a string with one\n  // `Buffer#toString()` call, and every ID is a cheap `String#substring()`.\n  // It avoids per-character string concatenations and pays string\n  // allocation cost once per refill.\n  //\n  // The pool starts at the first requested size and grows geometrically,\n  // so short-living generators do not pay for a full pool.\n  let pool = ''\n  let poolOffset = 0\n  let poolNext = 0\n\n  return (size = defaultSize) => {\n    // `|=` convert `size` to number to prevent `valueOf` abusing\n    // and pool offset pollution\n    size |= 0\n    if (size < 0) throw new RangeError('Wrong ID size')\n    if (size === 0) return ''\n    if (poolOffset + size > pool.length) {\n      let target = Math.max(poolNext, size)\n      poolNext = Math.min(target * 16, POOL_MAX)\n      let buffer = Buffer.allocUnsafe(target)\n      if (mask === alphabetLen - 1) {\n        // Power-of-two alphabets like `urlAlphabet` accept every byte,\n        // so random bytes are translated in place without rejections.\n        fillRandom(buffer)\n        for (let i = 0; i < target; i++) {\n          buffer[i] = charCodes[buffer[i] & mask]\n        }\n      } else {\n        // Rejection sampling accepts `alphabetLen` of every `mask + 1`\n        // random bytes. `1.6` requests extra bytes to cover\n        // unlucky streaks in most fills.\n        let randomBytes = Buffer.allocUnsafe(\n          Math.ceil((1.6 * (mask + 1) * target) / alphabetLen)\n        )\n        let accepted = 0\n        while (accepted < target) {\n          fillRandom(randomBytes)\n          for (let i = 0; i < randomBytes.length; i++) {\n            let index = randomBytes[i] & mask\n            if (index < alphabetLen) {\n              buffer[accepted++] = charCodes[index]\n              if (accepted === target) break\n            }\n          }\n        }\n      }",
+        "content_sha256": "4073716123f11a3add173e959b70ec43663ce177e1eaec43f0b28e96b7d45fa5"
+      },
+      {
+        "path": "index.browser.js",
+        "start_line": 75,
+        "end_line": 84,
+        "content": "export let nanoid = (size = 21) => {\n  let id = ''\n  let bytes = crypto.getRandomValues(new Uint8Array((size |= 0)))\n  while (size--) {\n    // The following mask reduces the random byte in the 0-255 value\n    // range to the 0-63 value range.\n    id += urlAlphabet[bytes[size] & 63]\n  }\n  return id\n}",
+        "content_sha256": "68dfc33bd5a7aabf8d6c4a7a1da1ed25e25e0f5232e69e6091a51e65e98425f0"
+      },
+      {
+        "path": "index.js",
+        "start_line": 176,
+        "end_line": 177,
+        "content": "\nexport const nanoid = customAlphabet(urlAlphabet)",
+        "content_sha256": "8f0b7ffb697af46ffe8173dba49bd3edc15d524c2d3c3377d86be53509ed420d"
+      }
+    ]
+  },
+  {
+    "candidate_id": "9b--history-dev-04--oracle",
+    "source_file": "experiments/qwen9b-diagnostic/cases/9b--history-dev-04--oracle.json",
+    "snapshot_id": "dfdc0816797bf578d0363591",
+    "task_id": "history-dev-04",
+    "model": "9b",
+    "condition": "oracle",
+    "question": "mitt 的 on 会把事件名统一转成小写吗？结合实现与 should NOT normalize case 测试说明。",
+    "answer": {
+      "answer": "否，mitt 的 on 方法不会把事件名统一转成小写。",
+      "citations": [
+        {
+          "path": "src/index.ts",
+          "start_line": 66,
+          "end_line": 73
+        },
+        {
+          "path": "test/index_test.ts",
+          "start_line": 79,
+          "end_line": 90
+        }
+      ],
+      "insufficient_evidence": false
+    },
+    "status": "success",
+    "record_sha256": "457a47a775c7f9bad386e0e03aed7527e2e660fc3dcced88fd07501b5ee5d75c",
+    "observed_context": [
+      {
+        "path": "test/index_test.ts",
+        "start_line": 79,
+        "end_line": 90,
+        "content": "\t\tit('should NOT normalize case', () => {\n\t\t\tconst foo = () => {};\n\t\t\tinst.on('FOO', foo);\n\t\t\tinst.on('Bar', foo);\n\t\t\tinst.on('baz:baT!', foo);\n\n\t\t\texpect(events.get('FOO')).to.deep.equal([foo]);\n\t\t\texpect(events.has('foo')).to.equal(false);\n\t\t\texpect(events.get('Bar')).to.deep.equal([foo]);\n\t\t\texpect(events.has('bar')).to.equal(false);\n\t\t\texpect(events.get('baz:baT!')).to.deep.equal([foo]);\n\t\t});",
+        "content_sha256": "7c7ae10f82f38319cf3cf181161ee7bfb29bde7819610b697836ace1ba119048"
+      },
+      {
+        "path": "src/index.ts",
+        "start_line": 66,
+        "end_line": 73,
+        "content": "\t\ton<Key extends keyof Events>(type: Key, handler: GenericEventHandler) {\n\t\t\tconst handlers: Array<GenericEventHandler> | undefined = all!.get(type);\n\t\t\tif (handlers) {\n\t\t\t\thandlers.push(handler);\n\t\t\t} else {\n\t\t\t\tall!.set(type, [handler] as EventHandlerList<Events[keyof Events]>);\n\t\t\t}\n\t\t},",
+        "content_sha256": "0a5bf296ae849cd916f0b4eedbc3b3dbd431acb523f64fede2782b79ff119004"
+      }
+    ]
+  },
+  {
+    "candidate_id": "9b--history-dev-04--sdk",
+    "source_file": "experiments/qwen9b-diagnostic/cases/9b--history-dev-04--sdk.json",
+    "snapshot_id": "dfdc0816797bf578d0363591",
+    "task_id": "history-dev-04",
+    "model": "9b",
+    "condition": "sdk",
+    "question": "mitt 的 on 会把事件名统一转成小写吗？结合实现与 should NOT normalize case 测试说明。",
+    "answer": {
+      "answer": "否，mitt 的 on 方法不会把事件名统一转成小写。",
+      "citations": [
+        {
+          "path": "src/index.ts",
+          "start_line": 66,
+          "end_line": 73
+        },
+        {
+          "path": "test/index_test.ts",
+          "start_line": 79,
+          "end_line": 90
+        }
+      ],
+      "insufficient_evidence": false
+    },
+    "status": "success",
+    "record_sha256": "05aa8dd7a9cd52c96623510ddc077eb329e424b0bc53e3726f10d64f9f6885f0",
+    "observed_context": [
+      {
+        "path": "src/index.ts",
+        "start_line": 46,
+        "end_line": 77,
+        "content": "export default function mitt<Events extends Record<EventType, unknown>>(\n\tall?: EventHandlerMap<Events>\n): Emitter<Events> {\n\ttype GenericEventHandler =\n\t\t| Handler<Events[keyof Events]>\n\t\t| WildcardHandler<Events>;\n\tall = all || new Map();\n\n\treturn {\n\t\t/**\n\t\t * A Map of event names to registered handler functions.\n\t\t */\n\t\tall,\n\n\t\t/**\n\t\t * Register an event handler for the given type.\n\t\t * @param {string|symbol} type Type of event to listen for, or `'*'` for all events\n\t\t * @param {Function} handler Function to call in response to given event\n\t\t * @memberOf mitt\n\t\t */\n\t\ton<Key extends keyof Events>(type: Key, handler: GenericEventHandler) {\n\t\t\tconst handlers: Array<GenericEventHandler> | undefined = all!.get(type);\n\t\t\tif (handlers) {\n\t\t\t\thandlers.push(handler);\n\t\t\t} else {\n\t\t\t\tall!.set(type, [handler] as EventHandlerList<Events[keyof Events]>);\n\t\t\t}\n\t\t},\n\n\t\t/**\n\t\t * Remove an event handler for the given type.\n\t\t * If `handler` is omitted, all handlers of the given type are removed.",
+        "content_sha256": "28f76797a19cd4ce5ed2a766ff2a57ab0fbcc39ae8c1448b56e5e2f7f29f4c4c"
+      },
+      {
+        "path": "test/index_test.ts",
+        "start_line": 79,
+        "end_line": 90,
+        "content": "\t\tit('should NOT normalize case', () => {\n\t\t\tconst foo = () => {};\n\t\t\tinst.on('FOO', foo);\n\t\t\tinst.on('Bar', foo);\n\t\t\tinst.on('baz:baT!', foo);\n\n\t\t\texpect(events.get('FOO')).to.deep.equal([foo]);\n\t\t\texpect(events.has('foo')).to.equal(false);\n\t\t\texpect(events.get('Bar')).to.deep.equal([foo]);\n\t\t\texpect(events.has('bar')).to.equal(false);\n\t\t\texpect(events.get('baz:baT!')).to.deep.equal([foo]);\n\t\t});",
+        "content_sha256": "7c7ae10f82f38319cf3cf181161ee7bfb29bde7819610b697836ace1ba119048"
+      }
+    ]
+  },
+  {
+    "candidate_id": "9b--history-dev-05--oracle",
+    "source_file": "experiments/qwen9b-diagnostic/cases/9b--history-dev-05--oracle.json",
+    "snapshot_id": "9999db891acf16c1a1fd96b5",
+    "task_id": "history-dev-05",
+    "model": "9b",
+    "condition": "oracle",
+    "question": "get_jobs() 不传 tag 返回内部列表本身吗？",
+    "answer": {
+      "answer": "不，get_jobs() 在不传 tag 参数时返回的是内部 jobs 列表的一个浅拷贝（self.jobs[:]），而非内部列表本身。",
+      "citations": [
+        {
+          "path": "schedule/__init__.py",
+          "start_line": 130,
+          "end_line": 131
+        }
+      ],
+      "insufficient_evidence": false
+    },
+    "status": "success",
+    "record_sha256": "d90040382c9c481fe3f08951f5236320410c0d7a1d7526c1b4faed2d54fdc831",
+    "observed_context": [
+      {
+        "path": "schedule/__init__.py",
+        "start_line": 122,
+        "end_line": 133,
+        "content": "    def get_jobs(self, tag: Optional[Hashable] = None) -> List[\"Job\"]:\n        \"\"\"\n        Gets scheduled jobs marked with the given tag, or all jobs\n        if tag is omitted.\n\n        :param tag: An identifier used to identify a subset of\n                    jobs to retrieve\n        \"\"\"\n        if tag is None:\n            return self.jobs[:]\n        else:\n            return [job for job in self.jobs if tag in job.tags]",
+        "content_sha256": "3b203d4e5005e3c3be275304e9fce13d28bb27a7128ad849faa7f33725e6e1be"
+      },
+      {
+        "path": "schedule/__init__.py",
+        "start_line": 864,
+        "end_line": 868,
+        "content": "def get_jobs(tag: Optional[Hashable] = None) -> List[Job]:\n    \"\"\"Calls :meth:`get_jobs <Scheduler.get_jobs>` on the\n    :data:`default scheduler instance <default_scheduler>`.\n    \"\"\"\n    return default_scheduler.get_jobs(tag)",
+        "content_sha256": "7b80054b113eb8b5edb3654e8efdecae4f7040e4188b558d04c5560aa9d7b07f"
+      }
+    ]
+  },
+  {
+    "candidate_id": "9b--history-dev-05--sdk",
+    "source_file": "experiments/qwen9b-diagnostic/cases/9b--history-dev-05--sdk.json",
+    "snapshot_id": "9999db891acf16c1a1fd96b5",
+    "task_id": "history-dev-05",
+    "model": "9b",
+    "condition": "sdk",
+    "question": "get_jobs() 不传 tag 返回内部列表本身吗？",
+    "answer": {
+      "answer": "不，get_jobs() 在不传 tag 参数时返回的是内部 jobs 列表的一个浅拷贝（self.jobs[:]），而非内部列表本身。",
+      "citations": [
+        {
+          "path": "schedule/__init__.py",
+          "start_line": 130,
+          "end_line": 131
+        }
+      ],
+      "insufficient_evidence": false
+    },
+    "status": "success",
+    "record_sha256": "34da12150d00164c275446d12f05ee969e488bb1422f10439b986c015c432cf3",
+    "observed_context": [
+      {
+        "path": "schedule/__init__.py",
+        "start_line": 122,
+        "end_line": 133,
+        "content": "    def get_jobs(self, tag: Optional[Hashable] = None) -> List[\"Job\"]:\n        \"\"\"\n        Gets scheduled jobs marked with the given tag, or all jobs\n        if tag is omitted.\n\n        :param tag: An identifier used to identify a subset of\n                    jobs to retrieve\n        \"\"\"\n        if tag is None:\n            return self.jobs[:]\n        else:\n            return [job for job in self.jobs if tag in job.tags]",
+        "content_sha256": "3b203d4e5005e3c3be275304e9fce13d28bb27a7128ad849faa7f33725e6e1be"
+      },
+      {
+        "path": "schedule/__init__.py",
+        "start_line": 864,
+        "end_line": 868,
+        "content": "def get_jobs(tag: Optional[Hashable] = None) -> List[Job]:\n    \"\"\"Calls :meth:`get_jobs <Scheduler.get_jobs>` on the\n    :data:`default scheduler instance <default_scheduler>`.\n    \"\"\"\n    return default_scheduler.get_jobs(tag)",
+        "content_sha256": "7b80054b113eb8b5edb3654e8efdecae4f7040e4188b558d04c5560aa9d7b07f"
+      },
+      {
+        "path": "schedule/__init__.py",
+        "start_line": 457,
+        "end_line": 469,
+        "content": "    def tag(self, *tags: Hashable):\n        \"\"\"\n        Tags the job with one or more unique identifiers.\n\n        Tags must be hashable. Duplicate tags are discarded.\n\n        :param tags: A unique list of ``Hashable`` tags.\n        :return: The invoked job instance\n        \"\"\"\n        if not all(isinstance(tag, Hashable) for tag in tags):\n            raise TypeError(\"Tags must be hashable\")\n        self.tags.update(tags)\n        return self",
+        "content_sha256": "158bded103b7fc7e0bec2d0f0cbb3b1150440d8959f80a0d37876580f6f7531e"
+      }
+    ]
+  },
+  {
+    "candidate_id": "9b--history-dev-06--oracle",
+    "source_file": "experiments/qwen9b-diagnostic/cases/9b--history-dev-06--oracle.json",
+    "snapshot_id": "30e277e52d238ad871cb5684",
+    "task_id": "history-dev-06",
+    "model": "9b",
+    "condition": "oracle",
+    "question": "我们公司生产环境昨天用 nanoid 生成了多少个 ID，碰撞次数是多少？",
+    "answer": {
+      "answer": "无法回答：提供的 context 中没有任何生产环境日志、运行记录或碰撞统计信息，因此无法得知昨天生成了多少个 ID 以及碰撞次数。",
+      "citations": [
+        {
+          "path": "test/index.test.js",
+          "start_line": 99,
+          "end_line": 122
+        },
+        {
+          "path": "test/non-secure.test.js",
+          "start_line": 39,
+          "end_line": 62
+        },
+        {
+          "path": "README.md",
+          "start_line": 146,
+          "end_line": 153
+        },
+        {
+          "path": "package.json",
+          "start_line": 1,
+          "end_line": 50
+        },
+        {
+          "path": "non-secure/index.d.ts",
+          "start_line": 1,
+          "end_line": 12
+        },
+        {
+          "path": "CHANGELOG.md",
+          "start_line": 1,
+          "end_line": 3
+        }
+      ],
+      "insufficient_evidence": true
+    },
+    "status": "success",
+    "record_sha256": "236fefa16a9e1e13f41420b5406d6b1275932bfac9a9d6a44e4cc17f240c3116",
+    "observed_context": [
+      {
+        "path": "test/index.test.js",
+        "start_line": 99,
+        "end_line": 122,
+        "content": "    test(`has flat distribution`, () => {\n      let COUNT = 100 * 1000\n      let LENGTH = nanoid().length\n\n      let chars = {}\n      for (let i = 0; i < COUNT; i++) {\n        let id = nanoid()\n        for (let char of id) {\n          if (!chars[char]) chars[char] = 0\n          chars[char] += 1\n        }\n      }\n\n      equal(Object.keys(chars).length, urlAlphabet.length)\n\n      let max = 0\n      let min = Number.MAX_SAFE_INTEGER\n      for (let k in chars) {\n        let distribution = (chars[k] * urlAlphabet.length) / (COUNT * LENGTH)\n        if (distribution > max) max = distribution\n        if (distribution < min) min = distribution\n      }\n      ok(max - min <= 0.05)\n    })",
+        "content_sha256": "e751b6edcb295e219835f6c6f03ea0495f3c75491ba5d2bf364061c64fdb20d9"
+      },
+      {
+        "path": "test/non-secure.test.js",
+        "start_line": 39,
+        "end_line": 62,
+        "content": "  test('has flat distribution', () => {\n    let COUNT = 100 * 1000\n    let LENGTH = nanoid().length\n\n    let chars = {}\n    for (let i = 0; i < COUNT; i++) {\n      let id = nanoid()\n      for (let char of id) {\n        if (!chars[char]) chars[char] = 0\n        chars[char] += 1\n      }\n    }\n\n    equal(Object.keys(chars).length, urlAlphabet.length)\n\n    let max = 0\n    let min = Number.MAX_SAFE_INTEGER\n    for (let k in chars) {\n      let distribution = (chars[k] * urlAlphabet.length) / (COUNT * LENGTH)\n      if (distribution > max) max = distribution\n      if (distribution < min) min = distribution\n    }\n    ok(max - min <= 0.05)\n  })",
+        "content_sha256": "3806a4f42057059f85c19c97848f12b1f0250af3f3ce1c3bfbd882faeb37386d"
+      },
+      {
+        "path": "README.md",
+        "start_line": 146,
+        "end_line": 153,
+        "content": "### CDN\n\nFor quick hacks, you can load Nano ID from CDN. Though, it is not recommended\nto be used in production because of the lower loading performance.\n\n```js\nimport { nanoid } from \"https://cdn.jsdelivr.net/npm/nanoid/nanoid.js\";\n```",
+        "content_sha256": "d1b1a3fd1e81bf6499b68542777d536229f48ca5847aa993735e6b986d729b03"
+      },
+      {
+        "path": "package.json",
+        "start_line": 1,
+        "end_line": 50,
+        "content": "{\n  \"name\": \"nanoid\",\n  \"version\": \"6.0.1\",\n  \"description\": \"A tiny (127 bytes), secure URL-friendly unique string ID generator\",\n  \"keywords\": [\n    \"id\",\n    \"random\",\n    \"url\",\n    \"uuid\"\n  ],\n  \"license\": \"MIT\",\n  \"author\": \"Andrey Sitnik <andrey@sitnik.es>\",\n  \"repository\": \"ai/nanoid\",\n  \"funding\": [\n    {\n      \"type\": \"github\",\n      \"url\": \"https://github.com/sponsors/ai\"\n    }\n  ],\n  \"bin\": \"./bin/nanoid.js\",\n  \"type\": \"module\",\n  \"sideEffects\": false,\n  \"browser\": {\n    \"./index.js\": \"./index.browser.js\"\n  },\n  \"types\": \"./index.d.ts\",\n  \"react-native\": {\n    \"./index.js\": \"./index.browser.js\"\n  },\n  \"exports\": {\n    \".\": {\n      \"types\": \"./index.d.ts\",\n      \"browser\": \"./index.browser.js\",\n      \"react-native\": \"./index.browser.js\",\n      \"default\": \"./index.js\"\n    },\n    \"./non-secure\": {\n      \"types\": \"./non-secure/index.d.ts\",\n      \"default\": \"./non-secure/index.js\"\n    },\n    \"./package.json\": \"./package.json\"\n  },\n  \"scripts\": {\n    \"clean\": \"rm -rf coverage\",\n    \"start\": \"vite --host 0.0.0.0 test/demo/\",\n    \"test:coverage\": \"bnt --coverage 100 --coverage-exclude 'test/*'\",\n    \"test:lint\": \"oxlint\",\n    \"test:size\": \"pnpm clean && size-limit\",\n    \"test:versions\": \"node ./test/check-versions.js\",\n    \"test:prebuild\": \"node ./test/check-prebuild.js\",",
+        "content_sha256": "50e3e3fd55ff49144a8545e5919ffda0eadc2d399c118a9b83e897fe01f077ac"
+      },
+      {
+        "path": "non-secure/index.d.ts",
+        "start_line": 1,
+        "end_line": 12,
+        "content": "/**\n * By default, Nano ID uses hardware random bytes generation for security\n * and low collision probability. If you are not so concerned with security,\n * you can use it for environments without hardware random generators.\n *\n * ```js\n * import { nanoid } from 'nanoid/non-secure'\n * const id = nanoid() //=> \"Uakgb_J5m9g-0JDMbcJqLJ\"\n * ```\n *\n * @module\n */",
+        "content_sha256": "379fdbb2ada260b222b0d5dcad6e4a24ecab327d5d403c5ad6ea338131b15e6a"
+      },
+      {
+        "path": "CHANGELOG.md",
+        "start_line": 1,
+        "end_line": 3,
+        "content": "# Change Log\n\nThis project adheres to [Semantic Versioning](http://semver.org/).",
+        "content_sha256": "8682fc212b163ca99262e271f60659301410651a37eab7ca8c8dddb7bf26d1d0"
+      }
+    ]
+  },
+  {
+    "candidate_id": "9b--history-dev-06--sdk",
+    "source_file": "experiments/qwen9b-diagnostic/cases/9b--history-dev-06--sdk.json",
+    "snapshot_id": "30e277e52d238ad871cb5684",
+    "task_id": "history-dev-06",
+    "model": "9b",
+    "condition": "sdk",
+    "question": "我们公司生产环境昨天用 nanoid 生成了多少个 ID，碰撞次数是多少？",
+    "answer": {
+      "answer": "无法回答。提供的 context 中没有任何记录显示生产环境昨天使用 nanoid 生成的 ID 数量或碰撞次数。",
+      "citations": [
+        {
+          "path": "non-secure/index.d.ts",
+          "start_line": 14,
+          "end_line": 27
+        },
+        {
+          "path": "index.js",
+          "start_line": 96,
+          "end_line": 121
+        },
+        {
+          "path": "index.browser.js",
+          "start_line": 75,
+          "end_line": 84
+        },
+        {
+          "path": "README.md",
+          "start_line": 146,
+          "end_line": 153
+        },
+        {
+          "path": "CHANGELOG.md",
+          "start_line": 1,
+          "end_line": 3
+        }
+      ],
+      "insufficient_evidence": true
+    },
+    "status": "success",
+    "record_sha256": "e7a19305f3e9a791237122124bb896b24377d0c035fa9891eab4fd332227ca64",
+    "observed_context": [
+      {
+        "path": "non-secure/index.d.ts",
+        "start_line": 14,
+        "end_line": 27,
+        "content": "/**\n * Generate URL-friendly unique ID. This method uses the non-secure\n * predictable random generator with bigger collision probability.\n *\n * ```js\n * import { nanoid } from 'nanoid/non-secure'\n * model.id = nanoid() //=> \"Uakgb_J5m9g-0JDMbcJqL\"\n * ```\n *\n * @param size Size of the ID. The default size is 21.\n * @typeparam Type The ID type to replace `string` with some opaque type.\n * @returns A random string.\n */\nexport function nanoid<Type extends string>(size?: number): Type",
+        "content_sha256": "2dd6bd13f67b449505163da82af88621fd7986c97718fb637c401e9c9be44842"
+      },
+      {
+        "path": "index.js",
+        "start_line": 96,
+        "end_line": 121,
+        "content": "export function customAlphabet(alphabet, defaultSize = 21) {\n  if (\n    typeof alphabet !== 'string' ||\n    !alphabet ||\n    alphabet.length > 256\n  ) {\n    return customRandom(alphabet, defaultSize, random)\n  }\n  for (let i = 0; i < alphabet.length; i++) {\n    if (alphabet.charCodeAt(i) > 255) {\n      // The fast path below writes char codes to a byte buffer,\n      // so it supports only single-byte characters.\n      return customRandom(alphabet, defaultSize, random)\n    }\n  }\n\n  // Alphabet char codes to write IDs into a byte buffer directly.\n  let charCodes = Uint8Array.from(alphabet, str => {\n    return str.charCodeAt(0)\n  })\n  let alphabetLen = alphabet.length\n  // The smallest `2^n - 1` covering all alphabet indexes. Rejecting\n  // `byte & mask >= alphabetLen` avoids modulo bias without `%` operation.\n  let mask = (2 << (31 - Math.clz32((alphabetLen - 1) | 1))) - 1\n\n  // IDs are pre-generated into a string pool: accepted alphabet chars are",
+        "content_sha256": "6a390d775062bd51a03e093f3df233c9c61ac0eb48987b6403feb600ca808145"
+      },
+      {
+        "path": "index.browser.js",
+        "start_line": 75,
+        "end_line": 84,
+        "content": "export let nanoid = (size = 21) => {\n  let id = ''\n  let bytes = crypto.getRandomValues(new Uint8Array((size |= 0)))\n  while (size--) {\n    // The following mask reduces the random byte in the 0-255 value\n    // range to the 0-63 value range.\n    id += urlAlphabet[bytes[size] & 63]\n  }\n  return id\n}",
+        "content_sha256": "68dfc33bd5a7aabf8d6c4a7a1da1ed25e25e0f5232e69e6091a51e65e98425f0"
+      },
+      {
+        "path": "non-secure/index.d.ts",
+        "start_line": 1,
+        "end_line": 12,
+        "content": "/**\n * By default, Nano ID uses hardware random bytes generation for security\n * and low collision probability. If you are not so concerned with security,\n * you can use it for environments without hardware random generators.\n *\n * ```js\n * import { nanoid } from 'nanoid/non-secure'\n * const id = nanoid() //=> \"Uakgb_J5m9g-0JDMbcJqLJ\"\n * ```\n *\n * @module\n */",
+        "content_sha256": "379fdbb2ada260b222b0d5dcad6e4a24ecab327d5d403c5ad6ea338131b15e6a"
+      },
+      {
+        "path": "non-secure/index.d.ts",
+        "start_line": 29,
+        "end_line": 48,
+        "content": "/**\n * Generate a unique ID based on a custom alphabet.\n * This method uses the non-secure predictable random generator\n * with bigger collision probability.\n *\n * @param alphabet Alphabet used to generate the ID.\n * @param defaultSize Size of the ID. The default size is 21.\n * @typeparam Type The ID type to replace `string` with some opaque type.\n * @returns A random string generator.\n *\n * ```js\n * import { customAlphabet } from 'nanoid/non-secure'\n * const nanoid = customAlphabet('0123456789абвгдеё', 5)\n * model.id = nanoid() //=> \"8ё56а\"\n * ```\n */\nexport function customAlphabet<Type extends string>(\n  alphabet: string,\n  defaultSize?: number\n): (size?: number) => Type",
+        "content_sha256": "99d935e0691d3ee54056df6e3de4e881cd9adbe677479721d3bf2877dfcf4269"
+      },
+      {
+        "path": "README.md",
+        "start_line": 146,
+        "end_line": 153,
+        "content": "### CDN\n\nFor quick hacks, you can load Nano ID from CDN. Though, it is not recommended\nto be used in production because of the lower loading performance.\n\n```js\nimport { nanoid } from \"https://cdn.jsdelivr.net/npm/nanoid/nanoid.js\";\n```",
+        "content_sha256": "d1b1a3fd1e81bf6499b68542777d536229f48ca5847aa993735e6b986d729b03"
+      },
+      {
+        "path": "index.js",
+        "start_line": 176,
+        "end_line": 177,
+        "content": "\nexport const nanoid = customAlphabet(urlAlphabet)",
+        "content_sha256": "8f0b7ffb697af46ffe8173dba49bd3edc15d524c2d3c3377d86be53509ed420d"
+      },
+      {
+        "path": "CHANGELOG.md",
+        "start_line": 1,
+        "end_line": 3,
+        "content": "# Change Log\n\nThis project adheres to [Semantic Versioning](http://semver.org/).",
+        "content_sha256": "8682fc212b163ca99262e271f60659301410651a37eab7ca8c8dddb7bf26d1d0"
+      }
+    ]
+  },
+  {
+    "candidate_id": "9b--sweqa-flask-002--oracle",
+    "source_file": "experiments/qwen9b-diagnostic/cases/9b--sweqa-flask-002--oracle.json",
+    "snapshot_id": "b597a359a6ff4391d4f36ec2",
+    "task_id": "sweqa-flask-002",
+    "model": "9b",
+    "condition": "oracle",
+    "question": "What is the purpose of the registration tracking flag in the blueprint collection class that prevents setup methods from being called after the blueprint has been registered once?",
+    "answer": {
+      "answer": "The registration tracking flag `_got_registered_once` prevents setup methods from being called after a blueprint has been registered once to ensure that all necessary imports, decorators, and functions are configured before registration, avoiding inconsistent behavior from subsequent changes.",
+      "citations": [
+        {
+          "path": "src/flask/sansio/blueprints.py",
+          "start_line": 172,
+          "end_line": 172
+        },
+        {
+          "path": "src/flask/sansio/blueprints.py",
+          "start_line": 213,
+          "end_line": 221
+        },
+        {
+          "path": "src/flask/sansio/blueprints.py",
+          "start_line": 320,
+          "end_line": 320
+        }
+      ],
+      "insufficient_evidence": false
+    },
+    "status": "success",
+    "record_sha256": "1beac101997271fb70fa9bfd1db6c48b8a14c2775170f779ffd0e188dfd94e18",
+    "observed_context": [
+      {
+        "path": "src/flask/sansio/blueprints.py",
+        "start_line": 213,
+        "end_line": 230,
+        "content": "    def _check_setup_finished(self, f_name: str) -> None:\n        if self._got_registered_once:\n            raise AssertionError(\n                f\"The setup method '{f_name}' can no longer be called on the blueprint\"\n                f\" '{self.name}'. It has already been registered at least once, any\"\n                \" changes will not be applied consistently.\\n\"\n                \"Make sure all imports, decorators, functions, etc. needed to set up\"\n                \" the blueprint are done before registering it.\"\n            )\n\n    @setupmethod\n    def record(self, func: DeferredSetupFunction) -> None:\n        \"\"\"Registers a function that is called when the blueprint is\n        registered on the application.  This function is called with the\n        state as argument as returned by the :meth:`make_setup_state`\n        method.\n        \"\"\"\n        self.deferred_functions.append(func)",
+        "content_sha256": "ed01493a5a4f660ec97c8e611f621d7a7e800108ed743b195eb78e4e429aa537"
+      },
+      {
+        "path": "src/flask/sansio/blueprints.py",
+        "start_line": 316,
+        "end_line": 335,
+        "content": "        first_bp_registration = not any(bp is self for bp in app.blueprints.values())\n        first_name_registration = name not in app.blueprints\n\n        app.blueprints[name] = self\n        self._got_registered_once = True\n        state = self.make_setup_state(app, options, first_bp_registration)\n\n        if self.has_static_folder:\n            state.add_url_rule(\n                f\"{self.static_url_path}/<path:filename>\",\n                view_func=self.send_static_file,  # type: ignore[attr-defined]\n                endpoint=\"static\",\n            )\n\n        # Merge blueprint data into parent.\n        if first_bp_registration or first_name_registration:\n            self._merge_blueprint_funcs(app, name)\n\n        for deferred in self.deferred_functions:\n            deferred(state)",
+        "content_sha256": "b454fcceb34c5c3246f7f8cc40df0ae5593f29e3910e78cb8b483f7bb65c3a6b"
+      },
+      {
+        "path": "src/flask/sansio/scaffold.py",
+        "start_line": 42,
+        "end_line": 49,
+        "content": "def setupmethod(f: F) -> F:\n    f_name = f.__name__\n\n    def wrapper_func(self: Scaffold, *args: t.Any, **kwargs: t.Any) -> t.Any:\n        self._check_setup_finished(f_name)\n        return f(self, *args, **kwargs)\n\n    return t.cast(F, update_wrapper(wrapper_func, f))",
+        "content_sha256": "bef14a46bf8ebc8fd2672d8b1939d041b7cb99d472b153cda9a4f5759b0526c2"
+      },
+      {
+        "path": "src/flask/sansio/blueprints.py",
+        "start_line": 172,
+        "end_line": 172,
+        "content": "    _got_registered_once = False",
+        "content_sha256": "2291e6dc4b61cced1c2e20dac34c9ad0c8b89f0684f921d49d70e84fdbec7d4e"
+      }
+    ]
+  },
+  {
+    "candidate_id": "9b--sweqa-flask-002--sdk",
+    "source_file": "experiments/qwen9b-diagnostic/cases/9b--sweqa-flask-002--sdk.json",
+    "snapshot_id": "b597a359a6ff4391d4f36ec2",
+    "task_id": "sweqa-flask-002",
+    "model": "9b",
+    "condition": "sdk",
+    "question": "What is the purpose of the registration tracking flag in the blueprint collection class that prevents setup methods from being called after the blueprint has been registered once?",
+    "answer": {
+      "answer": "The registration tracking flag `first_registration` in the `BlueprintSetupState` class prevents setup methods from being called again after a blueprint has been registered once by checking this flag before invoking deferred callbacks.",
+      "citations": [
+        {
+          "path": "src/flask/sansio/blueprints.py",
+          "start_line": 58,
+          "end_line": 62
+        }
+      ],
+      "insufficient_evidence": false
+    },
+    "status": "success",
+    "record_sha256": "698e24be74c469a8743cd61bc061c36c6f0a0e60261cfd4e2395728cae00eff8",
+    "observed_context": [
+      {
+        "path": "src/flask/sansio/blueprints.py",
+        "start_line": 1,
+        "end_line": 149,
+        "content": "from __future__ import annotations\n\nimport os\nimport typing as t\nfrom collections import defaultdict\nfrom functools import update_wrapper\n\nfrom .. import typing as ft\nfrom .scaffold import _endpoint_from_view_func\nfrom .scaffold import _sentinel\nfrom .scaffold import Scaffold\nfrom .scaffold import setupmethod\n\nif t.TYPE_CHECKING:  # pragma: no cover\n    from .app import App\n\nDeferredSetupFunction = t.Callable[[\"BlueprintSetupState\"], None]\nT_after_request = t.TypeVar(\"T_after_request\", bound=ft.AfterRequestCallable[t.Any])\nT_before_request = t.TypeVar(\"T_before_request\", bound=ft.BeforeRequestCallable)\nT_error_handler = t.TypeVar(\"T_error_handler\", bound=ft.ErrorHandlerCallable)\nT_teardown = t.TypeVar(\"T_teardown\", bound=ft.TeardownCallable)\nT_template_context_processor = t.TypeVar(\n    \"T_template_context_processor\", bound=ft.TemplateContextProcessorCallable\n)\nT_template_filter = t.TypeVar(\"T_template_filter\", bound=ft.TemplateFilterCallable)\nT_template_global = t.TypeVar(\"T_template_global\", bound=ft.TemplateGlobalCallable)\nT_template_test = t.TypeVar(\"T_template_test\", bound=ft.TemplateTestCallable)\nT_url_defaults = t.TypeVar(\"T_url_defaults\", bound=ft.URLDefaultCallable)\nT_url_value_preprocessor = t.TypeVar(\n    \"T_url_value_preprocessor\", bound=ft.URLValuePreprocessorCallable\n)\n\n\nclass BlueprintSetupState:\n    \"\"\"Temporary holder object for registering a blueprint with the\n    application.  An instance of this class is created by the\n    :meth:`~flask.Blueprint.make_setup_state` method and later passed\n    to all register callback functions.\n    \"\"\"\n\n    def __init__(\n        self,\n        blueprint: Blueprint,\n        app: App,\n        options: t.Any,\n        first_registration: bool,\n    ) -> None:\n        #: a reference to the current application\n        self.app = app\n\n        #: a reference to the blueprint that created this setup state.\n        self.blueprint = blueprint\n\n        #: a dictionary with all options that were passed to the\n        #: :meth:`~flask.Flask.register_blueprint` method.\n        self.options = options\n\n        #: as blueprints can be registered multiple times with the\n        #: application and not everything wants to be registered\n        #: multiple times on it, this attribute can be used to figure\n        #: out if the blueprint was registered in the past already.\n        self.first_registration = first_registration\n\n        subdomain = self.options.get(\"subdomain\")\n        if subdomain is None:\n            subdomain = self.blueprint.subdomain\n\n        #: The subdomain that the blueprint should be active for, ``None``\n        #: otherwise.\n        self.subdomain = subdomain\n\n        url_prefix = self.options.get(\"url_prefix\")\n        if url_prefix is None:\n            url_prefix = self.blueprint.url_prefix\n        #: The prefix that should be used for all URLs defined on the\n        #: blueprint.\n        self.url_prefix = url_prefix\n\n        self.name = self.options.get(\"name\", blueprint.name)\n        self.name_prefix = self.options.get(\"name_prefix\", \"\")\n\n        #: A dictionary with URL defaults that is added to each and every\n        #: URL that was defined with the blueprint.\n        self.url_defaults = dict(self.blueprint.url_values_defaults)\n        self.url_defaults.update(self.options.get(\"url_defaults\", ()))\n\n    def add_url_rule(\n        self,\n        rule: str,\n        endpoint: str | None = None,\n        view_func: ft.RouteCallable | None = None,\n        **options: t.Any,\n    ) -> None:\n        \"\"\"A helper method to register a rule (and optionally a view function)\n        to the application.  The endpoint is automatically prefixed with the\n        blueprint's name.\n        \"\"\"\n        if self.url_prefix is not None:\n            if rule:\n                rule = \"/\".join((self.url_prefix.rstrip(\"/\"), rule.lstrip(\"/\")))\n            else:\n                rule = self.url_prefix\n        options.setdefault(\"subdomain\", self.subdomain)\n        if endpoint is None:\n            endpoint = _endpoint_from_view_func(view_func)  # type: ignore\n        defaults = self.url_defaults\n        if \"defaults\" in options:\n            defaults = dict(defaults, **options.pop(\"defaults\"))\n\n        self.app.add_url_rule(\n            rule,\n            f\"{self.name_prefix}.{self.name}.{endpoint}\".lstrip(\".\"),\n            view_func,\n            defaults=defaults,\n            **options,\n        )\n\n\nclass Blueprint(Scaffold):\n    \"\"\"Represents a blueprint, a collection of routes and other\n    app-related functions that can be registered on a real application\n    later.\n\n    A blueprint is an object that allows defining application functions\n    without requiring an application object ahead of time. It uses the\n    same decorators as :class:`~flask.Flask`, but defers the need for an\n    application by recording them for later registration.\n\n    Decorating a function with a blueprint creates a deferred function\n    that is called with :class:`~flask.blueprints.BlueprintSetupState`\n    when the blueprint is registered on an application.\n\n    See :doc:`/blueprints` for more information.\n\n    :param name: The name of the blueprint. Will be prepended to each\n        endpoint name.\n    :param import_name: The name of the blueprint package, usually\n        ``__name__``. This helps locate the ``root_path`` for the\n        blueprint.\n    :param static_folder: A folder with static files that should be\n        served by the blueprint's static route. The path is relative to\n        the blueprint's root path. Blueprint static files are disabled\n        by default.\n    :param static_url_path: The url to serve static files from.\n        Defaults to ``static_folder``. If the blueprint does not have\n        a ``url_prefix``, the app's static route will take precedence,\n        and the blueprint's static files won't be accessible.\n    :param template_folder: A folder with templates that should be added\n        to the app's template search path. The path is relative to the",
+        "content_sha256": "f6d433eeaf10ace43efc6a0c06f01d1030b89a65c4c017c12c86757d929c7703"
+      },
+      {
+        "path": "src/flask/wrappers.py",
+        "start_line": 161,
+        "end_line": 178,
+        "content": "    @property\n    def blueprint(self) -> str | None:\n        \"\"\"The registered name of the current blueprint.\n\n        This will be ``None`` if the endpoint is not part of a\n        blueprint, or if URL matching failed or has not been performed\n        yet.\n\n        This does not necessarily match the name the blueprint was\n        created with. It may have been nested, or registered with a\n        different name.\n        \"\"\"\n        endpoint = self.endpoint\n\n        if endpoint is not None and \".\" in endpoint:\n            return endpoint.rpartition(\".\")[0]\n\n        return None",
+        "content_sha256": "762b7a9df5937a5e43f946722eecddda4725643dba306d2c04d50f03855c7114"
+      },
+      {
+        "path": "src/flask/sansio/blueprints.py",
+        "start_line": 273,
+        "end_line": 296,
+        "content": "    def register(self, app: App, options: dict[str, t.Any]) -> None:\n        \"\"\"Called by :meth:`Flask.register_blueprint` to register all\n        views and callbacks registered on the blueprint with the\n        application. Creates a :class:`.BlueprintSetupState` and calls\n        each :meth:`record` callback with it.\n\n        :param app: The application this blueprint is being registered\n            with.\n        :param options: Keyword arguments forwarded from\n            :meth:`~Flask.register_blueprint`.\n\n        .. versionchanged:: 2.3\n            Nested blueprints now correctly apply subdomains.\n\n        .. versionchanged:: 2.1\n            Registering the same blueprint with the same name multiple\n            times is an error.\n\n        .. versionchanged:: 2.0.1\n            Nested blueprints are registered with their dotted name.\n            This allows different blueprints with the same name to be\n            nested at different locations.\n\n        .. versionchanged:: 2.0.1",
+        "content_sha256": "ea46202a4d573aa7689ae04f08d53518b2ef24b29909ce63b497ced439cc680e"
+      },
+      {
+        "path": "docs/conf.py",
+        "start_line": 100,
+        "end_line": 101,
+        "content": "def setup(app):\n    app.add_role(\"gh\", github_link)",
+        "content_sha256": "8c6867f5df7b7fa8bf67ea138071c197674e9f79e00738f8a9be5f6948c64b6e"
+      },
+      {
+        "path": "src/flask/sansio/blueprints.py",
+        "start_line": 472,
+        "end_line": 473,
+        "content": "        def register_template(state: BlueprintSetupState) -> None:\n            state.app.jinja_env.filters[name or f.__name__] = f",
+        "content_sha256": "c17633b085372512051204da2cd5cf5b42cd719be43eda58445559b78e84ff3c"
+      },
+      {
+        "path": "src/flask/sansio/blueprints.py",
+        "start_line": 510,
+        "end_line": 511,
+        "content": "        def register_template(state: BlueprintSetupState) -> None:\n            state.app.jinja_env.tests[name or f.__name__] = f",
+        "content_sha256": "714f1b619088899af80f24c770a725117bd1a3bcbb950d683655a30a91ddea14"
+      }
+    ]
+  },
+  {
+    "candidate_id": "9b--sweqa-requests-001--oracle",
+    "source_file": "experiments/qwen9b-diagnostic/cases/9b--sweqa-requests-001--oracle.json",
+    "snapshot_id": "e82fdc78cb700c628d4286d6",
+    "task_id": "sweqa-requests-001",
+    "model": "9b",
+    "condition": "oracle",
+    "question": "What is the semantic significance of the `no_proxy` keyword argument in `get_environ_proxies` overriding environment variable precedence, and what does returning a non-empty dictionary when this override is applied indicate?",
+    "answer": {
+      "answer": "The `no_proxy` keyword argument in `get_environ_proxies` overrides the environment variable precedence by explicitly checking the provided argument first (lines 769-771 in `src/requests/utils.py`) before falling back to environment variables like `no_proxy` or `NO_PROXY`. Returning a non-empty dictionary when this override is applied indicates that the URL does not match any entries in the `no_proxy` list, so proxies defined in the environment variables should be used (as confirmed by the test at lines 268-272 in `tests/test_utils.py`).",
+      "citations": [
+        {
+          "path": "src/requests/utils.py",
+          "start_line": 769,
+          "end_line": 771
+        },
+        {
+          "path": "tests/test_utils.py",
+          "start_line": 268,
+          "end_line": 272
+        }
+      ],
+      "insufficient_evidence": false
+    },
+    "status": "success",
+    "record_sha256": "03f0b94660dfda149cb7114d8f5a660f8c757c8f274505cbdc5c07f161462cd2",
+    "observed_context": [
+      {
+        "path": "src/requests/utils.py",
+        "start_line": 755,
+        "end_line": 825,
+        "content": "def should_bypass_proxies(url, no_proxy):\n    \"\"\"\n    Returns whether we should bypass proxies or not.\n\n    :rtype: bool\n    \"\"\"\n\n    # Prioritize lowercase environment variables over uppercase\n    # to keep a consistent behaviour with other http projects (curl, wget).\n    def get_proxy(key):\n        return os.environ.get(key) or os.environ.get(key.upper())\n\n    # First check whether no_proxy is defined. If it is, check that the URL\n    # we're getting isn't in the no_proxy list.\n    no_proxy_arg = no_proxy\n    if no_proxy is None:\n        no_proxy = get_proxy(\"no_proxy\")\n    parsed = urlparse(url)\n\n    if parsed.hostname is None:\n        # URLs don't always have hostnames, e.g. file:/// urls.\n        return True\n\n    if no_proxy:\n        # We need to check whether we match here. We need to see if we match\n        # the end of the hostname, both with and without the port.\n        no_proxy = (host for host in no_proxy.replace(\" \", \"\").split(\",\") if host)\n\n        if is_ipv4_address(parsed.hostname):\n            for proxy_ip in no_proxy:\n                if is_valid_cidr(proxy_ip):\n                    if address_in_network(parsed.hostname, proxy_ip):\n                        return True\n                elif parsed.hostname == proxy_ip:\n                    # If no_proxy ip was defined in plain IP notation instead of cidr notation &\n                    # matches the IP of the index\n                    return True\n        else:\n            host_with_port = parsed.hostname\n            if parsed.port:\n                host_with_port += f\":{parsed.port}\"\n\n            for host in no_proxy:\n                if parsed.hostname.endswith(host) or host_with_port.endswith(host):\n                    # The URL does match something in no_proxy, so we don't want\n                    # to apply the proxies on this URL.\n                    return True\n\n    with set_environ(\"no_proxy\", no_proxy_arg):\n        # parsed.hostname can be `None` in cases such as a file URI.\n        try:\n            bypass = proxy_bypass(parsed.hostname)\n        except (TypeError, socket.gaierror):\n            bypass = False\n\n    if bypass:\n        return True\n\n    return False\n\n\ndef get_environ_proxies(url, no_proxy=None):\n    \"\"\"\n    Return a dict of environment proxies.\n\n    :rtype: dict\n    \"\"\"\n    if should_bypass_proxies(url, no_proxy=no_proxy):\n        return {}\n    else:\n        return getproxies()",
+        "content_sha256": "1470d8eebd3461f2e49881427c7e72735c82f201da142e2de296bb6300548276"
+      },
+      {
+        "path": "tests/test_utils.py",
+        "start_line": 257,
+        "end_line": 272,
+        "content": "    @pytest.mark.parametrize(\n        \"url\",\n        (\n            \"http://192.168.0.1:5000/\",\n            \"http://192.168.0.1/\",\n            \"http://172.16.1.1/\",\n            \"http://172.16.1.1:5000/\",\n            \"http://localhost.localdomain:5000/v1.0/\",\n        ),\n    )\n    def test_not_bypass_no_proxy_keyword(self, url, monkeypatch):\n        # This is testing that the 'no_proxy' argument overrides the\n        # environment variable 'no_proxy'\n        monkeypatch.setenv(\"http_proxy\", \"http://proxy.example.com:3128/\")\n        no_proxy = \"192.168.1.1,requests.com\"\n        assert get_environ_proxies(url, no_proxy=no_proxy) != {}",
+        "content_sha256": "e1496b0fb63c6fdf016b1639e1a26bf1b4ee20e8da8ecd158e8d99de6ab3fb5f"
+      }
+    ]
+  },
+  {
+    "candidate_id": "9b--sweqa-requests-001--sdk",
+    "source_file": "experiments/qwen9b-diagnostic/cases/9b--sweqa-requests-001--sdk.json",
+    "snapshot_id": "e82fdc78cb700c628d4286d6",
+    "task_id": "sweqa-requests-001",
+    "model": "9b",
+    "condition": "sdk",
+    "question": "What is the semantic significance of the `no_proxy` keyword argument in `get_environ_proxies` overriding environment variable precedence, and what does returning a non-empty dictionary when this override is applied indicate?",
+    "answer": {
+      "answer": "The `no_proxy` keyword argument in `get_environ_proxies` overrides environment variable precedence by allowing the caller to explicitly pass a `no_proxy` list that takes priority over any `no_proxy` or `NO_PROXY` environment variables defined in the system (as seen in `should_bypass_proxies` at lines 769-771). Returning a non-empty dictionary when this override is applied indicates that the URL does not match the provided `no_proxy` list, so environment-based proxies should be used; conversely, returning an empty dictionary means the URL matches the `no_proxy` list and proxies should be bypassed.",
+      "citations": [
+        {
+          "path": "src/requests/utils.py",
+          "start_line": 769,
+          "end_line": 771
+        },
+        {
+          "path": "src/requests/utils.py",
+          "start_line": 816,
+          "end_line": 825
+        },
+        {
+          "path": "tests/test_utils.py",
+          "start_line": 245,
+          "end_line": 255
+        }
+      ],
+      "insufficient_evidence": false
+    },
+    "status": "success",
+    "record_sha256": "905a37ac50efd4c7adbee2b6f829facd08c7a580fd7beb85c4771a90cd93dfbc",
+    "observed_context": [
+      {
+        "path": "src/requests/utils.py",
+        "start_line": 755,
+        "end_line": 813,
+        "content": "def should_bypass_proxies(url, no_proxy):\n    \"\"\"\n    Returns whether we should bypass proxies or not.\n\n    :rtype: bool\n    \"\"\"\n\n    # Prioritize lowercase environment variables over uppercase\n    # to keep a consistent behaviour with other http projects (curl, wget).\n    def get_proxy(key):\n        return os.environ.get(key) or os.environ.get(key.upper())\n\n    # First check whether no_proxy is defined. If it is, check that the URL\n    # we're getting isn't in the no_proxy list.\n    no_proxy_arg = no_proxy\n    if no_proxy is None:\n        no_proxy = get_proxy(\"no_proxy\")\n    parsed = urlparse(url)\n\n    if parsed.hostname is None:\n        # URLs don't always have hostnames, e.g. file:/// urls.\n        return True\n\n    if no_proxy:\n        # We need to check whether we match here. We need to see if we match\n        # the end of the hostname, both with and without the port.\n        no_proxy = (host for host in no_proxy.replace(\" \", \"\").split(\",\") if host)\n\n        if is_ipv4_address(parsed.hostname):\n            for proxy_ip in no_proxy:\n                if is_valid_cidr(proxy_ip):\n                    if address_in_network(parsed.hostname, proxy_ip):\n                        return True\n                elif parsed.hostname == proxy_ip:\n                    # If no_proxy ip was defined in plain IP notation instead of cidr notation &\n                    # matches the IP of the index\n                    return True\n        else:\n            host_with_port = parsed.hostname\n            if parsed.port:\n                host_with_port += f\":{parsed.port}\"\n\n            for host in no_proxy:\n                if parsed.hostname.endswith(host) or host_with_port.endswith(host):\n                    # The URL does match something in no_proxy, so we don't want\n                    # to apply the proxies on this URL.\n                    return True\n\n    with set_environ(\"no_proxy\", no_proxy_arg):\n        # parsed.hostname can be `None` in cases such as a file URI.\n        try:\n            bypass = proxy_bypass(parsed.hostname)\n        except (TypeError, socket.gaierror):\n            bypass = False\n\n    if bypass:\n        return True\n\n    return False",
+        "content_sha256": "3816d74e3e44e5eaf982a9e8a1d3b6edf030c3caea2bd5cac60cb53a61382558"
+      },
+      {
+        "path": "src/requests/utils.py",
+        "start_line": 816,
+        "end_line": 825,
+        "content": "def get_environ_proxies(url, no_proxy=None):\n    \"\"\"\n    Return a dict of environment proxies.\n\n    :rtype: dict\n    \"\"\"\n    if should_bypass_proxies(url, no_proxy=no_proxy):\n        return {}\n    else:\n        return getproxies()",
+        "content_sha256": "988e8929b6e4d2c33a504031023aa337574e2ea74a7acb00327a141ab2bd390d"
+      },
+      {
+        "path": "tests/test_utils.py",
+        "start_line": 245,
+        "end_line": 255,
+        "content": "    @pytest.mark.parametrize(\n        \"url\",\n        (\n            \"http://192.168.1.1:5000/\",\n            \"http://192.168.1.1/\",\n            \"http://www.requests.com/\",\n        ),\n    )\n    def test_bypass_no_proxy_keyword(self, url):\n        no_proxy = \"192.168.1.1,requests.com\"\n        assert get_environ_proxies(url, no_proxy=no_proxy) == {}",
+        "content_sha256": "1f50b7a197ec8751a9da8355b1bf8aa15d77e979c668dfdc3f1205dab35dc0c7"
+      },
+      {
+        "path": "tests/test_utils.py",
+        "start_line": 215,
+        "end_line": 219,
+        "content": "    @pytest.fixture(autouse=True, params=[\"no_proxy\", \"NO_PROXY\"])\n    def no_proxy(self, request, monkeypatch):\n        monkeypatch.setenv(\n            request.param, \"192.168.0.0/24,127.0.0.1,localhost.localdomain,172.16.1.1\"\n        )",
+        "content_sha256": "c00da8883e760ed68a342156fa75c7b74cebc15beeebe28507ee6c502e8a7fed"
+      },
+      {
+        "path": "tests/test_utils.py",
+        "start_line": 221,
+        "end_line": 232,
+        "content": "    @pytest.mark.parametrize(\n        \"url\",\n        (\n            \"http://192.168.0.1:5000/\",\n            \"http://192.168.0.1/\",\n            \"http://172.16.1.1/\",\n            \"http://172.16.1.1:5000/\",\n            \"http://localhost.localdomain:5000/v1.0/\",\n        ),\n    )\n    def test_bypass(self, url):\n        assert get_environ_proxies(url, no_proxy=None) == {}",
+        "content_sha256": "2e2aa25fb20d2b313debdf3e200a4c7535efb902c4d06473fce4c84c2092210c"
+      },
+      {
+        "path": "tests/test_utils.py",
+        "start_line": 234,
+        "end_line": 243,
+        "content": "    @pytest.mark.parametrize(\n        \"url\",\n        (\n            \"http://192.168.1.1:5000/\",\n            \"http://192.168.1.1/\",\n            \"http://www.requests.com/\",\n        ),\n    )\n    def test_not_bypass(self, url):\n        assert get_environ_proxies(url, no_proxy=None) != {}",
+        "content_sha256": "bb5284cb6fbb7bbb0f89bd9d7ccd0fdeea48b65c249af5635c7afcb223278d15"
+      }
+    ]
+  }
+]

@@ -16,6 +16,21 @@ class Contract(BaseModel):
     model_config = ConfigDict(extra="forbid", validate_assignment=True)
 
 
+class Citation(Contract):
+    path: str
+    start_line: int = Field(ge=1)
+    end_line: int = Field(ge=1)
+
+
+class RepositoryAnswer(Contract):
+    answer: str = Field(min_length=1, description="用中文完整回答题目各要点：直接结论、必要机制和条件、题干纠偏或具体信息缺口。主要事实要由引用支持。")
+    citations: list[Citation] = Field(description="仅列实际可见且支持正文的源码行段；逻辑性拒答无需虚构引文。")
+    insufficient_evidence: bool = Field(description="无法回答必要子问、缺必要源码或私有运行数据时为true；正文拒答时不得填false。")
+
+
+ANSWER_SCHEMA = RepositoryAnswer.model_json_schema()
+
+
 class ManifestEntry(Contract):
     path: str
     oid: str

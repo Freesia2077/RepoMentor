@@ -1,0 +1,1842 @@
+{
+  "rubric": {
+    "0": "错误或关键内容缺失",
+    "1": "部分正确但有重要缺口",
+    "2": "正确完整且有支持",
+    "null": "尚未评审或无法核验"
+  },
+  "claims": [
+    {
+      "report_sha256": "9a19fe77d751898693e37d55fef2e367a902532c85e70a68c9cacd73115d7a05",
+      "report": "experiments/p2/developit--mitt-report.json",
+      "stage": "explorer",
+      "claim_index": 0,
+      "claim": {
+        "claim": "项目是一个零依赖的极小体积事件发布/订阅库，对外的核心 API 由默认导出的 mitt() 工厂函数提供。",
+        "confidence": "high",
+        "evidence": [
+          {
+            "path": "package.json",
+            "supports": "name/description/keywords 声明为 events/eventemitter/pubsub，且无 dependencies 字段"
+          },
+          {
+            "path": "src/index.ts",
+            "supports": "export default function mitt(...) 返回包含 all/on/off/emit 的对象"
+          }
+        ]
+      },
+      "correctness_0_2": null,
+      "citation_support_0_2": null,
+      "reviewer": null,
+      "human_approved": false
+    },
+    {
+      "report_sha256": "9a19fe77d751898693e37d55fef2e367a902532c85e70a68c9cacd73115d7a05",
+      "report": "experiments/p2/developit--mitt-report.json",
+      "stage": "explorer",
+      "claim_index": 1,
+      "claim": {
+        "claim": "src/index.ts 同时承担实现与公共类型定义职责，导出 Emitter、EventType、Handler、EventHandlerMap 等类型。",
+        "confidence": "high",
+        "evidence": [
+          {
+            "path": "src/index.ts",
+            "supports": "文件中定义并导出 EventType、Handler、WildcardHandler、EventHandlerMap、Emitter 接口与默认工厂函数"
+          },
+          {
+            "path": "package.json",
+            "supports": "\"source\": \"src/index.ts\" 且 \"typings\": \"index.d.ts\"，构建产物类型由该源文件生成"
+          }
+        ]
+      },
+      "correctness_0_2": null,
+      "citation_support_0_2": null,
+      "reviewer": null,
+      "human_approved": false
+    },
+    {
+      "report_sha256": "9a19fe77d751898693e37d55fef2e367a902532c85e70a68c9cacd73115d7a05",
+      "report": "experiments/p2/developit--mitt-report.json",
+      "stage": "explorer",
+      "claim_index": 2,
+      "claim": {
+        "claim": "emit 的实现中，通配符 '*' 的处理器在按类型匹配的处理器之后被调用。",
+        "confidence": "high",
+        "evidence": [
+          {
+            "path": "src/index.ts",
+            "supports": "emit 内先取 all.get(type) 执行，再取 all.get('*') 执行"
+          },
+          {
+            "path": "test/index_test.ts",
+            "supports": "should invoke * handlers 用例断言通配符处理器被调用并收到 (type, evt)"
+          }
+        ]
+      },
+      "correctness_0_2": null,
+      "citation_support_0_2": null,
+      "reviewer": null,
+      "human_approved": false
+    },
+    {
+      "report_sha256": "9a19fe77d751898693e37d55fef2e367a902532c85e70a68c9cacd73115d7a05",
+      "report": "experiments/p2/developit--mitt-report.json",
+      "stage": "explorer",
+      "claim_index": 3,
+      "claim": {
+        "claim": "on/off 不做事件名大小写归一化，且 off 只移除首个匹配引用、off(type) 无 handler 时清空该类型全部处理器。",
+        "confidence": "high",
+        "evidence": [
+          {
+            "path": "src/index.ts",
+            "supports": "on 直接 all.get/set 原始 type；off 使用 handlers.splice(handlers.indexOf(handler) >>> 0, 1)，无 handler 时 set 为空数组"
+          },
+          {
+            "path": "test/index_test.ts",
+            "supports": "should NOT normalize case、should remove only the first matching listener、off(\"type\") should remove all handlers 用例"
+          }
+        ]
+      },
+      "correctness_0_2": null,
+      "citation_support_0_2": null,
+      "reviewer": null,
+      "human_approved": false
+    },
+    {
+      "report_sha256": "9a19fe77d751898693e37d55fef2e367a902532c85e70a68c9cacd73115d7a05",
+      "report": "experiments/p2/developit--mitt-report.json",
+      "stage": "explorer",
+      "claim_index": 4,
+      "claim": {
+        "claim": "运行期行为由 mocha + chai + sinon(spy) 在 test/index_test.ts 中验证，覆盖 on/off/emit、通配符、符号事件名与传入自定义 handler map 等场景。",
+        "confidence": "high",
+        "evidence": [
+          {
+            "path": "test/index_test.ts",
+            "supports": "describe('mitt#') 下按 properties/on()/off()/emit() 组织的断言"
+          },
+          {
+            "path": "package.json",
+            "supports": "mocha 配置 spec 为 test/*_test.ts，require ts-node/register"
+          },
+          {
+            "path": ".github/workflows/main.yml",
+            "supports": "CI 执行 npm install、npm run build --if-present、npm test"
+          }
+        ]
+      },
+      "correctness_0_2": null,
+      "citation_support_0_2": null,
+      "reviewer": null,
+      "human_approved": false
+    },
+    {
+      "report_sha256": "9a19fe77d751898693e37d55fef2e367a902532c85e70a68c9cacd73115d7a05",
+      "report": "experiments/p2/developit--mitt-report.json",
+      "stage": "explorer",
+      "claim_index": 5,
+      "claim": {
+        "claim": "类型层面的正确性由 test/test-types-compilation.ts 借助 @ts-expect-error 断言泛型推断与 strict 模式约束。",
+        "confidence": "high",
+        "evidence": [
+          {
+            "path": "test/test-types-compilation.ts",
+            "supports": "对 on/off/emit 参数推断的正反例均使用 @ts-expect-error 标注"
+          },
+          {
+            "path": "package.json",
+            "supports": "test-types 脚本为 tsc test/test-types-compilation.ts --noEmit --strict"
+          },
+          {
+            "path": "tsconfig.json",
+            "supports": "compilerOptions.strict 为 true，include 覆盖 src/*.ts 与 test/*.ts"
+          }
+        ]
+      },
+      "correctness_0_2": null,
+      "citation_support_0_2": null,
+      "reviewer": null,
+      "human_approved": false
+    },
+    {
+      "report_sha256": "9a19fe77d751898693e37d55fef2e367a902532c85e70a68c9cacd73115d7a05",
+      "report": "experiments/p2/developit--mitt-report.json",
+      "stage": "explorer",
+      "claim_index": 6,
+      "claim": {
+        "claim": "构建通过 microbundle 产出 es/cjs/umd 三种格式，并由 CI 单独校验压缩体积。",
+        "confidence": "high",
+        "evidence": [
+          {
+            "path": "package.json",
+            "supports": "bundle 脚本为 microbundle -f es,cjs,umd，module/main/umd:main 指向 dist 产物"
+          },
+          {
+            "path": ".github/workflows/compressed-size.yml",
+            "supports": "使用 preactjs/compressed-size-action 匹配 ./dist/*.{js,mjs,cjs}"
+          }
+        ]
+      },
+      "correctness_0_2": null,
+      "citation_support_0_2": null,
+      "reviewer": null,
+      "human_approved": false
+    },
+    {
+      "report_sha256": "9a19fe77d751898693e37d55fef2e367a902532c85e70a68c9cacd73115d7a05",
+      "report": "experiments/p2/developit--mitt-report.json",
+      "stage": "explorer",
+      "claim_index": 7,
+      "claim": {
+        "claim": "实现层没有任何内部模块依赖，整个库为单文件架构。",
+        "confidence": "medium",
+        "evidence": [
+          {
+            "path": "src/index.ts",
+            "supports": "文件内不存在对本地其他模块的 import"
+          },
+          {
+            "path": "package.json",
+            "supports": "files 仅发布 dist 与 index.d.ts，无多入口声明"
+          }
+        ]
+      },
+      "correctness_0_2": null,
+      "citation_support_0_2": null,
+      "reviewer": null,
+      "human_approved": false
+    },
+    {
+      "report_sha256": "9a19fe77d751898693e37d55fef2e367a902532c85e70a68c9cacd73115d7a05",
+      "report": "experiments/p2/developit--mitt-report.json",
+      "stage": "mentor",
+      "claim_index": 0,
+      "claim": {
+        "claim": "公共 API 由默认导出的泛型工厂函数 mitt() 提供，它返回一个普通对象（all/on/off/emit），不使用 class 或 this。",
+        "confidence": "high",
+        "evidence": [
+          {
+            "path": "src/index.ts",
+            "supports": "export default function mitt<Events>(all?) 返回含 all/on/off/emit 的对象字面量"
+          },
+          {
+            "path": "test/index_test.ts",
+            "supports": "should default export be a function 与 should accept an optional event handler map 用例"
+          },
+          {
+            "path": "README.md",
+            "supports": "宣称 Functional: methods don't rely on this"
+          }
+        ]
+      },
+      "correctness_0_2": null,
+      "citation_support_0_2": null,
+      "reviewer": null,
+      "human_approved": false
+    },
+    {
+      "report_sha256": "9a19fe77d751898693e37d55fef2e367a902532c85e70a68c9cacd73115d7a05",
+      "report": "experiments/p2/developit--mitt-report.json",
+      "stage": "mentor",
+      "claim_index": 1,
+      "claim": {
+        "claim": "emit 的执行顺序是先调用按类型匹配的处理器，再调用 '*' 通配符处理器，并把 (type, evt) 一并传给通配符处理器。",
+        "confidence": "high",
+        "evidence": [
+          {
+            "path": "src/index.ts",
+            "supports": "emit 内先 all.get(type) 执行，再 all.get('*') 并以 handler(type, evt) 调用"
+          },
+          {
+            "path": "test/index_test.ts",
+            "supports": "should invoke * handlers 用例断言 calledWith('foo', ea)"
+          },
+          {
+            "path": "README.md",
+            "supports": "API 文档声明 '*' handlers are invoked after type-matched handlers"
+          }
+        ]
+      },
+      "correctness_0_2": null,
+      "citation_support_0_2": null,
+      "reviewer": null,
+      "human_approved": false
+    },
+    {
+      "report_sha256": "9a19fe77d751898693e37d55fef2e367a902532c85e70a68c9cacd73115d7a05",
+      "report": "experiments/p2/developit--mitt-report.json",
+      "stage": "mentor",
+      "claim_index": 2,
+      "claim": {
+        "claim": "只有一个 Map 保存状态，且 on/off/emit 均直接读写它；构造时可传入外部 Map 实现状态共享。",
+        "confidence": "high",
+        "evidence": [
+          {
+            "path": "src/index.ts",
+            "supports": "all = all || new Map() 及三个闭包对 all.get/set 的直接操作"
+          },
+          {
+            "path": "test/index_test.ts",
+            "supports": "should expose the event handler map 断言 all 是 map，且用外部 map 预置处理器后 emit"
+          }
+        ]
+      },
+      "correctness_0_2": null,
+      "citation_support_0_2": null,
+      "reviewer": null,
+      "human_approved": false
+    },
+    {
+      "report_sha256": "9a19fe77d751898693e37d55fef2e367a902532c85e70a68c9cacd73115d7a05",
+      "report": "experiments/p2/developit--mitt-report.json",
+      "stage": "mentor",
+      "claim_index": 3,
+      "claim": {
+        "claim": "off 只移除第一个引用匹配的处理器（splice(indexOf >>> 0, 1)），省略 handler 时清空该类型全部处理器；事件名不做大小写归一化。",
+        "confidence": "high",
+        "evidence": [
+          {
+            "path": "src/index.ts",
+            "supports": "off 中 handlers.splice(handlers.indexOf(handler) >>> 0, 1)，无 handler 时 all.set(type, [])"
+          },
+          {
+            "path": "test/index_test.ts",
+            "supports": "should remove only the first matching listener、off(\"type\") should remove all handlers、should NOT normalize case 用例"
+          }
+        ]
+      },
+      "correctness_0_2": null,
+      "citation_support_0_2": null,
+      "reviewer": null,
+      "human_approved": false
+    },
+    {
+      "report_sha256": "9a19fe77d751898693e37d55fef2e367a902532c85e70a68c9cacd73115d7a05",
+      "report": "experiments/p2/developit--mitt-report.json",
+      "stage": "mentor",
+      "claim_index": 4,
+      "claim": {
+        "claim": "emit 与通配符执行前先对处理器数组做 slice 复制，使回调中的增删不影响本轮遍历的对象。",
+        "confidence": "medium",
+        "evidence": [
+          {
+            "path": "src/index.ts",
+            "supports": "两处执行链均为 (handlers as ...).slice().map(handler => handler(...))"
+          }
+        ]
+      },
+      "correctness_0_2": null,
+      "citation_support_0_2": null,
+      "reviewer": null,
+      "human_approved": false
+    },
+    {
+      "report_sha256": "9a19fe77d751898693e37d55fef2e367a902532c85e70a68c9cacd73115d7a05",
+      "report": "experiments/p2/developit--mitt-report.json",
+      "stage": "mentor",
+      "claim_index": 5,
+      "claim": {
+        "claim": "运行期行为由 test/index_test.ts 使用 mocha + chai + sinon(spy) 验证，覆盖 on/off/emit、通配符、符号事件名、重复监听与移除边界。",
+        "confidence": "high",
+        "evidence": [
+          {
+            "path": "test/index_test.ts",
+            "supports": "按 properties/on()/off()/emit() 组织的 describe/it 断言"
+          },
+          {
+            "path": "package.json",
+            "supports": "mocha.spec 为 test/*_test.ts 且 require ts-node/register"
+          },
+          {
+            "path": ".github/workflows/main.yml",
+            "supports": "CI 执行 npm install、npm run build --if-present、npm test"
+          }
+        ]
+      },
+      "correctness_0_2": null,
+      "citation_support_0_2": null,
+      "reviewer": null,
+      "human_approved": false
+    },
+    {
+      "report_sha256": "9a19fe77d751898693e37d55fef2e367a902532c85e70a68c9cacd73115d7a05",
+      "report": "experiments/p2/developit--mitt-report.json",
+      "stage": "mentor",
+      "claim_index": 6,
+      "claim": {
+        "claim": "类型正确性由纯编译期测试验证：test/test-types-compilation.ts 用 @ts-expect-error 标注预期报错，配合 tsconfig 的 strict: true。",
+        "confidence": "high",
+        "evidence": [
+          {
+            "path": "test/test-types-compilation.ts",
+            "supports": "on/off/emit 的参数推断正反例均以 @ts-expect-error 断言"
+          },
+          {
+            "path": "package.json",
+            "supports": "test-types 脚本为 tsc test/test-types-compilation.ts --noEmit --strict"
+          },
+          {
+            "path": "tsconfig.json",
+            "supports": "compilerOptions.strict 为 true，include 覆盖 src/*.ts 与 test/*.ts"
+          }
+        ]
+      },
+      "correctness_0_2": null,
+      "citation_support_0_2": null,
+      "reviewer": null,
+      "human_approved": false
+    },
+    {
+      "report_sha256": "9a19fe77d751898693e37d55fef2e367a902532c85e70a68c9cacd73115d7a05",
+      "report": "experiments/p2/developit--mitt-report.json",
+      "stage": "mentor",
+      "claim_index": 7,
+      "claim": {
+        "claim": "发布入口在 package.json 中声明为 source/module/main/umd:main/typings/exports，由 microbundle 产出 es/cjs/umd 三种格式，CI 另有压缩体积检查。",
+        "confidence": "high",
+        "evidence": [
+          {
+            "path": "package.json",
+            "supports": "source: src/index.ts，module/main/umd:main 指向 dist/*，bundle 脚本为 microbundle -f es,cjs,umd"
+          },
+          {
+            "path": ".github/workflows/compressed-size.yml",
+            "supports": "preactjs/compressed-size-action 匹配 ./dist/*.{js,mjs,cjs}"
+          }
+        ]
+      },
+      "correctness_0_2": null,
+      "citation_support_0_2": null,
+      "reviewer": null,
+      "human_approved": false
+    },
+    {
+      "report_sha256": "9a19fe77d751898693e37d55fef2e367a902532c85e70a68c9cacd73115d7a05",
+      "report": "experiments/p2/developit--mitt-report.json",
+      "stage": "contributor",
+      "claim_index": 0,
+      "claim": {
+        "claim": "开发、构建、测试与静态检查命令均由 package.json 的 scripts 定义：test 会并行串联 typecheck、lint、mocha、test-types，build 为 clean → bundle → docs。",
+        "confidence": "high",
+        "evidence": [
+          {
+            "path": "package.json",
+            "supports": "scripts 中 test/mocha/test-types/lint/typecheck/bundle/build/docs 的具体命令"
+          },
+          {
+            "path": "package.json",
+            "supports": "devDependencies 列出 mocha、ts-node、microbundle、typescript、eslint 等本地工具"
+          }
+        ]
+      },
+      "correctness_0_2": null,
+      "citation_support_0_2": null,
+      "reviewer": null,
+      "human_approved": false
+    },
+    {
+      "report_sha256": "9a19fe77d751898693e37d55fef2e367a902532c85e70a68c9cacd73115d7a05",
+      "report": "experiments/p2/developit--mitt-report.json",
+      "stage": "contributor",
+      "claim_index": 1,
+      "claim": {
+        "claim": "CI 在 Node 14 上执行 npm install、npm run build --if-present、npm test，因此提交前本地跑通同一组命令即可基本对齐 CI。",
+        "confidence": "high",
+        "evidence": [
+          {
+            "path": ".github/workflows/main.yml",
+            "supports": "setup-node 指定 node-version: 14，run 步骤为 npm install / npm run build --if-present / npm test"
+          }
+        ]
+      },
+      "correctness_0_2": null,
+      "citation_support_0_2": null,
+      "reviewer": null,
+      "human_approved": false
+    },
+    {
+      "report_sha256": "9a19fe77d751898693e37d55fef2e367a902532c85e70a68c9cacd73115d7a05",
+      "report": "experiments/p2/developit--mitt-report.json",
+      "stage": "contributor",
+      "claim_index": 2,
+      "claim": {
+        "claim": "PR 上另有压缩体积检查，对 dist 下的 js/mjs/cjs 产物做体积对比，因此改动引入的体积增长会被显式呈现。",
+        "confidence": "high",
+        "evidence": [
+          {
+            "path": ".github/workflows/compressed-size.yml",
+            "supports": "pull_request 触发 preactjs/compressed-size-action，pattern 为 ./dist/*.{js,mjs,cjs}"
+          },
+          {
+            "path": "README.md",
+            "supports": "README 宣称压缩后小于 200 字节，体积是该项目的核心卖点"
+          }
+        ]
+      },
+      "correctness_0_2": null,
+      "citation_support_0_2": null,
+      "reviewer": null,
+      "human_approved": false
+    },
+    {
+      "report_sha256": "9a19fe77d751898693e37d55fef2e367a902532c85e70a68c9cacd73115d7a05",
+      "report": "experiments/p2/developit--mitt-report.json",
+      "stage": "contributor",
+      "claim_index": 3,
+      "claim": {
+        "claim": "类型层正确性由纯编译期测试保证：test/test-types-compilation.ts 用 @ts-expect-error 固化预期错误用法，配合 tsconfig 的 strict: true 与 test-types 脚本的 --strict。",
+        "confidence": "high",
+        "evidence": [
+          {
+            "path": "test/test-types-compilation.ts",
+            "supports": "对 on/off/emit 参数推断的正反例均以 // @ts-expect-error 标注"
+          },
+          {
+            "path": "tsconfig.json",
+            "supports": "compilerOptions.strict 为 true，noEmit 为 true，include 覆盖 src/*.ts 与 test/*.ts"
+          },
+          {
+            "path": "package.json",
+            "supports": "test-types 脚本为 tsc test/test-types-compilation.ts --noEmit --strict"
+          }
+        ]
+      },
+      "correctness_0_2": null,
+      "citation_support_0_2": null,
+      "reviewer": null,
+      "human_approved": false
+    },
+    {
+      "report_sha256": "9a19fe77d751898693e37d55fef2e367a902532c85e70a68c9cacd73115d7a05",
+      "report": "experiments/p2/developit--mitt-report.json",
+      "stage": "contributor",
+      "claim_index": 4,
+      "claim": {
+        "claim": "两个测试文件都通过包根路径 '..' 引用实现，而不是直接指向 src/index.ts，说明测试依赖 package.json 的入口字段解析。",
+        "confidence": "high",
+        "evidence": [
+          {
+            "path": "test/index_test.ts",
+            "supports": "import mitt, { Emitter, EventHandlerMap } from '..'"
+          },
+          {
+            "path": "test/test-types-compilation.ts",
+            "supports": "import mitt from '..'"
+          },
+          {
+            "path": "package.json",
+            "supports": "source 指向 src/index.ts，main/module/umd:main 指向 dist 产物"
+          }
+        ]
+      },
+      "correctness_0_2": null,
+      "citation_support_0_2": null,
+      "reviewer": null,
+      "human_approved": false
+    },
+    {
+      "report_sha256": "9a19fe77d751898693e37d55fef2e367a902532c85e70a68c9cacd73115d7a05",
+      "report": "experiments/p2/developit--mitt-report.json",
+      "stage": "contributor",
+      "claim_index": 5,
+      "claim": {
+        "claim": "实现中的防御性 slice（emit 调用前复制处理器数组）在所提供的 test/index_test.ts 内容里没有对应运行期用例，该行为目前缺少回归保护。",
+        "confidence": "medium",
+        "evidence": [
+          {
+            "path": "src/index.ts",
+            "supports": "emit 中两处均为 (handlers as ...).slice().map(handler => handler(...))"
+          },
+          {
+            "path": "test/index_test.ts",
+            "supports": "已提供的用例覆盖 on/off/emit、通配符、符号事件名与删除边界，但未见在回调内增删处理器的断言"
+          }
+        ]
+      },
+      "correctness_0_2": null,
+      "citation_support_0_2": null,
+      "reviewer": null,
+      "human_approved": false
+    },
+    {
+      "report_sha256": "9a19fe77d751898693e37d55fef2e367a902532c85e70a68c9cacd73115d7a05",
+      "report": "experiments/p2/developit--mitt-report.json",
+      "stage": "contributor",
+      "claim_index": 6,
+      "claim": {
+        "claim": "仓库代码风格由 package.json 的 prettier 字段约定为单引号、无尾随逗号，源码可见 Tab 缩进；README 的 API 章节由 npm run docs 自动生成。",
+        "confidence": "high",
+        "evidence": [
+          {
+            "path": "package.json",
+            "supports": "prettier 字段 singleQuote: true、trailingComma: \"none\"；docs 脚本为 documentation readme src/index.ts --section API"
+          },
+          {
+            "path": "README.md",
+            "supports": "API 段落带有 “Generated by documentation.js. Update this documentation by updating the source code.” 提示"
+          }
+        ]
+      },
+      "correctness_0_2": null,
+      "citation_support_0_2": null,
+      "reviewer": null,
+      "human_approved": false
+    },
+    {
+      "report_sha256": "9a19fe77d751898693e37d55fef2e367a902532c85e70a68c9cacd73115d7a05",
+      "report": "experiments/p2/developit--mitt-report.json",
+      "stage": "contributor",
+      "claim_index": 7,
+      "claim": {
+        "claim": "仓库文件索引中没有 CONTRIBUTING.md，贡献流程说明只存在于 README 的 Contribute 章节，且该章节只提到 npm install，未提及测试与构建命令。",
+        "confidence": "high",
+        "evidence": [
+          {
+            "path": "README.md",
+            "supports": "Contribute 章节列出 fork、git checkout -b、npm install、提交 PR 的步骤"
+          },
+          {
+            "path": "package.json",
+            "supports": "仓库已定义 test/lint/build 脚本，可被贡献说明引用但 README 未引用"
+          }
+        ]
+      },
+      "correctness_0_2": null,
+      "citation_support_0_2": null,
+      "reviewer": null,
+      "human_approved": false
+    },
+    {
+      "report_sha256": "92538796dea929abb13c7d4dc0c2bf2db7bace100b63f5858baa72d8e97b5cfc",
+      "report": "experiments/p4/developit--mitt-qwen-report.json",
+      "stage": "explorer",
+      "claim_index": 0,
+      "claim": {
+        "claim": "仓库是一个微型（约200字节压缩后）的功能型事件发射器/发布订阅系统，支持通配符事件监听。",
+        "confidence": "high",
+        "evidence": [
+          {
+            "path": "README.md",
+            "supports": "L11: Tiny 200b functional event emitter / pubsub."
+          },
+          {
+            "path": "README.md",
+            "supports": "L14: a wildcard \"*\" event type listens to all events"
+          },
+          {
+            "path": "src/index.ts",
+            "supports": "L113-120: 实现了通配符事件的处理逻辑"
+          }
+        ]
+      },
+      "correctness_0_2": null,
+      "citation_support_0_2": null,
+      "reviewer": null,
+      "human_approved": false
+    },
+    {
+      "report_sha256": "92538796dea929abb13c7d4dc0c2bf2db7bace100b63f5858baa72d8e97b5cfc",
+      "report": "experiments/p4/developit--mitt-qwen-report.json",
+      "stage": "explorer",
+      "claim_index": 1,
+      "claim": {
+        "claim": "项目使用 TypeScript 作为主要语言，通过 Microbundle 构建，并依赖 Node.js 和 npm 进行开发和发布。",
+        "confidence": "high",
+        "evidence": [
+          {
+            "path": "package.json",
+            "supports": "L1: name: mitt, L9: source: src/index.ts"
+          },
+          {
+            "path": "package.json",
+            "supports": "L24: build: microbundle -f es,cjs,umd"
+          },
+          {
+            "path": ".github/workflows/main.yml",
+            "supports": "L18: node-version: 14"
+          }
+        ]
+      },
+      "correctness_0_2": null,
+      "citation_support_0_2": null,
+      "reviewer": null,
+      "human_approved": false
+    },
+    {
+      "report_sha256": "92538796dea929abb13c7d4dc0c2bf2db7bace100b63f5858baa72d8e97b5cfc",
+      "report": "experiments/p4/developit--mitt-qwen-report.json",
+      "stage": "explorer",
+      "claim_index": 2,
+      "claim": {
+        "claim": "核心入口文件 src/index.ts 定义了 mitt 工厂函数及 on/off/emit 方法，负责事件注册、注销和分发。",
+        "confidence": "high",
+        "evidence": [
+          {
+            "path": "src/index.ts",
+            "supports": "L46-48: export default function mitt... 定义核心实例"
+          },
+          {
+            "path": "src/index.ts",
+            "supports": "L66-72: on 方法注册事件处理器"
+          },
+          {
+            "path": "src/index.ts",
+            "supports": "L103-123: emit 方法分发事件"
+          }
+        ]
+      },
+      "correctness_0_2": null,
+      "citation_support_0_2": null,
+      "reviewer": null,
+      "human_approved": false
+    },
+    {
+      "report_sha256": "92538796dea929abb13c7d4dc0c2bf2db7bace100b63f5858baa72d8e97b5cfc",
+      "report": "experiments/p4/developit--mitt-qwen-report.json",
+      "stage": "mentor",
+      "claim_index": 0,
+      "claim": {
+        "claim": "核心实现基于 Map 存储事件类型与处理器的映射，支持类型匹配和通配符（'*'）分发。",
+        "confidence": "high",
+        "evidence": [
+          {
+            "path": "src/index.ts",
+            "supports": "使用 Map 实例 `all` 存储事件类型到处理器列表的映射，`on` 方法负责添加，`emit` 方法负责遍历并执行。"
+          },
+          {
+            "path": "src/index.ts",
+            "supports": "`emit` 方法先获取特定类型处理器，再获取通配符处理器，确保通配符在特定类型之后执行。"
+          },
+          {
+            "path": "src/index.ts",
+            "supports": "通过 TypeScript 泛型约束 `Events`，确保类型安全，支持字符串和符号作为事件类型。"
+          }
+        ]
+      },
+      "correctness_0_2": null,
+      "citation_support_0_2": null,
+      "reviewer": null,
+      "human_approved": false
+    },
+    {
+      "report_sha256": "92538796dea929abb13c7d4dc0c2bf2db7bace100b63f5858baa72d8e97b5cfc",
+      "report": "experiments/p4/developit--mitt-qwen-report.json",
+      "stage": "mentor",
+      "claim_index": 1,
+      "claim": {
+        "claim": "静态依赖仅包含测试工具库（chai, sinon）和构建工具配置，无运行时外部依赖。",
+        "confidence": "high",
+        "evidence": [
+          {
+            "path": "package.json",
+            "supports": "依赖项仅列出 `devDependencies` 中的测试和构建工具，`dependencies` 为空，符合轻量级库特征。"
+          },
+          {
+            "path": "package.json",
+            "supports": "Mocha 配置指定使用 `ts-node/register` 和 `esm` 进行测试运行，表明测试在开发环境执行。"
+          }
+        ]
+      },
+      "correctness_0_2": null,
+      "citation_support_0_2": null,
+      "reviewer": null,
+      "human_approved": false
+    },
+    {
+      "report_sha256": "92538796dea929abb13c7d4dc0c2bf2db7bace100b63f5858baa72d8e97b5cfc",
+      "report": "experiments/p4/developit--mitt-qwen-report.json",
+      "stage": "mentor",
+      "claim_index": 2,
+      "claim": {
+        "claim": "架构为单文件函数式组件，通过泛型实现类型推导，支持自定义事件映射注入。",
+        "confidence": "medium",
+        "evidence": [
+          {
+            "path": "src/index.ts",
+            "supports": "主函数 `mitt` 接收可选的 `EventHandlerMap` 参数，内部初始化 `Map` 并返回包含 `on`, `off`, `emit` 方法的对象。"
+          },
+          {
+            "path": "src/index.ts",
+            "supports": "类型定义部分定义了 `Handler`, `WildcardHandler`, `EventHandlerMap` 等核心类型，构建了完整的类型系统。"
+          }
+        ]
+      },
+      "correctness_0_2": null,
+      "citation_support_0_2": null,
+      "reviewer": null,
+      "human_approved": false
+    },
+    {
+      "report_sha256": "92538796dea929abb13c7d4dc0c2bf2db7bace100b63f5858baa72d8e97b5cfc",
+      "report": "experiments/p4/developit--mitt-qwen-report.json",
+      "stage": "contributor",
+      "claim_index": 0,
+      "claim": {
+        "claim": "项目支持 Node.js 14+ 环境，通过 CI 工作流自动运行构建、打包和测试流程。",
+        "confidence": "high",
+        "evidence": [
+          {
+            "path": ".github/workflows/main.yml",
+            "supports": "CI 工作流配置指定 node-version: 14，并在步骤中执行 npm install、npm run build 和 npm test。"
+          },
+          {
+            "path": "package.json",
+            "supports": "package.json 定义了 npm run build 和 npm test 脚本，分别调用 microbundle 打包和 mocha 测试。"
+          }
+        ]
+      },
+      "correctness_0_2": null,
+      "citation_support_0_2": null,
+      "reviewer": null,
+      "human_approved": false
+    },
+    {
+      "report_sha256": "92538796dea929abb13c7d4dc0c2bf2db7bace100b63f5858baa72d8e97b5cfc",
+      "report": "experiments/p4/developit--mitt-qwen-report.json",
+      "stage": "contributor",
+      "claim_index": 1,
+      "claim": {
+        "claim": "开发环境依赖 TypeScript 4.9.5 及 ESLint 7.32.0，需安装 ts-node 和 esm 以运行测试。",
+        "confidence": "high",
+        "evidence": [
+          {
+            "path": "package.json",
+            "supports": "devDependencies 明确列出了 typescript ^4.9.5, eslint ^7.32.0, ts-node ^10.9.1 和 esm ^3.2.25。"
+          },
+          {
+            "path": "package.json",
+            "supports": "mocha 配置中 require 了 ts-node/register 和 esm，spec 指向 test/*_test.ts 文件。"
+          }
+        ]
+      },
+      "correctness_0_2": null,
+      "citation_support_0_2": null,
+      "reviewer": null,
+      "human_approved": false
+    },
+    {
+      "report_sha256": "92538796dea929abb13c7d4dc0c2bf2db7bace100b63f5858baa72d8e97b5cfc",
+      "report": "experiments/p4/developit--mitt-qwen-report.json",
+      "stage": "contributor",
+      "claim_index": 2,
+      "claim": {
+        "claim": "源码位于 src/index.ts，测试用例位于 test 目录下，构建输出至 dist 目录。",
+        "confidence": "high",
+        "evidence": [
+          {
+            "path": "package.json",
+            "supports": "exports 和 main 字段指向 dist/mitt.js/mjs，source 字段指向 src/index.ts。"
+          },
+          {
+            "path": "test/index_test.ts",
+            "supports": "测试文件路径为 test/index_test.ts，包含具体的事件监听与发射测试逻辑。"
+          }
+        ]
+      },
+      "correctness_0_2": null,
+      "citation_support_0_2": null,
+      "reviewer": null,
+      "human_approved": false
+    },
+    {
+      "report_sha256": "9dc5dd69b561c1036f33ead2eddad488bfe9e06376836c078713506c85a713ab",
+      "report": "experiments/p2/ai--nanoid-report.json",
+      "stage": "explorer",
+      "claim_index": 0,
+      "claim": {
+        "claim": "index.js 是包的主运行时入口，通过 ESM 具名导出 nanoid、customAlphabet、customRandom、random 与 urlAlphabet，并复用共享的 url-alphabet 常量。",
+        "confidence": "high",
+        "evidence": [
+          {
+            "path": "index.js",
+            "supports": "文件顶部 `import { urlAlphabet } from './url-alphabet/index.js'` 并 `export { urlAlphabet }`，随后导出 random/customRandom/customAlphabet，最后 `export const nanoid = customAlphabet(urlAlphabet)`"
+          },
+          {
+            "path": "package.json",
+            "supports": "exports 映射 \".\" 的 default 指向 ./index.js，types 指向 ./index.d.ts"
+          }
+        ]
+      },
+      "correctness_0_2": null,
+      "citation_support_0_2": null,
+      "reviewer": null,
+      "human_approved": false
+    },
+    {
+      "report_sha256": "9dc5dd69b561c1036f33ead2eddad488bfe9e06376836c078713506c85a713ab",
+      "report": "experiments/p2/ai--nanoid-report.json",
+      "stage": "explorer",
+      "claim_index": 1,
+      "claim": {
+        "claim": "package.json 的 exports/browser/react-native 字段将浏览器与 React Native 环境的 \".\" 解析重定向到 index.browser.js，因此同一公共 API 存在 Node 与浏览器两套实现文件。",
+        "confidence": "high",
+        "evidence": [
+          {
+            "path": "package.json",
+            "supports": "browser 与 react-native 字段均把 ./index.js 映射到 ./index.browser.js，exports 中 browser/react-native 条件同样指向 ./index.browser.js"
+          },
+          {
+            "path": "index.browser.js",
+            "supports": "文件顶部注释说明该文件按 package.json 的 browser 配置替换 index.js，并导出同名 API"
+          }
+        ]
+      },
+      "correctness_0_2": null,
+      "citation_support_0_2": null,
+      "reviewer": null,
+      "human_approved": false
+    },
+    {
+      "report_sha256": "9dc5dd69b561c1036f33ead2eddad488bfe9e06376836c078713506c85a713ab",
+      "report": "experiments/p2/ai--nanoid-report.json",
+      "stage": "explorer",
+      "claim_index": 2,
+      "claim": {
+        "claim": "默认 ID 长度为 21、字母表为 64 个 URL 安全字符，由 url-alphabet/index.js 的单一常量提供并被安全与非安全实现共同引用。",
+        "confidence": "high",
+        "evidence": [
+          {
+            "path": "url-alphabet/index.js",
+            "supports": "导出常量 urlAlphabet 为 'useandom-26T198340PX75pxJACKVERYMINDBUSHWOLF_GQZbfghjklqvwyzrict'，注释说明为 A-Za-z0-9_- 且按压缩优化排序"
+          },
+          {
+            "path": "index.js",
+            "supports": "customAlphabet(alphabet, defaultSize = 21)，并以 customAlphabet(urlAlphabet) 生成 nanoid"
+          },
+          {
+            "path": "non-secure/index.js",
+            "supports": "同样从 ../url-alphabet/index.js 导入 urlAlphabet，非安全 nanoid 默认 size = 21"
+          }
+        ]
+      },
+      "correctness_0_2": null,
+      "citation_support_0_2": null,
+      "reviewer": null,
+      "human_approved": false
+    },
+    {
+      "report_sha256": "9dc5dd69b561c1036f33ead2eddad488bfe9e06376836c078713506c85a713ab",
+      "report": "experiments/p2/ai--nanoid-report.json",
+      "stage": "explorer",
+      "claim_index": 3,
+      "claim": {
+        "claim": "安全实现通过拒绝采样（safeByteCutoff / mask）消除取模偏差，并对 2 的幂字母表走 `& mask` 快速路径。",
+        "confidence": "high",
+        "evidence": [
+          {
+            "path": "index.js",
+            "supports": "customRandom 计算 safeByteCutoff = 256 - (256 % alphabet.length)；当 safeByteCutoff === 256 时使用 `alphabet[bytes[i] & mask]`，否则丢弃 bytes[i] >= safeByteCutoff"
+          },
+          {
+            "path": "index.browser.js",
+            "supports": "浏览器实现保留相同的 safeByteCutoff 与 mask 逻辑"
+          }
+        ]
+      },
+      "correctness_0_2": null,
+      "citation_support_0_2": null,
+      "reviewer": null,
+      "human_approved": false
+    },
+    {
+      "report_sha256": "9dc5dd69b561c1036f33ead2eddad488bfe9e06376836c078713506c85a713ab",
+      "report": "experiments/p2/ai--nanoid-report.json",
+      "stage": "explorer",
+      "claim_index": 4,
+      "claim": {
+        "claim": "安全实现的随机源是全局 crypto.getRandomValues，并因单次调用上限而按 65536 字节分块填充；random() 直接分配 Buffer 而不使用字符串池。",
+        "confidence": "high",
+        "evidence": [
+          {
+            "path": "index.js",
+            "supports": "GET_RANDOM_LIMIT = 65536，fillRandom 使用 crypto.getRandomValues(buffer.subarray(from, to)) 循环分块，random() 注释说明其走直接 crypto 调用"
+          }
+        ]
+      },
+      "correctness_0_2": null,
+      "citation_support_0_2": null,
+      "reviewer": null,
+      "human_approved": false
+    },
+    {
+      "report_sha256": "9dc5dd69b561c1036f33ead2eddad488bfe9e06376836c078713506c85a713ab",
+      "report": "experiments/p2/ai--nanoid-report.json",
+      "stage": "explorer",
+      "claim_index": 5,
+      "claim": {
+        "claim": "customAlphabet 使用预生成字符串池与几何扩张（POOL_MAX = 65536/2）以减少逐字符字符串拼接，并对非单字节字符、长度>256 或非字符串字母表回退到 customRandom。",
+        "confidence": "high",
+        "evidence": [
+          {
+            "path": "index.js",
+            "supports": "alphabet 长度>256 或存在 charCodeAt>255 时 return customRandom(...)；否则用 Uint8Array charCodes、mask 与 pool/poolOffset/poolNext 缓冲，pool = buffer.toString('latin1') 后以 substring 取 ID"
+          },
+          {
+            "path": "test/index.test.js",
+            "supports": "测试覆盖 'supports multi-byte characters'、'supports alphabets bigger than 256 symbols'、'supports non-string alphabets' 与 'avoids pool pollution, infinite loop'"
+          }
+        ]
+      },
+      "correctness_0_2": null,
+      "citation_support_0_2": null,
+      "reviewer": null,
+      "human_approved": false
+    },
+    {
+      "report_sha256": "9dc5dd69b561c1036f33ead2eddad488bfe9e06376836c078713506c85a713ab",
+      "report": "experiments/p2/ai--nanoid-report.json",
+      "stage": "explorer",
+      "claim_index": 6,
+      "claim": {
+        "claim": "non-secure 子路径入口提供基于 Math.random 的非加密实现，仅复用同一 urlAlphabet，不包含偏差修正逻辑。",
+        "confidence": "high",
+        "evidence": [
+          {
+            "path": "non-secure/index.js",
+            "supports": "customAlphabet/nanoid 均用 `(Math.random() * alphabet.length) | 0` 选字符，无拒绝采样"
+          },
+          {
+            "path": "package.json",
+            "supports": "exports 中 \"./non-secure\" 指向 ./non-secure/index.js，types 为 ./non-secure/index.d.ts"
+          }
+        ]
+      },
+      "correctness_0_2": null,
+      "citation_support_0_2": null,
+      "reviewer": null,
+      "human_approved": false
+    },
+    {
+      "report_sha256": "9dc5dd69b561c1036f33ead2eddad488bfe9e06376836c078713506c85a713ab",
+      "report": "experiments/p2/ai--nanoid-report.json",
+      "stage": "explorer",
+      "claim_index": 7,
+      "claim": {
+        "claim": "bin/nanoid.js 是 package.json bin 声明的命令行入口，直接复用 index.js 的 nanoid/customAlphabet，支持 -s/--size、-a/--alphabet、-v、-h 参数。",
+        "confidence": "high",
+        "evidence": [
+          {
+            "path": "bin/nanoid.js",
+            "supports": "shebang 脚本导入 ../index.js，解析 process.argv 中的 --size/-s、--alphabet/-a、--version/-v、--help/-h 并输出 ID 或错误"
+          },
+          {
+            "path": "package.json",
+            "supports": "\"bin\": \"./bin/nanoid.js\""
+          }
+        ]
+      },
+      "correctness_0_2": null,
+      "citation_support_0_2": null,
+      "reviewer": null,
+      "human_approved": false
+    },
+    {
+      "report_sha256": "9dc5dd69b561c1036f33ead2eddad488bfe9e06376836c078713506c85a713ab",
+      "report": "experiments/p2/ai--nanoid-report.json",
+      "stage": "mentor",
+      "claim_index": 0,
+      "claim": {
+        "claim": "CLI 是典型的「薄 CLI + 胖核心」：bin/nanoid.js 只从 ../index.js 导入 nanoid 与 customAlphabet，自身不含任何随机数生成或偏差修正逻辑，全部生成能力委托给核心库。",
+        "confidence": "high",
+        "evidence": [
+          {
+            "path": "bin/nanoid.js",
+            "supports": "import { customAlphabet, nanoid } from '../index.js'，文件其余部分只有参数解析、print/error 输出与分发，没有生成算法"
+          },
+          {
+            "path": "index.js",
+            "supports": "核心文件集中实现 random/customRandom/customAlphabet，并以 customAlphabet(urlAlphabet) 导出 nanoid"
+          }
+        ]
+      },
+      "correctness_0_2": null,
+      "citation_support_0_2": null,
+      "reviewer": null,
+      "human_approved": false
+    },
+    {
+      "report_sha256": "9dc5dd69b561c1036f33ead2eddad488bfe9e06376836c078713506c85a713ab",
+      "report": "experiments/p2/ai--nanoid-report.json",
+      "stage": "mentor",
+      "claim_index": 1,
+      "claim": {
+        "claim": "CLI 不使用 commander/yargs 等框架，而是手写循环遍历 process.argv，支持 -s/--size、-a/--alphabet、-v/--version、-h/--help，未知参数报错 'Unknown argument'；无子命令与路由机制。",
+        "confidence": "high",
+        "evidence": [
+          {
+            "path": "bin/nanoid.js",
+            "supports": "以 for 循环从下标 2 遍历 process.argv，逐项匹配 --size/-s、--alphabet/-a、--version/-v、--help/-h，else 分支调用 error('Unknown argument ' + arg)"
+          },
+          {
+            "path": "test/bin.test.js",
+            "supports": "测试分别对 --size、--alphabet、--help、--version 及未知参数 -test 做端到端断言"
+          },
+          {
+            "path": "README.md",
+            "supports": "CLI 文档只描述单一 nanoid 命令及 --size/--alphabet 选项，无子命令章节"
+          }
+        ]
+      },
+      "correctness_0_2": null,
+      "citation_support_0_2": null,
+      "reviewer": null,
+      "human_approved": false
+    },
+    {
+      "report_sha256": "9dc5dd69b561c1036f33ead2eddad488bfe9e06376836c078713506c85a713ab",
+      "report": "experiments/p2/ai--nanoid-report.json",
+      "stage": "mentor",
+      "claim_index": 2,
+      "claim": {
+        "claim": "CLI 输出契约：成功时 ID 以单行加换行写入 stdout 且 stderr 为空；错误走 stderr 且进程以非零码退出。",
+        "confidence": "high",
+        "evidence": [
+          {
+            "path": "bin/nanoid.js",
+            "supports": "print() 用 process.stdout.write(msg + 换行)，error() 用 process.stderr.write 后 process.exit(1)"
+          },
+          {
+            "path": "test/bin.test.js",
+            "supports": "成功用例断言 stderr 为空并用正则匹配 stdout 中 21 位 ID 与换行；错误用例用 rejects 断言进程失败"
+          }
+        ]
+      },
+      "correctness_0_2": null,
+      "citation_support_0_2": null,
+      "reviewer": null,
+      "human_approved": false
+    },
+    {
+      "report_sha256": "9dc5dd69b561c1036f33ead2eddad488bfe9e06376836c078713506c85a713ab",
+      "report": "experiments/p2/ai--nanoid-report.json",
+      "stage": "mentor",
+      "claim_index": 3,
+      "claim": {
+        "claim": "CLI 参数校验策略：--size 经 Number() 转换，NaN 或非正数时报 'Size must be positive integer'；指定 --alphabet 时改走 customAlphabet(alphabet, size)；--version 直接读取 package.json 的 version。",
+        "confidence": "high",
+        "evidence": [
+          {
+            "path": "bin/nanoid.js",
+            "supports": "size = Number(process.argv[i + 1]) 后判断 Number.isNaN(size) || size <= 0 报错；alphabet 分支调用 customAlphabet(alphabet, size)；--version 分支 readFileSync package.json"
+          },
+          {
+            "path": "test/bin.test.js",
+            "supports": "'shows an error if size is not a number'、'requires error if size is a negative number'、'uses alphabet' 对应用例"
+          }
+        ]
+      },
+      "correctness_0_2": null,
+      "citation_support_0_2": null,
+      "reviewer": null,
+      "human_approved": false
+    },
+    {
+      "report_sha256": "9dc5dd69b561c1036f33ead2eddad488bfe9e06376836c078713506c85a713ab",
+      "report": "experiments/p2/ai--nanoid-report.json",
+      "stage": "mentor",
+      "claim_index": 4,
+      "claim": {
+        "claim": "安全实现使用全局 crypto.getRandomValues 作为随机源，并因单次调用 65536 字节上限而按块循环填充；random() 直接分配 Buffer 不使用字符串池。",
+        "confidence": "high",
+        "evidence": [
+          {
+            "path": "index.js",
+            "supports": "GET_RANDOM_LIMIT = 65536，fillRandom 以 buffer.subarray 分块循环调用 crypto.getRandomValues，random() 注释说明其走直接 crypto 调用"
+          },
+          {
+            "path": "test/index.test.js",
+            "supports": "'recovers from crypto errors' 用例注入抛错的 getRandomValues 并断言 nanoid(65536)/random(131072) 抛错后仍可恢复"
+          }
+        ]
+      },
+      "correctness_0_2": null,
+      "citation_support_0_2": null,
+      "reviewer": null,
+      "human_approved": false
+    },
+    {
+      "report_sha256": "9dc5dd69b561c1036f33ead2eddad488bfe9e06376836c078713506c85a713ab",
+      "report": "experiments/p2/ai--nanoid-report.json",
+      "stage": "mentor",
+      "claim_index": 5,
+      "claim": {
+        "claim": "安全实现通过拒绝采样（safeByteCutoff / mask）消除取模偏差，且对 2 的幂字母表走位掩码快速路径；浏览器实现保留同一算法。",
+        "confidence": "high",
+        "evidence": [
+          {
+            "path": "index.js",
+            "supports": "customRandom 计算 safeByteCutoff = 256 - (256 % alphabet.length)；safeByteCutoff 为 256 时用 alphabet[bytes[i] & mask]，否则丢弃 bytes[i] >= safeByteCutoff"
+          },
+          {
+            "path": "index.browser.js",
+            "supports": "浏览器版本保留相同的 safeByteCutoff 与 mask 逻辑，仅随机源换成 Web Crypto"
+          }
+        ]
+      },
+      "correctness_0_2": null,
+      "citation_support_0_2": null,
+      "reviewer": null,
+      "human_approved": false
+    },
+    {
+      "report_sha256": "9dc5dd69b561c1036f33ead2eddad488bfe9e06376836c078713506c85a713ab",
+      "report": "experiments/p2/ai--nanoid-report.json",
+      "stage": "mentor",
+      "claim_index": 6,
+      "claim": {
+        "claim": "customAlphabet 使用预生成字符串池与几何扩张（POOL_MAX = 65536/2）避免逐字符拼接，并对非字符串、长度超 256 或含多字节字符的字母表回退到 customRandom。",
+        "confidence": "high",
+        "evidence": [
+          {
+            "path": "index.js",
+            "supports": "字母表非 string、为空或长度 > 256，或存在 charCodeAt > 255 时直接 return customRandom(...)；否则用 charCodes/mask 填充 Buffer，pool = buffer.toString('latin1') 后以 substring 切出 ID，poolNext 按 target * 16 增长并封顶 POOL_MAX"
+          },
+          {
+            "path": "test/index.test.js",
+            "supports": "'supports multi-byte characters'、'supports alphabets bigger than 256 symbols'、'supports non-string alphabets'、'avoids pool pollution, infinite loop' 覆盖各回退分支"
+          }
+        ]
+      },
+      "correctness_0_2": null,
+      "citation_support_0_2": null,
+      "reviewer": null,
+      "human_approved": false
+    },
+    {
+      "report_sha256": "9dc5dd69b561c1036f33ead2eddad488bfe9e06376836c078713506c85a713ab",
+      "report": "experiments/p2/ai--nanoid-report.json",
+      "stage": "mentor",
+      "claim_index": 7,
+      "claim": {
+        "claim": "同一公共 API 存在三套实现并共享唯一字母表常量：Node 走 index.js，浏览器/React Native 走 index.browser.js，non-secure 子路径走基于 Math.random 且无偏差修正的 non-secure/index.js，三者都从 url-alphabet/index.js 取默认字母表。",
+        "confidence": "high",
+        "evidence": [
+          {
+            "path": "index.browser.js",
+            "supports": "顶部注释说明本文件按 package.json 的 browser 配置替换 index.js，并导入共享 urlAlphabet"
+          },
+          {
+            "path": "non-secure/index.js",
+            "supports": "customAlphabet/nanoid 均用 (Math.random() * alphabet.length) | 0 选字符，从 ../url-alphabet/index.js 导入 urlAlphabet，无拒绝采样"
+          },
+          {
+            "path": "url-alphabet/index.js",
+            "supports": "导出唯一的 64 字符 urlAlphabet 常量，注释说明顺序按 gzip/brotli 压缩优化"
+          },
+          {
+            "path": "test/non-secure.test.js",
+            "supports": "导入 ../index.js 的 urlAlphabet 与 ../non-secure/index.js 的生成器，断言二者字母表一致"
+          }
+        ]
+      },
+      "correctness_0_2": null,
+      "citation_support_0_2": null,
+      "reviewer": null,
+      "human_approved": false
+    },
+    {
+      "report_sha256": "9dc5dd69b561c1036f33ead2eddad488bfe9e06376836c078713506c85a713ab",
+      "report": "experiments/p2/ai--nanoid-report.json",
+      "stage": "contributor",
+      "claim_index": 0,
+      "claim": {
+        "claim": "项目是零依赖的纯 ESM 包，package.json 的 engines 要求 Node 为 ^22 或 ^24 或 >=26，本地开发必须使用较新 Node。",
+        "confidence": "high",
+        "evidence": [
+          {
+            "path": "package.json",
+            "supports": "type 为 module，devDependencies 全为开发工具而无运行时依赖，engines.node 为 ^22 || ^24 || >=26"
+          },
+          {
+            "path": ".github/workflows/test.yml",
+            "supports": "CI 使用 pnpm/setup，runtime 为 node@26，短任务矩阵为 24 与 22"
+          }
+        ]
+      },
+      "correctness_0_2": null,
+      "citation_support_0_2": null,
+      "reviewer": null,
+      "human_approved": false
+    },
+    {
+      "report_sha256": "9dc5dd69b561c1036f33ead2eddad488bfe9e06376836c078713506c85a713ab",
+      "report": "experiments/p2/ai--nanoid-report.json",
+      "stage": "contributor",
+      "claim_index": 1,
+      "claim": {
+        "claim": "顶层测试入口为 pnpm test，脚本定义为 pnpm run /^test:/，聚合 test:coverage、test:lint、test:size、test:versions、test:prebuild；CI 完整任务用 pnpm ci 加 pnpm test，短任务只用 pnpm bnt。",
+        "confidence": "high",
+        "evidence": [
+          {
+            "path": "package.json",
+            "supports": "scripts 中 test 为 pnpm run /^test:/，并定义 test:coverage、test:lint、test:size、test:versions、test:prebuild"
+          },
+          {
+            "path": ".github/workflows/test.yml",
+            "supports": "full 任务执行 pnpm ci 与 pnpm test，short 任务执行 pnpm bnt"
+          }
+        ]
+      },
+      "correctness_0_2": null,
+      "citation_support_0_2": null,
+      "reviewer": null,
+      "human_approved": false
+    },
+    {
+      "report_sha256": "9dc5dd69b561c1036f33ead2eddad488bfe9e06376836c078713506c85a713ab",
+      "report": "experiments/p2/ai--nanoid-report.json",
+      "stage": "contributor",
+      "claim_index": 2,
+      "claim": {
+        "claim": "包体积是被 CI 脚本强制的硬约束：size-limit 对 nanoid 限定 127 B，对 customAlphabet 219 B，且 test:size 会先执行 pnpm clean 再运行 size-limit。",
+        "confidence": "high",
+        "evidence": [
+          {
+            "path": "package.json",
+            "supports": "size-limit 数组包含 nanoid 127 B、customAlphabet 219 B、urlAlphabet 58 B 及 non-secure 103 B/66 B 五条限制，test:size 为 pnpm clean 加 size-limit"
+          },
+          {
+            "path": "README.md",
+            "supports": "体积宣传语声明 127 bytes（minified and brotlied）并由 Size Limit 控制"
+          }
+        ]
+      },
+      "correctness_0_2": null,
+      "citation_support_0_2": null,
+      "reviewer": null,
+      "human_approved": false
+    },
+    {
+      "report_sha256": "9dc5dd69b561c1036f33ead2eddad488bfe9e06376836c078713506c85a713ab",
+      "report": "experiments/p2/ai--nanoid-report.json",
+      "stage": "contributor",
+      "claim_index": 3,
+      "claim": {
+        "claim": "CLI 的输出契约由 bin/nanoid.js 与 test/bin.test.js 固定：成功时 ID 以单行加换行写入 stdout 且 stderr 为空，参数错误写 stderr 并以非零码退出。",
+        "confidence": "high",
+        "evidence": [
+          {
+            "path": "bin/nanoid.js",
+            "supports": "print 使用 process.stdout.write 加换行，error 使用 process.stderr.write 后 process.exit(1)"
+          },
+          {
+            "path": "test/bin.test.js",
+            "supports": "成功用例断言 stderr 为空并用正则匹配 stdout 中的 ID 与换行，错误用例用 rejects 断言进程失败"
+          },
+          {
+            "path": "README.md",
+            "supports": "CLI 章节示例输出为单行 ID"
+          }
+        ]
+      },
+      "correctness_0_2": null,
+      "citation_support_0_2": null,
+      "reviewer": null,
+      "human_approved": false
+    },
+    {
+      "report_sha256": "9dc5dd69b561c1036f33ead2eddad488bfe9e06376836c078713506c85a713ab",
+      "report": "experiments/p2/ai--nanoid-report.json",
+      "stage": "contributor",
+      "claim_index": 4,
+      "claim": {
+        "claim": "README 声称指定 --alphabet 时必须提供 --size，但 bin/nanoid.js 未强制该约束：省略时把 undefined 传给 customAlphabet，而 index.js 的 defaultSize 默认参数为 21，因此会静默生成默认长度 ID。",
+        "confidence": "high",
+        "evidence": [
+          {
+            "path": "README.md",
+            "supports": "CLI 章节括号内写明 note that in this case --size is required"
+          },
+          {
+            "path": "bin/nanoid.js",
+            "supports": "alphabet 分支直接调用 customAlphabet(alphabet, size)，未校验 size 是否给出"
+          },
+          {
+            "path": "index.js",
+            "supports": "customAlphabet(alphabet, defaultSize = 21) 在实参为 undefined 时使用默认值 21"
+          },
+          {
+            "path": "test/bin.test.js",
+            "supports": "uses alphabet 用例固定提供 --size 15，未覆盖省略 size 的情况"
+          }
+        ]
+      },
+      "correctness_0_2": null,
+      "citation_support_0_2": null,
+      "reviewer": null,
+      "human_approved": false
+    },
+    {
+      "report_sha256": "9dc5dd69b561c1036f33ead2eddad488bfe9e06376836c078713506c85a713ab",
+      "report": "experiments/p2/ai--nanoid-report.json",
+      "stage": "contributor",
+      "claim_index": 5,
+      "claim": {
+        "claim": "Node 实现的随机源按 65536 字节分块填充，而 index.browser.js 的 random 是单次 crypto.getRandomValues 调用且不做分块，浏览器测试的 mock crypto 也未模拟该上限，两端在大 bytes 下行为可能不同（该结论基于源码注释所述上限与实现差异，未经浏览器实机验证）。",
+        "confidence": "medium",
+        "evidence": [
+          {
+            "path": "index.js",
+            "supports": "GET_RANDOM_LIMIT 为 65536，注释说明 crypto.getRandomValues 拒绝超过 65536 字节的请求，fillRandom 用 subarray 分块循环"
+          },
+          {
+            "path": "index.browser.js",
+            "supports": "random 定义为 crypto.getRandomValues(new Uint8Array(bytes))，无分块逻辑"
+          },
+          {
+            "path": "test/index.test.js",
+            "supports": "browser 用例注入的 mock crypto.getRandomValues 对任意长度都直接返回数组，未模拟长度上限"
+          }
+        ]
+      },
+      "correctness_0_2": null,
+      "citation_support_0_2": null,
+      "reviewer": null,
+      "human_approved": false
+    },
+    {
+      "report_sha256": "9dc5dd69b561c1036f33ead2eddad488bfe9e06376836c078713506c85a713ab",
+      "report": "experiments/p2/ai--nanoid-report.json",
+      "stage": "contributor",
+      "claim_index": 6,
+      "claim": {
+        "claim": "package.json 配置了 simple-git-hooks 的 pre-commit 指向 ./test/check-versions.js，但未见 prepare 或 postinstall 安装脚本，本地钩子是否生效无法从现有证据确认。",
+        "confidence": "medium",
+        "evidence": [
+          {
+            "path": "package.json",
+            "supports": "simple-git-hooks 字段配置 pre-commit 为 ./test/check-versions.js，devDependencies 含 simple-git-hooks，但 scripts 中无 prepare/postinstall"
+          }
+        ]
+      },
+      "correctness_0_2": null,
+      "citation_support_0_2": null,
+      "reviewer": null,
+      "human_approved": false
+    },
+    {
+      "report_sha256": "9dc5dd69b561c1036f33ead2eddad488bfe9e06376836c078713506c85a713ab",
+      "report": "experiments/p2/ai--nanoid-report.json",
+      "stage": "contributor",
+      "claim_index": 7,
+      "claim": {
+        "claim": "仓库没有贡献指南类文件，README.md 内容为使用文档、多语言版本链接与移植列表，未描述贡献流程；repositoryContext.guidanceFiles 为空。",
+        "confidence": "high",
+        "evidence": [
+          {
+            "path": "README.md",
+            "supports": "章节为 Table of Contents、API、Usage、Tools 等使用向内容，无贡献流程或本地开发说明"
+          },
+          {
+            "path": ".github/workflows/test.yml",
+            "supports": "贡献者可参照的检查项只体现在 CI 步骤中（pnpm ci 与 pnpm test），无对应文档引用"
+          }
+        ]
+      },
+      "correctness_0_2": null,
+      "citation_support_0_2": null,
+      "reviewer": null,
+      "human_approved": false
+    },
+    {
+      "report_sha256": "d91adc2fc2f370aaf9459b95fbd1af94adf94bf7ecf952b63d3e62bca96929be",
+      "report": "experiments/p4/ai--nanoid-qwen-report.json",
+      "stage": "explorer",
+      "claim_index": 0,
+      "claim": {
+        "claim": "仓库是一个轻量级、安全且符合 URL 规范的唯一字符串 ID 生成器，旨在替代传统的 UUID 和 crypto.randomUUID。",
+        "confidence": "high",
+        "evidence": [
+          {
+            "path": "README.ar.md",
+            "supports": "描述其为‘小型、安全且符合 URL 的 JavaScript 唯一字符串 ID 生成器’，并强调其无外部依赖且体积小。"
+          },
+          {
+            "path": "package.json",
+            "supports": "版本 6.0.1 的 description 字段明确定义为‘A tiny (127 bytes), secure URL-friendly unique string ID generator'。"
+          },
+          {
+            "path": "README.ko.md",
+            "supports": "指出其使用 Node.js 的 `crypto` 模块和浏览器的 Web Crypto API，而非不可预测的 `Math.random()`。"
+          }
+        ]
+      },
+      "correctness_0_2": null,
+      "citation_support_0_2": null,
+      "reviewer": null,
+      "human_approved": false
+    },
+    {
+      "report_sha256": "d91adc2fc2f370aaf9459b95fbd1af94adf94bf7ecf952b63d3e62bca96929be",
+      "report": "experiments/p4/ai--nanoid-qwen-report.json",
+      "stage": "explorer",
+      "claim_index": 1,
+      "claim": {
+        "claim": "项目主要使用 JavaScript/TypeScript 开发，采用 ES Modules 构建，并通过 `size-limit` 工具进行包大小优化。",
+        "confidence": "high",
+        "evidence": [
+          {
+            "path": "package.json",
+            "supports": "声明 `type` 为 `module`，指定了 Node.js 引擎版本，并配置了 `size-limit` 插件以限制包大小。"
+          },
+          {
+            "path": "index.js",
+            "supports": "代码使用 ES6+ 语法（如 `const`, `let`, `import/export`），并直接操作 `Buffer` 和 `crypto`。"
+          },
+          {
+            "path": "README.ar.md",
+            "supports": "强调其‘无外部依赖’（without any external dependencies）的特性。"
+          }
+        ]
+      },
+      "correctness_0_2": null,
+      "citation_support_0_2": null,
+      "reviewer": null,
+      "human_approved": false
+    },
+    {
+      "report_sha256": "d91adc2fc2f370aaf9459b95fbd1af94adf94bf7ecf952b63d3e62bca96929be",
+      "report": "experiments/p4/ai--nanoid-qwen-report.json",
+      "stage": "explorer",
+      "claim_index": 2,
+      "claim": {
+        "claim": "核心逻辑位于 `index.js` 中，负责处理随机字节填充、拒绝采样算法及自定义字母表生成；`non-secure` 目录提供不安全的实现变体。",
+        "confidence": "high",
+        "evidence": [
+          {
+            "path": "index.js",
+            "supports": "包含 `customAlphabet` 和 `nanoid` 导出函数，实现了基于拒绝采样的随机字符生成逻辑。"
+          },
+          {
+            "path": "package.json",
+            "supports": "定义了 `./non-secure` 的导出路径，表明存在一个专门的安全降级版本。"
+          },
+          {
+            "path": "test/benchmark.js",
+            "supports": "测试文件同时导入了 `../index.js` 和 `../non-secure/index.js` 进行性能对比。"
+          }
+        ]
+      },
+      "correctness_0_2": null,
+      "citation_support_0_2": null,
+      "reviewer": null,
+      "human_approved": false
+    },
+    {
+      "report_sha256": "d91adc2fc2f370aaf9459b95fbd1af94adf94bf7ecf952b63d3e62bca96929be",
+      "report": "experiments/p4/ai--nanoid-qwen-report.json",
+      "stage": "explorer",
+      "claim_index": 3,
+      "claim": {
+        "claim": "存在测试缺失或覆盖范围限制，特别是针对 `customAlphabet` 的特定配置和 `non-secure` 模块的深入测试。",
+        "confidence": "medium",
+        "evidence": [
+          {
+            "path": "test/benchmark.js",
+            "supports": "仅包含基准测试（benchmark），未显示针对核心算法逻辑的单元测试文件（如 `test/index.test.js`）。"
+          },
+          {
+            "path": "README.ko.md",
+            "supports": "提到‘进行了均匀性测试’，但未提供具体的测试文件路径或覆盖率报告。"
+          },
+          {
+            "path": "package.json",
+            "supports": "存在 `non-secure` 模块，但在提供的上下文中未见其对应的具体测试用例。"
+          }
+        ]
+      },
+      "correctness_0_2": null,
+      "citation_support_0_2": null,
+      "reviewer": null,
+      "human_approved": false
+    },
+    {
+      "report_sha256": "d91adc2fc2f370aaf9459b95fbd1af94adf94bf7ecf952b63d3e62bca96929be",
+      "report": "experiments/p4/ai--nanoid-qwen-report.json",
+      "stage": "mentor",
+      "claim_index": 0,
+      "claim": {
+        "claim": "核心实现通过拒绝采样（Rejection Sampling）生成均匀分布的随机字符，避免模运算偏差。",
+        "confidence": "high",
+        "evidence": [
+          {
+            "path": "index.js",
+            "supports": "L151-L167 显示当字母表长度非 2 的幂时，使用拒绝采样机制，丢弃超出范围的随机字节以确保熵的均匀性。"
+          },
+          {
+            "path": "index.js",
+            "supports": "L78-L81 在 `customRandom` 中明确拒绝大于 `safeByteCutoff` 的字节，防止因取模导致的符号概率不均。"
+          },
+          {
+            "path": "index.js",
+            "supports": "L143-L149 针对 2 的幂字母表（如 URL 字母表），采用位掩码直接映射，无需拒绝采样，提升性能。"
+          }
+        ]
+      },
+      "correctness_0_2": null,
+      "citation_support_0_2": null,
+      "reviewer": null,
+      "human_approved": false
+    },
+    {
+      "report_sha256": "d91adc2fc2f370aaf9459b95fbd1af94adf94bf7ecf952b63d3e62bca96929be",
+      "report": "experiments/p4/ai--nanoid-qwen-report.json",
+      "stage": "mentor",
+      "claim_index": 1,
+      "claim": {
+        "claim": "架构采用单文件主入口导出 `nanoid` 和 `customAlphabet`，支持浏览器与 Node.js 环境，并包含非安全模式分支。",
+        "confidence": "high",
+        "evidence": [
+          {
+            "path": "package.json",
+            "supports": "L33-L40 定义 `index.js` 为默认入口，同时导出 `./non-secure` 模块，表明存在安全与非安全两种实现路径。"
+          },
+          {
+            "path": "index.js",
+            "supports": "L177 导出 `nanoid` 函数，L96 导出 `customAlphabet`，L18 导出 `random`，显示清晰的 API 结构。"
+          },
+          {
+            "path": "index.js",
+            "supports": "L90-L91 注释提及字符串池优化源自 `nope-id` 项目，暗示了底层算法的演进来源。"
+          }
+        ]
+      },
+      "correctness_0_2": null,
+      "citation_support_0_2": null,
+      "reviewer": null,
+      "human_approved": false
+    },
+    {
+      "report_sha256": "d91adc2fc2f370aaf9459b95fbd1af94adf94bf7ecf952b63d3e62bca96929be",
+      "report": "experiments/p4/ai--nanoid-qwen-report.json",
+      "stage": "mentor",
+      "claim_index": 2,
+      "claim": {
+        "claim": "静态依赖主要包含 `crypto` 用于随机数生成，以及 `Buffer` 用于内存操作，无重型外部库依赖。",
+        "confidence": "medium",
+        "evidence": [
+          {
+            "path": "index.js",
+            "supports": "L1-L2 导入 `urlAlphabet`，L13 使用 `crypto.getRandomValues` 生成随机数据，L24 使用 `Buffer.allocUnsafe` 分配内存。"
+          },
+          {
+            "path": "test/benchmark.js",
+            "supports": "L3-L13 对比了 `@lukeed/uuid`, `uuid`, `uid` 等库，显示本项目旨在提供轻量级替代方案。"
+          },
+          {
+            "path": "package.json",
+            "supports": "L54-L68 列出了 `tinybench`, `oxlint` 等测试与构建工具，但核心逻辑不依赖这些库。"
+          }
+        ]
+      },
+      "correctness_0_2": null,
+      "citation_support_0_2": null,
+      "reviewer": null,
+      "human_approved": false
+    },
+    {
+      "report_sha256": "d91adc2fc2f370aaf9459b95fbd1af94adf94bf7ecf952b63d3e62bca96929be",
+      "report": "experiments/p4/ai--nanoid-qwen-report.json",
+      "stage": "contributor",
+      "claim_index": 0,
+      "claim": {
+        "claim": "项目要求使用 Node.js 22、24 或 26+ 版本进行开发，并依赖 pnpm 进行包管理。",
+        "confidence": "high",
+        "evidence": [
+          {
+            "path": "package.json",
+            "supports": "engines 字段指定了 Node.js 版本范围，且 scripts 和 devDependencies 均基于 pnpm 配置。"
+          },
+          {
+            "path": ".github/workflows/test.yml",
+            "supports": "CI 配置中通过 pnpm/setup 安装 Node.js 和 pnpm，并运行 pnpm ci 和 pnpm bnt。"
+          },
+          {
+            "path": "package.json",
+            "supports": "scripts 定义了 test 命令为 pnpm run /^test:/，包含 lint、coverage 和 size 检查。"
+          }
+        ]
+      },
+      "correctness_0_2": null,
+      "citation_support_0_2": null,
+      "reviewer": null,
+      "human_approved": false
+    },
+    {
+      "report_sha256": "d91adc2fc2f370aaf9459b95fbd1af94adf94bf7ecf952b63d3e62bca96929be",
+      "report": "experiments/p4/ai--nanoid-qwen-report.json",
+      "stage": "contributor",
+      "claim_index": 1,
+      "claim": {
+        "claim": "测试套件使用 better-node-test (bnt) 运行，并强制要求 100% 覆盖率，排除 test 目录。",
+        "confidence": "high",
+        "evidence": [
+          {
+            "path": "package.json",
+            "supports": "test:coverage 脚本明确调用 bnt 并设置 --coverage 100 参数。"
+          },
+          {
+            "path": ".github/workflows/test.yml",
+            "supports": "CI 流程中直接执行 pnpm bnt 命令。"
+          },
+          {
+            "path": "package.json",
+            "supports": "test:coverage 脚本包含 --coverage-exclude 'test/*' 参数。"
+          }
+        ]
+      },
+      "correctness_0_2": null,
+      "citation_support_0_2": null,
+      "reviewer": null,
+      "human_approved": false
+    },
+    {
+      "report_sha256": "d91adc2fc2f370aaf9459b95fbd1af94adf94bf7ecf952b63d3e62bca96929be",
+      "report": "experiments/p4/ai--nanoid-qwen-report.json",
+      "stage": "contributor",
+      "claim_index": 2,
+      "claim": {
+        "claim": "项目通过 size-limit 工具严格限制各导出函数的压缩后大小，确保无外部依赖。",
+        "confidence": "high",
+        "evidence": [
+          {
+            "path": "package.json",
+            "supports": "size-limit 配置列出了 nanoid、customAlphabet 等导出项的具体字节限制。"
+          },
+          {
+            "path": "package.json",
+            "supports": "test:scripts 包含 test:size 命令，用于执行大小限制检查。"
+          },
+          {
+            "path": "README.ar.md",
+            "supports": "文档宣称项目体积仅 127 字节且无外部依赖，由 Size Limit 控制。"
+          }
+        ]
+      },
+      "correctness_0_2": null,
+      "citation_support_0_2": null,
+      "reviewer": null,
+      "human_approved": false
+    }
+  ],
+  "coverage_checklist": {
+    "developit/mitt": [
+      [
+        "创建一个 Map，并通过返回对象的 all 暴露。"
+      ],
+      [
+        "不会；all = all || new Map() 复用传入的 Map。"
+      ],
+      [
+        "查找数组并 push，新监听器排在末尾。"
+      ],
+      [
+        "使用 all.set(type, [handler]) 创建该事件的数组。"
+      ],
+      [
+        "将该 type 的处理器列表置为空数组，Map 的键仍保留。"
+      ],
+      [
+        "indexOf 返回 -1；无符号右移转换成大整数，splice 不会删除末项。"
+      ],
+      [
+        "先执行 type 对应的处理器，之后读取并执行 '*' 列表。"
+      ],
+      [
+        "迭代当前数组的副本，避免迭代时增删同一列表改变当前轮的副本。"
+      ],
+      [
+        "先传入事件 type，再传入 evt。"
+      ],
+      [
+        "handlers 为 falsy 时跳过普通监听器；后续仍可能调用通配符。"
+      ],
+      [
+        "这里没有 try/catch；同步异常会中断本次调用，不能保证后续处理器执行。"
+      ],
+      [
+        "EventType 定义为 string | symbol。"
+      ],
+      [
+        "不会；代码同步调用处理器，并没有 await 或 Promise 聚合。"
+      ],
+      [
+        "返回对象暴露保存监听器的同一个 Map，clear 直接清空该存储。"
+      ],
+      [
+        "不能；可见代码只调用内存 Map 中的处理器，没有数据库写入依据。"
+      ],
+      [
+        "复用传入的 Map；on 对同一 Map 写入事件监听器；测试通过外部 events Map 观察注册结果。"
+      ],
+      [
+        "不转换大小写；按原始 type 访问 Map；测试区分 FOO/foo、Bar/bar 等。"
+      ],
+      [
+        "固定源码不能证明用户电脑今天的测试运行结果，应说明无法确定。"
+      ]
+    ],
+    "ai/nanoid": [
+      [
+        "defaultSize 默认为 21。"
+      ],
+      [
+        "由 customAlphabet(urlAlphabet) 生成。"
+      ],
+      [
+        "size 先按位转整数；负数抛 RangeError，零返回空字符串。"
+      ],
+      [
+        "单次请求限制 65536 字节；按 GET_RANDOM_LIMIT 切 subarray 分块填充。"
+      ],
+      [
+        "不使用；创建 Buffer 后直接调用 fillRandom 并返回 buffer。"
+      ],
+      [
+        "通过 safeByteCutoff=256-(256%alphabet.length) 避免取模导致的分布偏差。"
+      ],
+      [
+        "safeByteCutoff 为 256 时，以 alphabet.length-1 为 mask，按位与映射字节。"
+      ],
+      [
+        "不会；回退到 customRandom(alphabet, defaultSize, random)。"
+      ],
+      [
+        "不足时填充 buffer 并转 latin1 字符串；增加 poolOffset，用 substring 返回当前 ID。"
+      ],
+      [
+        "poolNext 按 target*16 增长并限制到 POOL_MAX；target 还至少覆盖当前 size。"
+      ],
+      [
+        "对随机字节按 mask 取索引，只有 index < alphabetLen 才接受并写入。"
+      ],
+      [
+        "不会；该函数没有捕获异常。"
+      ],
+      [
+        "i 从 size 开始递减，按 bytes[size-1] 到 bytes[0] 读取。"
+      ],
+      [
+        "按接收比例和经验系数 1.6 预取额外随机字节，以减少额外随机调用。"
+      ],
+      [
+        "不能；这是基于随机字节的生成流程，不存在全局唯一性存储或冲突检测证明。"
+      ],
+      [
+        "负数长度抛出 RangeError；测试用 nanoid(-10) 并断言 Wrong ID size 或 Invalid typed array length。"
+      ],
+      [
+        "默认长度参数为21；测试 customAlphabet('a') 返回的函数传入10，得到10个a。"
+      ],
+      [
+        "源码不包含公司生产环境昨天的调用与碰撞统计，应说明无法确定。"
+      ]
+    ]
+  },
+  "additional_dimensions": [
+    "关键信息覆盖",
+    "信息不足处理",
+    "教学价值"
+  ],
+  "human_approved": false
+}

@@ -1,0 +1,250 @@
+{
+  "task_id": "dbader--schedule-11",
+  "repository": "dbader/schedule",
+  "split": "validation",
+  "index_id": "2d7d94e73bbf987c8660f0a2",
+  "base_index_id": "f26de0d2a461bcbdd863767c",
+  "chunk_ids_sha256": "7d5cac1d40773160c08ef2c5e183972628798e505997a8ca03ce3fc0d5dd4951",
+  "retriever": "hybrid",
+  "metrics": {
+    "recall_at_6": 1.0,
+    "recall_at_20": 1.0,
+    "mrr": 1.0,
+    "target_overlap_recall_at_6": 1.0,
+    "target_overlap_recall_at_20": 1.0,
+    "line_coverage_at_6": 1.0
+  },
+  "first_query_seconds": 0.003972100000055434,
+  "warm_query_seconds": 0.00857840000003307,
+  "index_open_build_seconds": 0.09462299999995594,
+  "chunks": 328,
+  "candidates": [
+    {
+      "snapshot_id": "9999db891acf16c1a1fd96b5",
+      "chunk_id": "c0e16b36de5706ee256f8f1c",
+      "path": "schedule/__init__.py",
+      "start_line": 644,
+      "end_line": 664,
+      "content_hash": "29650fd7a5e028bcd3178da29d9b0b5c8f5e2896e67e38f88c1186d68c48ba18",
+      "content": "    def do(self, job_func: Callable, *args, **kwargs):\n        \"\"\"\n        Specifies the job_func that should be called every time the\n        job runs.\n\n        Any additional arguments are passed on to job_func when\n        the job runs.\n\n        :param job_func: The function to be scheduled\n        :return: The invoked job instance\n        \"\"\"\n        self.job_func = functools.partial(job_func, *args, **kwargs)\n        functools.update_wrapper(self.job_func, job_func)\n        self._schedule_next_run()\n        if self.scheduler is None:\n            raise ScheduleError(\n                \"Unable to a add job to schedule. \"\n                \"Job is not associated with an scheduler\"\n            )\n        self.scheduler.jobs.append(self)\n        return self",
+      "symbol": "Job.do",
+      "truncated": false
+    },
+    {
+      "snapshot_id": "9999db891acf16c1a1fd96b5",
+      "chunk_id": "5e342081f32a3a745e3a5f8a",
+      "path": "schedule/__init__.py",
+      "start_line": 209,
+      "end_line": 226,
+      "content_hash": "add66ae456a20862169761909ff480ae170164aed25a3536f75bb470a84974df",
+      "content": "class Job:\n    \"\"\"\n    A periodic job as used by :class:`Scheduler`.\n\n    :param interval: A quantity of a certain time unit\n    :param scheduler: The :class:`Scheduler <Scheduler>` instance that\n                      this job will register itself with once it has\n                      been fully configured in :meth:`Job.do()`.\n\n    Every job runs at a given fixed time interval that is defined by:\n\n    * a :meth:`time unit <Job.second>`\n    * a quantity of `time units` defined by `interval`\n\n    A job is usually created and returned by :meth:`Scheduler.every`\n    method, which also defines its `interval`.\n    \"\"\"\n",
+      "symbol": "Job",
+      "truncated": false
+    },
+    {
+      "snapshot_id": "9999db891acf16c1a1fd96b5",
+      "chunk_id": "806a70d87e215804a46e5fe7",
+      "path": "schedule/__init__.py",
+      "start_line": 899,
+      "end_line": 913,
+      "content_hash": "0c6a904a90143a4f7938aac346e5d1f97cf85967e2c589b9b4ef250002da6c93",
+      "content": "def repeat(job, *args, **kwargs):\n    \"\"\"\n    Decorator to schedule a new periodic job.\n\n    Any additional arguments are passed on to the decorated function\n    when the job runs.\n\n    :param job: a :class:`Jobs <Job>`\n    \"\"\"\n\n    def _schedule_decorator(decorated_function):\n        job.do(decorated_function, *args, **kwargs)\n        return decorated_function\n\n    return _schedule_decorator",
+      "symbol": "repeat",
+      "truncated": false
+    },
+    {
+      "snapshot_id": "9999db891acf16c1a1fd96b5",
+      "chunk_id": "fdf9ab0567a28cd0883d2b3c",
+      "path": "schedule/__init__.py",
+      "start_line": 831,
+      "end_line": 842,
+      "content_hash": "e0a03952696acf8a86ed3956e75a3a286cd82d51b3c7b5cd08ce42287e89cb37",
+      "content": "\n\n# The following methods are shortcuts for not having to\n# create a Scheduler instance:\n\n#: Default :class:`Scheduler <Scheduler>` object\ndefault_scheduler = Scheduler()\n\n#: Default :class:`Jobs <Job>` list\njobs = default_scheduler.jobs  # todo: should this be a copy, e.g. jobs()?\n\n",
+      "symbol": null,
+      "truncated": false
+    },
+    {
+      "snapshot_id": "9999db891acf16c1a1fd96b5",
+      "chunk_id": "272e7d720b9771ee4a1230b3",
+      "path": "schedule/__init__.py",
+      "start_line": 878,
+      "end_line": 882,
+      "content_hash": "4478815b1f101c76648bf94bf9de89ac070d57078de42d565b9b1d8cf7081a4c",
+      "content": "def cancel_job(job: Job) -> None:\n    \"\"\"Calls :meth:`cancel_job <Scheduler.cancel_job>` on the\n    :data:`default scheduler instance <default_scheduler>`.\n    \"\"\"\n    default_scheduler.cancel_job(job)",
+      "symbol": "cancel_job",
+      "truncated": false
+    },
+    {
+      "snapshot_id": "9999db891acf16c1a1fd96b5",
+      "chunk_id": "27ac4470e8fb582b1945ac76",
+      "path": "schedule/__init__.py",
+      "start_line": 843,
+      "end_line": 847,
+      "content_hash": "58150a610734e2d410873299795e69b1eb5a8e04f4485563cc28ed461f52a741",
+      "content": "def every(interval: int = 1) -> Job:\n    \"\"\"Calls :meth:`every <Scheduler.every>` on the\n    :data:`default scheduler instance <default_scheduler>`.\n    \"\"\"\n    return default_scheduler.every(interval)",
+      "symbol": "every",
+      "truncated": false
+    },
+    {
+      "snapshot_id": "9999db891acf16c1a1fd96b5",
+      "chunk_id": "2fb5162593862dc2544dc86b",
+      "path": "README.rst",
+      "start_line": 37,
+      "end_line": 64,
+      "content_hash": "6e81087baae486b18a3ccf6416c3cce9c19daeb992bad8122ec5b0496f11cb12",
+      "content": "    schedule.every(10).seconds.do(job)\n    schedule.every(10).minutes.do(job)\n    schedule.every().hour.do(job)\n    schedule.every().day.at(\"10:30\").do(job)\n    schedule.every(5).to(10).minutes.do(job)\n    schedule.every().monday.do(job)\n    schedule.every().wednesday.at(\"13:15\").do(job)\n    schedule.every().day.at(\"12:42\", \"Europe/Amsterdam\").do(job)\n    schedule.every().minute.at(\":17\").do(job)\n\n    def job_with_argument(name):\n        print(f\"I am {name}\")\n\n    schedule.every(10).seconds.do(job_with_argument, name=\"Peter\")\n\n    while True:\n        schedule.run_pending()\n        time.sleep(1)\n\nDocumentation\n-------------\n\nSchedule's documentation lives at `schedule.readthedocs.io <https://schedule.readthedocs.io/>`_.\n\n\nMeta\n----\n",
+      "symbol": null,
+      "truncated": false
+    },
+    {
+      "snapshot_id": "9999db891acf16c1a1fd96b5",
+      "chunk_id": "efa79583d959688354e0a6e6",
+      "path": "docs/faq.rst",
+      "start_line": 60,
+      "end_line": 75,
+      "content_hash": "8702941d1ea56683f3bcb288b967c554a9eefc74be784c4c1cd996b527399b9f",
+      "content": "How can I run a job only once?\n------------------------------\nSee :doc:`Examples <examples>`.\n\nHow can I cancel several jobs at once?\n--------------------------------------\nSee :doc:`Examples <examples>`.\n\nHow to execute jobs in parallel?\n--------------------------------\nSee :doc:`Parallel Execution <parallel-execution>`.\n\nHow to continuously run the scheduler without blocking the main thread?\n-----------------------------------------------------------------------\n:doc:`Background Execution<background-execution>`.\n",
+      "symbol": null,
+      "truncated": false
+    },
+    {
+      "snapshot_id": "9999db891acf16c1a1fd96b5",
+      "chunk_id": "b3c8da91e7ec9fd5220f827b",
+      "path": "schedule/__init__.py",
+      "start_line": 79,
+      "end_line": 85,
+      "content_hash": "8db63d60c060dd410edc83b74a80a2096b9263fbcd7fc78008e71651b12878da",
+      "content": "class Scheduler:\n    \"\"\"\n    Objects instantiated by the :class:`Scheduler <Scheduler>` are\n    factories to create jobs, keep record of scheduled jobs and\n    handle their execution.\n    \"\"\"\n",
+      "symbol": "Scheduler",
+      "truncated": false
+    },
+    {
+      "snapshot_id": "9999db891acf16c1a1fd96b5",
+      "chunk_id": "a82c13e7eac232f6f78a010d",
+      "path": "docs/examples.rst",
+      "start_line": 29,
+      "end_line": 51,
+      "content_hash": "413413d4d81c7d7286fa7edea583b2f75c5efc63fded2eaba85f9662c8c6668d",
+      "content": "    # Run job every hour at the 42nd minute\n    schedule.every().hour.at(\":42\").do(job)\n\n    # Run jobs every 5th hour, 20 minutes and 30 seconds in.\n    # If current time is 02:00, first execution is at 06:20:30\n    schedule.every(5).hours.at(\"20:30\").do(job)\n\n    # Run job every day at specific HH:MM and next HH:MM:SS\n    schedule.every().day.at(\"10:30\").do(job)\n    schedule.every().day.at(\"10:30:42\").do(job)\n    schedule.every().day.at(\"12:42\", \"Europe/Amsterdam\").do(job)\n\n    # Run job on a specific day of the week\n    schedule.every().monday.do(job)\n    schedule.every().wednesday.at(\"13:15\").do(job)\n\n    while True:\n        schedule.run_pending()\n        time.sleep(1)\n\nUse a decorator to schedule a job\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n",
+      "symbol": null,
+      "truncated": false
+    },
+    {
+      "snapshot_id": "9999db891acf16c1a1fd96b5",
+      "chunk_id": "94d1118dd75def6f7c94a9a9",
+      "path": "docs/examples.rst",
+      "start_line": 289,
+      "end_line": 296,
+      "content_hash": "ad40e29737162b5a1abfbdec235d14c6d06d68ae4d3f1c28b901bf152306547e",
+      "content": "    schedule.every().monday.at(\"12:40\").do(job_1)\n    schedule.every().tuesday.at(\"16:40\").do(job_2)\n\n    schedule.run_all()\n\n    # Add the delay_seconds argument to run the jobs with a number\n    # of seconds delay in between.\n    schedule.run_all(delay_seconds=10)",
+      "symbol": null,
+      "truncated": false
+    },
+    {
+      "snapshot_id": "9999db891acf16c1a1fd96b5",
+      "chunk_id": "37e11e2f55e8c47484bb348e",
+      "path": "schedule/__init__.py",
+      "start_line": 864,
+      "end_line": 868,
+      "content_hash": "7b80054b113eb8b5edb3654e8efdecae4f7040e4188b558d04c5560aa9d7b07f",
+      "content": "def get_jobs(tag: Optional[Hashable] = None) -> List[Job]:\n    \"\"\"Calls :meth:`get_jobs <Scheduler.get_jobs>` on the\n    :data:`default scheduler instance <default_scheduler>`.\n    \"\"\"\n    return default_scheduler.get_jobs(tag)",
+      "symbol": "get_jobs",
+      "truncated": false
+    },
+    {
+      "snapshot_id": "9999db891acf16c1a1fd96b5",
+      "chunk_id": "a02999602853d9edccf9581f",
+      "path": "docs/index.rst",
+      "start_line": 1,
+      "end_line": 15,
+      "content_hash": "7285c4260b8a67638bc8a99b6f154f6f7f682a1c513c96209dada5a6fb1b9474",
+      "content": "schedule\n========\n\n\n.. image:: https://github.com/dbader/schedule/workflows/Tests/badge.svg\n        :target: https://github.com/dbader/schedule/actions?query=workflow%3ATests+branch%3Amaster\n\n.. image:: https://coveralls.io/repos/dbader/schedule/badge.svg?branch=master\n        :target: https://coveralls.io/r/dbader/schedule\n\n.. image:: https://img.shields.io/pypi/v/schedule.svg\n        :target: https://pypi.python.org/pypi/schedule\n\nPython job scheduling for humans. Run Python functions (or any other callable) periodically using a friendly syntax.\n",
+      "symbol": null,
+      "truncated": false
+    },
+    {
+      "snapshot_id": "9999db891acf16c1a1fd96b5",
+      "chunk_id": "95805fa5f2242500eb9d1a2d",
+      "path": "schedule/__init__.py",
+      "start_line": 177,
+      "end_line": 193,
+      "content_hash": "e1341bf8d11dd3ba879b90caef2ce14af739a367762c11330d21e3a9082db8c7",
+      "content": "    def get_next_run(\n        self, tag: Optional[Hashable] = None\n    ) -> Optional[datetime.datetime]:\n        \"\"\"\n        Datetime when the next job should run.\n\n        :param tag: Filter the next run for the given tag parameter\n\n        :return: A :class:`~datetime.datetime` object\n                 or None if no jobs scheduled\n        \"\"\"\n        if not self.jobs:\n            return None\n        jobs_filtered = self.get_jobs(tag)\n        if not jobs_filtered:\n            return None\n        return min(jobs_filtered).next_run",
+      "symbol": "Scheduler.get_next_run",
+      "truncated": false
+    },
+    {
+      "snapshot_id": "9999db891acf16c1a1fd96b5",
+      "chunk_id": "d3deb46c990701de984c4691",
+      "path": "docs/timezones.rst",
+      "start_line": 67,
+      "end_line": 78,
+      "content_hash": "7cf74610e7ee119ba4b255a0183471c6b59227fe18e4184f3cb0def27a2194e0",
+      "content": "    s = every().day.at(\"10:30\", \"America/New_York\").do(job)\n\nBecause of the 5 hour time difference between Berlin and New York the job should effectively run at ``15:30:00``.\nSo the next run in Berlin time is ``2022 march 20, 15:30:00``:\n\n.. code-block:: python\n\n    print(s.next_run)\n    # 2022-03-20 15:30:00\n\n    print(repr(s))\n    # Every 1 day at 10:30:00 do job() (last run: [never], next run: 2022-03-20 15:30:00)",
+      "symbol": null,
+      "truncated": false
+    },
+    {
+      "snapshot_id": "9999db891acf16c1a1fd96b5",
+      "chunk_id": "115c6041f85e9a34eb40b96e",
+      "path": "schedule/__init__.py",
+      "start_line": 871,
+      "end_line": 875,
+      "content_hash": "361a999a9e237f428e095b823cc47708872ba20ce9f66620c67b54116c7aa222",
+      "content": "def clear(tag: Optional[Hashable] = None) -> None:\n    \"\"\"Calls :meth:`clear <Scheduler.clear>` on the\n    :data:`default scheduler instance <default_scheduler>`.\n    \"\"\"\n    default_scheduler.clear(tag)",
+      "symbol": "clear",
+      "truncated": false
+    },
+    {
+      "snapshot_id": "9999db891acf16c1a1fd96b5",
+      "chunk_id": "92851b2791599452d8dbd61f",
+      "path": "README.rst",
+      "start_line": 1,
+      "end_line": 15,
+      "content_hash": "f0cc09650a4e896d352d3d5b65245fe74ab07d3beaa898d8291d4f91621a505f",
+      "content": "`schedule <https://schedule.readthedocs.io/>`__\n===============================================\n\n\n.. image:: https://github.com/dbader/schedule/workflows/Tests/badge.svg\n        :target: https://github.com/dbader/schedule/actions?query=workflow%3ATests+branch%3Amaster\n\n.. image:: https://coveralls.io/repos/dbader/schedule/badge.svg?branch=master\n        :target: https://coveralls.io/r/dbader/schedule\n\n.. image:: https://img.shields.io/pypi/v/schedule.svg\n        :target: https://pypi.python.org/pypi/schedule\n\nPython job scheduling for humans. Run Python functions (or any other callable) periodically using a friendly syntax.\n",
+      "symbol": null,
+      "truncated": false
+    },
+    {
+      "snapshot_id": "9999db891acf16c1a1fd96b5",
+      "chunk_id": "cff98b77683036e50e2fa280",
+      "path": "schedule/__init__.py",
+      "start_line": 850,
+      "end_line": 854,
+      "content_hash": "236bc3a377bb1bf163e3ed925721e7c21d195b365a48dbec20a368ff916eaea1",
+      "content": "def run_pending() -> None:\n    \"\"\"Calls :meth:`run_pending <Scheduler.run_pending>` on the\n    :data:`default scheduler instance <default_scheduler>`.\n    \"\"\"\n    default_scheduler.run_pending()",
+      "symbol": "run_pending",
+      "truncated": false
+    },
+    {
+      "snapshot_id": "9999db891acf16c1a1fd96b5",
+      "chunk_id": "7f467a5ce391415432e553dc",
+      "path": "docs/exception-handling.rst",
+      "start_line": 33,
+      "end_line": 33,
+      "content_hash": "6333b72d5802ee92fbcc454b45780b1ce6b0aadf9039314852b54f532b117010",
+      "content": "Another option would be to subclass Schedule like @mplewis did in `this example <https://gist.github.com/mplewis/8483f1c24f2d6259aef6>`_.",
+      "symbol": null,
+      "truncated": false
+    },
+    {
+      "snapshot_id": "9999db891acf16c1a1fd96b5",
+      "chunk_id": "0228552c436e922e8dac75fc",
+      "path": "test_schedule.py",
+      "start_line": 312,
+      "end_line": 325,
+      "content_hash": "ab2e235db5ca737a7a5c22d6f5b5b7ab232e60891c76085a3251f707d366e9e6",
+      "content": "    def test_until_time(self):\n        mock_job = make_mock_job()\n        # Check argument parsing\n        with mock_datetime(2020, 1, 1, 10, 0, 0) as m:\n            assert every().day.until(datetime.datetime(3000, 1, 1, 20, 30)).do(\n                mock_job\n            ).cancel_after == datetime.datetime(3000, 1, 1, 20, 30, 0)\n            assert every().day.until(datetime.datetime(3000, 1, 1, 20, 30, 50)).do(\n                mock_job\n            ).cancel_after == datetime.datetime(3000, 1, 1, 20, 30, 50)\n            assert every().day.until(datetime.time(12, 30)).do(\n                mock_job\n            ).cancel_after == m.replace(hour=12, minute=30, second=0, microsecond=0)\n            assert every().day.until(datetime.time(12, 30, 50)).do(",
+      "symbol": "SchedulerTests.test_until_time",
+      "truncated": false
+    }
+  ],
+  "neural_work": {
+    "embedding_hits": 11,
+    "embedding_new": 0,
+    "rerank_hits": 0,
+    "rerank_new": 0
+  },
+  "generation_requests": 0
+}

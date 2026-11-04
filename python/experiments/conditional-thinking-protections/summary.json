@@ -1,0 +1,461 @@
+{
+  "questions": 3,
+  "planned_answers": 3,
+  "records": 3,
+  "reviews": {
+    "improvement-confirm-tenacity-03--thinking-protection": {
+      "candidate_id": "improvement-confirm-tenacity-03--thinking-protection",
+      "correctness": "partially_correct",
+      "citation_support": "partial",
+      "completeness": "adequate",
+      "abstention": "not_applicable",
+      "entry_scope": "correct",
+      "consistency": "consistent",
+      "claims": [
+        {
+          "claim": "本题达到停止条件时配置callback返回fallback，不先抛ValueError；callback分支跳过reraise。",
+          "status": "supported",
+          "rationale": "473–476先选callback且return，未添加exc_check；本题给定回调正常返回fallback。481–483仅在callback不存在的停止分支。",
+          "evidence": [
+            {
+              "path": "tenacity/__init__.py",
+              "start_line": 472,
+              "end_line": 486
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "tenacity/__init__.py",
+              "start_line": 472,
+              "end_line": 486,
+              "content": "    def _post_stop_check_actions(self, retry_state: \"RetryCallState\") -> None:\n        if self.iter_state.stop_run_result:\n            if self.retry_error_callback:\n                self._add_action_func(self.retry_error_callback)\n                return\n\n            def exc_check(rs: \"RetryCallState\") -> None:\n                fut = t.cast(\"Future\", rs.outcome)\n                retry_exc = self.retry_error_cls(fut)\n                if self.reraise:\n                    retry_exc.reraise()\n                raise retry_exc from fut.exception()\n\n            self._add_action_func(exc_check)\n            return",
+              "content_sha256": "27f56f54b49fe5b9ece029c0e019a73c8bd869a2f30fdd2abdadb0fc604e0f5c",
+              "visible_to_generator": true
+            }
+          ]
+        },
+        {
+          "claim": "只有stop_run_result为假、未达停止时才会构建exc_check重抛函数。",
+          "status": "contradicted",
+          "rationale": "478–485仍缩进在473的if stop_run_result真分支内；仅当已停止且callback不存在才构建/添加exc_check。stop为假时转入488之后的继续重试动作，不是该异常路径。",
+          "evidence": [
+            {
+              "path": "tenacity/__init__.py",
+              "start_line": 472,
+              "end_line": 500
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "tenacity/__init__.py",
+              "start_line": 472,
+              "end_line": 500,
+              "content": "    def _post_stop_check_actions(self, retry_state: \"RetryCallState\") -> None:\n        if self.iter_state.stop_run_result:\n            if self.retry_error_callback:\n                self._add_action_func(self.retry_error_callback)\n                return\n\n            def exc_check(rs: \"RetryCallState\") -> None:\n                fut = t.cast(\"Future\", rs.outcome)\n                retry_exc = self.retry_error_cls(fut)\n                if self.reraise:\n                    retry_exc.reraise()\n                raise retry_exc from fut.exception()\n\n            self._add_action_func(exc_check)\n            return\n\n        def next_action(rs: \"RetryCallState\") -> None:\n            sleep = rs.upcoming_sleep\n            rs.next_action = RetryAction(sleep)\n            rs.idle_for += sleep\n            self.statistics[\"idle_for\"] += sleep\n            self.statistics[\"attempt_number\"] += 1\n\n        self._add_action_func(next_action)\n\n        if self.before_sleep is not None:\n            self._add_action_func(self.before_sleep)\n\n        self._add_action_func(lambda rs: DoSleep(rs.upcoming_sleep))",
+              "content_sha256": "19946715664b2917a28bedd35d9c559ac5594059fdfa058822471baf53066cf2",
+              "visible_to_generator": true
+            }
+          ]
+        }
+      ],
+      "notes": "直接返回值和callback优先关系正确，但正文明确把异常分支的停止条件反读。整答不能因首尾正确忽略中间错误。该错误可完全由已交付源码核对，不是检索不足。consistency=consistent仅表示未将源码矛盾等同内部自相矛盾，不使整答通过。",
+      "key_points": null,
+      "candidate_sha256": "928659e8885b1c507201c2ea16aadaafbf2e4d486f88a08ff9d2ae4e3cd2c22a",
+      "reviewer": "Codex (current session)",
+      "review_type": "model_assisted_nonblind_development_review",
+      "human_approved": false,
+      "training_eligible": false,
+      "result_sha256": "056a4c7d94f8dcaed1a4366a5187474f48ddbb6e58139a5c65eb6d7b93db1534"
+    },
+    "q-bbad3968026fefab--thinking-protection": {
+      "candidate_id": "q-bbad3968026fefab--thinking-protection",
+      "correctness": "partially_correct",
+      "citation_support": "partial",
+      "completeness": "partial",
+      "abstention": "not_applicable",
+      "entry_scope": "correct",
+      "consistency": "contradictory",
+      "claims": [
+        {
+          "claim": "override=False且同名键已存在时continue，保留现有环境变量。",
+          "status": "supported",
+          "rationale": "109–110确实先于后续值判断执行。",
+          "evidence": [
+            {
+              "path": "src/dotenv/main.py",
+              "start_line": 109,
+              "end_line": 112
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "src/dotenv/main.py",
+              "start_line": 109,
+              "end_line": 112,
+              "content": "            if k in os.environ and not self.override:\n                continue\n            if v is not None:\n                os.environ[k] = v",
+              "content_sha256": "c4dfb2d9dd1c34e0535b7e6cf27a96cee4d4498e6c5796d599acfbc72cb26203",
+              "visible_to_generator": true
+            }
+          ]
+        },
+        {
+          "claim": "在已经到达111行的前提下，None不写入而空字符串满足is not None。",
+          "status": "supported",
+          "rationale": "111–112判断的是None身份，而非字符串真值。",
+          "evidence": [
+            {
+              "path": "src/dotenv/main.py",
+              "start_line": 109,
+              "end_line": 112
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "src/dotenv/main.py",
+              "start_line": 109,
+              "end_line": 112,
+              "content": "            if k in os.environ and not self.override:\n                continue\n            if v is not None:\n                os.environ[k] = v",
+              "content_sha256": "c4dfb2d9dd1c34e0535b7e6cf27a96cee4d4498e6c5796d599acfbc72cb26203",
+              "visible_to_generator": true
+            }
+          ]
+        },
+        {
+          "claim": "解析值仅None被跳过，空字符串会设置到os.environ，而不保留前置continue的条件。",
+          "status": "contradicted",
+          "rationale": "题设override=False且已有键时，无论值是None或空字符串均在109–110跳过；空字符串可写仅在未被该条件拦截时。首段和结尾的无条件断言与其正确首句冲突，且第二点“只有None才不赋值”也漏前置条件。",
+          "evidence": [
+            {
+              "path": "src/dotenv/main.py",
+              "start_line": 109,
+              "end_line": 112
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "src/dotenv/main.py",
+              "start_line": 109,
+              "end_line": 112,
+              "content": "            if k in os.environ and not self.override:\n                continue\n            if v is not None:\n                os.environ[k] = v",
+              "content_sha256": "c4dfb2d9dd1c34e0535b7e6cf27a96cee4d4498e6c5796d599acfbc72cb26203",
+              "visible_to_generator": true
+            }
+          ]
+        }
+      ],
+      "notes": "与Q8类似的关键条件丢失；引用行段包含全部必要条件，属于条件整合错误。原正确Q4明确写出了override=True或键不存在的前提，本次没有保持。",
+      "key_points": null,
+      "candidate_sha256": "88a229ec0f85886a47bb256559cbf14198e8085e050c32d3ec5b4373607545ba",
+      "reviewer": "Codex (current session)",
+      "review_type": "model_assisted_nonblind_development_review",
+      "human_approved": false,
+      "training_eligible": false,
+      "result_sha256": "4b28c335535ef74389ee50e9600a9fba3827cf2195d902778d1254f0b55b0d82"
+    },
+    "improvement-confirm-blinker-05--thinking-protection": {
+      "candidate_id": "improvement-confirm-blinker-05--thinking-protection",
+      "correctness": "partially_correct",
+      "citation_support": "partial",
+      "completeness": "adequate",
+      "abstention": "appropriate",
+      "entry_scope": "not_applicable",
+      "consistency": "consistent",
+      "claims": [
+        {
+          "claim": "缺少企业生产日志、埋点或进程数据，无法给过去24小时订单信号次数与最慢回调耗时；flag=true。",
+          "status": "supported",
+          "rationale": "题干明确没有运行数据；所交付为通用库源码/文档，不是公司生产记录。正确拒答，未编造数字。",
+          "evidence": [
+            {
+              "path": "docs/index.rst",
+              "start_line": 1,
+              "end_line": 28
+            },
+            {
+              "path": "src/blinker/base.py",
+              "start_line": 141,
+              "end_line": 165
+            },
+            {
+              "path": "src/blinker/base.py",
+              "start_line": 364,
+              "end_line": 386
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "docs/index.rst",
+              "start_line": 1,
+              "end_line": 28,
+              "content": ".. rst-class:: hide-header\n\nBlinker Documentation\n=====================\n\n.. image:: _static/blinker-named.png\n    :align: center\n\n.. currentmodule:: blinker\n\nBlinker provides fast & simple object-to-object and broadcast\nsignaling for Python objects.\n\nThe core of Blinker is quite small but provides powerful features:\n\n - a global registry of named signals\n - anonymous signals\n - custom name registries\n - permanently or temporarily connected receivers\n - automatically disconnected receivers via weak referencing\n - sending arbitrary data payloads\n - collecting return values from signal receivers\n - thread safety\n\nBlinker was written by Jason Kirtand and is provided under the MIT\nLicense. The library supports Python 3.9 or later.\n\n",
+              "content_sha256": "5b4af8a9183145aebc45dfd9806ce8402a2c07deeb4dd3f4bf9eeb5c2524aa58",
+              "visible_to_generator": true
+            },
+            {
+              "path": "src/blinker/base.py",
+              "start_line": 141,
+              "end_line": 165,
+              "content": "    def connect_via(self, sender: t.Any, weak: bool = False) -> c.Callable[[F], F]:\n        \"\"\"Connect the decorated function to be called when the signal is sent\n        by ``sender``.\n\n        The decorated function will be called when :meth:`send` is called with\n        the given ``sender``, passing ``sender`` as a positional argument along\n        with any extra keyword arguments.\n\n        :param sender: Any object or :data:`ANY`. ``receiver`` will only be\n            called when :meth:`send` is called with this sender. If ``ANY``, the\n            receiver will be called for any sender. A receiver may be connected\n            to multiple senders by calling :meth:`connect` multiple times.\n        :param weak: Track the receiver with a :mod:`weakref`. The receiver will\n            be automatically disconnected when it is garbage collected. When\n            connecting a receiver defined within a function, set to ``False``,\n            otherwise it will be disconnected when the function scope ends.=\n\n        .. versionadded:: 1.1\n        \"\"\"\n\n        def decorator(fn: F) -> F:\n            self.connect(fn, sender, weak)\n            return fn\n\n        return decorator",
+              "content_sha256": "7edaf3aeb71153e329a351347b6f66af92eee072b89ca1922fae6bc242242f08",
+              "visible_to_generator": true
+            },
+            {
+              "path": "src/blinker/base.py",
+              "start_line": 364,
+              "end_line": 386,
+              "content": "    def disconnect(self, receiver: c.Callable[..., t.Any], sender: t.Any = ANY) -> None:\n        \"\"\"Disconnect ``receiver`` from being called when the signal is sent by\n        ``sender``.\n\n        :param receiver: A connected receiver callable.\n        :param sender: Disconnect from only this sender. By default, disconnect\n            from all senders.\n        \"\"\"\n        sender_id: c.Hashable\n\n        if sender is ANY:\n            sender_id = ANY_ID\n        else:\n            sender_id = make_id(sender)\n\n        receiver_id = make_id(receiver)\n        self._disconnect(receiver_id, sender_id)\n\n        if (\n            \"receiver_disconnected\" in self.__dict__\n            and self.receiver_disconnected.receivers\n        ):\n            self.receiver_disconnected.send(self, receiver=receiver, sender=sender)",
+              "content_sha256": "49eb3c41376c40674351aea367e079c3026858e5577eb0b128432dc313564728",
+              "visible_to_generator": true
+            }
+          ]
+        },
+        {
+          "claim": "Blinker作为信号分发库仅负责连接/断开接收器。",
+          "status": "contradicted",
+          "rationale": "答案以库整体职责作排他性断言，但send/send_async还调用接收者并返回结果；只提供connect_via/disconnect的例子不能将库职责限为连接/断开。该额外断言不是拒答所必需。",
+          "evidence": [
+            {
+              "path": "src/blinker/base.py",
+              "start_line": 204,
+              "end_line": 253
+            },
+            {
+              "path": "src/blinker/base.py",
+              "start_line": 255,
+              "end_line": 305
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "src/blinker/base.py",
+              "start_line": 204,
+              "end_line": 253,
+              "content": "    def send(\n        self,\n        sender: t.Any | None = None,\n        /,\n        *,\n        _async_wrapper: c.Callable[\n            [c.Callable[..., c.Coroutine[t.Any, t.Any, t.Any]]], c.Callable[..., t.Any]\n        ]\n        | None = None,\n        **kwargs: t.Any,\n    ) -> list[tuple[c.Callable[..., t.Any], t.Any]]:\n        \"\"\"Call all receivers that are connected to the given ``sender``\n        or :data:`ANY`. Each receiver is called with ``sender`` as a positional\n        argument along with any extra keyword arguments. Return a list of\n        ``(receiver, return value)`` tuples.\n\n        The order receivers are called is undefined, but can be influenced by\n        setting :attr:`set_class`.\n\n        If a receiver raises an exception, that exception will propagate up.\n        This makes debugging straightforward, with an assumption that correctly\n        implemented receivers will not raise.\n\n        :param sender: Call receivers connected to this sender, in addition to\n            those connected to :data:`ANY`.\n        :param _async_wrapper: Will be called on any receivers that are async\n            coroutines to turn them into sync callables. For example, could run\n            the receiver with an event loop.\n        :param kwargs: Extra keyword arguments to pass to each receiver.\n\n        .. versionchanged:: 1.7\n            Added the ``_async_wrapper`` argument.\n        \"\"\"\n        if self.is_muted:\n            return []\n\n        results = []\n\n        for receiver in self.receivers_for(sender):\n            if iscoroutinefunction(receiver):\n                if _async_wrapper is None:\n                    raise RuntimeError(\"Cannot send to a coroutine function.\")\n\n                result = _async_wrapper(receiver)(sender, **kwargs)\n            else:\n                result = receiver(sender, **kwargs)\n\n            results.append((receiver, result))\n\n        return results",
+              "content_sha256": "ac83931ff93469809b338ccb0733acadbfcbd6fb57847cc3e8e4ce646c3a0c9c",
+              "visible_to_generator": false
+            },
+            {
+              "path": "src/blinker/base.py",
+              "start_line": 255,
+              "end_line": 305,
+              "content": "    async def send_async(\n        self,\n        sender: t.Any | None = None,\n        /,\n        *,\n        _sync_wrapper: c.Callable[\n            [c.Callable[..., t.Any]], c.Callable[..., c.Coroutine[t.Any, t.Any, t.Any]]\n        ]\n        | None = None,\n        **kwargs: t.Any,\n    ) -> list[tuple[c.Callable[..., t.Any], t.Any]]:\n        \"\"\"Await all receivers that are connected to the given ``sender``\n        or :data:`ANY`. Each receiver is called with ``sender`` as a positional\n        argument along with any extra keyword arguments. Return a list of\n        ``(receiver, return value)`` tuples.\n\n        The order receivers are called is undefined, but can be influenced by\n        setting :attr:`set_class`.\n\n        If a receiver raises an exception, that exception will propagate up.\n        This makes debugging straightforward, with an assumption that correctly\n        implemented receivers will not raise.\n\n        :param sender: Call receivers connected to this sender, in addition to\n            those connected to :data:`ANY`.\n        :param _sync_wrapper: Will be called on any receivers that are sync\n            callables to turn them into async coroutines. For example,\n            could call the receiver in a thread.\n        :param kwargs: Extra keyword arguments to pass to each receiver.\n\n        .. versionadded:: 1.7\n        \"\"\"\n        if self.is_muted:\n            return []\n\n        results = []\n\n        for receiver in self.receivers_for(sender):\n            if not iscoroutinefunction(receiver):\n                if _sync_wrapper is None:\n                    raise RuntimeError(\"Cannot send to a non-coroutine function.\")\n\n                result = await _sync_wrapper(receiver)(sender, **kwargs)\n            else:\n                result = await receiver(sender, **kwargs)\n\n            results.append((receiver, result))\n\n        return results\n\n    def has_receivers_for(self, sender: t.Any) -> bool:",
+              "content_sha256": "c6b7389f780a4dc8e61c64e5bb46d92f509028e7dea3f3e60e0886637d67d304",
+              "visible_to_generator": false
+            }
+          ]
+        },
+        {
+          "claim": "代码无任何发送计数或耗时追踪机制，引用connect_via/disconnect即可证明该全库结论。",
+          "status": "partial",
+          "rationale": "固定快照的核心库确未实现这些企业指标；但给出的141–165与364–386两段只能证明各自方法行为，不能证明整个库的全称否定。复核者对send等额外源码的检查不能倒灌成生成时证据。应将拒答理由限定为缺少业务运行记录。",
+          "evidence": [
+            {
+              "path": "src/blinker/base.py",
+              "start_line": 141,
+              "end_line": 165
+            },
+            {
+              "path": "src/blinker/base.py",
+              "start_line": 364,
+              "end_line": 386
+            },
+            {
+              "path": "src/blinker/base.py",
+              "start_line": 204,
+              "end_line": 253
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "src/blinker/base.py",
+              "start_line": 141,
+              "end_line": 165,
+              "content": "    def connect_via(self, sender: t.Any, weak: bool = False) -> c.Callable[[F], F]:\n        \"\"\"Connect the decorated function to be called when the signal is sent\n        by ``sender``.\n\n        The decorated function will be called when :meth:`send` is called with\n        the given ``sender``, passing ``sender`` as a positional argument along\n        with any extra keyword arguments.\n\n        :param sender: Any object or :data:`ANY`. ``receiver`` will only be\n            called when :meth:`send` is called with this sender. If ``ANY``, the\n            receiver will be called for any sender. A receiver may be connected\n            to multiple senders by calling :meth:`connect` multiple times.\n        :param weak: Track the receiver with a :mod:`weakref`. The receiver will\n            be automatically disconnected when it is garbage collected. When\n            connecting a receiver defined within a function, set to ``False``,\n            otherwise it will be disconnected when the function scope ends.=\n\n        .. versionadded:: 1.1\n        \"\"\"\n\n        def decorator(fn: F) -> F:\n            self.connect(fn, sender, weak)\n            return fn\n\n        return decorator",
+              "content_sha256": "7edaf3aeb71153e329a351347b6f66af92eee072b89ca1922fae6bc242242f08",
+              "visible_to_generator": true
+            },
+            {
+              "path": "src/blinker/base.py",
+              "start_line": 364,
+              "end_line": 386,
+              "content": "    def disconnect(self, receiver: c.Callable[..., t.Any], sender: t.Any = ANY) -> None:\n        \"\"\"Disconnect ``receiver`` from being called when the signal is sent by\n        ``sender``.\n\n        :param receiver: A connected receiver callable.\n        :param sender: Disconnect from only this sender. By default, disconnect\n            from all senders.\n        \"\"\"\n        sender_id: c.Hashable\n\n        if sender is ANY:\n            sender_id = ANY_ID\n        else:\n            sender_id = make_id(sender)\n\n        receiver_id = make_id(receiver)\n        self._disconnect(receiver_id, sender_id)\n\n        if (\n            \"receiver_disconnected\" in self.__dict__\n            and self.receiver_disconnected.receivers\n        ):\n            self.receiver_disconnected.send(self, receiver=receiver, sender=sender)",
+              "content_sha256": "49eb3c41376c40674351aea367e079c3026858e5577eb0b128432dc313564728",
+              "visible_to_generator": true
+            },
+            {
+              "path": "src/blinker/base.py",
+              "start_line": 204,
+              "end_line": 253,
+              "content": "    def send(\n        self,\n        sender: t.Any | None = None,\n        /,\n        *,\n        _async_wrapper: c.Callable[\n            [c.Callable[..., c.Coroutine[t.Any, t.Any, t.Any]]], c.Callable[..., t.Any]\n        ]\n        | None = None,\n        **kwargs: t.Any,\n    ) -> list[tuple[c.Callable[..., t.Any], t.Any]]:\n        \"\"\"Call all receivers that are connected to the given ``sender``\n        or :data:`ANY`. Each receiver is called with ``sender`` as a positional\n        argument along with any extra keyword arguments. Return a list of\n        ``(receiver, return value)`` tuples.\n\n        The order receivers are called is undefined, but can be influenced by\n        setting :attr:`set_class`.\n\n        If a receiver raises an exception, that exception will propagate up.\n        This makes debugging straightforward, with an assumption that correctly\n        implemented receivers will not raise.\n\n        :param sender: Call receivers connected to this sender, in addition to\n            those connected to :data:`ANY`.\n        :param _async_wrapper: Will be called on any receivers that are async\n            coroutines to turn them into sync callables. For example, could run\n            the receiver with an event loop.\n        :param kwargs: Extra keyword arguments to pass to each receiver.\n\n        .. versionchanged:: 1.7\n            Added the ``_async_wrapper`` argument.\n        \"\"\"\n        if self.is_muted:\n            return []\n\n        results = []\n\n        for receiver in self.receivers_for(sender):\n            if iscoroutinefunction(receiver):\n                if _async_wrapper is None:\n                    raise RuntimeError(\"Cannot send to a coroutine function.\")\n\n                result = _async_wrapper(receiver)(sender, **kwargs)\n            else:\n                result = receiver(sender, **kwargs)\n\n            results.append((receiver, result))\n\n        return results",
+              "content_sha256": "ac83931ff93469809b338ccb0733acadbfcbd6fb57847cc3e8e4ce646c3a0c9c",
+              "visible_to_generator": false
+            }
+          ]
+        }
+      ],
+      "notes": "必须分别报告：私有问题拒答恰当且insufficient_evidence=true，但追加错误的排他性库职责描述和未充分支持的全库否定，整答事实/core/full不能保持。并非要求逻辑拒答虚构引用；本次主动加入了源码事实，须按同一标准复核。",
+      "key_points": null,
+      "candidate_sha256": "6fe9ffba86723974985eb1951ef9a9e76956743899f0db1b29c719a9eeff423b",
+      "reviewer": "Codex (current session)",
+      "review_type": "model_assisted_nonblind_development_review",
+      "human_approved": false,
+      "training_eligible": false,
+      "result_sha256": "be2057db03776ed5a1f0a390b1fa72e73193c59002373167c97d379b9685a63a"
+    }
+  },
+  "groups": {
+    "all/oracle": {
+      "records": 3,
+      "success": 3,
+      "model_requests": 3,
+      "tool_calls": 0,
+      "episodes_using_tools": 0,
+      "citation_ranges_valid": 3,
+      "initial_reference_complete": 2,
+      "final_reference_complete": 2,
+      "initial_nonblank_reference_complete": 2,
+      "final_nonblank_reference_complete": 2,
+      "requests_without_usage": 0,
+      "requests_without_elapsed": 0,
+      "prompt_tokens": 6749,
+      "completion_tokens": 5263,
+      "generator_seconds": 323.64099999999996,
+      "reviewed": 3,
+      "factually_correct": 0,
+      "core_supported": 0,
+      "fully_resolved": 0,
+      "insufficiency_flag_true": 1,
+      "insufficiency_flag_false": 0
+    },
+    "revealed-confirmation-development/oracle": {
+      "records": 2,
+      "success": 2,
+      "model_requests": 2,
+      "tool_calls": 0,
+      "episodes_using_tools": 0,
+      "citation_ranges_valid": 2,
+      "initial_reference_complete": 1,
+      "final_reference_complete": 1,
+      "initial_nonblank_reference_complete": 1,
+      "final_nonblank_reference_complete": 1,
+      "requests_without_usage": 0,
+      "requests_without_elapsed": 0,
+      "prompt_tokens": 3549,
+      "completion_tokens": 1424,
+      "generator_seconds": 84.25,
+      "reviewed": 2,
+      "factually_correct": 0,
+      "core_supported": 0,
+      "fully_resolved": 0,
+      "insufficiency_flag_true": 1,
+      "insufficiency_flag_false": 0
+    },
+    "thinking-bundle-known-protection/oracle": {
+      "records": 3,
+      "success": 3,
+      "model_requests": 3,
+      "tool_calls": 0,
+      "episodes_using_tools": 0,
+      "citation_ranges_valid": 3,
+      "initial_reference_complete": 2,
+      "final_reference_complete": 2,
+      "initial_nonblank_reference_complete": 2,
+      "final_nonblank_reference_complete": 2,
+      "requests_without_usage": 0,
+      "requests_without_elapsed": 0,
+      "prompt_tokens": 6749,
+      "completion_tokens": 5263,
+      "generator_seconds": 323.64099999999996,
+      "reviewed": 3,
+      "factually_correct": 0,
+      "core_supported": 0,
+      "fully_resolved": 0,
+      "insufficiency_flag_true": 1,
+      "insufficiency_flag_false": 0
+    },
+    "answerable/oracle": {
+      "records": 2,
+      "success": 2,
+      "model_requests": 2,
+      "tool_calls": 0,
+      "episodes_using_tools": 0,
+      "citation_ranges_valid": 2,
+      "initial_reference_complete": 2,
+      "final_reference_complete": 2,
+      "initial_nonblank_reference_complete": 2,
+      "final_nonblank_reference_complete": 2,
+      "requests_without_usage": 0,
+      "requests_without_elapsed": 0,
+      "prompt_tokens": 4800,
+      "completion_tokens": 4635,
+      "generator_seconds": 286.344,
+      "reviewed": 2,
+      "factually_correct": 0,
+      "core_supported": 0,
+      "fully_resolved": 0
+    },
+    "added-confirmation/oracle": {
+      "records": 1,
+      "success": 1,
+      "model_requests": 1,
+      "tool_calls": 0,
+      "episodes_using_tools": 0,
+      "citation_ranges_valid": 1,
+      "initial_reference_complete": 1,
+      "final_reference_complete": 1,
+      "initial_nonblank_reference_complete": 1,
+      "final_nonblank_reference_complete": 1,
+      "requests_without_usage": 0,
+      "requests_without_elapsed": 0,
+      "prompt_tokens": 3200,
+      "completion_tokens": 3839,
+      "generator_seconds": 239.391,
+      "reviewed": 1,
+      "factually_correct": 0,
+      "core_supported": 0,
+      "fully_resolved": 0
+    },
+    "unanswerable/oracle": {
+      "records": 1,
+      "success": 1,
+      "model_requests": 1,
+      "tool_calls": 0,
+      "episodes_using_tools": 0,
+      "citation_ranges_valid": 1,
+      "insufficiency_flag_true": 1,
+      "insufficiency_flag_false": 0,
+      "requests_without_usage": 0,
+      "requests_without_elapsed": 0,
+      "prompt_tokens": 1949,
+      "completion_tokens": 628,
+      "generator_seconds": 37.297,
+      "reviewed": 1,
+      "factually_correct": 0,
+      "core_supported": 0,
+      "fully_resolved": 0
+    }
+  },
+  "retrieval": {
+    "shared_initial": {
+      "answerable": 3,
+      "reference_complete": 3,
+      "nonblank_reference_complete": 3
+    }
+  },
+  "new_requests": 3,
+  "combined_requests": 1380,
+  "paid_requests": 0,
+  "human_approved": false,
+  "training_eligible": false,
+  "reporting_implementation": "4432a399824bc989792b734caf26caf8da5ada5fef0941d184fd5a00d4ae2e6b",
+  "usage_observation_note": "Token/time sums include observed values only. Missing usage and elapsed time remain unknown in raw records; reservations still count every sent or ambiguous request.",
+  "checks": {
+    "stage_gate_passed": false,
+    "deployment_bundle_adopted": false,
+    "decision": "reject bundle after all three protections regressed; no independent new-question confirmation",
+    "independent_source_review": "artifacts\\rag-iteration-2026-10-27\\conditional-thinking-protection-review.json",
+    "exact_original_Q4_messages": true,
+    "daily_configuration_modified": false,
+    "claim_limit": "Target facts/core/full0/3->2/3 does not override protection3/3->0/3. Thinking/sampling/output-budget bundle cannot isolate causal parameters."
+  },
+  "scope": "Predeclared follow-up after two of three complete-function targets newly passed whole-answer fact/core/full. Same existing general-thinking Q4 configuration, exact original actual callback/setter/private Q4 control source messages. No prompt, code, gold injection, retry or threshold change. Recorded source coverage is tautological, not retrieval gain. Daily profile unchanged."
+}

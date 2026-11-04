@@ -1,0 +1,167 @@
+[
+  {
+    "task_id": "history-dev-04",
+    "key_points": [
+      "不转小写，原始事件键区分大小写",
+      "说明 FOO/foo 或 Bar/bar 的具体测试断言"
+    ],
+    "sources": [
+      {
+        "path": "src/index.ts",
+        "start_line": 66,
+        "end_line": 73,
+        "content": "\t\ton<Key extends keyof Events>(type: Key, handler: GenericEventHandler) {\n\t\t\tconst handlers: Array<GenericEventHandler> | undefined = all!.get(type);\n\t\t\tif (handlers) {\n\t\t\t\thandlers.push(handler);\n\t\t\t} else {\n\t\t\t\tall!.set(type, [handler] as EventHandlerList<Events[keyof Events]>);\n\t\t\t}\n\t\t},",
+        "content_sha256": "0a5bf296ae849cd916f0b4eedbc3b3dbd431acb523f64fede2782b79ff119004"
+      },
+      {
+        "path": "test/index_test.ts",
+        "start_line": 79,
+        "end_line": 90,
+        "content": "\t\tit('should NOT normalize case', () => {\n\t\t\tconst foo = () => {};\n\t\t\tinst.on('FOO', foo);\n\t\t\tinst.on('Bar', foo);\n\t\t\tinst.on('baz:baT!', foo);\n\n\t\t\texpect(events.get('FOO')).to.deep.equal([foo]);\n\t\t\texpect(events.has('foo')).to.equal(false);\n\t\t\texpect(events.get('Bar')).to.deep.equal([foo]);\n\t\t\texpect(events.has('bar')).to.equal(false);\n\t\t\texpect(events.get('baz:baT!')).to.deep.equal([foo]);\n\t\t});",
+        "content_sha256": "7c7ae10f82f38319cf3cf181161ee7bfb29bde7819610b697836ace1ba119048"
+      }
+    ],
+    "reviewer": "Codex source-read before generation",
+    "human_approved": false,
+    "training_eligible": false
+  },
+  {
+    "task_id": "history-dev-01",
+    "key_points": [
+      "Node 默认入口负数长度抛 RangeError",
+      "核对实际负数输入与异常测试，不能混入 non-secure"
+    ],
+    "sources": [
+      {
+        "path": "index.js",
+        "start_line": 133,
+        "end_line": 138,
+        "content": "  return (size = defaultSize) => {\n    // `|=` convert `size` to number to prevent `valueOf` abusing\n    // and pool offset pollution\n    size |= 0\n    if (size < 0) throw new RangeError('Wrong ID size')\n    if (size === 0) return ''",
+        "content_sha256": "a2cd1e5a3ee0815f52f8518c2ba5fe4a3358024401993d7b63baeff18d5ca89d"
+      },
+      {
+        "path": "index.js",
+        "start_line": 177,
+        "end_line": 177,
+        "content": "export const nanoid = customAlphabet(urlAlphabet)",
+        "content_sha256": "c360da0cbb0aa1c8336ed31a9e0e16ce867647e121e735f1574f9047535ded40"
+      },
+      {
+        "path": "test/index.test.js",
+        "start_line": 87,
+        "end_line": 93,
+        "content": "    test('throws on negative or too big ID length', () => {\n      throws(() => {\n        nanoid(2147483648)\n      }, /Wrong ID size|Invalid typed array length/)\n      throws(() => {\n        nanoid(-10)\n      }, /Wrong ID size|Invalid typed array length/)",
+        "content_sha256": "83c73323390e7346826ae581b72991ccada33b5471b4178e0eae644e435e8536"
+      }
+    ],
+    "reviewer": "Codex source-read before generation",
+    "human_approved": false,
+    "training_eligible": false
+  },
+  {
+    "task_id": "history-dev-05",
+    "key_points": [
+      "无 tag 时返回 self.jobs[:] 副本",
+      "列表对象不同，但元素 Job 对象仍共享"
+    ],
+    "sources": [
+      {
+        "path": "schedule/__init__.py",
+        "start_line": 122,
+        "end_line": 133,
+        "content": "    def get_jobs(self, tag: Optional[Hashable] = None) -> List[\"Job\"]:\n        \"\"\"\n        Gets scheduled jobs marked with the given tag, or all jobs\n        if tag is omitted.\n\n        :param tag: An identifier used to identify a subset of\n                    jobs to retrieve\n        \"\"\"\n        if tag is None:\n            return self.jobs[:]\n        else:\n            return [job for job in self.jobs if tag in job.tags]",
+        "content_sha256": "3b203d4e5005e3c3be275304e9fce13d28bb27a7128ad849faa7f33725e6e1be"
+      }
+    ],
+    "reviewer": "Codex source-read before generation",
+    "human_approved": false,
+    "training_eligible": false
+  },
+  {
+    "task_id": "sweqa-flask-002",
+    "key_points": [
+      "_got_registered_once 阻止注册后的 setup 操作",
+      "区别于 first_registration，不能混为同一状态",
+      "说明何时设置以及对应异常路径"
+    ],
+    "sources": [
+      {
+        "path": "src/flask/sansio/blueprints.py",
+        "start_line": 213,
+        "end_line": 221,
+        "content": "    def _check_setup_finished(self, f_name: str) -> None:\n        if self._got_registered_once:\n            raise AssertionError(\n                f\"The setup method '{f_name}' can no longer be called on the blueprint\"\n                f\" '{self.name}'. It has already been registered at least once, any\"\n                \" changes will not be applied consistently.\\n\"\n                \"Make sure all imports, decorators, functions, etc. needed to set up\"\n                \" the blueprint are done before registering it.\"\n            )",
+        "content_sha256": "b4c75a22b022e443069d149a3fa2bbd7039fe362fe691335625fc8f904e534ed"
+      },
+      {
+        "path": "src/flask/sansio/blueprints.py",
+        "start_line": 319,
+        "end_line": 335,
+        "content": "        app.blueprints[name] = self\n        self._got_registered_once = True\n        state = self.make_setup_state(app, options, first_bp_registration)\n\n        if self.has_static_folder:\n            state.add_url_rule(\n                f\"{self.static_url_path}/<path:filename>\",\n                view_func=self.send_static_file,  # type: ignore[attr-defined]\n                endpoint=\"static\",\n            )\n\n        # Merge blueprint data into parent.\n        if first_bp_registration or first_name_registration:\n            self._merge_blueprint_funcs(app, name)\n\n        for deferred in self.deferred_functions:\n            deferred(state)",
+        "content_sha256": "1d7fa8270eeb5a8f36d962c677248ac5e7863e278cf7e18792697655253c4cb2"
+      },
+      {
+        "path": "src/flask/sansio/scaffold.py",
+        "start_line": 42,
+        "end_line": 49,
+        "content": "def setupmethod(f: F) -> F:\n    f_name = f.__name__\n\n    def wrapper_func(self: Scaffold, *args: t.Any, **kwargs: t.Any) -> t.Any:\n        self._check_setup_finished(f_name)\n        return f(self, *args, **kwargs)\n\n    return t.cast(F, update_wrapper(wrapper_func, f))",
+        "content_sha256": "bef14a46bf8ebc8fd2672d8b1939d041b7cb99d472b153cda9a4f5759b0526c2"
+      }
+    ],
+    "reviewer": "Codex source-read before generation",
+    "human_approved": false,
+    "training_eligible": false
+  },
+  {
+    "task_id": "sweqa-requests-001",
+    "key_points": [
+      "显式 no_proxy 优先于环境变量",
+      "返回非空字典表示未绕过代理并返回环境代理，非绕过成功"
+    ],
+    "sources": [
+      {
+        "path": "src/requests/utils.py",
+        "start_line": 769,
+        "end_line": 771,
+        "content": "    no_proxy_arg = no_proxy\n    if no_proxy is None:\n        no_proxy = get_proxy(\"no_proxy\")",
+        "content_sha256": "687c697bcb7b0ab5fbc3e58c992186e388ed4fd1ddde0266cd640aef6879d88b"
+      },
+      {
+        "path": "src/requests/utils.py",
+        "start_line": 816,
+        "end_line": 825,
+        "content": "def get_environ_proxies(url, no_proxy=None):\n    \"\"\"\n    Return a dict of environment proxies.\n\n    :rtype: dict\n    \"\"\"\n    if should_bypass_proxies(url, no_proxy=no_proxy):\n        return {}\n    else:\n        return getproxies()",
+        "content_sha256": "988e8929b6e4d2c33a504031023aa337574e2ea74a7acb00327a141ab2bd390d"
+      },
+      {
+        "path": "tests/test_utils.py",
+        "start_line": 267,
+        "end_line": 272,
+        "content": "    def test_not_bypass_no_proxy_keyword(self, url, monkeypatch):\n        # This is testing that the 'no_proxy' argument overrides the\n        # environment variable 'no_proxy'\n        monkeypatch.setenv(\"http_proxy\", \"http://proxy.example.com:3128/\")\n        no_proxy = \"192.168.1.1,requests.com\"\n        assert get_environ_proxies(url, no_proxy=no_proxy) != {}",
+        "content_sha256": "35d84bc707b0f58055b8d91fdd8e48a91b5820149ebf94093d709bbe7850f15c"
+      }
+    ],
+    "reviewer": "Codex source-read before generation",
+    "human_approved": false,
+    "training_eligible": false
+  },
+  {
+    "task_id": "known-first-true",
+    "key_points": [
+      "默认谓词返回 2",
+      "显式 x == 0 返回 0，不会再次按真值丢弃",
+      "filter 筛原始元素，next 取首项"
+    ],
+    "sources": [
+      {
+        "path": "more_itertools/recipes.py",
+        "start_line": 571,
+        "end_line": 588,
+        "content": "def first_true(iterable, default=None, pred=None):\n    \"\"\"\n    Returns the first true value in the iterable.\n\n    If no true value is found, returns *default*\n\n    If *pred* is not None, returns the first item for which\n    ``pred(item) == True`` .\n\n        >>> first_true(range(10))\n        1\n        >>> first_true(range(10), pred=lambda x: x > 5)\n        6\n        >>> first_true(range(10), default='missing', pred=lambda x: x > 9)\n        'missing'\n\n    \"\"\"\n    return next(filter(pred, iterable), default)",
+        "content_sha256": "406048ff2d04fb0542a59badd30d7ceb1a5a97ca62f890dbe743e5d69a8d23e8"
+      }
+    ],
+    "reviewer": "Codex source-read before generation",
+    "human_approved": false,
+    "training_eligible": false
+  }
+]

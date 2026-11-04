@@ -1,0 +1,331 @@
+[
+  {
+    "candidate_id": "315d52946fe8f6eb45cfb718",
+    "correctness": "correct",
+    "citation_support": "supported",
+    "completeness": "adequate",
+    "abstention": "not_applicable",
+    "entry_scope": "correct",
+    "consistency": "consistent",
+    "claims": [
+      {
+        "claim": "True 转义、False 保留 Unicode",
+        "status": "supported",
+        "rationale": "属性注释与 JSON 测试共同支持。",
+        "evidence": [
+          {
+            "path": "src/flask/json/provider.py",
+            "start_line": 144,
+            "end_line": 148
+          },
+          {
+            "path": "tests/test_json.py",
+            "start_line": 48,
+            "end_line": 54
+          }
+        ],
+        "verified_evidence": [
+          {
+            "path": "src/flask/json/provider.py",
+            "start_line": 144,
+            "end_line": 148,
+            "content": "    ensure_ascii = True\n    \"\"\"Replace non-ASCII characters with escape sequences. This may be\n    more compatible with some clients, but can be disabled for better\n    performance and size.\n    \"\"\"",
+            "content_sha256": "ee092b2a487a1f1330c288514c7523b7bf64a98400affa02027cb584358f7847",
+            "visible_to_generator": true
+          },
+          {
+            "path": "tests/test_json.py",
+            "start_line": 48,
+            "end_line": 54,
+            "content": "@pytest.mark.parametrize(\n    \"test_value,expected\", [(True, '\"\\\\u2603\"'), (False, '\"\\u2603\"')]\n)\ndef test_json_as_unicode(test_value, expected, app, app_ctx):\n    app.json.ensure_ascii = test_value\n    rv = app.json.dumps(\"\\N{SNOWMAN}\")\n    assert rv == expected",
+            "content_sha256": "abbec6ea28d255affa27b1352a9ab6fafa2ddad25386325a49481501a7fe5b63",
+            "visible_to_generator": true
+          }
+        ]
+      }
+    ],
+    "notes": "True/False 与 Unicode 输出关系完整且引用支持。",
+    "key_points": null,
+    "candidate_sha256": "a0995b050be6b4995460584dddb4b86d303bd04ad0449cf271a301fec859533a",
+    "reviewer": "Codex (current session)",
+    "review_type": "nonblind_model_development_review",
+    "human_approved": false,
+    "training_eligible": false,
+    "solved": true
+  },
+  {
+    "candidate_id": "f30e85067957c6e3cc8234ff",
+    "correctness": "correct",
+    "citation_support": "supported",
+    "completeness": "adequate",
+    "abstention": "not_applicable",
+    "entry_scope": "correct",
+    "consistency": "consistent",
+    "claims": [
+      {
+        "claim": "注册标志阻止后续 setup",
+        "status": "supported",
+        "rationale": "检查和设置标志的源码支持。",
+        "evidence": [
+          {
+            "path": "src/flask/sansio/blueprints.py",
+            "start_line": 213,
+            "end_line": 221
+          },
+          {
+            "path": "src/flask/sansio/blueprints.py",
+            "start_line": 319,
+            "end_line": 320
+          }
+        ],
+        "verified_evidence": [
+          {
+            "path": "src/flask/sansio/blueprints.py",
+            "start_line": 213,
+            "end_line": 221,
+            "content": "    def _check_setup_finished(self, f_name: str) -> None:\n        if self._got_registered_once:\n            raise AssertionError(\n                f\"The setup method '{f_name}' can no longer be called on the blueprint\"\n                f\" '{self.name}'. It has already been registered at least once, any\"\n                \" changes will not be applied consistently.\\n\"\n                \"Make sure all imports, decorators, functions, etc. needed to set up\"\n                \" the blueprint are done before registering it.\"\n            )",
+            "content_sha256": "b4c75a22b022e443069d149a3fa2bbd7039fe362fe691335625fc8f904e534ed",
+            "visible_to_generator": true
+          },
+          {
+            "path": "src/flask/sansio/blueprints.py",
+            "start_line": 319,
+            "end_line": 320,
+            "content": "        app.blueprints[name] = self\n        self._got_registered_once = True",
+            "content_sha256": "f4acbcd75ad97bd83df5c547bdf23f304f92e981c895177ccfffc5abef83d1c5",
+            "visible_to_generator": true
+          }
+        ]
+      }
+    ],
+    "notes": "说明注册前完成 setup、注册后 AssertionError 与一致性目的。",
+    "key_points": null,
+    "candidate_sha256": "7989694e370546f01ede3b7514d6baabb896f0622edda126ef195055eebf4631",
+    "reviewer": "Codex (current session)",
+    "review_type": "nonblind_model_development_review",
+    "human_approved": false,
+    "training_eligible": false,
+    "solved": true
+  },
+  {
+    "candidate_id": "4c612ee8e644d5a14f1fb900",
+    "correctness": "partially_correct",
+    "citation_support": "unsupported",
+    "completeness": "partial",
+    "abstention": "not_applicable",
+    "entry_scope": "correct",
+    "consistency": "consistent",
+    "claims": [
+      {
+        "claim": "Blueprint 继承 Flask",
+        "status": "contradicted",
+        "rationale": "Blueprint 继承 SansioBlueprint，不是 Flask。",
+        "evidence": [
+          {
+            "path": "src/flask/blueprints.py",
+            "start_line": 18,
+            "end_line": 26
+          }
+        ],
+        "verified_evidence": [
+          {
+            "path": "src/flask/blueprints.py",
+            "start_line": 18,
+            "end_line": 26,
+            "content": "class Blueprint(SansioBlueprint):\n    def __init__(\n        self,\n        name: str,\n        import_name: str,\n        static_folder: str | os.PathLike[str] | None = None,\n        static_url_path: str | None = None,\n        template_folder: str | os.PathLike[str] | None = None,\n        url_prefix: str | None = None,",
+            "content_sha256": "0475845354cf85a91ee680fff603e6c70901fff02c8241eb5956bb08178502e7",
+            "visible_to_generator": false
+          }
+        ]
+      },
+      {
+        "claim": "共享 get_send_file_max_age",
+        "status": "supported",
+        "rationale": "两个组件分别实现同名钩子。",
+        "evidence": [
+          {
+            "path": "src/flask/blueprints.py",
+            "start_line": 55,
+            "end_line": 102
+          },
+          {
+            "path": "src/flask/app.py",
+            "start_line": 281,
+            "end_line": 328
+          }
+        ],
+        "verified_evidence": [
+          {
+            "path": "src/flask/blueprints.py",
+            "start_line": 55,
+            "end_line": 102,
+            "content": "    def get_send_file_max_age(self, filename: str | None) -> int | None:\n        \"\"\"Used by :func:`send_file` to determine the ``max_age`` cache\n        value for a given file path if it wasn't passed.\n\n        By default, this returns :data:`SEND_FILE_MAX_AGE_DEFAULT` from\n        the configuration of :data:`~flask.current_app`. This defaults\n        to ``None``, which tells the browser to use conditional requests\n        instead of a timed cache, which is usually preferable.\n\n        Note this is a duplicate of the same method in the Flask\n        class.\n\n        .. versionchanged:: 2.0\n            The default configuration is ``None`` instead of 12 hours.\n\n        .. versionadded:: 0.9\n        \"\"\"\n        value = current_app.config[\"SEND_FILE_MAX_AGE_DEFAULT\"]\n\n        if value is None:\n            return None\n\n        if isinstance(value, timedelta):\n            return int(value.total_seconds())\n\n        return value  # type: ignore[no-any-return]\n\n    def send_static_file(self, filename: str) -> Response:\n        \"\"\"The view function used to serve files from\n        :attr:`static_folder`. A route is automatically registered for\n        this view at :attr:`static_url_path` if :attr:`static_folder` is\n        set.\n\n        Note this is a duplicate of the same method in the Flask\n        class.\n\n        .. versionadded:: 0.5\n\n        \"\"\"\n        if not self.has_static_folder:\n            raise RuntimeError(\"'static_folder' must be set to serve static_files.\")\n\n        # send_file only knows to call get_send_file_max_age on the app,\n        # call it here so it works for blueprints too.\n        max_age = self.get_send_file_max_age(filename)\n        return send_from_directory(\n            t.cast(str, self.static_folder), filename, max_age=max_age\n        )",
+            "content_sha256": "1fedb2d2810223681b783f36fba1afd9c22445327f0764ac6c015f869f9afe7e",
+            "visible_to_generator": true
+          },
+          {
+            "path": "src/flask/app.py",
+            "start_line": 281,
+            "end_line": 328,
+            "content": "    def get_send_file_max_age(self, filename: str | None) -> int | None:\n        \"\"\"Used by :func:`send_file` to determine the ``max_age`` cache\n        value for a given file path if it wasn't passed.\n\n        By default, this returns :data:`SEND_FILE_MAX_AGE_DEFAULT` from\n        the configuration of :data:`~flask.current_app`. This defaults\n        to ``None``, which tells the browser to use conditional requests\n        instead of a timed cache, which is usually preferable.\n\n        Note this is a duplicate of the same method in the Flask\n        class.\n\n        .. versionchanged:: 2.0\n            The default configuration is ``None`` instead of 12 hours.\n\n        .. versionadded:: 0.9\n        \"\"\"\n        value = current_app.config[\"SEND_FILE_MAX_AGE_DEFAULT\"]\n\n        if value is None:\n            return None\n\n        if isinstance(value, timedelta):\n            return int(value.total_seconds())\n\n        return value  # type: ignore[no-any-return]\n\n    def send_static_file(self, filename: str) -> Response:\n        \"\"\"The view function used to serve files from\n        :attr:`static_folder`. A route is automatically registered for\n        this view at :attr:`static_url_path` if :attr:`static_folder` is\n        set.\n\n        Note this is a duplicate of the same method in the Flask\n        class.\n\n        .. versionadded:: 0.5\n\n        \"\"\"\n        if not self.has_static_folder:\n            raise RuntimeError(\"'static_folder' must be set to serve static_files.\")\n\n        # send_file only knows to call get_send_file_max_age on the app,\n        # call it here so it works for blueprints too.\n        max_age = self.get_send_file_max_age(filename)\n        return send_from_directory(\n            t.cast(str, self.static_folder), filename, max_age=max_age\n        )",
+            "content_sha256": "1fedb2d2810223681b783f36fba1afd9c22445327f0764ac6c015f869f9afe7e",
+            "visible_to_generator": true
+          }
+        ]
+      }
+    ],
+    "notes": "识别 Blueprint 与 max-age 钩子，却虚构 Blueprint 继承 Flask，且省略共享配置和显式传参。",
+    "key_points": null,
+    "candidate_sha256": "269da1b9627f81096f34fa563e3b816b6c94df079594c63835a737eadb955455",
+    "reviewer": "Codex (current session)",
+    "review_type": "nonblind_model_development_review",
+    "human_approved": false,
+    "training_eligible": false,
+    "solved": false
+  },
+  {
+    "candidate_id": "dbeb5e254417430a218422ea",
+    "correctness": "correct",
+    "citation_support": "partial",
+    "completeness": "partial",
+    "abstention": "not_applicable",
+    "entry_scope": "correct",
+    "consistency": "consistent",
+    "claims": [
+      {
+        "claim": "显式 no_proxy 覆盖环境绕过设置",
+        "status": "supported",
+        "rationale": "None 分支决定读取环境，引用 wrapper 不足。",
+        "evidence": [
+          {
+            "path": "src/requests/utils.py",
+            "start_line": 769,
+            "end_line": 771
+          }
+        ],
+        "verified_evidence": [
+          {
+            "path": "src/requests/utils.py",
+            "start_line": 769,
+            "end_line": 771,
+            "content": "    no_proxy_arg = no_proxy\n    if no_proxy is None:\n        no_proxy = get_proxy(\"no_proxy\")",
+            "content_sha256": "687c697bcb7b0ab5fbc3e58c992186e388ed4fd1ddde0266cd640aef6879d88b",
+            "visible_to_generator": true
+          }
+        ]
+      },
+      {
+        "claim": "绕过返回空字典",
+        "status": "supported",
+        "rationale": "wrapper 的 bypass 分支支持。",
+        "evidence": [
+          {
+            "path": "src/requests/utils.py",
+            "start_line": 816,
+            "end_line": 825
+          }
+        ],
+        "verified_evidence": [
+          {
+            "path": "src/requests/utils.py",
+            "start_line": 816,
+            "end_line": 825,
+            "content": "def get_environ_proxies(url, no_proxy=None):\n    \"\"\"\n    Return a dict of environment proxies.\n\n    :rtype: dict\n    \"\"\"\n    if should_bypass_proxies(url, no_proxy=no_proxy):\n        return {}\n    else:\n        return getproxies()",
+            "content_sha256": "988e8929b6e4d2c33a504031023aa337574e2ea74a7acb00327a141ab2bd390d",
+            "visible_to_generator": true
+          }
+        ]
+      }
+    ],
+    "notes": "覆盖参数优先和空字典，却没有回答题目要求的非空字典含义，参数优先引用缺关键分支。",
+    "key_points": null,
+    "candidate_sha256": "4fd89067416fdccecd0e925bd9e08c35aecf950111d5672ce361c742bcf27a27",
+    "reviewer": "Codex (current session)",
+    "review_type": "nonblind_model_development_review",
+    "human_approved": false,
+    "training_eligible": false,
+    "solved": false
+  },
+  {
+    "candidate_id": "df32f690cf1497aee59bcb22",
+    "correctness": "partially_correct",
+    "citation_support": "partial",
+    "completeness": "insufficient",
+    "abstention": "not_applicable",
+    "entry_scope": "correct",
+    "consistency": "consistent",
+    "claims": [
+      {
+        "claim": "声明匹配不区分大小写",
+        "status": "partial",
+        "rationale": "HTML 正则使用 re.I，XML 正则没有；也不对编码值规范化。",
+        "evidence": [
+          {
+            "path": "src/requests/utils.py",
+            "start_line": 493,
+            "end_line": 501
+          }
+        ],
+        "verified_evidence": [
+          {
+            "path": "src/requests/utils.py",
+            "start_line": 493,
+            "end_line": 501,
+            "content": "    charset_re = re.compile(r'<meta.*?charset=[\"\\']*(.+?)[\"\\'>]', flags=re.I)\n    pragma_re = re.compile(r'<meta.*?content=[\"\\']*;?charset=(.+?)[\"\\'>]', flags=re.I)\n    xml_re = re.compile(r'^<\\?xml.*?encoding=[\"\\']*(.+?)[\"\\'>]')\n\n    return (\n        charset_re.findall(content)\n        + pragma_re.findall(content)\n        + xml_re.findall(content)\n    )",
+            "content_sha256": "001e4703104d74018e3f3dfdf5d39ca4cfc41bdea307b15d7c90234e2dd56b91",
+            "visible_to_generator": true
+          }
+        ]
+      }
+    ],
+    "notes": "只说大小写无关，既未解释测试恰好一个 UTF-8，也未纠正编码值规范化和 HTTP headers 前提。",
+    "key_points": null,
+    "candidate_sha256": "701050ae0daadc988cc38ed7899fe5bada54314974657303098d80bb01243925",
+    "reviewer": "Codex (current session)",
+    "review_type": "nonblind_model_development_review",
+    "human_approved": false,
+    "training_eligible": false,
+    "solved": false
+  },
+  {
+    "candidate_id": "05a708b40613d14902555d2f",
+    "correctness": "correct",
+    "citation_support": "supported",
+    "completeness": "adequate",
+    "abstention": "not_applicable",
+    "entry_scope": "correct",
+    "consistency": "consistent",
+    "claims": [
+      {
+        "claim": "双重继承允许两类捕获",
+        "status": "supported",
+        "rationale": "InvalidSchema 声明两个父类。",
+        "evidence": [
+          {
+            "path": "src/requests/exceptions.py",
+            "start_line": 103,
+            "end_line": 104
+          }
+        ],
+        "verified_evidence": [
+          {
+            "path": "src/requests/exceptions.py",
+            "start_line": 103,
+            "end_line": 104,
+            "content": "class InvalidSchema(RequestException, ValueError):\n    \"\"\"The URL scheme provided is either invalid or unsupported.\"\"\"",
+            "content_sha256": "0376439d90968a28f5ec9cfa50f96df2455e3d66f178ee4f6bfe61e7da2af734",
+            "visible_to_generator": true
+          }
+        ]
+      }
+    ],
+    "notes": "父类输入错误和统一请求异常捕获的区别正确，继承声明支持。",
+    "key_points": null,
+    "candidate_sha256": "f490062c36f34314f49258c8000b595912a8ef8949f719304b3b949fe680795e",
+    "reviewer": "Codex (current session)",
+    "review_type": "nonblind_model_development_review",
+    "human_approved": false,
+    "training_eligible": false,
+    "solved": true
+  }
+]

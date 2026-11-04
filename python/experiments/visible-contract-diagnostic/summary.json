@@ -1,0 +1,283 @@
+{
+  "questions": 2,
+  "planned_answers": 2,
+  "records": 2,
+  "reviews": {
+    "improvement-confirm-tenacity-02--visible-contract": {
+      "candidate_id": "improvement-confirm-tenacity-02--visible-contract",
+      "correctness": "incorrect",
+      "citation_support": "unsupported",
+      "completeness": "insufficient",
+      "abstention": "not_applicable",
+      "entry_scope": "correct",
+      "consistency": "consistent",
+      "claims": [
+        {
+          "claim": "默认异常重试策略下首次成功也执行 after。",
+          "status": "contradicted",
+          "rationale": "成功的 outcome 使 retry_if_exception 返回 False；_post_retry_check_actions 在 after 前提前返回结果动作。",
+          "evidence": [
+            {
+              "path": "tenacity/retry.py",
+              "start_line": 88,
+              "end_line": 119
+            },
+            {
+              "path": "tenacity/__init__.py",
+              "start_line": 460,
+              "end_line": 466
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "tenacity/retry.py",
+              "start_line": 88,
+              "end_line": 119,
+              "content": "class retry_if_exception(retry_base):\n    \"\"\"Retry strategy that retries if an exception verifies a predicate.\"\"\"\n\n    def __init__(self, predicate: typing.Callable[[BaseException], bool]) -> None:\n        self.predicate = predicate\n\n    @override\n    def __call__(self, retry_state: \"RetryCallState\") -> bool:\n        if retry_state.outcome is None:\n            raise RuntimeError(\"__call__() called before outcome was set\")\n\n        if retry_state.outcome.failed:\n            exception = retry_state.outcome.exception()\n            if exception is None:\n                raise RuntimeError(\"outcome failed but the exception is None\")\n            return self.predicate(exception)\n        return False\n\n\nclass retry_if_exception_type(retry_if_exception):\n    \"\"\"Retries if an exception has been raised of one or more types.\"\"\"\n\n    def __init__(\n        self,\n        exception_types: type[BaseException]\n        | tuple[type[BaseException], ...] = Exception,\n    ) -> None:\n        self.exception_types = exception_types\n        super().__init__(self._check)\n\n    def _check(self, e: BaseException) -> bool:\n        return isinstance(e, self.exception_types)",
+              "content_sha256": "2d8353e948161cb807d054e581c2b1eb5ab251027e22b0fea37858a0e4d4990c",
+              "visible_to_generator": true
+            },
+            {
+              "path": "tenacity/__init__.py",
+              "start_line": 460,
+              "end_line": 466,
+              "content": "    def _post_retry_check_actions(self, retry_state: \"RetryCallState\") -> None:\n        if not (self.iter_state.is_explicit_retry or self.iter_state.retry_run_result):\n            self._add_action_func(lambda rs: rs.outcome.result())\n            return\n\n        if self.after is not None:\n            self._add_action_func(self.after)",
+              "content_sha256": "ed98cb68710d5153075623d1b5d46f0946b3a12ebdb32ae76395ede8c3ebf1d0",
+              "visible_to_generator": true
+            }
+          ]
+        },
+        {
+          "claim": "前两次异常第三次成功时 after 记录 attempt_number=3。",
+          "status": "contradicted",
+          "rationale": "测试明确断言记录为2；第三次成功不再调用 after。答案引用的测试直接反驳正文。",
+          "evidence": [
+            {
+              "path": "tests/test_tenacity.py",
+              "start_line": 1853,
+              "end_line": 1870
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "tests/test_tenacity.py",
+              "start_line": 1853,
+              "end_line": 1870,
+              "content": "    def test_after_attempts(self) -> None:\n        TestBeforeAfterAttempts._attempt_number = 0\n\n        def _after(retry_state: RetryCallState) -> None:\n            TestBeforeAfterAttempts._attempt_number = retry_state.attempt_number\n\n        @retry(\n            wait=tenacity.wait_fixed(0.1),\n            stop=tenacity.stop_after_attempt(3),\n            after=_after,\n        )\n        def _test_after() -> None:\n            if TestBeforeAfterAttempts._attempt_number < 2:\n                raise Exception(\"testing after_attempts handler\")\n\n        _test_after()\n\n        self.assertTrue(TestBeforeAfterAttempts._attempt_number == 2)",
+              "content_sha256": "a1325d17a55b7019d349cfaf8c5c45a3b194635dac22914f8632662e8d599a2b",
+              "visible_to_generator": true
+            }
+          ]
+        }
+      ],
+      "notes": "可见契约后正文变长，仍把after用于成功或不重试路径，误解retry_run_result和测试编号。非截断，仍不正确。",
+      "key_points": null,
+      "candidate_sha256": "131fe746953b7cf528ba3d13ead9c284ea5683d74e6df438f87b55b4753723ac",
+      "reviewer": "Codex (current session)",
+      "review_type": "model_assisted_nonblind_development_review",
+      "human_approved": false,
+      "training_eligible": false,
+      "result_sha256": "c243d51ff0ed51a44a9cfd043edac274800babc0989188d6642296c6511d3805"
+    },
+    "improvement-confirm-tenacity-03--visible-contract": {
+      "candidate_id": "improvement-confirm-tenacity-03--visible-contract",
+      "correctness": "partially_correct",
+      "citation_support": "partial",
+      "completeness": "partial",
+      "abstention": "not_applicable",
+      "entry_scope": "correct",
+      "consistency": "consistent",
+      "claims": [
+        {
+          "claim": "停止时存在 retry_error_callback 则得到 callback 返回的 fallback，而不重新抛 ValueError。",
+          "status": "supported",
+          "rationale": "callback 分支提前 return，不添加 exc_check；此结论已纠正控制答案的先 callback 后 reraise 误述。",
+          "evidence": [
+            {
+              "path": "tenacity/__init__.py",
+              "start_line": 472,
+              "end_line": 486
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "tenacity/__init__.py",
+              "start_line": 472,
+              "end_line": 486,
+              "content": "    def _post_stop_check_actions(self, retry_state: \"RetryCallState\") -> None:\n        if self.iter_state.stop_run_result:\n            if self.retry_error_callback:\n                self._add_action_func(self.retry_error_callback)\n                return\n\n            def exc_check(rs: \"RetryCallState\") -> None:\n                fut = t.cast(\"Future\", rs.outcome)\n                retry_exc = self.retry_error_cls(fut)\n                if self.reraise:\n                    retry_exc.reraise()\n                raise retry_exc from fut.exception()\n\n            self._add_action_func(exc_check)\n            return",
+              "content_sha256": "27f56f54b49fe5b9ece029c0e019a73c8bd869a2f30fdd2abdadb0fc604e0f5c",
+              "visible_to_generator": true
+            }
+          ]
+        },
+        {
+          "claim": "callback 返回值最终直接返回给调用者。",
+          "status": "supported",
+          "rationale": "iter 返回最后 action 的结果，同步 Retrying.__call__ 对非 DoAttempt/DoSleep 的结果直接 return；这些原文已在生成输入中，但本答案未引用返回链。",
+          "evidence": [
+            {
+              "path": "tenacity/__init__.py",
+              "start_line": 436,
+              "end_line": 441
+            },
+            {
+              "path": "tenacity/__init__.py",
+              "start_line": 548,
+              "end_line": 562
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "tenacity/__init__.py",
+              "start_line": 436,
+              "end_line": 441,
+              "content": "    def iter(self, retry_state: \"RetryCallState\") -> DoAttempt | DoSleep | t.Any:\n        self._begin_iter(retry_state)\n        result = None\n        for action in self.iter_state.actions:\n            result = action(retry_state)\n        return result",
+              "content_sha256": "600f803e805093b5fa54a66ec1b1aab369f5692eee640b04ed985d1ce7f0b606",
+              "visible_to_generator": true
+            },
+            {
+              "path": "tenacity/__init__.py",
+              "start_line": 548,
+              "end_line": 562,
+              "content": "        retry_state = RetryCallState(retry_object=self, fn=fn, args=args, kwargs=kwargs)\n        while True:\n            do = self.iter(retry_state=retry_state)\n            if isinstance(do, DoAttempt):\n                try:\n                    result = fn(*args, **kwargs)\n                except BaseException:\n                    retry_state.set_exception(sys.exc_info())  # type: ignore[arg-type]\n                else:\n                    retry_state.set_result(result)\n            elif isinstance(do, DoSleep):\n                retry_state.prepare_for_next_attempt()\n                self.sleep(do)\n            else:\n                return do  # type: ignore[no-any-return]",
+              "content_sha256": "8cba8206bbb28dbf22fe8c85c5b56e2504db946bd99c7ba46e1f5e6f1ca09789",
+              "visible_to_generator": true
+            }
+          ]
+        },
+        {
+          "claim": "retry_error_callback 优先级高于 stop_after_attempt 的停止行为。",
+          "status": "contradicted",
+          "rationale": "先判断停止才进入回调分支；回调替代错误处理，并不优先于停止判断。",
+          "evidence": [
+            {
+              "path": "tenacity/__init__.py",
+              "start_line": 472,
+              "end_line": 486
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "tenacity/__init__.py",
+              "start_line": 472,
+              "end_line": 486,
+              "content": "    def _post_stop_check_actions(self, retry_state: \"RetryCallState\") -> None:\n        if self.iter_state.stop_run_result:\n            if self.retry_error_callback:\n                self._add_action_func(self.retry_error_callback)\n                return\n\n            def exc_check(rs: \"RetryCallState\") -> None:\n                fut = t.cast(\"Future\", rs.outcome)\n                retry_exc = self.retry_error_cls(fut)\n                if self.reraise:\n                    retry_exc.reraise()\n                raise retry_exc from fut.exception()\n\n            self._add_action_func(exc_check)\n            return",
+              "content_sha256": "27f56f54b49fe5b9ece029c0e019a73c8bd869a2f30fdd2abdadb0fc604e0f5c",
+              "visible_to_generator": true
+            }
+          ]
+        }
+      ],
+      "notes": "返回fallback与提前return解释正确；额外概括回调高于stop不成立，且缺同步调用者返回链说明，不能仅按变长判完整。",
+      "key_points": null,
+      "candidate_sha256": "1dba4fd09438cd53b5ffaf0679fc0a1dd8e360c0e01d7ade5b73498789b3760d",
+      "reviewer": "Codex (current session)",
+      "review_type": "model_assisted_nonblind_development_review",
+      "human_approved": false,
+      "training_eligible": false,
+      "result_sha256": "f1d25f1eb9cc07833e598a82bf15861def1f73b538808827c8fdd7baf14ca003"
+    }
+  },
+  "groups": {
+    "all/oracle": {
+      "records": 2,
+      "success": 2,
+      "model_requests": 2,
+      "tool_calls": 0,
+      "episodes_using_tools": 0,
+      "citation_ranges_valid": 2,
+      "initial_reference_complete": 2,
+      "final_reference_complete": 2,
+      "initial_nonblank_reference_complete": 2,
+      "final_nonblank_reference_complete": 2,
+      "requests_without_usage": 0,
+      "requests_without_elapsed": 0,
+      "prompt_tokens": 3790,
+      "completion_tokens": 741,
+      "generator_seconds": 52.406,
+      "reviewed": 2,
+      "factually_correct": 0,
+      "core_supported": 0,
+      "fully_resolved": 0
+    },
+    "generator-calibration-known-development/oracle": {
+      "records": 2,
+      "success": 2,
+      "model_requests": 2,
+      "tool_calls": 0,
+      "episodes_using_tools": 0,
+      "citation_ranges_valid": 2,
+      "initial_reference_complete": 2,
+      "final_reference_complete": 2,
+      "initial_nonblank_reference_complete": 2,
+      "final_nonblank_reference_complete": 2,
+      "requests_without_usage": 0,
+      "requests_without_elapsed": 0,
+      "prompt_tokens": 3790,
+      "completion_tokens": 741,
+      "generator_seconds": 52.406,
+      "reviewed": 2,
+      "factually_correct": 0,
+      "core_supported": 0,
+      "fully_resolved": 0
+    },
+    "visible-contract-development-diagnostic/oracle": {
+      "records": 2,
+      "success": 2,
+      "model_requests": 2,
+      "tool_calls": 0,
+      "episodes_using_tools": 0,
+      "citation_ranges_valid": 2,
+      "initial_reference_complete": 2,
+      "final_reference_complete": 2,
+      "initial_nonblank_reference_complete": 2,
+      "final_nonblank_reference_complete": 2,
+      "requests_without_usage": 0,
+      "requests_without_elapsed": 0,
+      "prompt_tokens": 3790,
+      "completion_tokens": 741,
+      "generator_seconds": 52.406,
+      "reviewed": 2,
+      "factually_correct": 0,
+      "core_supported": 0,
+      "fully_resolved": 0
+    },
+    "answerable/oracle": {
+      "records": 2,
+      "success": 2,
+      "model_requests": 2,
+      "tool_calls": 0,
+      "episodes_using_tools": 0,
+      "citation_ranges_valid": 2,
+      "initial_reference_complete": 2,
+      "final_reference_complete": 2,
+      "initial_nonblank_reference_complete": 2,
+      "final_nonblank_reference_complete": 2,
+      "requests_without_usage": 0,
+      "requests_without_elapsed": 0,
+      "prompt_tokens": 3790,
+      "completion_tokens": 741,
+      "generator_seconds": 52.406,
+      "reviewed": 2,
+      "factually_correct": 0,
+      "core_supported": 0,
+      "fully_resolved": 0
+    }
+  },
+  "retrieval": {
+    "shared_initial": {
+      "answerable": 2,
+      "reference_complete": 0,
+      "nonblank_reference_complete": 0
+    }
+  },
+  "new_requests": 2,
+  "combined_requests": 1265,
+  "paid_requests": 0,
+  "human_approved": false,
+  "training_eligible": false,
+  "reporting_implementation": "4432a399824bc989792b734caf26caf8da5ada5fef0941d184fd5a00d4ae2e6b",
+  "usage_observation_note": "Token/time sums include observed values only. Missing usage and elapsed time remain unknown in raw records; reservations still count every sent or ambiguous request.",
+  "checks": {},
+  "scope": "Two known failures. Same complete non-thinking configuration and raw source as full-config-diagnostic, with the single RepositoryAnswer contract provided to both visible messages and schema decoding. No question-specific answers, gold, or new prompt mode. Selected development check, not unseen confirmation."
+}

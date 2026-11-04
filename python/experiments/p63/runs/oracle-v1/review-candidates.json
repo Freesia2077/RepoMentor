@@ -1,0 +1,337 @@
+[
+  {
+    "candidate_id": "315d52946fe8f6eb45cfb718",
+    "source_file": "experiments/p63/runs/oracle-v1/cases/sweqa-flask-001--oracle.json",
+    "stage": "answer",
+    "record_sha256": "c52bc9106fe99c26b085cd6ffc36ee2604d80d4d27ef4244700515ed74a73dd3",
+    "task_id": "sweqa-flask-001",
+    "snapshot_id": "b597a359a6ff4391d4f36ec2",
+    "mode": "oracle",
+    "question": "What is the relationship between the ASCII-only encoding control parameter in the framework's JSON serialization provider and Unicode character representation in serialized output?",
+    "answer": {
+      "answer": "When the `ensure_ascii` parameter is set to `True`, non-ASCII characters in the serialized JSON output are replaced with Unicode escape sequences (e.g., `\\u2603`). When set to `False`, non-ASCII characters are represented directly in the output string.",
+      "insufficient_evidence": false,
+      "citations": [
+        {
+          "path": "src/flask/json/provider.py",
+          "start_line": 144,
+          "end_line": 148
+        },
+        {
+          "path": "src/flask/json/provider.py",
+          "start_line": 176,
+          "end_line": 179
+        },
+        {
+          "path": "tests/test_json.py",
+          "start_line": 48,
+          "end_line": 54
+        }
+      ]
+    },
+    "status": "success",
+    "visible_context": [
+      {
+        "path": "src/flask/json/provider.py",
+        "start_line": 144,
+        "end_line": 148,
+        "content": "    ensure_ascii = True\n    \"\"\"Replace non-ASCII characters with escape sequences. This may be\n    more compatible with some clients, but can be disabled for better\n    performance and size.\n    \"\"\"",
+        "content_sha256": "ee092b2a487a1f1330c288514c7523b7bf64a98400affa02027cb584358f7847"
+      },
+      {
+        "path": "src/flask/json/provider.py",
+        "start_line": 166,
+        "end_line": 179,
+        "content": "    def dumps(self, obj: t.Any, **kwargs: t.Any) -> str:\n        \"\"\"Serialize data as JSON to a string.\n\n        Keyword arguments are passed to :func:`json.dumps`. Sets some\n        parameter defaults from the :attr:`default`,\n        :attr:`ensure_ascii`, and :attr:`sort_keys` attributes.\n\n        :param obj: The data to serialize.\n        :param kwargs: Passed to :func:`json.dumps`.\n        \"\"\"\n        kwargs.setdefault(\"default\", self.default)\n        kwargs.setdefault(\"ensure_ascii\", self.ensure_ascii)\n        kwargs.setdefault(\"sort_keys\", self.sort_keys)\n        return json.dumps(obj, **kwargs)",
+        "content_sha256": "2b62604253e6930250ab4c10f2a09f8c95ba0a57a5cc06d2083db8021fa5b88c"
+      },
+      {
+        "path": "tests/test_json.py",
+        "start_line": 48,
+        "end_line": 54,
+        "content": "@pytest.mark.parametrize(\n    \"test_value,expected\", [(True, '\"\\\\u2603\"'), (False, '\"\\u2603\"')]\n)\ndef test_json_as_unicode(test_value, expected, app, app_ctx):\n    app.json.ensure_ascii = test_value\n    rv = app.json.dumps(\"\\N{SNOWMAN}\")\n    assert rv == expected",
+        "content_sha256": "abbec6ea28d255affa27b1352a9ab6fafa2ddad25386325a49481501a7fe5b63"
+      }
+    ],
+    "quality": {
+      "version": "answer-diagnostics-v1",
+      "issues": [],
+      "semantic_correctness": "not_scored",
+      "complete": null,
+      "human_approved": false
+    },
+    "reviewer": "Codex nonblind model review",
+    "human_approved": false
+  },
+  {
+    "candidate_id": "f30e85067957c6e3cc8234ff",
+    "source_file": "experiments/p63/runs/oracle-v1/cases/sweqa-flask-002--oracle.json",
+    "stage": "answer",
+    "record_sha256": "147f2aaff1c9df5bbabc53f3fcd75f3e217ab0892c40c6c499e1e317c2f1e794",
+    "task_id": "sweqa-flask-002",
+    "snapshot_id": "b597a359a6ff4391d4f36ec2",
+    "mode": "oracle",
+    "question": "What is the purpose of the registration tracking flag in the blueprint collection class that prevents setup methods from being called after the blueprint has been registered once?",
+    "answer": {
+      "answer": "The purpose of the registration tracking flag (`_got_registered_once`) is to enforce a strict ordering requirement: all imports, decorators, and setup logic for a blueprint must be completed before the blueprint is registered with the application. Once registered, the flag is set to `True`, and any subsequent attempt to call setup methods raises an `AssertionError` to prevent inconsistent state.",
+      "insufficient_evidence": false,
+      "citations": [
+        {
+          "path": "src/flask/sansio/blueprints.py",
+          "start_line": 213,
+          "end_line": 221
+        },
+        {
+          "path": "src/flask/sansio/blueprints.py",
+          "start_line": 319,
+          "end_line": 320
+        }
+      ]
+    },
+    "status": "success",
+    "visible_context": [
+      {
+        "path": "src/flask/sansio/blueprints.py",
+        "start_line": 213,
+        "end_line": 221,
+        "content": "    def _check_setup_finished(self, f_name: str) -> None:\n        if self._got_registered_once:\n            raise AssertionError(\n                f\"The setup method '{f_name}' can no longer be called on the blueprint\"\n                f\" '{self.name}'. It has already been registered at least once, any\"\n                \" changes will not be applied consistently.\\n\"\n                \"Make sure all imports, decorators, functions, etc. needed to set up\"\n                \" the blueprint are done before registering it.\"\n            )",
+        "content_sha256": "b4c75a22b022e443069d149a3fa2bbd7039fe362fe691335625fc8f904e534ed"
+      },
+      {
+        "path": "src/flask/sansio/blueprints.py",
+        "start_line": 319,
+        "end_line": 335,
+        "content": "        app.blueprints[name] = self\n        self._got_registered_once = True\n        state = self.make_setup_state(app, options, first_bp_registration)\n\n        if self.has_static_folder:\n            state.add_url_rule(\n                f\"{self.static_url_path}/<path:filename>\",\n                view_func=self.send_static_file,  # type: ignore[attr-defined]\n                endpoint=\"static\",\n            )\n\n        # Merge blueprint data into parent.\n        if first_bp_registration or first_name_registration:\n            self._merge_blueprint_funcs(app, name)\n\n        for deferred in self.deferred_functions:\n            deferred(state)",
+        "content_sha256": "1d7fa8270eeb5a8f36d962c677248ac5e7863e278cf7e18792697655253c4cb2"
+      },
+      {
+        "path": "src/flask/sansio/scaffold.py",
+        "start_line": 42,
+        "end_line": 49,
+        "content": "def setupmethod(f: F) -> F:\n    f_name = f.__name__\n\n    def wrapper_func(self: Scaffold, *args: t.Any, **kwargs: t.Any) -> t.Any:\n        self._check_setup_finished(f_name)\n        return f(self, *args, **kwargs)\n\n    return t.cast(F, update_wrapper(wrapper_func, f))",
+        "content_sha256": "bef14a46bf8ebc8fd2672d8b1939d041b7cb99d472b153cda9a4f5759b0526c2"
+      }
+    ],
+    "quality": {
+      "version": "answer-diagnostics-v1",
+      "issues": [],
+      "semantic_correctness": "not_scored",
+      "complete": null,
+      "human_approved": false
+    },
+    "reviewer": "Codex nonblind model review",
+    "human_approved": false
+  },
+  {
+    "candidate_id": "4c612ee8e644d5a14f1fb900",
+    "source_file": "experiments/p63/runs/oracle-v1/cases/sweqa-flask-003--oracle.json",
+    "stage": "answer",
+    "record_sha256": "fa9b5ba0e5f1be87b459a5d05d2f688cc0c3cb1181e346f75a0af77993bead6b",
+    "task_id": "sweqa-flask-003",
+    "snapshot_id": "b597a359a6ff4391d4f36ec2",
+    "mode": "oracle",
+    "question": "What is the modular component registration architecture that separates static asset serving from the main application framework while preserving consistent caching behavior across both components?",
+    "answer": {
+      "answer": "Flask 使用蓝图（Blueprints）作为其模块化组件注册架构。蓝图允许开发者将静态资源（如 CSS、JS）与应用框架逻辑分离，同时通过继承自 Flask 的类并实现 `get_send_file_max_age` 方法，确保静态文件在两个组件间保持一致的缓存行为。",
+      "insufficient_evidence": false,
+      "citations": [
+        {
+          "path": "src/flask/blueprints.py",
+          "start_line": 55,
+          "end_line": 102
+        },
+        {
+          "path": "src/flask/app.py",
+          "start_line": 281,
+          "end_line": 328
+        }
+      ]
+    },
+    "status": "success",
+    "visible_context": [
+      {
+        "path": "src/flask/blueprints.py",
+        "start_line": 55,
+        "end_line": 102,
+        "content": "    def get_send_file_max_age(self, filename: str | None) -> int | None:\n        \"\"\"Used by :func:`send_file` to determine the ``max_age`` cache\n        value for a given file path if it wasn't passed.\n\n        By default, this returns :data:`SEND_FILE_MAX_AGE_DEFAULT` from\n        the configuration of :data:`~flask.current_app`. This defaults\n        to ``None``, which tells the browser to use conditional requests\n        instead of a timed cache, which is usually preferable.\n\n        Note this is a duplicate of the same method in the Flask\n        class.\n\n        .. versionchanged:: 2.0\n            The default configuration is ``None`` instead of 12 hours.\n\n        .. versionadded:: 0.9\n        \"\"\"\n        value = current_app.config[\"SEND_FILE_MAX_AGE_DEFAULT\"]\n\n        if value is None:\n            return None\n\n        if isinstance(value, timedelta):\n            return int(value.total_seconds())\n\n        return value  # type: ignore[no-any-return]\n\n    def send_static_file(self, filename: str) -> Response:\n        \"\"\"The view function used to serve files from\n        :attr:`static_folder`. A route is automatically registered for\n        this view at :attr:`static_url_path` if :attr:`static_folder` is\n        set.\n\n        Note this is a duplicate of the same method in the Flask\n        class.\n\n        .. versionadded:: 0.5\n\n        \"\"\"\n        if not self.has_static_folder:\n            raise RuntimeError(\"'static_folder' must be set to serve static_files.\")\n\n        # send_file only knows to call get_send_file_max_age on the app,\n        # call it here so it works for blueprints too.\n        max_age = self.get_send_file_max_age(filename)\n        return send_from_directory(\n            t.cast(str, self.static_folder), filename, max_age=max_age\n        )",
+        "content_sha256": "1fedb2d2810223681b783f36fba1afd9c22445327f0764ac6c015f869f9afe7e"
+      },
+      {
+        "path": "src/flask/app.py",
+        "start_line": 281,
+        "end_line": 328,
+        "content": "    def get_send_file_max_age(self, filename: str | None) -> int | None:\n        \"\"\"Used by :func:`send_file` to determine the ``max_age`` cache\n        value for a given file path if it wasn't passed.\n\n        By default, this returns :data:`SEND_FILE_MAX_AGE_DEFAULT` from\n        the configuration of :data:`~flask.current_app`. This defaults\n        to ``None``, which tells the browser to use conditional requests\n        instead of a timed cache, which is usually preferable.\n\n        Note this is a duplicate of the same method in the Flask\n        class.\n\n        .. versionchanged:: 2.0\n            The default configuration is ``None`` instead of 12 hours.\n\n        .. versionadded:: 0.9\n        \"\"\"\n        value = current_app.config[\"SEND_FILE_MAX_AGE_DEFAULT\"]\n\n        if value is None:\n            return None\n\n        if isinstance(value, timedelta):\n            return int(value.total_seconds())\n\n        return value  # type: ignore[no-any-return]\n\n    def send_static_file(self, filename: str) -> Response:\n        \"\"\"The view function used to serve files from\n        :attr:`static_folder`. A route is automatically registered for\n        this view at :attr:`static_url_path` if :attr:`static_folder` is\n        set.\n\n        Note this is a duplicate of the same method in the Flask\n        class.\n\n        .. versionadded:: 0.5\n\n        \"\"\"\n        if not self.has_static_folder:\n            raise RuntimeError(\"'static_folder' must be set to serve static_files.\")\n\n        # send_file only knows to call get_send_file_max_age on the app,\n        # call it here so it works for blueprints too.\n        max_age = self.get_send_file_max_age(filename)\n        return send_from_directory(\n            t.cast(str, self.static_folder), filename, max_age=max_age\n        )",
+        "content_sha256": "1fedb2d2810223681b783f36fba1afd9c22445327f0764ac6c015f869f9afe7e"
+      }
+    ],
+    "quality": {
+      "version": "answer-diagnostics-v1",
+      "issues": [],
+      "semantic_correctness": "not_scored",
+      "complete": null,
+      "human_approved": false
+    },
+    "reviewer": "Codex nonblind model review",
+    "human_approved": false
+  },
+  {
+    "candidate_id": "dbeb5e254417430a218422ea",
+    "source_file": "experiments/p63/runs/oracle-v1/cases/sweqa-requests-001--oracle.json",
+    "stage": "answer",
+    "record_sha256": "21e459335a00fa7630276231111fffdf7e169a8adf16ee0a3e1c42012e1ed403",
+    "task_id": "sweqa-requests-001",
+    "snapshot_id": "e82fdc78cb700c628d4286d6",
+    "mode": "oracle",
+    "question": "What is the semantic significance of the `no_proxy` keyword argument in `get_environ_proxies` overriding environment variable precedence, and what does returning a non-empty dictionary when this override is applied indicate?",
+    "answer": {
+      "answer": "The `no_proxy` keyword argument in `get_environ_proxies` has the semantic significance of **overriding** the environment variable `no_proxy` to determine proxy bypass rules. When this override is applied and the URL matches the bypass list, the function returns an empty dictionary `{}`, indicating that **no proxy should be used** for that specific request.",
+      "insufficient_evidence": false,
+      "citations": [
+        {
+          "path": "src/requests/utils.py",
+          "start_line": 816,
+          "end_line": 825
+        },
+        {
+          "path": "tests/test_utils.py",
+          "start_line": 267,
+          "end_line": 272
+        }
+      ]
+    },
+    "status": "success",
+    "visible_context": [
+      {
+        "path": "src/requests/utils.py",
+        "start_line": 769,
+        "end_line": 771,
+        "content": "    no_proxy_arg = no_proxy\n    if no_proxy is None:\n        no_proxy = get_proxy(\"no_proxy\")",
+        "content_sha256": "687c697bcb7b0ab5fbc3e58c992186e388ed4fd1ddde0266cd640aef6879d88b"
+      },
+      {
+        "path": "src/requests/utils.py",
+        "start_line": 816,
+        "end_line": 825,
+        "content": "def get_environ_proxies(url, no_proxy=None):\n    \"\"\"\n    Return a dict of environment proxies.\n\n    :rtype: dict\n    \"\"\"\n    if should_bypass_proxies(url, no_proxy=no_proxy):\n        return {}\n    else:\n        return getproxies()",
+        "content_sha256": "988e8929b6e4d2c33a504031023aa337574e2ea74a7acb00327a141ab2bd390d"
+      },
+      {
+        "path": "tests/test_utils.py",
+        "start_line": 267,
+        "end_line": 272,
+        "content": "    def test_not_bypass_no_proxy_keyword(self, url, monkeypatch):\n        # This is testing that the 'no_proxy' argument overrides the\n        # environment variable 'no_proxy'\n        monkeypatch.setenv(\"http_proxy\", \"http://proxy.example.com:3128/\")\n        no_proxy = \"192.168.1.1,requests.com\"\n        assert get_environ_proxies(url, no_proxy=no_proxy) != {}",
+        "content_sha256": "35d84bc707b0f58055b8d91fdd8e48a91b5820149ebf94093d709bbe7850f15c"
+      }
+    ],
+    "quality": {
+      "version": "answer-diagnostics-v1",
+      "issues": [],
+      "semantic_correctness": "not_scored",
+      "complete": null,
+      "human_approved": false
+    },
+    "reviewer": "Codex nonblind model review",
+    "human_approved": false
+  },
+  {
+    "candidate_id": "df32f690cf1497aee59bcb22",
+    "source_file": "experiments/p63/runs/oracle-v1/cases/sweqa-requests-002--oracle.json",
+    "stage": "answer",
+    "record_sha256": "ca2be25de81363074cafe2c6a499c7f6f36ef40cc957835c646ba0fb7136c101",
+    "task_id": "sweqa-requests-002",
+    "snapshot_id": "e82fdc78cb700c628d4286d6",
+    "mode": "oracle",
+    "question": "What assumptions about encoding representation does the test_pragmas method enforce when validating that get_encodings_from_content correctly extracts and normalizes character encoding declarations from HTTP content headers?",
+    "answer": {
+      "answer": "The test_pragmas method enforces the assumption that character encoding declarations are case-insensitive.",
+      "insufficient_evidence": false,
+      "citations": [
+        {
+          "path": "src/requests/utils.py",
+          "start_line": 493,
+          "end_line": 493
+        }
+      ]
+    },
+    "status": "success",
+    "visible_context": [
+      {
+        "path": "src/requests/utils.py",
+        "start_line": 493,
+        "end_line": 501,
+        "content": "    charset_re = re.compile(r'<meta.*?charset=[\"\\']*(.+?)[\"\\'>]', flags=re.I)\n    pragma_re = re.compile(r'<meta.*?content=[\"\\']*;?charset=(.+?)[\"\\'>]', flags=re.I)\n    xml_re = re.compile(r'^<\\?xml.*?encoding=[\"\\']*(.+?)[\"\\'>]')\n\n    return (\n        charset_re.findall(content)\n        + pragma_re.findall(content)\n        + xml_re.findall(content)\n    )",
+        "content_sha256": "001e4703104d74018e3f3dfdf5d39ca4cfc41bdea307b15d7c90234e2dd56b91"
+      },
+      {
+        "path": "tests/test_utils.py",
+        "start_line": 368,
+        "end_line": 392,
+        "content": "    @pytest.mark.parametrize(\n        \"content\",\n        (\n            # HTML5 meta charset attribute\n            '<meta charset=\"UTF-8\">',\n            # HTML4 pragma directive\n            '<meta http-equiv=\"Content-type\" content=\"text/html;charset=UTF-8\">',\n            # XHTML 1.x served with text/html MIME type\n            '<meta http-equiv=\"Content-type\" content=\"text/html;charset=UTF-8\" />',\n            # XHTML 1.x served as XML\n            '<?xml version=\"1.0\" encoding=\"UTF-8\"?>',\n        ),\n    )\n    def test_pragmas(self, content):\n        encodings = get_encodings_from_content(content)\n        assert len(encodings) == 1\n        assert encodings[0] == \"UTF-8\"\n\n    def test_precedence(self):\n        content = \"\"\"\n        <?xml version=\"1.0\" encoding=\"XML\"?>\n        <meta charset=\"HTML5\">\n        <meta http-equiv=\"Content-type\" content=\"text/html;charset=HTML4\" />\n        \"\"\".strip()\n        assert get_encodings_from_content(content) == [\"HTML5\", \"HTML4\", \"XML\"]",
+        "content_sha256": "01af3a279a1e9839e2437237dea7554c97aa23f55a821d60b465d21b684b6f8e"
+      }
+    ],
+    "quality": {
+      "version": "answer-diagnostics-v1",
+      "issues": [],
+      "semantic_correctness": "not_scored",
+      "complete": null,
+      "human_approved": false
+    },
+    "reviewer": "Codex nonblind model review",
+    "human_approved": false
+  },
+  {
+    "candidate_id": "05a708b40613d14902555d2f",
+    "source_file": "experiments/p63/runs/oracle-v1/cases/sweqa-requests-003--oracle.json",
+    "stage": "answer",
+    "record_sha256": "2da7ecb9b22e1dc5ddad5da35c946ee4fb158cc70a9bbd433abc70d14543396e",
+    "task_id": "sweqa-requests-003",
+    "snapshot_id": "e82fdc78cb700c628d4286d6",
+    "mode": "oracle",
+    "question": "What is the semantic distinction between InvalidSchema's dual inheritance from RequestException and ValueError in handling URL scheme validation failures, and how do these two parent exception types differ in the context of schema validation?",
+    "answer": {
+      "answer": "InvalidSchema 通过双重继承同时继承自 RequestException 和 ValueError，其语义区别在于：继承自 ValueError 表示该错误源于输入参数的逻辑错误（URL scheme 无效或不支持），而继承自 RequestException 表示该错误发生在请求处理流程中，便于统一捕获请求相关的异常。在 schema 验证上下文中，ValueError 强调参数本身的合法性问题，RequestException 强调请求处理流程中的异常状态。",
+      "insufficient_evidence": false,
+      "citations": [
+        {
+          "path": "src/requests/exceptions.py",
+          "start_line": 103,
+          "end_line": 104
+        }
+      ]
+    },
+    "status": "success",
+    "visible_context": [
+      {
+        "path": "src/requests/exceptions.py",
+        "start_line": 12,
+        "end_line": 24,
+        "content": "class RequestException(IOError):\n    \"\"\"There was an ambiguous exception that occurred while handling your\n    request.\n    \"\"\"\n\n    def __init__(self, *args, **kwargs):\n        \"\"\"Initialize RequestException with `request` and `response` objects.\"\"\"\n        response = kwargs.pop(\"response\", None)\n        self.response = response\n        self.request = kwargs.pop(\"request\", None)\n        if response is not None and not self.request and hasattr(response, \"request\"):\n            self.request = self.response.request\n        super().__init__(*args, **kwargs)",
+        "content_sha256": "3a5464dda05aa61d56458b0ce5331f5a02597db22b315c365f73c9ebb13c3a3b"
+      },
+      {
+        "path": "src/requests/exceptions.py",
+        "start_line": 103,
+        "end_line": 104,
+        "content": "class InvalidSchema(RequestException, ValueError):\n    \"\"\"The URL scheme provided is either invalid or unsupported.\"\"\"",
+        "content_sha256": "0376439d90968a28f5ec9cfa50f96df2455e3d66f178ee4f6bfe61e7da2af734"
+      },
+      {
+        "path": "src/requests/sessions.py",
+        "start_line": 783,
+        "end_line": 792,
+        "content": "        Returns the appropriate connection adapter for the given URL.\n\n        :rtype: requests.adapters.BaseAdapter\n        \"\"\"\n        for prefix, adapter in self.adapters.items():\n            if url.lower().startswith(prefix.lower()):\n                return adapter\n\n        # Nothing matches :-/\n        raise InvalidSchema(f\"No connection adapters were found for {url!r}\")",
+        "content_sha256": "3c71869ed145e67ddcede5429c680e135cbd8eaadc12ce57875cc31c1b4f124e"
+      }
+    ],
+    "quality": {
+      "version": "answer-diagnostics-v1",
+      "issues": [],
+      "semantic_correctness": "not_scored",
+      "complete": null,
+      "human_approved": false
+    },
+    "reviewer": "Codex nonblind model review",
+    "human_approved": false
+  }
+]

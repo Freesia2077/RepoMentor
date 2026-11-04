@@ -1,0 +1,1900 @@
+[
+  {
+    "candidate_id": "development/history-dev-04--sdk/answer",
+    "correctness": "correct",
+    "citation_support": "supported",
+    "completeness": "partial",
+    "abstention": "not_applicable",
+    "entry_scope": "correct",
+    "consistency": "consistent",
+    "claims": [
+      {
+        "claim": "on 不做事件名小写转换，直接使用传入 type 作为 Map 键。",
+        "status": "supported",
+        "rationale": "on 只执行 get/push/set，没有大小写转换。",
+        "evidence": [
+          {
+            "path": "src/index.ts",
+            "start_line": 66,
+            "end_line": 73
+          }
+        ],
+        "verified_evidence": [
+          {
+            "path": "src/index.ts",
+            "start_line": 66,
+            "end_line": 73,
+            "content": "\t\ton<Key extends keyof Events>(type: Key, handler: GenericEventHandler) {\n\t\t\tconst handlers: Array<GenericEventHandler> | undefined = all!.get(type);\n\t\t\tif (handlers) {\n\t\t\t\thandlers.push(handler);\n\t\t\t} else {\n\t\t\t\tall!.set(type, [handler] as EventHandlerList<Events[keyof Events]>);\n\t\t\t}\n\t\t},",
+            "content_sha256": "0a5bf296ae849cd916f0b4eedbc3b3dbd431acb523f64fede2782b79ff119004",
+            "visible_to_generator": true
+          }
+        ]
+      }
+    ],
+    "notes": "明确要求结合 should NOT normalize case 测试；最终只解释实现，未说明 FOO/foo 等输入及断言。完整测试解释已在 research_notes 和最终源码中，但 finish=stop 的最终回答仍遗漏，不能归为输出额度不足。",
+    "key_points": null,
+    "candidate_sha256": "28c00a4e82e08136bc221344a282272b9123a4b22e69e140b26b77e0b1ea13e8",
+    "reviewer": "Codex (current session)",
+    "review_type": "model_assisted_nonblind_development_review",
+    "human_approved": false,
+    "training_eligible": false,
+    "solved": false
+  },
+  {
+    "candidate_id": "development/sweqa-flask-002--sdk/answer",
+    "correctness": "partially_correct",
+    "citation_support": "partial",
+    "completeness": "adequate",
+    "abstention": "not_applicable",
+    "entry_scope": "correct",
+    "consistency": "consistent",
+    "claims": [
+      {
+        "claim": "_got_registered_once 配合 _check_setup_finished 阻止注册后的设置。",
+        "status": "supported",
+        "rationale": "标志、赋值和 AssertionError 分支可由实际原文核对。",
+        "evidence": [
+          {
+            "path": "src/flask/sansio/blueprints.py",
+            "start_line": 172,
+            "end_line": 172
+          },
+          {
+            "path": "src/flask/sansio/blueprints.py",
+            "start_line": 213,
+            "end_line": 221
+          },
+          {
+            "path": "src/flask/sansio/blueprints.py",
+            "start_line": 316,
+            "end_line": 335
+          }
+        ],
+        "verified_evidence": [
+          {
+            "path": "src/flask/sansio/blueprints.py",
+            "start_line": 172,
+            "end_line": 172,
+            "content": "    _got_registered_once = False",
+            "content_sha256": "2291e6dc4b61cced1c2e20dac34c9ad0c8b89f0684f921d49d70e84fdbec7d4e",
+            "visible_to_generator": true
+          },
+          {
+            "path": "src/flask/sansio/blueprints.py",
+            "start_line": 213,
+            "end_line": 221,
+            "content": "    def _check_setup_finished(self, f_name: str) -> None:\n        if self._got_registered_once:\n            raise AssertionError(\n                f\"The setup method '{f_name}' can no longer be called on the blueprint\"\n                f\" '{self.name}'. It has already been registered at least once, any\"\n                \" changes will not be applied consistently.\\n\"\n                \"Make sure all imports, decorators, functions, etc. needed to set up\"\n                \" the blueprint are done before registering it.\"\n            )",
+            "content_sha256": "b4c75a22b022e443069d149a3fa2bbd7039fe362fe691335625fc8f904e534ed",
+            "visible_to_generator": true
+          },
+          {
+            "path": "src/flask/sansio/blueprints.py",
+            "start_line": 316,
+            "end_line": 335,
+            "content": "        first_bp_registration = not any(bp is self for bp in app.blueprints.values())\n        first_name_registration = name not in app.blueprints\n\n        app.blueprints[name] = self\n        self._got_registered_once = True\n        state = self.make_setup_state(app, options, first_bp_registration)\n\n        if self.has_static_folder:\n            state.add_url_rule(\n                f\"{self.static_url_path}/<path:filename>\",\n                view_func=self.send_static_file,  # type: ignore[attr-defined]\n                endpoint=\"static\",\n            )\n\n        # Merge blueprint data into parent.\n        if first_bp_registration or first_name_registration:\n            self._merge_blueprint_funcs(app, name)\n\n        for deferred in self.deferred_functions:\n            deferred(state)",
+            "content_sha256": "b454fcceb34c5c3246f7f8cc40df0ae5593f29e3910e78cb8b483f7bb65c3a6b",
+            "visible_to_generator": true
+          }
+        ]
+      },
+      {
+        "claim": "标志在蓝图写入 app.blueprints 后才设置。",
+        "status": "contradicted",
+        "rationale": "register 中先设置标志，随后才写入应用的字典，答案颠倒顺序。",
+        "evidence": [
+          {
+            "path": "src/flask/sansio/blueprints.py",
+            "start_line": 316,
+            "end_line": 335
+          }
+        ],
+        "verified_evidence": [
+          {
+            "path": "src/flask/sansio/blueprints.py",
+            "start_line": 316,
+            "end_line": 335,
+            "content": "        first_bp_registration = not any(bp is self for bp in app.blueprints.values())\n        first_name_registration = name not in app.blueprints\n\n        app.blueprints[name] = self\n        self._got_registered_once = True\n        state = self.make_setup_state(app, options, first_bp_registration)\n\n        if self.has_static_folder:\n            state.add_url_rule(\n                f\"{self.static_url_path}/<path:filename>\",\n                view_func=self.send_static_file,  # type: ignore[attr-defined]\n                endpoint=\"static\",\n            )\n\n        # Merge blueprint data into parent.\n        if first_bp_registration or first_name_registration:\n            self._merge_blueprint_funcs(app, name)\n\n        for deferred in self.deferred_functions:\n            deferred(state)",
+            "content_sha256": "b454fcceb34c5c3246f7f8cc40df0ae5593f29e3910e78cb8b483f7bb65c3a6b",
+            "visible_to_generator": true
+          }
+        ]
+      }
+    ],
+    "notes": "此次读取包含真实标志，解决了原先的信息缺失；仍新增了注册顺序错误，故不是严格解决。",
+    "key_points": null,
+    "candidate_sha256": "80876bd25a66805449b04e6eda3c5bb6913dc566918eae285c8e242a5d4e1393",
+    "reviewer": "Codex (current session)",
+    "review_type": "model_assisted_nonblind_development_review",
+    "human_approved": false,
+    "training_eligible": false,
+    "solved": false
+  },
+  {
+    "candidate_id": "development/sweqa-requests-001--sdk/answer",
+    "correctness": "correct",
+    "citation_support": "supported",
+    "completeness": "adequate",
+    "abstention": "not_applicable",
+    "entry_scope": "correct",
+    "consistency": "consistent",
+    "claims": [
+      {
+        "claim": "显式 no_proxy 在非 None 时优先于环境变量。",
+        "status": "supported",
+        "rationale": "仅 no_proxy is None 时才从环境读取。",
+        "evidence": [
+          {
+            "path": "src/requests/utils.py",
+            "start_line": 769,
+            "end_line": 771
+          }
+        ],
+        "verified_evidence": [
+          {
+            "path": "src/requests/utils.py",
+            "start_line": 769,
+            "end_line": 771,
+            "content": "    no_proxy_arg = no_proxy\n    if no_proxy is None:\n        no_proxy = get_proxy(\"no_proxy\")",
+            "content_sha256": "687c697bcb7b0ab5fbc3e58c992186e388ed4fd1ddde0266cd640aef6879d88b",
+            "visible_to_generator": true
+          }
+        ]
+      },
+      {
+        "claim": "非空返回来自未绕过时的 getproxies() 配置。",
+        "status": "supported",
+        "rationale": "822–825 在绕过时直接返回空字典，否则返回配置；非空确实排除了 no_proxy 命中，答案没有宣称反向充分条件。",
+        "evidence": [
+          {
+            "path": "src/requests/utils.py",
+            "start_line": 816,
+            "end_line": 825
+          }
+        ],
+        "verified_evidence": [
+          {
+            "path": "src/requests/utils.py",
+            "start_line": 816,
+            "end_line": 825,
+            "content": "def get_environ_proxies(url, no_proxy=None):\n    \"\"\"\n    Return a dict of environment proxies.\n\n    :rtype: dict\n    \"\"\"\n    if should_bypass_proxies(url, no_proxy=no_proxy):\n        return {}\n    else:\n        return getproxies()",
+            "content_sha256": "988e8929b6e4d2c33a504031023aa337574e2ea74a7acb00327a141ab2bd390d",
+            "visible_to_generator": true
+          }
+        ]
+      }
+    ],
+    "notes": "回答的是非空字典的含义，不能把先前空字典 iff no_proxy 的错误直接套用。本次未声称网络请求实际成功使用代理。",
+    "key_points": null,
+    "candidate_sha256": "f6be630abe7dbe105f2ebc4f5f26fb3eb306eb8e8385c02a2eb0a856d91d3bb5",
+    "reviewer": "Codex (current session)",
+    "review_type": "model_assisted_nonblind_development_review",
+    "human_approved": false,
+    "training_eligible": false,
+    "solved": true
+  },
+  {
+    "candidate_id": "confirmation/reliability-confirm-01--fixed/answer",
+    "correctness": "correct",
+    "citation_support": "supported",
+    "completeness": "partial",
+    "abstention": "not_applicable",
+    "entry_scope": "correct",
+    "consistency": "consistent",
+    "claims": [
+      {
+        "claim": "在普通 handler 内新增的同类型 handler 不在当前 emit 执行。",
+        "status": "supported",
+        "rationale": "emit 对当前 handlers 使用 slice 快照。",
+        "evidence": [
+          {
+            "path": "src/index.ts",
+            "start_line": 66,
+            "end_line": 73
+          },
+          {
+            "path": "src/index.ts",
+            "start_line": 103,
+            "end_line": 110
+          }
+        ],
+        "verified_evidence": [
+          {
+            "path": "src/index.ts",
+            "start_line": 66,
+            "end_line": 73,
+            "content": "\t\ton<Key extends keyof Events>(type: Key, handler: GenericEventHandler) {\n\t\t\tconst handlers: Array<GenericEventHandler> | undefined = all!.get(type);\n\t\t\tif (handlers) {\n\t\t\t\thandlers.push(handler);\n\t\t\t} else {\n\t\t\t\tall!.set(type, [handler] as EventHandlerList<Events[keyof Events]>);\n\t\t\t}\n\t\t},",
+            "content_sha256": "0a5bf296ae849cd916f0b4eedbc3b3dbd431acb523f64fede2782b79ff119004",
+            "visible_to_generator": true
+          },
+          {
+            "path": "src/index.ts",
+            "start_line": 103,
+            "end_line": 110,
+            "content": "\t\temit<Key extends keyof Events>(type: Key, evt?: Events[Key]) {\n\t\t\tlet handlers = all!.get(type);\n\t\t\tif (handlers) {\n\t\t\t\t(handlers as EventHandlerList<Events[keyof Events]>)\n\t\t\t\t\t.slice()\n\t\t\t\t\t.map((handler) => {\n\t\t\t\t\t\thandler(evt!);\n\t\t\t\t\t});",
+            "content_sha256": "bbee530a904e9d605eaa018ff4b88ac44a4f30a6e667398622a79339f4e0f8be",
+            "visible_to_generator": true
+          }
+        ]
+      }
+    ],
+    "notes": "答案仅为“不会执行”，虽结论正确且引用支持，未按问题解释 on 修改原数组和 emit 使用快照的机制。",
+    "key_points": null,
+    "candidate_sha256": "9ad4fa74c3b670c1c7c3a9e90bbe1f8a3c2e135e4e1e4cf5a3b3ea45febf8676",
+    "reviewer": "Codex (current session)",
+    "review_type": "model_assisted_nonblind_development_review",
+    "human_approved": false,
+    "training_eligible": false,
+    "solved": false
+  },
+  {
+    "candidate_id": "confirmation/reliability-confirm-01--sdk/answer",
+    "correctness": "correct",
+    "citation_support": "supported",
+    "completeness": "partial",
+    "abstention": "not_applicable",
+    "entry_scope": "correct",
+    "consistency": "consistent",
+    "claims": [
+      {
+        "claim": "在普通 handler 内新增的同类型 handler 不在当前 emit 执行。",
+        "status": "supported",
+        "rationale": "emit 对当前 handlers 使用 slice 快照。",
+        "evidence": [
+          {
+            "path": "src/index.ts",
+            "start_line": 66,
+            "end_line": 73
+          },
+          {
+            "path": "src/index.ts",
+            "start_line": 103,
+            "end_line": 110
+          }
+        ],
+        "verified_evidence": [
+          {
+            "path": "src/index.ts",
+            "start_line": 66,
+            "end_line": 73,
+            "content": "\t\ton<Key extends keyof Events>(type: Key, handler: GenericEventHandler) {\n\t\t\tconst handlers: Array<GenericEventHandler> | undefined = all!.get(type);\n\t\t\tif (handlers) {\n\t\t\t\thandlers.push(handler);\n\t\t\t} else {\n\t\t\t\tall!.set(type, [handler] as EventHandlerList<Events[keyof Events]>);\n\t\t\t}\n\t\t},",
+            "content_sha256": "0a5bf296ae849cd916f0b4eedbc3b3dbd431acb523f64fede2782b79ff119004",
+            "visible_to_generator": true
+          },
+          {
+            "path": "src/index.ts",
+            "start_line": 103,
+            "end_line": 110,
+            "content": "\t\temit<Key extends keyof Events>(type: Key, evt?: Events[Key]) {\n\t\t\tlet handlers = all!.get(type);\n\t\t\tif (handlers) {\n\t\t\t\t(handlers as EventHandlerList<Events[keyof Events]>)\n\t\t\t\t\t.slice()\n\t\t\t\t\t.map((handler) => {\n\t\t\t\t\t\thandler(evt!);\n\t\t\t\t\t});",
+            "content_sha256": "bbee530a904e9d605eaa018ff4b88ac44a4f30a6e667398622a79339f4e0f8be",
+            "visible_to_generator": true
+          }
+        ]
+      }
+    ],
+    "notes": "答案仅为“不会执行”，虽结论正确且引用支持，未按问题解释 on 修改原数组和 emit 使用快照的机制。",
+    "key_points": null,
+    "candidate_sha256": "7bad3db6ad094755e9e7fd0ee7ba522b49cba21e93490ef7c776515aa81d6112",
+    "reviewer": "Codex (current session)",
+    "review_type": "model_assisted_nonblind_development_review",
+    "human_approved": false,
+    "training_eligible": false,
+    "solved": false
+  },
+  {
+    "candidate_id": "confirmation/reliability-confirm-02--fixed/answer",
+    "correctness": "correct",
+    "citation_support": "supported",
+    "completeness": "partial",
+    "abstention": "not_applicable",
+    "entry_scope": "correct",
+    "consistency": "consistent",
+    "claims": [
+      {
+        "claim": "on 支持 Symbol，直接保留 Map 键，符号测试核对了此行为。",
+        "status": "supported",
+        "rationale": "实现原样使用 type；测试使用 eventType 并断言得到 [foo]。",
+        "evidence": [
+          {
+            "path": "src/index.ts",
+            "start_line": 66,
+            "end_line": 73
+          },
+          {
+            "path": "test/index_test.ts",
+            "start_line": 26,
+            "end_line": 26
+          },
+          {
+            "path": "test/index_test.ts",
+            "start_line": 92,
+            "end_line": 96
+          }
+        ],
+        "verified_evidence": [
+          {
+            "path": "src/index.ts",
+            "start_line": 66,
+            "end_line": 73,
+            "content": "\t\ton<Key extends keyof Events>(type: Key, handler: GenericEventHandler) {\n\t\t\tconst handlers: Array<GenericEventHandler> | undefined = all!.get(type);\n\t\t\tif (handlers) {\n\t\t\t\thandlers.push(handler);\n\t\t\t} else {\n\t\t\t\tall!.set(type, [handler] as EventHandlerList<Events[keyof Events]>);\n\t\t\t}\n\t\t},",
+            "content_sha256": "0a5bf296ae849cd916f0b4eedbc3b3dbd431acb523f64fede2782b79ff119004",
+            "visible_to_generator": true
+          },
+          {
+            "path": "test/index_test.ts",
+            "start_line": 26,
+            "end_line": 26,
+            "content": "\tconst eventType = Symbol('eventType');",
+            "content_sha256": "8d857fead7ffb45098fb0679f0593d86421e30d77a9529b56c52cc267cc583dc",
+            "visible_to_generator": true
+          },
+          {
+            "path": "test/index_test.ts",
+            "start_line": 92,
+            "end_line": 96,
+            "content": "\t\tit('can take symbols for event types', () => {\n\t\t\tconst foo = () => {};\n\t\t\tinst.on(eventType, foo);\n\t\t\texpect(events.get(eventType)).to.deep.equal([foo]);\n\t\t});",
+            "content_sha256": "34896f2cfae6a2101410934b087cd19efd03555116eec1faee1ea1c89e30d35e",
+            "visible_to_generator": true
+          }
+        ]
+      }
+    ],
+    "notes": "提到了测试名称，但未解释输入和实际断言结果；要求说明对应测试如何验证，不能只给测试标题。",
+    "key_points": null,
+    "candidate_sha256": "61e39d456c317dd085c87115f4a393f509e103634e3a51c13d3bd5b96d139ff5",
+    "reviewer": "Codex (current session)",
+    "review_type": "model_assisted_nonblind_development_review",
+    "human_approved": false,
+    "training_eligible": false,
+    "solved": false
+  },
+  {
+    "candidate_id": "confirmation/reliability-confirm-02--sdk/answer",
+    "correctness": "correct",
+    "citation_support": "supported",
+    "completeness": "adequate",
+    "abstention": "not_applicable",
+    "entry_scope": "correct",
+    "consistency": "consistent",
+    "claims": [
+      {
+        "claim": "on 支持 Symbol，直接保留 Map 键，符号测试核对了此行为。",
+        "status": "supported",
+        "rationale": "实现原样使用 type；测试使用 eventType 并断言得到 [foo]。",
+        "evidence": [
+          {
+            "path": "src/index.ts",
+            "start_line": 66,
+            "end_line": 73
+          },
+          {
+            "path": "test/index_test.ts",
+            "start_line": 26,
+            "end_line": 26
+          },
+          {
+            "path": "test/index_test.ts",
+            "start_line": 92,
+            "end_line": 96
+          }
+        ],
+        "verified_evidence": [
+          {
+            "path": "src/index.ts",
+            "start_line": 66,
+            "end_line": 73,
+            "content": "\t\ton<Key extends keyof Events>(type: Key, handler: GenericEventHandler) {\n\t\t\tconst handlers: Array<GenericEventHandler> | undefined = all!.get(type);\n\t\t\tif (handlers) {\n\t\t\t\thandlers.push(handler);\n\t\t\t} else {\n\t\t\t\tall!.set(type, [handler] as EventHandlerList<Events[keyof Events]>);\n\t\t\t}\n\t\t},",
+            "content_sha256": "0a5bf296ae849cd916f0b4eedbc3b3dbd431acb523f64fede2782b79ff119004",
+            "visible_to_generator": true
+          },
+          {
+            "path": "test/index_test.ts",
+            "start_line": 26,
+            "end_line": 26,
+            "content": "\tconst eventType = Symbol('eventType');",
+            "content_sha256": "8d857fead7ffb45098fb0679f0593d86421e30d77a9529b56c52cc267cc583dc",
+            "visible_to_generator": true
+          },
+          {
+            "path": "test/index_test.ts",
+            "start_line": 92,
+            "end_line": 96,
+            "content": "\t\tit('can take symbols for event types', () => {\n\t\t\tconst foo = () => {};\n\t\t\tinst.on(eventType, foo);\n\t\t\texpect(events.get(eventType)).to.deep.equal([foo]);\n\t\t});",
+            "content_sha256": "34896f2cfae6a2101410934b087cd19efd03555116eec1faee1ea1c89e30d35e",
+            "visible_to_generator": true
+          }
+        ]
+      }
+    ],
+    "notes": "解释了测试使用 Symbol 对象作为同一 Map 键进行存取来验证原样保留，属于有效的测试机制说明；不机械要求抄写 expect、foo 或数组字面量。",
+    "key_points": null,
+    "candidate_sha256": "66c26efa565052f2e685de9fd82b7a062cb39211d26d34c24f66c4f33a3f22e1",
+    "reviewer": "Codex (current session)",
+    "review_type": "model_assisted_nonblind_development_review",
+    "human_approved": false,
+    "training_eligible": false,
+    "solved": true
+  },
+  {
+    "candidate_id": "confirmation/reliability-confirm-03--fixed/answer",
+    "correctness": "partially_correct",
+    "citation_support": "partial",
+    "completeness": "adequate",
+    "abstention": "not_applicable",
+    "entry_scope": "correct",
+    "consistency": "contradictory",
+    "claims": [
+      {
+        "claim": "长度2使用mask=1，255映射索引1。",
+        "status": "supported",
+        "rationale": "40–59支持这个分支。",
+        "evidence": [
+          {
+            "path": "index.js",
+            "start_line": 40,
+            "end_line": 59
+          }
+        ],
+        "verified_evidence": [
+          {
+            "path": "index.js",
+            "start_line": 40,
+            "end_line": 59,
+            "content": "  let safeByteCutoff = 256 - (256 % alphabet.length)\n\n  // Power-of-two alphabets can use `& mask` instead of modulo.\n  if (safeByteCutoff === 256) {\n    let mask = alphabet.length - 1\n\n    return (size = defaultSize) => {\n      if (!size) return ''\n      let id = ''\n      while (true) {\n        let bytes = getRandom(size)\n        // A compact alternative for `for (let i = 0; i < step; i++)`.\n        let i = size\n        while (i--) {\n          // Here, `& mask` is equivalent to `% alphabet.length`, but faster\n          id += alphabet[bytes[i] & mask]\n          if (id.length >= size) return id\n        }\n      }\n    }",
+            "content_sha256": "6d5df251b6d30c4da23f3aac576bb2ef3d9254e2c74096f04d881bb4a354dddd",
+            "visible_to_generator": true
+          }
+        ]
+      },
+      {
+        "claim": "长度3也会进入cutoff=256分支，且255先映射到索引0。",
+        "status": "contradicted",
+        "rationale": "长度3 cutoff=255，拒绝255；正文多处说法与最终结论冲突，且119属于customAlphabet而非customRandom。",
+        "evidence": [
+          {
+            "path": "index.js",
+            "start_line": 40,
+            "end_line": 44
+          },
+          {
+            "path": "index.js",
+            "start_line": 70,
+            "end_line": 82
+          }
+        ],
+        "verified_evidence": [
+          {
+            "path": "index.js",
+            "start_line": 40,
+            "end_line": 44,
+            "content": "  let safeByteCutoff = 256 - (256 % alphabet.length)\n\n  // Power-of-two alphabets can use `& mask` instead of modulo.\n  if (safeByteCutoff === 256) {\n    let mask = alphabet.length - 1",
+            "content_sha256": "e220a5ee0870277d7e24f86d71cdd5d71018161633ed07523239ef8280245d29",
+            "visible_to_generator": true
+          },
+          {
+            "path": "index.js",
+            "start_line": 70,
+            "end_line": 82,
+            "content": "  return (size = defaultSize) => {\n    if (!size) return ''\n    let id = ''\n    while (true) {\n      let bytes = getRandom(step)\n      // A compact alternative for `for (let i = 0; i < step; i++)`.\n      let i = step\n      while (i--) {\n        // Reject bytes >= `safeByteCutoff` to avoid modulo bias\n        // and give each symbol an equal chance.\n        if (bytes[i] < safeByteCutoff) {\n          id += alphabet[bytes[i] % alphabet.length]\n          if (id.length >= size) return id",
+            "content_sha256": "74b304061df655600cecb4991c1c4b6a8cc8444c95ebef27feba2dfe20368d09",
+            "visible_to_generator": false
+          }
+        ]
+      }
+    ],
+    "notes": "最后一句写对拒绝255，不能抵消前文错误计算、错误映射和相互矛盾。",
+    "key_points": null,
+    "candidate_sha256": "39e3d1ffa48cb9247ac232015c4bfb03b6bbf71cd397eb5aaac686751d031b4c",
+    "reviewer": "Codex (current session)",
+    "review_type": "model_assisted_nonblind_development_review",
+    "human_approved": false,
+    "training_eligible": false,
+    "solved": false
+  },
+  {
+    "candidate_id": "confirmation/reliability-confirm-03--sdk/answer",
+    "correctness": "correct",
+    "citation_support": "supported",
+    "completeness": "partial",
+    "abstention": "not_applicable",
+    "entry_scope": "correct",
+    "consistency": "consistent",
+    "claims": [
+      {
+        "claim": "长度2的cutoff=256、mask映射255到第二字符；长度3 cutoff=255拒绝255。",
+        "status": "supported",
+        "rationale": "原代码分别走位掩码及阈值拒绝分支。",
+        "evidence": [
+          {
+            "path": "index.js",
+            "start_line": 40,
+            "end_line": 59
+          },
+          {
+            "path": "index.js",
+            "start_line": 70,
+            "end_line": 82
+          }
+        ],
+        "verified_evidence": [
+          {
+            "path": "index.js",
+            "start_line": 40,
+            "end_line": 59,
+            "content": "  let safeByteCutoff = 256 - (256 % alphabet.length)\n\n  // Power-of-two alphabets can use `& mask` instead of modulo.\n  if (safeByteCutoff === 256) {\n    let mask = alphabet.length - 1\n\n    return (size = defaultSize) => {\n      if (!size) return ''\n      let id = ''\n      while (true) {\n        let bytes = getRandom(size)\n        // A compact alternative for `for (let i = 0; i < step; i++)`.\n        let i = size\n        while (i--) {\n          // Here, `& mask` is equivalent to `% alphabet.length`, but faster\n          id += alphabet[bytes[i] & mask]\n          if (id.length >= size) return id\n        }\n      }\n    }",
+            "content_sha256": "6d5df251b6d30c4da23f3aac576bb2ef3d9254e2c74096f04d881bb4a354dddd",
+            "visible_to_generator": true
+          },
+          {
+            "path": "index.js",
+            "start_line": 70,
+            "end_line": 82,
+            "content": "  return (size = defaultSize) => {\n    if (!size) return ''\n    let id = ''\n    while (true) {\n      let bytes = getRandom(step)\n      // A compact alternative for `for (let i = 0; i < step; i++)`.\n      let i = step\n      while (i--) {\n        // Reject bytes >= `safeByteCutoff` to avoid modulo bias\n        // and give each symbol an equal chance.\n        if (bytes[i] < safeByteCutoff) {\n          id += alphabet[bytes[i] % alphabet.length]\n          if (id.length >= size) return id",
+            "content_sha256": "74b304061df655600cecb4991c1c4b6a8cc8444c95ebef27feba2dfe20368d09",
+            "visible_to_generator": false
+          }
+        ]
+      }
+    ],
+    "notes": "正确说明两分支和255处理，但题目还要求随机字节到字符的映射；没有解释长度3对合格字节使用%3，完整性不足。",
+    "key_points": null,
+    "candidate_sha256": "73def9412a2da988e7220455aa4fa8ef4d519c754f1412b7ef925380d80c9303",
+    "reviewer": "Codex (current session)",
+    "review_type": "model_assisted_nonblind_development_review",
+    "human_approved": false,
+    "training_eligible": false,
+    "solved": false
+  },
+  {
+    "candidate_id": "confirmation/reliability-confirm-04--fixed/answer",
+    "correctness": "correct",
+    "citation_support": "partial",
+    "completeness": "partial",
+    "abstention": "not_applicable",
+    "entry_scope": "correct",
+    "consistency": "consistent",
+    "claims": [
+      {
+        "claim": "默认长度4、显式2返回2、显式0返回空串。",
+        "status": "supported",
+        "rationale": "完整实现支持这些结果；已引用范围只含默认参数和零返回，缺少实际substring返回路径。",
+        "evidence": [
+          {
+            "path": "index.js",
+            "start_line": 96,
+            "end_line": 110
+          },
+          {
+            "path": "index.js",
+            "start_line": 133,
+            "end_line": 175
+          }
+        ],
+        "verified_evidence": [
+          {
+            "path": "index.js",
+            "start_line": 96,
+            "end_line": 110,
+            "content": "export function customAlphabet(alphabet, defaultSize = 21) {\n  if (\n    typeof alphabet !== 'string' ||\n    !alphabet ||\n    alphabet.length > 256\n  ) {\n    return customRandom(alphabet, defaultSize, random)\n  }\n  for (let i = 0; i < alphabet.length; i++) {\n    if (alphabet.charCodeAt(i) > 255) {\n      // The fast path below writes char codes to a byte buffer,\n      // so it supports only single-byte characters.\n      return customRandom(alphabet, defaultSize, random)\n    }\n  }",
+            "content_sha256": "48da7f3bfe0651cd773018e3ca9dfb5ae99ef6c6b0d42fa31308be8bad51d1a2",
+            "visible_to_generator": true
+          },
+          {
+            "path": "index.js",
+            "start_line": 133,
+            "end_line": 175,
+            "content": "  return (size = defaultSize) => {\n    // `|=` convert `size` to number to prevent `valueOf` abusing\n    // and pool offset pollution\n    size |= 0\n    if (size < 0) throw new RangeError('Wrong ID size')\n    if (size === 0) return ''\n    if (poolOffset + size > pool.length) {\n      let target = Math.max(poolNext, size)\n      poolNext = Math.min(target * 16, POOL_MAX)\n      let buffer = Buffer.allocUnsafe(target)\n      if (mask === alphabetLen - 1) {\n        // Power-of-two alphabets like `urlAlphabet` accept every byte,\n        // so random bytes are translated in place without rejections.\n        fillRandom(buffer)\n        for (let i = 0; i < target; i++) {\n          buffer[i] = charCodes[buffer[i] & mask]\n        }\n      } else {\n        // Rejection sampling accepts `alphabetLen` of every `mask + 1`\n        // random bytes. `1.6` requests extra bytes to cover\n        // unlucky streaks in most fills.\n        let randomBytes = Buffer.allocUnsafe(\n          Math.ceil((1.6 * (mask + 1) * target) / alphabetLen)\n        )\n        let accepted = 0\n        while (accepted < target) {\n          fillRandom(randomBytes)\n          for (let i = 0; i < randomBytes.length; i++) {\n            let index = randomBytes[i] & mask\n            if (index < alphabetLen) {\n              buffer[accepted++] = charCodes[index]\n              if (accepted === target) break\n            }\n          }\n        }\n      }\n      pool = buffer.toString('latin1')\n      poolOffset = 0\n    }\n    poolOffset += size\n    return pool.substring(poolOffset - size, poolOffset)\n  }\n}",
+            "content_sha256": "57556853b8e129178bc8e7bf217652b272868d88b8b35c4fe3c5e3725cb9cf5a",
+            "visible_to_generator": false
+          }
+        ]
+      }
+    ],
+    "notes": "要求沿参数与截取路径解释，正文仅列结果；实际上下文止于145，没有169–173的截取实现，不能视为引用充分。",
+    "key_points": null,
+    "candidate_sha256": "a12a4df727fc487d014394292328b07bb0eee515c1e5bf678a526d10e6a40ca3",
+    "reviewer": "Codex (current session)",
+    "review_type": "model_assisted_nonblind_development_review",
+    "human_approved": false,
+    "training_eligible": false,
+    "solved": false
+  },
+  {
+    "candidate_id": "confirmation/reliability-confirm-04--sdk/answer",
+    "correctness": "correct",
+    "citation_support": "supported",
+    "completeness": "partial",
+    "abstention": "not_applicable",
+    "entry_scope": "correct",
+    "consistency": "consistent",
+    "claims": [
+      {
+        "claim": "默认长度4，显式2保留2，0返回空串。",
+        "status": "supported",
+        "rationale": "SDK补读96–175，引用包含默认参数、零分支和substring。",
+        "evidence": [
+          {
+            "path": "index.js",
+            "start_line": 133,
+            "end_line": 175
+          }
+        ],
+        "verified_evidence": [
+          {
+            "path": "index.js",
+            "start_line": 133,
+            "end_line": 175,
+            "content": "  return (size = defaultSize) => {\n    // `|=` convert `size` to number to prevent `valueOf` abusing\n    // and pool offset pollution\n    size |= 0\n    if (size < 0) throw new RangeError('Wrong ID size')\n    if (size === 0) return ''\n    if (poolOffset + size > pool.length) {\n      let target = Math.max(poolNext, size)\n      poolNext = Math.min(target * 16, POOL_MAX)\n      let buffer = Buffer.allocUnsafe(target)\n      if (mask === alphabetLen - 1) {\n        // Power-of-two alphabets like `urlAlphabet` accept every byte,\n        // so random bytes are translated in place without rejections.\n        fillRandom(buffer)\n        for (let i = 0; i < target; i++) {\n          buffer[i] = charCodes[buffer[i] & mask]\n        }\n      } else {\n        // Rejection sampling accepts `alphabetLen` of every `mask + 1`\n        // random bytes. `1.6` requests extra bytes to cover\n        // unlucky streaks in most fills.\n        let randomBytes = Buffer.allocUnsafe(\n          Math.ceil((1.6 * (mask + 1) * target) / alphabetLen)\n        )\n        let accepted = 0\n        while (accepted < target) {\n          fillRandom(randomBytes)\n          for (let i = 0; i < randomBytes.length; i++) {\n            let index = randomBytes[i] & mask\n            if (index < alphabetLen) {\n              buffer[accepted++] = charCodes[index]\n              if (accepted === target) break\n            }\n          }\n        }\n      }\n      pool = buffer.toString('latin1')\n      poolOffset = 0\n    }\n    poolOffset += size\n    return pool.substring(poolOffset - size, poolOffset)\n  }\n}",
+            "content_sha256": "57556853b8e129178bc8e7bf217652b272868d88b8b35c4fe3c5e3725cb9cf5a",
+            "visible_to_generator": true
+          }
+        ]
+      }
+    ],
+    "notes": "工具已取回固定版缺少的截取路径，但最终只重复长度结果，没有解释默认参数和poolOffset/substring如何决定长度。",
+    "key_points": null,
+    "candidate_sha256": "210e5760f1ad059ed46ca3f2d397faa7f74bbc6bb049052cbe67eb2244aee0d7",
+    "reviewer": "Codex (current session)",
+    "review_type": "model_assisted_nonblind_development_review",
+    "human_approved": false,
+    "training_eligible": false,
+    "solved": false
+  },
+  {
+    "candidate_id": "confirmation/reliability-confirm-05--fixed/answer",
+    "correctness": "correct",
+    "citation_support": "partial",
+    "completeness": "adequate",
+    "abstention": "not_applicable",
+    "entry_scope": "correct",
+    "consistency": "consistent",
+    "claims": [
+      {
+        "claim": "无标签匹配返回None，成功匹配后取最早next_run。",
+        "status": "supported",
+        "rationale": "get_jobs按tag筛选，get_next_run空结果返回None，否则min(filtered).next_run。",
+        "evidence": [
+          {
+            "path": "schedule/__init__.py",
+            "start_line": 122,
+            "end_line": 133
+          },
+          {
+            "path": "schedule/__init__.py",
+            "start_line": 188,
+            "end_line": 193
+          }
+        ],
+        "verified_evidence": [
+          {
+            "path": "schedule/__init__.py",
+            "start_line": 122,
+            "end_line": 133,
+            "content": "    def get_jobs(self, tag: Optional[Hashable] = None) -> List[\"Job\"]:\n        \"\"\"\n        Gets scheduled jobs marked with the given tag, or all jobs\n        if tag is omitted.\n\n        :param tag: An identifier used to identify a subset of\n                    jobs to retrieve\n        \"\"\"\n        if tag is None:\n            return self.jobs[:]\n        else:\n            return [job for job in self.jobs if tag in job.tags]",
+            "content_sha256": "3b203d4e5005e3c3be275304e9fce13d28bb27a7128ad849faa7f33725e6e1be",
+            "visible_to_generator": true
+          },
+          {
+            "path": "schedule/__init__.py",
+            "start_line": 188,
+            "end_line": 193,
+            "content": "        if not self.jobs:\n            return None\n        jobs_filtered = self.get_jobs(tag)\n        if not jobs_filtered:\n            return None\n        return min(jobs_filtered).next_run",
+            "content_sha256": "92ed19557eb95204034fb2b9e0400c415623edbe5ba5064cf369c4d37afd6ffb",
+            "visible_to_generator": true
+          }
+        ]
+      }
+    ],
+    "notes": "内容覆盖过滤、空结果和min选择；引用188–192停在返回None，没有包含支撑min声明的193，故引用支持不完整。",
+    "key_points": null,
+    "candidate_sha256": "7d357609feca1fc798a485a10318df0dfd50367e7142a555111e948eedbb52bb",
+    "reviewer": "Codex (current session)",
+    "review_type": "model_assisted_nonblind_development_review",
+    "human_approved": false,
+    "training_eligible": false,
+    "solved": false
+  },
+  {
+    "candidate_id": "confirmation/reliability-confirm-05--sdk/answer",
+    "correctness": "correct",
+    "citation_support": "supported",
+    "completeness": "partial",
+    "abstention": "not_applicable",
+    "entry_scope": "correct",
+    "consistency": "consistent",
+    "claims": [
+      {
+        "claim": "无匹配返回None，有匹配选择next_run最小时间。",
+        "status": "supported",
+        "rationale": "191–193支持两个返回分支。",
+        "evidence": [
+          {
+            "path": "schedule/__init__.py",
+            "start_line": 188,
+            "end_line": 193
+          }
+        ],
+        "verified_evidence": [
+          {
+            "path": "schedule/__init__.py",
+            "start_line": 188,
+            "end_line": 193,
+            "content": "        if not self.jobs:\n            return None\n        jobs_filtered = self.get_jobs(tag)\n        if not jobs_filtered:\n            return None\n        return min(jobs_filtered).next_run",
+            "content_sha256": "92ed19557eb95204034fb2b9e0400c415623edbe5ba5064cf369c4d37afd6ffb",
+            "visible_to_generator": true
+          }
+        ]
+      }
+    ],
+    "notes": "未回答如何调用get_jobs(tag)获得匹配任务，虽然源码190行已进入最终上下文；跨函数关联解释遗漏。",
+    "key_points": null,
+    "candidate_sha256": "bd59278d968c7f88ca03ae0d97b4ab169fbb6a32f61973f3e2ec242a6e4c33a6",
+    "reviewer": "Codex (current session)",
+    "review_type": "model_assisted_nonblind_development_review",
+    "human_approved": false,
+    "training_eligible": false,
+    "solved": false
+  },
+  {
+    "candidate_id": "confirmation/reliability-confirm-06--fixed/answer",
+    "correctness": "partially_correct",
+    "citation_support": "partial",
+    "completeness": "partial",
+    "abstention": "not_applicable",
+    "entry_scope": "correct",
+    "consistency": "consistent",
+    "claims": [
+      {
+        "claim": "every只构造并返回未配置Job。",
+        "status": "supported",
+        "rationale": "162–170明确构造后返回，不追加jobs。",
+        "evidence": [
+          {
+            "path": "schedule/__init__.py",
+            "start_line": 162,
+            "end_line": 170
+          }
+        ],
+        "verified_evidence": [
+          {
+            "path": "schedule/__init__.py",
+            "start_line": 162,
+            "end_line": 170,
+            "content": "    def every(self, interval: int = 1) -> \"Job\":\n        \"\"\"\n        Schedule a new periodic job.\n\n        :param interval: A quantity of a certain time unit\n        :return: An unconfigured :class:`Job <Job>`\n        \"\"\"\n        job = Job(interval, self)\n        return job",
+            "content_sha256": "ffb91d9eadc493604edeceeb8cca8e71d1aa7f6d07e04af7a03a2089de23e80d",
+            "visible_to_generator": true
+          }
+        ]
+      },
+      {
+        "claim": "do调用self.scheduler.add_job(self)登记。",
+        "status": "contradicted",
+        "rationale": "do实际直接self.scheduler.jobs.append(self)，未调用该虚构方法。",
+        "evidence": [
+          {
+            "path": "schedule/__init__.py",
+            "start_line": 644,
+            "end_line": 664
+          }
+        ],
+        "verified_evidence": [
+          {
+            "path": "schedule/__init__.py",
+            "start_line": 644,
+            "end_line": 664,
+            "content": "    def do(self, job_func: Callable, *args, **kwargs):\n        \"\"\"\n        Specifies the job_func that should be called every time the\n        job runs.\n\n        Any additional arguments are passed on to job_func when\n        the job runs.\n\n        :param job_func: The function to be scheduled\n        :return: The invoked job instance\n        \"\"\"\n        self.job_func = functools.partial(job_func, *args, **kwargs)\n        functools.update_wrapper(self.job_func, job_func)\n        self._schedule_next_run()\n        if self.scheduler is None:\n            raise ScheduleError(\n                \"Unable to a add job to schedule. \"\n                \"Job is not associated with an scheduler\"\n            )\n        self.scheduler.jobs.append(self)\n        return self",
+            "content_sha256": "29650fd7a5e028bcd3178da29d9b0b5c8f5e2896e67e38f88c1186d68c48ba18",
+            "visible_to_generator": false
+          }
+        ]
+      }
+    ],
+    "notes": "还漏掉functools.partial绑定回调/参数及计算next_run；引用Job类声明不能支持do机制。",
+    "key_points": null,
+    "candidate_sha256": "8a1e8042f95abf426a4c499791c2128cd8fbfff23712960b0bd066f16790f8a7",
+    "reviewer": "Codex (current session)",
+    "review_type": "model_assisted_nonblind_development_review",
+    "human_approved": false,
+    "training_eligible": false,
+    "solved": false
+  },
+  {
+    "candidate_id": "confirmation/reliability-confirm-06--sdk/answer",
+    "correctness": "correct",
+    "citation_support": "supported",
+    "completeness": "partial",
+    "abstention": "not_applicable",
+    "entry_scope": "correct",
+    "consistency": "consistent",
+    "claims": [
+      {
+        "claim": "every本身不登记，关联Scheduler的Job在do中加入列表。",
+        "status": "supported",
+        "rationale": "162–170与644–664支持这个生命周期区别。",
+        "evidence": [
+          {
+            "path": "schedule/__init__.py",
+            "start_line": 162,
+            "end_line": 170
+          },
+          {
+            "path": "schedule/__init__.py",
+            "start_line": 644,
+            "end_line": 664
+          }
+        ],
+        "verified_evidence": [
+          {
+            "path": "schedule/__init__.py",
+            "start_line": 162,
+            "end_line": 170,
+            "content": "    def every(self, interval: int = 1) -> \"Job\":\n        \"\"\"\n        Schedule a new periodic job.\n\n        :param interval: A quantity of a certain time unit\n        :return: An unconfigured :class:`Job <Job>`\n        \"\"\"\n        job = Job(interval, self)\n        return job",
+            "content_sha256": "ffb91d9eadc493604edeceeb8cca8e71d1aa7f6d07e04af7a03a2089de23e80d",
+            "visible_to_generator": true
+          },
+          {
+            "path": "schedule/__init__.py",
+            "start_line": 644,
+            "end_line": 664,
+            "content": "    def do(self, job_func: Callable, *args, **kwargs):\n        \"\"\"\n        Specifies the job_func that should be called every time the\n        job runs.\n\n        Any additional arguments are passed on to job_func when\n        the job runs.\n\n        :param job_func: The function to be scheduled\n        :return: The invoked job instance\n        \"\"\"\n        self.job_func = functools.partial(job_func, *args, **kwargs)\n        functools.update_wrapper(self.job_func, job_func)\n        self._schedule_next_run()\n        if self.scheduler is None:\n            raise ScheduleError(\n                \"Unable to a add job to schedule. \"\n                \"Job is not associated with an scheduler\"\n            )\n        self.scheduler.jobs.append(self)\n        return self",
+            "content_sha256": "29650fd7a5e028bcd3178da29d9b0b5c8f5e2896e67e38f88c1186d68c48ba18",
+            "visible_to_generator": true
+          }
+        ]
+      }
+    ],
+    "notes": "补查找到了do，避免虚构add_job；但没有回答如何保存回调与参数、实际追加方式及返回self，未完成题目要点。",
+    "key_points": null,
+    "candidate_sha256": "61e447cdd3e60db2a25fbc39f991413f349d51dccbbb4faf8d3e1dbbb447fb58",
+    "reviewer": "Codex (current session)",
+    "review_type": "model_assisted_nonblind_development_review",
+    "human_approved": false,
+    "training_eligible": false,
+    "solved": false
+  },
+  {
+    "candidate_id": "confirmation/reliability-confirm-07--fixed/answer",
+    "correctness": "incorrect",
+    "citation_support": "unsupported",
+    "completeness": "partial",
+    "abstention": "not_applicable",
+    "entry_scope": "correct",
+    "consistency": "consistent",
+    "claims": [
+      {
+        "claim": "默认pred=None时0是真值，first_true返回0。",
+        "status": "contradicted",
+        "rationale": "filter(None,...)按真值筛选；0和False均假，首个保留项是2。源码示例range(10)也返回1而非0。",
+        "evidence": [
+          {
+            "path": "more_itertools/recipes.py",
+            "start_line": 571,
+            "end_line": 588
+          }
+        ],
+        "verified_evidence": [
+          {
+            "path": "more_itertools/recipes.py",
+            "start_line": 571,
+            "end_line": 588,
+            "content": "def first_true(iterable, default=None, pred=None):\n    \"\"\"\n    Returns the first true value in the iterable.\n\n    If no true value is found, returns *default*\n\n    If *pred* is not None, returns the first item for which\n    ``pred(item) == True`` .\n\n        >>> first_true(range(10))\n        1\n        >>> first_true(range(10), pred=lambda x: x > 5)\n        6\n        >>> first_true(range(10), default='missing', pred=lambda x: x > 9)\n        'missing'\n\n    \"\"\"\n    return next(filter(pred, iterable), default)",
+            "content_sha256": "406048ff2d04fb0542a59badd30d7ceb1a5a97ca62f890dbe743e5d69a8d23e8",
+            "visible_to_generator": true
+          }
+        ]
+      }
+    ],
+    "notes": "基本布尔语义与返回值均错，也没有解释显式谓词为何能够保留0。",
+    "key_points": null,
+    "candidate_sha256": "2353553a220cd376e879ac4f15a9379b2892baa12c209a95de2f0d8d5b3663cf",
+    "reviewer": "Codex (current session)",
+    "review_type": "model_assisted_nonblind_development_review",
+    "human_approved": false,
+    "training_eligible": false,
+    "solved": false
+  },
+  {
+    "candidate_id": "confirmation/reliability-confirm-07--sdk/answer",
+    "correctness": "correct",
+    "citation_support": "supported",
+    "completeness": "partial",
+    "abstention": "not_applicable",
+    "entry_scope": "correct",
+    "consistency": "consistent",
+    "claims": [
+      {
+        "claim": "默认得到2，显式x==0得到0且不丢弃。",
+        "status": "supported",
+        "rationale": "next(filter(pred, iterable), default)支持这两个结果。",
+        "evidence": [
+          {
+            "path": "more_itertools/recipes.py",
+            "start_line": 571,
+            "end_line": 588
+          }
+        ],
+        "verified_evidence": [
+          {
+            "path": "more_itertools/recipes.py",
+            "start_line": 571,
+            "end_line": 588,
+            "content": "def first_true(iterable, default=None, pred=None):\n    \"\"\"\n    Returns the first true value in the iterable.\n\n    If no true value is found, returns *default*\n\n    If *pred* is not None, returns the first item for which\n    ``pred(item) == True`` .\n\n        >>> first_true(range(10))\n        1\n        >>> first_true(range(10), pred=lambda x: x > 5)\n        6\n        >>> first_true(range(10), default='missing', pred=lambda x: x > 9)\n        'missing'\n\n    \"\"\"\n    return next(filter(pred, iterable), default)",
+            "content_sha256": "406048ff2d04fb0542a59badd30d7ceb1a5a97ca62f890dbe743e5d69a8d23e8",
+            "visible_to_generator": true
+          }
+        ]
+      }
+    ],
+    "notes": "值与条件区别正确；问题要求结合实现解释，未说明filter依据谓词结果保留原元素、不会再次对0作真值过滤。",
+    "key_points": null,
+    "candidate_sha256": "48914c717c68e6e8c812a2dc3ccc2577d1b280de9b16c135828b368da2d6518a",
+    "reviewer": "Codex (current session)",
+    "review_type": "model_assisted_nonblind_development_review",
+    "human_approved": false,
+    "training_eligible": false,
+    "solved": false
+  },
+  {
+    "candidate_id": "confirmation/reliability-confirm-08--fixed/answer",
+    "correctness": "correct",
+    "citation_support": "supported",
+    "completeness": "adequate",
+    "abstention": "not_applicable",
+    "entry_scope": "correct",
+    "consistency": "consistent",
+    "claims": [
+      {
+        "claim": "空输入和按casefold后全相等输入均True，不先排序而用groupby。",
+        "status": "supported",
+        "rationale": "237–242按相邻分组，第二组才False，空输入落到末尾True。",
+        "evidence": [
+          {
+            "path": "more_itertools/recipes.py",
+            "start_line": 219,
+            "end_line": 242
+          }
+        ],
+        "verified_evidence": [
+          {
+            "path": "more_itertools/recipes.py",
+            "start_line": 219,
+            "end_line": 242,
+            "content": "def all_equal(iterable, key=None):\n    \"\"\"\n    Returns ``True`` if all the elements are equal to each other.\n\n        >>> all_equal('aaaa')\n        True\n        >>> all_equal('aaab')\n        False\n\n    A function that accepts a single argument and returns a transformed version\n    of each input item can be specified with *key*:\n\n        >>> all_equal('AaaA', key=str.casefold)\n        True\n        >>> all_equal([1, 2, 3], key=lambda x: x < 10)\n        True\n\n    \"\"\"\n    iterator = groupby(iterable, key)\n    for first in iterator:\n        for second in iterator:\n            return False\n        return True\n    return True",
+            "content_sha256": "41d6a075670a2470e02d82df534a015abdf6ae8b7dc3fde407c2fb03ed3f6e51",
+            "visible_to_generator": true
+          }
+        ]
+      }
+    ],
+    "notes": "两个结果和无排序机制均覆盖；不要求逐字抄写所有循环语句。",
+    "key_points": null,
+    "candidate_sha256": "eb2057f90ea84f8ad2ad85c2452d4bec5141310136861507a284cc7d6e439297",
+    "reviewer": "Codex (current session)",
+    "review_type": "model_assisted_nonblind_development_review",
+    "human_approved": false,
+    "training_eligible": false,
+    "solved": true
+  },
+  {
+    "candidate_id": "confirmation/reliability-confirm-08--sdk/answer",
+    "correctness": "correct",
+    "citation_support": "supported",
+    "completeness": "adequate",
+    "abstention": "not_applicable",
+    "entry_scope": "correct",
+    "consistency": "consistent",
+    "claims": [
+      {
+        "claim": "空输入和按casefold后全相等输入均True，不先排序而用groupby。",
+        "status": "supported",
+        "rationale": "237–242按相邻分组，第二组才False，空输入落到末尾True。",
+        "evidence": [
+          {
+            "path": "more_itertools/recipes.py",
+            "start_line": 219,
+            "end_line": 242
+          }
+        ],
+        "verified_evidence": [
+          {
+            "path": "more_itertools/recipes.py",
+            "start_line": 219,
+            "end_line": 242,
+            "content": "def all_equal(iterable, key=None):\n    \"\"\"\n    Returns ``True`` if all the elements are equal to each other.\n\n        >>> all_equal('aaaa')\n        True\n        >>> all_equal('aaab')\n        False\n\n    A function that accepts a single argument and returns a transformed version\n    of each input item can be specified with *key*:\n\n        >>> all_equal('AaaA', key=str.casefold)\n        True\n        >>> all_equal([1, 2, 3], key=lambda x: x < 10)\n        True\n\n    \"\"\"\n    iterator = groupby(iterable, key)\n    for first in iterator:\n        for second in iterator:\n            return False\n        return True\n    return True",
+            "content_sha256": "41d6a075670a2470e02d82df534a015abdf6ae8b7dc3fde407c2fb03ed3f6e51",
+            "visible_to_generator": true
+          }
+        ]
+      }
+    ],
+    "notes": "两个结果和无排序机制均覆盖；不要求逐字抄写所有循环语句。",
+    "key_points": null,
+    "candidate_sha256": "20105b93303f5941d5b4e5d3d8f81dc3a097747f69c466b55265ba74f7f99d28",
+    "reviewer": "Codex (current session)",
+    "review_type": "model_assisted_nonblind_development_review",
+    "human_approved": false,
+    "training_eligible": false,
+    "solved": true
+  },
+  {
+    "candidate_id": "confirmation/reliability-confirm-09--fixed/answer",
+    "correctness": "partially_correct",
+    "citation_support": "partial",
+    "completeness": "adequate",
+    "abstention": "not_applicable",
+    "entry_scope": "correct",
+    "consistency": "consistent",
+    "claims": [
+      {
+        "claim": "Decimal/UUID转str，未知普通对象抛TypeError。",
+        "status": "supported",
+        "rationale": "112–121支持返回与兜底异常。",
+        "evidence": [
+          {
+            "path": "src/flask/json/provider.py",
+            "start_line": 108,
+            "end_line": 121
+          }
+        ],
+        "verified_evidence": [
+          {
+            "path": "src/flask/json/provider.py",
+            "start_line": 108,
+            "end_line": 121,
+            "content": "def _default(o: t.Any) -> t.Any:\n    if isinstance(o, date):\n        return http_date(o)\n\n    if isinstance(o, (decimal.Decimal, uuid.UUID)):\n        return str(o)\n\n    if dataclasses and dataclasses.is_dataclass(o):\n        return dataclasses.asdict(o)  # type: ignore[arg-type]\n\n    if hasattr(o, \"__html__\"):\n        return str(o.__html__())\n\n    raise TypeError(f\"Object of type {type(o).__name__} is not JSON serializable\")",
+            "content_sha256": "ad6a5aea66420f07ab5a7a71dcbf7f7090f7e86e87c88f87b08977f3a7e8dd36",
+            "visible_to_generator": true
+          }
+        ]
+      },
+      {
+        "claim": "自动转null违背Flask设计原则，作者设计为明确报错。",
+        "status": "unsupported",
+        "rationale": "代码能证明会抛错，不能独立证明额外陈述的设计原则或作者意图。",
+        "evidence": [
+          {
+            "path": "src/flask/json/provider.py",
+            "start_line": 108,
+            "end_line": 141
+          }
+        ],
+        "verified_evidence": [
+          {
+            "path": "src/flask/json/provider.py",
+            "start_line": 108,
+            "end_line": 141,
+            "content": "def _default(o: t.Any) -> t.Any:\n    if isinstance(o, date):\n        return http_date(o)\n\n    if isinstance(o, (decimal.Decimal, uuid.UUID)):\n        return str(o)\n\n    if dataclasses and dataclasses.is_dataclass(o):\n        return dataclasses.asdict(o)  # type: ignore[arg-type]\n\n    if hasattr(o, \"__html__\"):\n        return str(o.__html__())\n\n    raise TypeError(f\"Object of type {type(o).__name__} is not JSON serializable\")\n\n\nclass DefaultJSONProvider(JSONProvider):\n    \"\"\"Provide JSON operations using Python's built-in :mod:`json`\n    library. Serializes the following additional data types:\n\n    -   :class:`datetime.datetime` and :class:`datetime.date` are\n        serialized to :rfc:`822` strings. This is the same as the HTTP\n        date format.\n    -   :class:`uuid.UUID` is serialized to a string.\n    -   :class:`dataclasses.dataclass` is passed to\n        :func:`dataclasses.asdict`.\n    -   :class:`~markupsafe.Markup` (or any object with a ``__html__``\n        method) will call the ``__html__`` method to get a string.\n    \"\"\"\n\n    default: t.Callable[[t.Any], t.Any] = staticmethod(_default)\n    \"\"\"Apply this function to any object that :meth:`json.dumps` does\n    not know how to serialize. It should return a valid JSON type or\n    raise a ``TypeError``.",
+            "content_sha256": "079be52cf6371c7196a9d05169c052f1bed3bab457c9217bfb22c40b13e627a1",
+            "visible_to_generator": false
+          }
+        ]
+      }
+    ],
+    "notes": "也未实际获取138行default=staticmethod(_default)绑定；关联断言的来源不完整。",
+    "key_points": null,
+    "candidate_sha256": "699eb65803174b4cdf925cea1cdec5d49c0f3ddb5e53fc2528b906a0148ecf73",
+    "reviewer": "Codex (current session)",
+    "review_type": "model_assisted_nonblind_development_review",
+    "human_approved": false,
+    "training_eligible": false,
+    "solved": false
+  },
+  {
+    "candidate_id": "confirmation/reliability-confirm-09--sdk/answer",
+    "correctness": "correct",
+    "citation_support": "partial",
+    "completeness": "adequate",
+    "abstention": "not_applicable",
+    "entry_scope": "correct",
+    "consistency": "consistent",
+    "claims": [
+      {
+        "claim": "默认逻辑把Decimal/UUID转str、未知对象抛TypeError。",
+        "status": "supported",
+        "rationale": "112–121支持具体类型行为。",
+        "evidence": [
+          {
+            "path": "src/flask/json/provider.py",
+            "start_line": 108,
+            "end_line": 121
+          }
+        ],
+        "verified_evidence": [
+          {
+            "path": "src/flask/json/provider.py",
+            "start_line": 108,
+            "end_line": 121,
+            "content": "def _default(o: t.Any) -> t.Any:\n    if isinstance(o, date):\n        return http_date(o)\n\n    if isinstance(o, (decimal.Decimal, uuid.UUID)):\n        return str(o)\n\n    if dataclasses and dataclasses.is_dataclass(o):\n        return dataclasses.asdict(o)  # type: ignore[arg-type]\n\n    if hasattr(o, \"__html__\"):\n        return str(o.__html__())\n\n    raise TypeError(f\"Object of type {type(o).__name__} is not JSON serializable\")",
+            "content_sha256": "ad6a5aea66420f07ab5a7a71dcbf7f7090f7e86e87c88f87b08977f3a7e8dd36",
+            "visible_to_generator": true
+          }
+        ]
+      },
+      {
+        "claim": "default的默认实现对应_default；自定义处理器可在兜底时调用基类default。",
+        "status": "partial",
+        "rationale": "测试228–232确有自定义处理器回退基类的示例；但绑定关系在138，未进入模型上下文和引用。",
+        "evidence": [
+          {
+            "path": "src/flask/json/provider.py",
+            "start_line": 138,
+            "end_line": 141
+          },
+          {
+            "path": "tests/test_json.py",
+            "start_line": 228,
+            "end_line": 232
+          }
+        ],
+        "verified_evidence": [
+          {
+            "path": "src/flask/json/provider.py",
+            "start_line": 138,
+            "end_line": 141,
+            "content": "    default: t.Callable[[t.Any], t.Any] = staticmethod(_default)\n    \"\"\"Apply this function to any object that :meth:`json.dumps` does\n    not know how to serialize. It should return a valid JSON type or\n    raise a ``TypeError``.",
+            "content_sha256": "2d349e54eba4901ff8ba31e5a1198e40d50d1ee849f4e49368f013fc0cee0286",
+            "visible_to_generator": false
+          },
+          {
+            "path": "tests/test_json.py",
+            "start_line": 228,
+            "end_line": 232,
+            "content": "    def default(o):\n        if isinstance(o, X):\n            return f\"<{o.val}>\"\n\n        return DefaultJSONProvider.default(o)",
+            "content_sha256": "700e831e4753543fa01d7a9c65a77ac2e3fe4b6ce07eee7c642474530c0f5589",
+            "visible_to_generator": true
+          }
+        ]
+      }
+    ],
+    "notes": "将静默null的后果视为一般解释，不当作作者意图；主要事实成立，但缺少default/_default绑定的直接引用支持。",
+    "key_points": null,
+    "candidate_sha256": "90e6e1c3ee67729b2a572bd8b481c93932e174d0758cf490331b487fd4c13215",
+    "reviewer": "Codex (current session)",
+    "review_type": "model_assisted_nonblind_development_review",
+    "human_approved": false,
+    "training_eligible": false,
+    "solved": false
+  },
+  {
+    "candidate_id": "confirmation/reliability-confirm-10--fixed/answer",
+    "correctness": "correct",
+    "citation_support": "supported",
+    "completeness": "adequate",
+    "abstention": "not_applicable",
+    "entry_scope": "correct",
+    "consistency": "consistent",
+    "claims": [
+      {
+        "claim": "record_once登记延迟包装器，record负责追加，wrapper按first_registration决定是否调用func(state)。",
+        "status": "supported",
+        "rationale": "record追加传入函数，record_once用wrapper包原func再登记；True执行、False跳过。",
+        "evidence": [
+          {
+            "path": "src/flask/sansio/blueprints.py",
+            "start_line": 223,
+            "end_line": 244
+          }
+        ],
+        "verified_evidence": [
+          {
+            "path": "src/flask/sansio/blueprints.py",
+            "start_line": 223,
+            "end_line": 244,
+            "content": "    @setupmethod\n    def record(self, func: DeferredSetupFunction) -> None:\n        \"\"\"Registers a function that is called when the blueprint is\n        registered on the application.  This function is called with the\n        state as argument as returned by the :meth:`make_setup_state`\n        method.\n        \"\"\"\n        self.deferred_functions.append(func)\n\n    @setupmethod\n    def record_once(self, func: DeferredSetupFunction) -> None:\n        \"\"\"Works like :meth:`record` but wraps the function in another\n        function that will ensure the function is only called once.  If the\n        blueprint is registered a second time on the application, the\n        function passed is not called.\n        \"\"\"\n\n        def wrapper(state: BlueprintSetupState) -> None:\n            if state.first_registration:\n                func(state)\n\n        self.record(update_wrapper(wrapper, func))",
+            "content_sha256": "4d6ae17f74b3c528558bc7d8655c1d02fbb9130758d4af9da7cbe8a702257fb6",
+            "visible_to_generator": false
+          }
+        ]
+      }
+    ],
+    "notes": "未把record参数名func机械误判为直接登记未包装的原函数；结合整体答案和引用，解释与实现一致。",
+    "key_points": null,
+    "candidate_sha256": "52858c25addb8e50e6b2d65892c9cc588f87ee6b8bbb2786f22184afaa8e7ea6",
+    "reviewer": "Codex (current session)",
+    "review_type": "model_assisted_nonblind_development_review",
+    "human_approved": false,
+    "training_eligible": false,
+    "solved": true
+  },
+  {
+    "candidate_id": "confirmation/reliability-confirm-10--sdk/answer",
+    "correctness": "correct",
+    "citation_support": "supported",
+    "completeness": "adequate",
+    "abstention": "not_applicable",
+    "entry_scope": "correct",
+    "consistency": "consistent",
+    "claims": [
+      {
+        "claim": "record_once登记延迟包装器，record负责追加，wrapper按first_registration决定是否调用func(state)。",
+        "status": "supported",
+        "rationale": "record追加传入函数，record_once用wrapper包原func再登记；True执行、False跳过。",
+        "evidence": [
+          {
+            "path": "src/flask/sansio/blueprints.py",
+            "start_line": 223,
+            "end_line": 244
+          }
+        ],
+        "verified_evidence": [
+          {
+            "path": "src/flask/sansio/blueprints.py",
+            "start_line": 223,
+            "end_line": 244,
+            "content": "    @setupmethod\n    def record(self, func: DeferredSetupFunction) -> None:\n        \"\"\"Registers a function that is called when the blueprint is\n        registered on the application.  This function is called with the\n        state as argument as returned by the :meth:`make_setup_state`\n        method.\n        \"\"\"\n        self.deferred_functions.append(func)\n\n    @setupmethod\n    def record_once(self, func: DeferredSetupFunction) -> None:\n        \"\"\"Works like :meth:`record` but wraps the function in another\n        function that will ensure the function is only called once.  If the\n        blueprint is registered a second time on the application, the\n        function passed is not called.\n        \"\"\"\n\n        def wrapper(state: BlueprintSetupState) -> None:\n            if state.first_registration:\n                func(state)\n\n        self.record(update_wrapper(wrapper, func))",
+            "content_sha256": "4d6ae17f74b3c528558bc7d8655c1d02fbb9130758d4af9da7cbe8a702257fb6",
+            "visible_to_generator": false
+          }
+        ]
+      }
+    ],
+    "notes": "未把record参数名func机械误判为直接登记未包装的原函数；结合整体答案和引用，解释与实现一致。",
+    "key_points": null,
+    "candidate_sha256": "4d1b9920a3eefafedc9952181049c5aa1800f7fc8483ed501fb3b90df5b924cb",
+    "reviewer": "Codex (current session)",
+    "review_type": "model_assisted_nonblind_development_review",
+    "human_approved": false,
+    "training_eligible": false,
+    "solved": true
+  },
+  {
+    "candidate_id": "confirmation/reliability-confirm-11--fixed/answer",
+    "correctness": "correct",
+    "citation_support": "supported",
+    "completeness": "adequate",
+    "abstention": "not_applicable",
+    "entry_scope": "correct",
+    "consistency": "consistent",
+    "claims": [
+      {
+        "claim": "按scheme+host、scheme、all+host、all查找；首个键即便值None也停止。",
+        "status": "supported",
+        "rationale": "839–849根据键是否存在取值并break。",
+        "evidence": [
+          {
+            "path": "src/requests/utils.py",
+            "start_line": 839,
+            "end_line": 849
+          }
+        ],
+        "verified_evidence": [
+          {
+            "path": "src/requests/utils.py",
+            "start_line": 839,
+            "end_line": 849,
+            "content": "    proxy_keys = [\n        urlparts.scheme + \"://\" + urlparts.hostname,\n        urlparts.scheme,\n        \"all://\" + urlparts.hostname,\n        \"all\",\n    ]\n    proxy = None\n    for proxy_key in proxy_keys:\n        if proxy_key in proxies:\n            proxy = proxies[proxy_key]\n            break",
+            "content_sha256": "6901070a3d566e1f9572fa7b52ef0d4bf63d4188636e7b95678e3cb59747a570",
+            "visible_to_generator": true
+          }
+        ]
+      }
+    ],
+    "notes": "优先级和None阻止继续回退两个要点均完整。",
+    "key_points": null,
+    "candidate_sha256": "a1099de02a6660131b380f5255a3ebf142ce53e16dfa21f48b4097d0acf1147f",
+    "reviewer": "Codex (current session)",
+    "review_type": "model_assisted_nonblind_development_review",
+    "human_approved": false,
+    "training_eligible": false,
+    "solved": true
+  },
+  {
+    "candidate_id": "confirmation/reliability-confirm-11--sdk/answer",
+    "correctness": "correct",
+    "citation_support": "supported",
+    "completeness": "adequate",
+    "abstention": "not_applicable",
+    "entry_scope": "correct",
+    "consistency": "consistent",
+    "claims": [
+      {
+        "claim": "按scheme+host、scheme、all+host、all查找；首个键即便值None也停止。",
+        "status": "supported",
+        "rationale": "839–849根据键是否存在取值并break。",
+        "evidence": [
+          {
+            "path": "src/requests/utils.py",
+            "start_line": 839,
+            "end_line": 849
+          }
+        ],
+        "verified_evidence": [
+          {
+            "path": "src/requests/utils.py",
+            "start_line": 839,
+            "end_line": 849,
+            "content": "    proxy_keys = [\n        urlparts.scheme + \"://\" + urlparts.hostname,\n        urlparts.scheme,\n        \"all://\" + urlparts.hostname,\n        \"all\",\n    ]\n    proxy = None\n    for proxy_key in proxy_keys:\n        if proxy_key in proxies:\n            proxy = proxies[proxy_key]\n            break",
+            "content_sha256": "6901070a3d566e1f9572fa7b52ef0d4bf63d4188636e7b95678e3cb59747a570",
+            "visible_to_generator": true
+          }
+        ]
+      }
+    ],
+    "notes": "优先级和None阻止继续回退两个要点均完整。",
+    "key_points": null,
+    "candidate_sha256": "8ec084b9f0c1d758425fd76dfb75194681bf37aea7ebed39789a1862d0d1aea9",
+    "reviewer": "Codex (current session)",
+    "review_type": "model_assisted_nonblind_development_review",
+    "human_approved": false,
+    "training_eligible": false,
+    "solved": true
+  },
+  {
+    "candidate_id": "confirmation/reliability-confirm-12--fixed/answer",
+    "correctness": "partially_correct",
+    "citation_support": "partial",
+    "completeness": "adequate",
+    "abstention": "not_applicable",
+    "entry_scope": "correct",
+    "consistency": "consistent",
+    "claims": [
+      {
+        "claim": "trust_env=False不查环境并返回副本，环境只用setdefault补缺、不覆盖已有scheme。",
+        "status": "supported",
+        "rationale": "869、871、877支持题目核心问题。",
+        "evidence": [
+          {
+            "path": "src/requests/utils.py",
+            "start_line": 854,
+            "end_line": 878
+          }
+        ],
+        "verified_evidence": [
+          {
+            "path": "src/requests/utils.py",
+            "start_line": 854,
+            "end_line": 878,
+            "content": "def resolve_proxies(request, proxies, trust_env=True):\n    \"\"\"This method takes proxy information from a request and configuration\n    input to resolve a mapping of target proxies. This will consider settings\n    such as NO_PROXY to strip proxy configurations.\n\n    :param request: Request or PreparedRequest\n    :param proxies: A dictionary of schemes or schemes and hosts to proxy URLs\n    :param trust_env: Boolean declaring whether to trust environment configs\n\n    :rtype: dict\n    \"\"\"\n    proxies = proxies if proxies is not None else {}\n    url = request.url\n    scheme = urlparse(url).scheme\n    no_proxy = proxies.get(\"no_proxy\")\n    new_proxies = proxies.copy()\n\n    if trust_env and not should_bypass_proxies(url, no_proxy=no_proxy):\n        environ_proxies = get_environ_proxies(url, no_proxy=no_proxy)\n\n        proxy = environ_proxies.get(scheme, environ_proxies.get(\"all\"))\n\n        if proxy:\n            new_proxies.setdefault(scheme, proxy)\n    return new_proxies",
+            "content_sha256": "2bb9d0f60e15fad9c50826ed39c358adda61c204965269d873f0248e1b8cdae1",
+            "visible_to_generator": true
+          }
+        ]
+      },
+      {
+        "claim": "只要有环境代理且URL未命中no_proxy就一定补全。",
+        "status": "unsupported",
+        "rationale": "实际还必须should_bypass_proxies为False；该函数还有proxy_bypass等其他绕过途径，未命中列表不足以推出不会绕过。",
+        "evidence": [
+          {
+            "path": "src/requests/utils.py",
+            "start_line": 755,
+            "end_line": 815
+          },
+          {
+            "path": "src/requests/utils.py",
+            "start_line": 869,
+            "end_line": 878
+          }
+        ],
+        "verified_evidence": [
+          {
+            "path": "src/requests/utils.py",
+            "start_line": 755,
+            "end_line": 815,
+            "content": "def should_bypass_proxies(url, no_proxy):\n    \"\"\"\n    Returns whether we should bypass proxies or not.\n\n    :rtype: bool\n    \"\"\"\n\n    # Prioritize lowercase environment variables over uppercase\n    # to keep a consistent behaviour with other http projects (curl, wget).\n    def get_proxy(key):\n        return os.environ.get(key) or os.environ.get(key.upper())\n\n    # First check whether no_proxy is defined. If it is, check that the URL\n    # we're getting isn't in the no_proxy list.\n    no_proxy_arg = no_proxy\n    if no_proxy is None:\n        no_proxy = get_proxy(\"no_proxy\")\n    parsed = urlparse(url)\n\n    if parsed.hostname is None:\n        # URLs don't always have hostnames, e.g. file:/// urls.\n        return True\n\n    if no_proxy:\n        # We need to check whether we match here. We need to see if we match\n        # the end of the hostname, both with and without the port.\n        no_proxy = (host for host in no_proxy.replace(\" \", \"\").split(\",\") if host)\n\n        if is_ipv4_address(parsed.hostname):\n            for proxy_ip in no_proxy:\n                if is_valid_cidr(proxy_ip):\n                    if address_in_network(parsed.hostname, proxy_ip):\n                        return True\n                elif parsed.hostname == proxy_ip:\n                    # If no_proxy ip was defined in plain IP notation instead of cidr notation &\n                    # matches the IP of the index\n                    return True\n        else:\n            host_with_port = parsed.hostname\n            if parsed.port:\n                host_with_port += f\":{parsed.port}\"\n\n            for host in no_proxy:\n                if parsed.hostname.endswith(host) or host_with_port.endswith(host):\n                    # The URL does match something in no_proxy, so we don't want\n                    # to apply the proxies on this URL.\n                    return True\n\n    with set_environ(\"no_proxy\", no_proxy_arg):\n        # parsed.hostname can be `None` in cases such as a file URI.\n        try:\n            bypass = proxy_bypass(parsed.hostname)\n        except (TypeError, socket.gaierror):\n            bypass = False\n\n    if bypass:\n        return True\n\n    return False\n\n",
+            "content_sha256": "911180ee5f2787ac4dea5de2a940195b325889c8d79c495ba8d82e0348d8ea8a",
+            "visible_to_generator": false
+          },
+          {
+            "path": "src/requests/utils.py",
+            "start_line": 869,
+            "end_line": 878,
+            "content": "    new_proxies = proxies.copy()\n\n    if trust_env and not should_bypass_proxies(url, no_proxy=no_proxy):\n        environ_proxies = get_environ_proxies(url, no_proxy=no_proxy)\n\n        proxy = environ_proxies.get(scheme, environ_proxies.get(\"all\"))\n\n        if proxy:\n            new_proxies.setdefault(scheme, proxy)\n    return new_proxies",
+            "content_sha256": "899089b1c2916dbd1779d2b031fea246baf59a84e69ff2d2b7b37e6f838186e7",
+            "visible_to_generator": true
+          }
+        ]
+      }
+    ],
+    "notes": "核心答案正确，但额外添加的充分条件过强；答案实际引用的755–805也遗漏了后续其他绕过分支。",
+    "key_points": null,
+    "candidate_sha256": "8a4ab25479fe86b325bf54b38854708245612bfe634f9242ce8c03ce735f6cf0",
+    "reviewer": "Codex (current session)",
+    "review_type": "model_assisted_nonblind_development_review",
+    "human_approved": false,
+    "training_eligible": false,
+    "solved": false
+  },
+  {
+    "candidate_id": "confirmation/reliability-confirm-12--sdk/answer",
+    "correctness": "correct",
+    "citation_support": "supported",
+    "completeness": "adequate",
+    "abstention": "not_applicable",
+    "entry_scope": "correct",
+    "consistency": "consistent",
+    "claims": [
+      {
+        "claim": "trust_env=False不查环境、返回副本；True时只以setdefault补缺，不覆盖已有scheme。",
+        "status": "supported",
+        "rationale": "869复制、871短路、877setdefault与回答逐项对应。",
+        "evidence": [
+          {
+            "path": "src/requests/utils.py",
+            "start_line": 869,
+            "end_line": 878
+          }
+        ],
+        "verified_evidence": [
+          {
+            "path": "src/requests/utils.py",
+            "start_line": 869,
+            "end_line": 878,
+            "content": "    new_proxies = proxies.copy()\n\n    if trust_env and not should_bypass_proxies(url, no_proxy=no_proxy):\n        environ_proxies = get_environ_proxies(url, no_proxy=no_proxy)\n\n        proxy = environ_proxies.get(scheme, environ_proxies.get(\"all\"))\n\n        if proxy:\n            new_proxies.setdefault(scheme, proxy)\n    return new_proxies",
+            "content_sha256": "899089b1c2916dbd1779d2b031fea246baf59a84e69ff2d2b7b37e6f838186e7",
+            "visible_to_generator": true
+          }
+        ]
+      }
+    ],
+    "notes": "未声称trust_env=True必定添加环境代理，也没有把未命中no_proxy说成不绕过的充分条件。",
+    "key_points": null,
+    "candidate_sha256": "b9ec925b422b2d6f5ac92ef4a0f42a83a9cdbdf65966bd96badf713233be5b0e",
+    "reviewer": "Codex (current session)",
+    "review_type": "model_assisted_nonblind_development_review",
+    "human_approved": false,
+    "training_eligible": false,
+    "solved": true
+  },
+  {
+    "candidate_id": "dialogue/mitt-turn-1/answer",
+    "correctness": "correct",
+    "citation_support": "supported",
+    "completeness": "partial",
+    "abstention": "not_applicable",
+    "entry_scope": "correct",
+    "consistency": "consistent",
+    "claims": [
+      {
+        "claim": "on不将事件名转成小写。",
+        "status": "supported",
+        "rationale": "实现直接按type使用Map键，测试也保留大小写。",
+        "evidence": [
+          {
+            "path": "src/index.ts",
+            "start_line": 66,
+            "end_line": 73
+          },
+          {
+            "path": "test/index_test.ts",
+            "start_line": 79,
+            "end_line": 90
+          }
+        ],
+        "verified_evidence": [
+          {
+            "path": "src/index.ts",
+            "start_line": 66,
+            "end_line": 73,
+            "content": "\t\ton<Key extends keyof Events>(type: Key, handler: GenericEventHandler) {\n\t\t\tconst handlers: Array<GenericEventHandler> | undefined = all!.get(type);\n\t\t\tif (handlers) {\n\t\t\t\thandlers.push(handler);\n\t\t\t} else {\n\t\t\t\tall!.set(type, [handler] as EventHandlerList<Events[keyof Events]>);\n\t\t\t}\n\t\t},",
+            "content_sha256": "0a5bf296ae849cd916f0b4eedbc3b3dbd431acb523f64fede2782b79ff119004",
+            "visible_to_generator": true
+          },
+          {
+            "path": "test/index_test.ts",
+            "start_line": 79,
+            "end_line": 90,
+            "content": "\t\tit('should NOT normalize case', () => {\n\t\t\tconst foo = () => {};\n\t\t\tinst.on('FOO', foo);\n\t\t\tinst.on('Bar', foo);\n\t\t\tinst.on('baz:baT!', foo);\n\n\t\t\texpect(events.get('FOO')).to.deep.equal([foo]);\n\t\t\texpect(events.has('foo')).to.equal(false);\n\t\t\texpect(events.get('Bar')).to.deep.equal([foo]);\n\t\t\texpect(events.has('bar')).to.equal(false);\n\t\t\texpect(events.get('baz:baT!')).to.deep.equal([foo]);\n\t\t});",
+            "content_sha256": "7c7ae10f82f38319cf3cf181161ee7bfb29bde7819610b697836ace1ba119048",
+            "visible_to_generator": true
+          }
+        ]
+      }
+    ],
+    "notes": "明确要求具体测试输入和断言，仍只有结论；测试原文与研究笔记已提供。",
+    "key_points": null,
+    "candidate_sha256": "47b33092c4e169dd94660bf3cb14ffc3006731e2a282770c597246c47f99118e",
+    "reviewer": "Codex (current session)",
+    "review_type": "model_assisted_nonblind_development_review",
+    "human_approved": false,
+    "training_eligible": false,
+    "solved": false
+  },
+  {
+    "candidate_id": "dialogue/mitt-turn-2/answer",
+    "correctness": "incorrect",
+    "citation_support": "supported",
+    "completeness": "insufficient",
+    "abstention": "not_applicable",
+    "entry_scope": "mixed",
+    "consistency": "consistent",
+    "claims": [
+      {
+        "claim": "on保留事件名大小写。",
+        "status": "supported",
+        "rationale": "这句话本身有测试支持，却不是本轮off问题的答案。",
+        "evidence": [
+          {
+            "path": "test/index_test.ts",
+            "start_line": 79,
+            "end_line": 90
+          }
+        ],
+        "verified_evidence": [
+          {
+            "path": "test/index_test.ts",
+            "start_line": 79,
+            "end_line": 90,
+            "content": "\t\tit('should NOT normalize case', () => {\n\t\t\tconst foo = () => {};\n\t\t\tinst.on('FOO', foo);\n\t\t\tinst.on('Bar', foo);\n\t\t\tinst.on('baz:baT!', foo);\n\n\t\t\texpect(events.get('FOO')).to.deep.equal([foo]);\n\t\t\texpect(events.has('foo')).to.equal(false);\n\t\t\texpect(events.get('Bar')).to.deep.equal([foo]);\n\t\t\texpect(events.has('bar')).to.equal(false);\n\t\t\texpect(events.get('baz:baT!')).to.deep.equal([foo]);\n\t\t});",
+            "content_sha256": "7c7ae10f82f38319cf3cf181161ee7bfb29bde7819610b697836ace1ba119048",
+            "visible_to_generator": true
+          }
+        ]
+      }
+    ],
+    "notes": "本轮问off不传handler，回答却重复上一轮on。最终输入把带旧问题的resolved_query当作question；研究笔记已正确解释off，但最终目标串用。",
+    "key_points": null,
+    "candidate_sha256": "ab13dfde354b379505108fe03cb300656075417986035558526c6c341a93c697",
+    "reviewer": "Codex (current session)",
+    "review_type": "model_assisted_nonblind_development_review",
+    "human_approved": false,
+    "training_eligible": false,
+    "solved": false
+  },
+  {
+    "candidate_id": "dialogue/mitt-turn-3/answer",
+    "correctness": "correct",
+    "citation_support": "supported",
+    "completeness": "adequate",
+    "abstention": "not_applicable",
+    "entry_scope": "correct",
+    "consistency": "consistent",
+    "claims": [
+      {
+        "claim": "普通handler接收evt，通配符接收type和evt，普通在先。",
+        "status": "supported",
+        "rationale": "顺序执行普通handlers映射，再执行通配符映射，参数与所引行一致。",
+        "evidence": [
+          {
+            "path": "src/index.ts",
+            "start_line": 103,
+            "end_line": 120
+          }
+        ],
+        "verified_evidence": [
+          {
+            "path": "src/index.ts",
+            "start_line": 103,
+            "end_line": 120,
+            "content": "\t\temit<Key extends keyof Events>(type: Key, evt?: Events[Key]) {\n\t\t\tlet handlers = all!.get(type);\n\t\t\tif (handlers) {\n\t\t\t\t(handlers as EventHandlerList<Events[keyof Events]>)\n\t\t\t\t\t.slice()\n\t\t\t\t\t.map((handler) => {\n\t\t\t\t\t\thandler(evt!);\n\t\t\t\t\t});\n\t\t\t}\n\n\t\t\thandlers = all!.get('*');\n\t\t\tif (handlers) {\n\t\t\t\t(handlers as WildCardEventHandlerList<Events>)\n\t\t\t\t\t.slice()\n\t\t\t\t\t.map((handler) => {\n\t\t\t\t\t\thandler(type, evt!);\n\t\t\t\t\t});\n\t\t\t}",
+            "content_sha256": "1dc14bec228bbca23eba6b2dc6ccc8fdda9305ee4582c946f8ccfb5ef089e05e",
+            "visible_to_generator": true
+          }
+        ]
+      }
+    ],
+    "notes": "已按新目标解释emit，没有沿用on/off事实作为证据。",
+    "key_points": null,
+    "candidate_sha256": "27ea4797b3d22c702c83a6a8c63c8dbfc0cf86cee8a9aa28eeccb433b34e1494",
+    "reviewer": "Codex (current session)",
+    "review_type": "model_assisted_nonblind_development_review",
+    "human_approved": false,
+    "training_eligible": false,
+    "solved": true
+  },
+  {
+    "candidate_id": "dialogue/mitt-turn-4/answer",
+    "correctness": "correct",
+    "citation_support": "not_applicable",
+    "completeness": "partial",
+    "abstention": "appropriate",
+    "entry_scope": "correct",
+    "consistency": "consistent",
+    "claims": [
+      {
+        "claim": "现有源代码不能证明用户今天已经执行测试成功。",
+        "status": "unverifiable",
+        "rationale": "这是适当的证据边界，不是断言用户实际未运行；工作区没有用户当日执行日志。",
+        "evidence": [],
+        "verified_evidence": []
+      }
+    ],
+    "notes": "拒答方向正确，但没有回答还缺什么（本机实际执行命令、时间与结果/日志）。",
+    "key_points": null,
+    "candidate_sha256": "d14f93257ae1dd8269d0eedd6fa0ca2dbb894699d5e4ca8a0798167b580c4164",
+    "reviewer": "Codex (current session)",
+    "review_type": "model_assisted_nonblind_development_review",
+    "human_approved": false,
+    "training_eligible": false,
+    "solved": false
+  },
+  {
+    "candidate_id": "reports/mitt/explorer",
+    "correctness": "correct",
+    "citation_support": "supported",
+    "completeness": "adequate",
+    "abstention": "not_applicable",
+    "entry_scope": "correct",
+    "consistency": "consistent",
+    "claims": [
+      {
+        "claim": "README声明体积约200b、IE9+与无运行时依赖，包配置指向三种模块产物。",
+        "status": "supported",
+        "rationale": "按项目文档与声明核对，不冒充本次实测包大小。",
+        "evidence": [
+          {
+            "path": "README.md",
+            "start_line": 11,
+            "end_line": 19
+          },
+          {
+            "path": "package.json",
+            "start_line": 4,
+            "end_line": 16
+          }
+        ],
+        "verified_evidence": [
+          {
+            "path": "README.md",
+            "start_line": 11,
+            "end_line": 19,
+            "content": "> Tiny 200b functional event emitter / pubsub.\n\n-   **Microscopic:** weighs less than 200 bytes gzipped\n-   **Useful:** a wildcard `\"*\"` event type listens to all events\n-   **Familiar:** same names & ideas as [Node's EventEmitter](https://nodejs.org/api/events.html#events_class_eventemitter)\n-   **Functional:** methods don't rely on `this`\n-   **Great Name:** somehow [mitt](https://npm.im/mitt) wasn't taken\n\nMitt was made for the browser, but works in any JavaScript runtime. It has no dependencies and supports IE9+.",
+            "content_sha256": "e3f8895f23fe20cca5fbc0edfa840ff024fe88c15e43363630d9caf91b8bbdd8",
+            "visible_to_generator": true
+          },
+          {
+            "path": "package.json",
+            "start_line": 4,
+            "end_line": 16,
+            "content": "  \"description\": \"Tiny 200b functional Event Emitter / pubsub.\",\n  \"module\": \"dist/mitt.mjs\",\n  \"main\": \"dist/mitt.js\",\n  \"jsnext:main\": \"dist/mitt.mjs\",\n  \"umd:main\": \"dist/mitt.umd.js\",\n  \"source\": \"src/index.ts\",\n  \"typings\": \"index.d.ts\",\n  \"exports\": {\n    \"types\": \"./index.d.ts\",\n    \"module\": \"./dist/mitt.mjs\",\n    \"import\": \"./dist/mitt.mjs\",\n    \"require\": \"./dist/mitt.js\",\n    \"default\": \"./dist/mitt.mjs\"",
+            "content_sha256": "63c07caf5dc531afa1b8a0ffa87e70d0247c6794e4126ce44dbb8e75d7e33d4f",
+            "visible_to_generator": true
+          }
+        ]
+      },
+      {
+        "claim": "源码提供泛型mitt工厂及Emitter接口。",
+        "status": "supported",
+        "rationale": "所引46–123包括导出工厂的Events泛型和Emitter<Events>返回签名，可支持提供泛型接口的概览；不机械要求引用接口完整声明。",
+        "evidence": [
+          {
+            "path": "src/index.ts",
+            "start_line": 23,
+            "end_line": 39
+          },
+          {
+            "path": "src/index.ts",
+            "start_line": 46,
+            "end_line": 58
+          }
+        ],
+        "verified_evidence": [
+          {
+            "path": "src/index.ts",
+            "start_line": 23,
+            "end_line": 39,
+            "content": "export interface Emitter<Events extends Record<EventType, unknown>> {\n\tall: EventHandlerMap<Events>;\n\n\ton<Key extends keyof Events>(type: Key, handler: Handler<Events[Key]>): void;\n\ton(type: '*', handler: WildcardHandler<Events>): void;\n\n\toff<Key extends keyof Events>(\n\t\ttype: Key,\n\t\thandler?: Handler<Events[Key]>\n\t): void;\n\toff(type: '*', handler: WildcardHandler<Events>): void;\n\n\temit<Key extends keyof Events>(type: Key, event: Events[Key]): void;\n\temit<Key extends keyof Events>(\n\t\ttype: undefined extends Events[Key] ? Key : never\n\t): void;\n}",
+            "content_sha256": "76bc8b689bae2167e97ea3d097d3809919e6f251e86daa5ae2377d8a7b9c6cce",
+            "visible_to_generator": true
+          },
+          {
+            "path": "src/index.ts",
+            "start_line": 46,
+            "end_line": 58,
+            "content": "export default function mitt<Events extends Record<EventType, unknown>>(\n\tall?: EventHandlerMap<Events>\n): Emitter<Events> {\n\ttype GenericEventHandler =\n\t\t| Handler<Events[keyof Events]>\n\t\t| WildcardHandler<Events>;\n\tall = all || new Map();\n\n\treturn {\n\t\t/**\n\t\t * A Map of event names to registered handler functions.\n\t\t */\n\t\tall,",
+            "content_sha256": "131bf0a988f8c0ec61aa830987ccc3aa9fbc4bcfb1add84b35fa4f9d7b2da63e",
+            "visible_to_generator": true
+          }
+        ]
+      }
+    ],
+    "notes": "概览覆盖入口、模块和构建产物；接受泛型工厂返回签名作为接口概览的有效引用，不机械要求引用接口全部声明。",
+    "key_points": null,
+    "candidate_sha256": "8a1ea6ce6983cb476f96667f6b2e40955f4a7d6a8c25979d2fd70775d968bb5a",
+    "reviewer": "Codex (current session)",
+    "review_type": "model_assisted_nonblind_development_review",
+    "human_approved": false,
+    "training_eligible": false,
+    "solved": true
+  },
+  {
+    "candidate_id": "reports/mitt/mentor",
+    "correctness": "partially_correct",
+    "citation_support": "partial",
+    "completeness": "adequate",
+    "abstention": "not_applicable",
+    "entry_scope": "correct",
+    "consistency": "consistent",
+    "claims": [
+      {
+        "claim": "核心为Map工厂，按普通后通配符顺序派发，提供泛型事件接口。",
+        "status": "supported",
+        "rationale": "工厂状态、声明和emit方法支持主要架构解释。",
+        "evidence": [
+          {
+            "path": "src/index.ts",
+            "start_line": 23,
+            "end_line": 39
+          },
+          {
+            "path": "src/index.ts",
+            "start_line": 46,
+            "end_line": 73
+          },
+          {
+            "path": "src/index.ts",
+            "start_line": 103,
+            "end_line": 121
+          }
+        ],
+        "verified_evidence": [
+          {
+            "path": "src/index.ts",
+            "start_line": 23,
+            "end_line": 39,
+            "content": "export interface Emitter<Events extends Record<EventType, unknown>> {\n\tall: EventHandlerMap<Events>;\n\n\ton<Key extends keyof Events>(type: Key, handler: Handler<Events[Key]>): void;\n\ton(type: '*', handler: WildcardHandler<Events>): void;\n\n\toff<Key extends keyof Events>(\n\t\ttype: Key,\n\t\thandler?: Handler<Events[Key]>\n\t): void;\n\toff(type: '*', handler: WildcardHandler<Events>): void;\n\n\temit<Key extends keyof Events>(type: Key, event: Events[Key]): void;\n\temit<Key extends keyof Events>(\n\t\ttype: undefined extends Events[Key] ? Key : never\n\t): void;\n}",
+            "content_sha256": "76bc8b689bae2167e97ea3d097d3809919e6f251e86daa5ae2377d8a7b9c6cce",
+            "visible_to_generator": true
+          },
+          {
+            "path": "src/index.ts",
+            "start_line": 46,
+            "end_line": 73,
+            "content": "export default function mitt<Events extends Record<EventType, unknown>>(\n\tall?: EventHandlerMap<Events>\n): Emitter<Events> {\n\ttype GenericEventHandler =\n\t\t| Handler<Events[keyof Events]>\n\t\t| WildcardHandler<Events>;\n\tall = all || new Map();\n\n\treturn {\n\t\t/**\n\t\t * A Map of event names to registered handler functions.\n\t\t */\n\t\tall,\n\n\t\t/**\n\t\t * Register an event handler for the given type.\n\t\t * @param {string|symbol} type Type of event to listen for, or `'*'` for all events\n\t\t * @param {Function} handler Function to call in response to given event\n\t\t * @memberOf mitt\n\t\t */\n\t\ton<Key extends keyof Events>(type: Key, handler: GenericEventHandler) {\n\t\t\tconst handlers: Array<GenericEventHandler> | undefined = all!.get(type);\n\t\t\tif (handlers) {\n\t\t\t\thandlers.push(handler);\n\t\t\t} else {\n\t\t\t\tall!.set(type, [handler] as EventHandlerList<Events[keyof Events]>);\n\t\t\t}\n\t\t},",
+            "content_sha256": "715cda3df8acf52c630a8f6c507e7e0e363d6b0505c6da23e3030b336d9d7174",
+            "visible_to_generator": true
+          },
+          {
+            "path": "src/index.ts",
+            "start_line": 103,
+            "end_line": 121,
+            "content": "\t\temit<Key extends keyof Events>(type: Key, evt?: Events[Key]) {\n\t\t\tlet handlers = all!.get(type);\n\t\t\tif (handlers) {\n\t\t\t\t(handlers as EventHandlerList<Events[keyof Events]>)\n\t\t\t\t\t.slice()\n\t\t\t\t\t.map((handler) => {\n\t\t\t\t\t\thandler(evt!);\n\t\t\t\t\t});\n\t\t\t}\n\n\t\t\thandlers = all!.get('*');\n\t\t\tif (handlers) {\n\t\t\t\t(handlers as WildCardEventHandlerList<Events>)\n\t\t\t\t\t.slice()\n\t\t\t\t\t.map((handler) => {\n\t\t\t\t\t\thandler(type, evt!);\n\t\t\t\t\t});\n\t\t\t}\n\t\t}",
+            "content_sha256": "de218dd03ced6346cf85a3718f6de30c6e5ee74ee6cf557d28c5b9587dc9ceee",
+            "visible_to_generator": true
+          }
+        ]
+      },
+      {
+        "claim": "代码约定使用非严格相等，!断言Map获取结果非空。",
+        "status": "contradicted",
+        "rationale": "相关行是all!.get(type)，!作用于Map变量all，返回的handlers仍允许undefined并受if检查；并无所称松散相等逻辑。",
+        "evidence": [
+          {
+            "path": "src/index.ts",
+            "start_line": 66,
+            "end_line": 91
+          },
+          {
+            "path": "src/index.ts",
+            "start_line": 103,
+            "end_line": 120
+          }
+        ],
+        "verified_evidence": [
+          {
+            "path": "src/index.ts",
+            "start_line": 66,
+            "end_line": 91,
+            "content": "\t\ton<Key extends keyof Events>(type: Key, handler: GenericEventHandler) {\n\t\t\tconst handlers: Array<GenericEventHandler> | undefined = all!.get(type);\n\t\t\tif (handlers) {\n\t\t\t\thandlers.push(handler);\n\t\t\t} else {\n\t\t\t\tall!.set(type, [handler] as EventHandlerList<Events[keyof Events]>);\n\t\t\t}\n\t\t},\n\n\t\t/**\n\t\t * Remove an event handler for the given type.\n\t\t * If `handler` is omitted, all handlers of the given type are removed.\n\t\t * @param {string|symbol} type Type of event to unregister `handler` from (`'*'` to remove a wildcard handler)\n\t\t * @param {Function} [handler] Handler function to remove\n\t\t * @memberOf mitt\n\t\t */\n\t\toff<Key extends keyof Events>(type: Key, handler?: GenericEventHandler) {\n\t\t\tconst handlers: Array<GenericEventHandler> | undefined = all!.get(type);\n\t\t\tif (handlers) {\n\t\t\t\tif (handler) {\n\t\t\t\t\thandlers.splice(handlers.indexOf(handler) >>> 0, 1);\n\t\t\t\t} else {\n\t\t\t\t\tall!.set(type, []);\n\t\t\t\t}\n\t\t\t}\n\t\t},",
+            "content_sha256": "9c98ce1da66a2f9b41b13fc903cfdcfd23d040bee051c3e1b4e62162d8414681",
+            "visible_to_generator": true
+          },
+          {
+            "path": "src/index.ts",
+            "start_line": 103,
+            "end_line": 120,
+            "content": "\t\temit<Key extends keyof Events>(type: Key, evt?: Events[Key]) {\n\t\t\tlet handlers = all!.get(type);\n\t\t\tif (handlers) {\n\t\t\t\t(handlers as EventHandlerList<Events[keyof Events]>)\n\t\t\t\t\t.slice()\n\t\t\t\t\t.map((handler) => {\n\t\t\t\t\t\thandler(evt!);\n\t\t\t\t\t});\n\t\t\t}\n\n\t\t\thandlers = all!.get('*');\n\t\t\tif (handlers) {\n\t\t\t\t(handlers as WildCardEventHandlerList<Events>)\n\t\t\t\t\t.slice()\n\t\t\t\t\t.map((handler) => {\n\t\t\t\t\t\thandler(type, evt!);\n\t\t\t\t\t});\n\t\t\t}",
+            "content_sha256": "1dc14bec228bbca23eba6b2dc6ccc8fdda9305ee4582c946f8ccfb5ef089e05e",
+            "visible_to_generator": true
+          }
+        ]
+      }
+    ],
+    "notes": "主要架构正确，但不能用路径合法掩盖类型断言对象误读；报告基类claims还延续接口声明引用缺口。",
+    "key_points": null,
+    "candidate_sha256": "e9dc4a7469b31afe528e1e983be733fa3d10128774d590446d37afa3680e9b8c",
+    "reviewer": "Codex (current session)",
+    "review_type": "model_assisted_nonblind_development_review",
+    "human_approved": false,
+    "training_eligible": false,
+    "solved": false
+  },
+  {
+    "candidate_id": "reports/mitt/contributor",
+    "correctness": "correct",
+    "citation_support": "supported",
+    "completeness": "adequate",
+    "abstention": "not_applicable",
+    "entry_scope": "correct",
+    "consistency": "consistent",
+    "claims": [
+      {
+        "claim": "构建/测试/lint命令是仓库脚本声明，贡献建议是文档扩展而非已存在issue。",
+        "status": "supported",
+        "rationale": "package脚本支持这些命令；建议没有宣称已执行测试。",
+        "evidence": [
+          {
+            "path": "package.json",
+            "start_line": 18,
+            "end_line": 27
+          },
+          {
+            "path": "README.md",
+            "start_line": 11,
+            "end_line": 19
+          }
+        ],
+        "verified_evidence": [
+          {
+            "path": "package.json",
+            "start_line": 18,
+            "end_line": 27,
+            "content": "  \"scripts\": {\n    \"test\": \"npm-run-all --silent typecheck lint mocha test-types\",\n    \"mocha\": \"mocha test\",\n    \"test-types\": \"tsc test/test-types-compilation.ts --noEmit --strict\",\n    \"lint\": \"eslint src test --ext ts --ext js\",\n    \"typecheck\": \"tsc --noEmit\",\n    \"bundle\": \"microbundle -f es,cjs,umd\",\n    \"build\": \"npm-run-all --silent clean -p bundle -s docs\",\n    \"clean\": \"rimraf dist\",\n    \"docs\": \"documentation readme src/index.ts --section API -q --parse-extension ts\",",
+            "content_sha256": "1b7dc821113d4b1ac61692695425c75d9bb65630e2fd3bbc2404f12c2cd4745e",
+            "visible_to_generator": true
+          },
+          {
+            "path": "README.md",
+            "start_line": 11,
+            "end_line": 19,
+            "content": "> Tiny 200b functional event emitter / pubsub.\n\n-   **Microscopic:** weighs less than 200 bytes gzipped\n-   **Useful:** a wildcard `\"*\"` event type listens to all events\n-   **Familiar:** same names & ideas as [Node's EventEmitter](https://nodejs.org/api/events.html#events_class_eventemitter)\n-   **Functional:** methods don't rely on `this`\n-   **Great Name:** somehow [mitt](https://npm.im/mitt) wasn't taken\n\nMitt was made for the browser, but works in any JavaScript runtime. It has no dependencies and supports IE9+.",
+            "content_sha256": "e3f8895f23fe20cca5fbc0edfa840ff024fe88c15e43363630d9caf91b8bbdd8",
+            "visible_to_generator": true
+          }
+        ]
+      },
+      {
+        "claim": "概览中的Emitter接口与泛型工厂。",
+        "status": "supported",
+        "rationale": "46–123所引工厂签名明确包含Events泛型和Emitter<Events>返回类型，可支持提供泛型接口的概览。",
+        "evidence": [
+          {
+            "path": "src/index.ts",
+            "start_line": 23,
+            "end_line": 39
+          },
+          {
+            "path": "src/index.ts",
+            "start_line": 46,
+            "end_line": 58
+          }
+        ],
+        "verified_evidence": [
+          {
+            "path": "src/index.ts",
+            "start_line": 23,
+            "end_line": 39,
+            "content": "export interface Emitter<Events extends Record<EventType, unknown>> {\n\tall: EventHandlerMap<Events>;\n\n\ton<Key extends keyof Events>(type: Key, handler: Handler<Events[Key]>): void;\n\ton(type: '*', handler: WildcardHandler<Events>): void;\n\n\toff<Key extends keyof Events>(\n\t\ttype: Key,\n\t\thandler?: Handler<Events[Key]>\n\t): void;\n\toff(type: '*', handler: WildcardHandler<Events>): void;\n\n\temit<Key extends keyof Events>(type: Key, event: Events[Key]): void;\n\temit<Key extends keyof Events>(\n\t\ttype: undefined extends Events[Key] ? Key : never\n\t): void;\n}",
+            "content_sha256": "76bc8b689bae2167e97ea3d097d3809919e6f251e86daa5ae2377d8a7b9c6cce",
+            "visible_to_generator": false
+          },
+          {
+            "path": "src/index.ts",
+            "start_line": 46,
+            "end_line": 58,
+            "content": "export default function mitt<Events extends Record<EventType, unknown>>(\n\tall?: EventHandlerMap<Events>\n): Emitter<Events> {\n\ttype GenericEventHandler =\n\t\t| Handler<Events[keyof Events]>\n\t\t| WildcardHandler<Events>;\n\tall = all || new Map();\n\n\treturn {\n\t\t/**\n\t\t * A Map of event names to registered handler functions.\n\t\t */\n\t\tall,",
+            "content_sha256": "131bf0a988f8c0ec61aa830987ccc3aa9fbc4bcfb1add84b35fa4f9d7b2da63e",
+            "visible_to_generator": true
+          }
+        ]
+      }
+    ],
+    "notes": "命令有package脚本支持，建议没有冒充真实issue或已执行测试；接口概览可由所引工厂签名支持，发布约束也保留了不可核验命令的缺口。",
+    "key_points": null,
+    "candidate_sha256": "3d8e285363889f91d5a7bde2bb2cf27a1749b7d144368808084986a89943ac90",
+    "reviewer": "Codex (current session)",
+    "review_type": "model_assisted_nonblind_development_review",
+    "human_approved": false,
+    "training_eligible": false,
+    "solved": true
+  }
+]

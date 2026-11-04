@@ -1,0 +1,876 @@
+{
+  "schema_version": "repomentor.v1",
+  "run_id": "a3c72ac1b1154eb8813d63913aa3092d",
+  "snapshot_id": "30e277e52d238ad871cb5684",
+  "runtime": "local-rag-report",
+  "status": "success",
+  "outputs": {
+    "explorer": {
+      "evidenceClaims": [
+        {
+          "claim": "仓库是一个用于生成 URL 友好型唯一字符串 ID 的轻量级库，旨在替代 UUID v4 并提供更高的性能。",
+          "confidence": "high",
+          "evidence": [
+            {
+              "path": "package.json",
+              "supports": "描述为'A tiny (127 bytes), secure URL-friendly unique string ID generator'，且版本为 6.0.1。"
+            },
+            {
+              "path": "README.md",
+              "supports": "明确指出 Nano ID 比 `crypto.randomUUID` 和 `uuid/v4` 更快，且使用更大的字母表将随机位压缩到 21 个符号中。"
+            },
+            {
+              "path": "README.md",
+              "supports": "强调其不可预测性（使用 Node.js `crypto` 模块和浏览器 Web Crypto API）和均匀性（避免 `random % alphabet` 的偏差）。"
+            }
+          ]
+        },
+        {
+          "claim": "项目主要使用 JavaScript/TypeScript 开发，采用 ES Modules 构建，并针对 Node.js 和浏览器环境进行了优化。",
+          "confidence": "high",
+          "evidence": [
+            {
+              "path": "package.json",
+              "supports": "声明 `\"type\": \"module\"`，并在 `browser` 和 `react-native` 字段中配置了别名指向 `index.browser.js`。"
+            },
+            {
+              "path": "index.js",
+              "supports": "代码中使用了 `crypto.getRandomValues` 进行安全随机数生成，并处理了 Buffer 操作。"
+            },
+            {
+              "path": "test/index.test.js",
+              "supports": "测试文件同时导入了 `index.js` (Node) 和 `index.browser.js` (浏览器)，并模拟了 `crypto` 行为以验证跨平台一致性。"
+            }
+          ]
+        },
+        {
+          "claim": "核心逻辑集中在 `index.js` 中的 `customAlphabet` 和 `customRandom` 函数，负责处理随机字节填充、拒绝采样算法及字符映射。",
+          "confidence": "high",
+          "evidence": [
+            {
+              "path": "index.js",
+              "supports": "展示了 `customAlphabet` 函数内部使用 `fillRandom` 填充缓冲区，并通过拒绝采样（rejection sampling）确保字符分布均匀。"
+            },
+            {
+              "path": "index.js",
+              "supports": "代码注释详细解释了 `safeByteCutoff` 的计算逻辑，用于防止因取模导致的熵损失。"
+            },
+            {
+              "path": "index.js",
+              "supports": "定义了 `GET_RANDOM_LIMIT` 为 65536，以处理超过此限制的大缓冲区填充需求。"
+            }
+          ]
+        }
+      ],
+      "evidenceCoverage": {
+        "examinedFiles": [
+          "README.md",
+          "README.zh-CN.md",
+          "index.js",
+          "package.json",
+          "test/index.test.js"
+        ],
+        "gaps": [
+          {
+            "kind": "coverage_limit",
+            "subject": "README.md",
+            "summary": "Only a bounded excerpt was read",
+            "severity": "medium"
+          },
+          {
+            "kind": "coverage_limit",
+            "subject": "README.zh-CN.md",
+            "summary": "Only a bounded excerpt was read",
+            "severity": "medium"
+          },
+          {
+            "kind": "coverage_limit",
+            "subject": "README.ko.md",
+            "summary": "Only a bounded excerpt was read",
+            "severity": "medium"
+          },
+          {
+            "kind": "coverage_limit",
+            "subject": "README.ar.md",
+            "summary": "Only a bounded excerpt was read",
+            "severity": "medium"
+          },
+          {
+            "kind": "coverage_limit",
+            "subject": "README.ru.md",
+            "summary": "Only a bounded excerpt was read",
+            "severity": "medium"
+          },
+          {
+            "kind": "test_absent",
+            "subject": "非安全模式 (`non-secure`) 的完整测试覆盖",
+            "summary": "虽然 `package.json` 定义了 `./non-secure` 导出，但提供的测试片段主要关注 `index.js` 和 `index.browser.js`，未展示针对非安全模式的详细测试用例。",
+            "severity": "medium"
+          }
+        ]
+      },
+      "projectType": {
+        "primary": "Utility Library",
+        "secondary": [
+          "ID Generator",
+          "Security Tool"
+        ]
+      },
+      "techStack": {
+        "language": "JavaScript",
+        "framework": null,
+        "buildTool": null
+      },
+      "fileCount": 49,
+      "entryPoints": [
+        {
+          "file": "index.js",
+          "role": "Main Entry"
+        },
+        {
+          "file": "index.browser.js",
+          "role": "Browser Entry"
+        },
+        {
+          "file": "non-secure/index.js",
+          "role": "Non-Secure Entry"
+        }
+      ],
+      "moduleMap": [
+        {
+          "path": "index.js",
+          "responsibility": "Core random ID generation logic using rejection sampling and secure crypto APIs.",
+          "importance": "core",
+          "justification": "Contains the primary algorithms for generating IDs and handling buffer filling."
+        },
+        {
+          "path": "test/index.test.js",
+          "responsibility": "Validation of ID generation correctness and cross-environment compatibility.",
+          "importance": "support",
+          "justification": "Tests both Node.js and browser implementations, including simulated crypto behavior."
+        },
+        {
+          "path": "package.json",
+          "responsibility": "Project configuration, dependency management, and export definitions.",
+          "importance": "utility",
+          "justification": "Defines build targets, browser aliases, and metadata essential for package distribution."
+        }
+      ],
+      "directorySummary": "The repository contains a lightweight JavaScript library for generating secure, URL-friendly unique IDs. The core logic resides in `index.js`, which implements rejection sampling to ensure uniform character distribution. It supports both Node.js and browser environments via separate entry points (`index.js` and `index.browser.js`). The project is configured as an ES Module with specific exports for non-secure modes. Documentation is provided in both English and Chinese, highlighting performance benchmarks and security features.",
+      "projectSummary": "Nano ID is a high-performance, secure ID generator that outperforms UUID v4 by using a larger alphabet and optimized randomization algorithms. It leverages the `crypto` module for security and supports multiple environments through conditional exports. The codebase is minimal, focusing on efficient buffer manipulation and uniform distribution logic."
+    },
+    "mentor": {
+      "evidenceClaims": [
+        {
+          "claim": "核心实现通过 `customAlphabet` 和 `customRandom` 函数生成 ID，利用 `crypto.getRandomValues` 获取随机字节，并通过拒绝采样（rejection sampling）或位掩码映射消除模偏（modulo bias），确保字符分布均匀。",
+          "confidence": "high",
+          "evidence": [
+            {
+              "path": "index.js",
+              "supports": "L78-L81 拒绝大值字节以消除模偏；L143-L149 使用位掩码直接映射；L151-L167 使用拒绝采样处理非 2 的幂次表长。"
+            },
+            {
+              "path": "index.js",
+              "supports": "L16-L15 分块填充大缓冲区；L154-L156 计算 1.6 倍冗余字节以覆盖坏运气序列。"
+            },
+            {
+              "path": "index.js",
+              "supports": "L161-L163 使用 `& mask` 进行位运算映射；L155 计算 `Math.ceil((1.6 * (mask + 1) * target) / alphabetLen)`。"
+            }
+          ]
+        },
+        {
+          "claim": "架构采用单文件（`index.js`）导出 `nanoid`、`customAlphabet` 等 API，支持 Node 和浏览器环境，通过 `package.json` 配置多入口，测试覆盖核心逻辑及边界条件。",
+          "confidence": "high",
+          "evidence": [
+            {
+              "path": "package.json",
+              "supports": "L33-L35 定义 `browser` 和 `default` 入口；L46 指定 `bnt` 进行覆盖率测试。"
+            },
+            {
+              "path": "test/index.test.js",
+              "supports": "L1-L5 导入 Node 和 Browser 实现；L12-L29 模拟浏览器 `crypto` 环境。"
+            },
+            {
+              "path": "test/index.test.js",
+              "supports": "L32-L40 测试 0 大小及 URL 友好 ID；L289-L299 使用 `fakeRandom` 测试自定义随机源。"
+            }
+          ]
+        },
+        {
+          "claim": "静态依赖包括 `node:crypto`（Node 端）、`node:assert` 和 `node:test`（测试），无外部运行时依赖，代码约定强调类型安全（`|=` 转换）和熵值均匀性。",
+          "confidence": "medium",
+          "evidence": [
+            {
+              "path": "index.js",
+              "supports": "L19-L20 使用 `|=` 防止 `valueOf` 滥用；L33-L34 注释解释 `safeByteCutoff` 消除模偏。"
+            },
+            {
+              "path": "test/index.test.js",
+              "supports": "L1-L2 导入 `node:assert` 和 `node:test`。"
+            },
+            {
+              "path": "index.js",
+              "supports": "L96-L102 验证 `alphabet` 类型及长度限制。"
+            }
+          ]
+        }
+      ],
+      "evidenceCoverage": {
+        "examinedFiles": [
+          ".github/workflows/test.yml",
+          "index.js",
+          "package.json",
+          "test/index.test.js"
+        ],
+        "gaps": [
+          {
+            "kind": "coverage_limit",
+            "subject": "README.ko.md",
+            "summary": "Only a bounded excerpt was read",
+            "severity": "medium"
+          },
+          {
+            "kind": "coverage_limit",
+            "subject": "README.ar.md",
+            "summary": "Only a bounded excerpt was read",
+            "severity": "medium"
+          },
+          {
+            "kind": "coverage_limit",
+            "subject": "README.ru.md",
+            "summary": "Only a bounded excerpt was read",
+            "severity": "medium"
+          },
+          {
+            "kind": "test_absent",
+            "subject": "大缓冲区（>65536 字节）的 `random` 函数",
+            "summary": "测试未覆盖 `fillRandom` 分块逻辑在超大缓冲区下的行为，仅测试了中小规模。",
+            "severity": "medium"
+          },
+          {
+            "kind": "coverage_limit",
+            "subject": "`customRandom` 的拒绝采样路径",
+            "summary": "测试主要覆盖 `customAlphabet` 的池化逻辑，对 `customRandom` 中拒绝采样循环的覆盖率可能不足。",
+            "severity": "medium"
+          }
+        ]
+      },
+      "architectureOverview": "项目为轻量级 ID 生成库，核心逻辑集中在 `index.js`，提供 `nanoid`、`customAlphabet` 和 `customRandom` 函数。Node 环境调用原生 `crypto`，浏览器环境通过 `test` 模拟。架构简单，无复杂模块划分，依赖最小化。",
+      "dependencyGraph": {
+        "node": [
+          "node:crypto",
+          "node:assert",
+          "node:test"
+        ],
+        "browser": [
+          "node:assert",
+          "node:test"
+        ],
+        "external": [
+          "nope-id",
+          "uuid",
+          "rndm"
+        ]
+      },
+      "readingPath": [
+        {
+          "step": 1,
+          "file": "index.js",
+          "why": "理解核心随机生成逻辑、模偏消除机制及缓冲区填充策略。"
+        },
+        {
+          "step": 2,
+          "file": "test/index.test.js",
+          "why": "验证不同环境（Node/Browser）下的行为及边界条件（如 0 大小、自定义随机源）。"
+        },
+        {
+          "step": 3,
+          "file": "package.json",
+          "why": "确认构建配置、多入口支持及测试脚本，了解项目整体结构。"
+        }
+      ],
+      "keyPatterns": [
+        {
+          "pattern": "bytes |= 0",
+          "where": "index.js L19, L134",
+          "description": "强制将参数转换为无符号整数，防止 `valueOf` 被滥用导致类型错误。"
+        },
+        {
+          "pattern": "1.6 * (mask + 1)",
+          "where": "index.js L155, L68",
+          "description": "拒绝采样中的冗余系数，用于覆盖随机字节序列中的坏运气情况。"
+        },
+        {
+          "pattern": "safeByteCutoff = 256 - (256 % alphabet.length)",
+          "where": "index.js L40",
+          "description": "计算安全字节截断值，确保每个字符被选中的概率严格相等。"
+        }
+      ],
+      "codeConventions": [
+        {
+          "rule": "Type Safety",
+          "example": "bytes |= 0"
+        },
+        {
+          "rule": "Entropy Uniformity",
+          "example": "reject bytes >= safeByteCutoff"
+        },
+        {
+          "rule": "Buffer Chunking",
+          "example": "GET_RANDOM_LIMIT = 65536"
+        }
+      ]
+    },
+    "contributor": {
+      "evidenceClaims": [
+        {
+          "claim": "项目支持 Node.js 22/24/26+ 环境，依赖 pnpm 进行安装与测试。",
+          "confidence": "high",
+          "evidence": [
+            {
+              "path": "package.json",
+              "supports": "engines 字段指定 Node.js 版本范围，scripts 定义 pnpm 命令。"
+            },
+            {
+              "path": ".github/workflows/test.yml",
+              "supports": "CI 配置使用 pnpm 安装依赖并运行测试。"
+            },
+            {
+              "path": "package.json",
+              "supports": "devDependencies 包含 pnpm 相关工具。"
+            }
+          ]
+        },
+        {
+          "claim": "测试覆盖 Node 与浏览器环境，包含随机数模拟与 URL 友好 ID 生成验证。",
+          "confidence": "high",
+          "evidence": [
+            {
+              "path": "test/index.test.js",
+              "supports": "测试文件模拟浏览器 crypto 并验证不同环境下的 ID 生成。"
+            },
+            {
+              "path": "package.json",
+              "supports": "scripts 定义 test:coverage 与 test:lint 命令。"
+            },
+            {
+              "path": ".github/workflows/test.yml",
+              "supports": "CI 流程执行 pnpm bnt 运行测试。"
+            }
+          ]
+        },
+        {
+          "claim": "构建限制严格，各模块打包体积需控制在 127B 以内。",
+          "confidence": "high",
+          "evidence": [
+            {
+              "path": "package.json",
+              "supports": "size-limit 配置中 nanoid 模块限制为 127 B。"
+            },
+            {
+              "path": "package.json",
+              "supports": "scripts 包含 test:size 命令用于体积检查。"
+            },
+            {
+              "path": "index.js",
+              "supports": "代码逻辑包含熵分布优化以支持小体积输出。"
+            }
+          ]
+        }
+      ],
+      "evidenceCoverage": {
+        "examinedFiles": [
+          ".github/workflows/benchmark.yml",
+          ".github/workflows/test.yml",
+          "README.md",
+          "index.js",
+          "package.json",
+          "test/index.test.js"
+        ],
+        "gaps": [
+          {
+            "kind": "coverage_limit",
+            "subject": "README.ko.md",
+            "summary": "Only a bounded excerpt was read",
+            "severity": "medium"
+          },
+          {
+            "kind": "coverage_limit",
+            "subject": "README.ar.md",
+            "summary": "Only a bounded excerpt was read",
+            "severity": "medium"
+          },
+          {
+            "kind": "coverage_limit",
+            "subject": "README.ru.md",
+            "summary": "Only a bounded excerpt was read",
+            "severity": "medium"
+          },
+          {
+            "kind": "test_absent",
+            "subject": "非安全模式 (non-secure) 的测试覆盖率不足。",
+            "summary": "package.json 定义了 non-secure 模块，但 test/index.test.js 未显式测试该模式。",
+            "severity": "medium"
+          }
+        ]
+      },
+      "goodFirstIssues": [
+        {
+          "area": "测试覆盖",
+          "difficulty": "easy",
+          "description": "补充 non-secure 模式的测试用例，验证非安全随机数生成器行为。"
+        },
+        {
+          "area": "文档完善",
+          "difficulty": "easy",
+          "description": "在 README 中明确说明 CI 测试使用的 Node.js 版本与 Benchmark 版本的区别。"
+        },
+        {
+          "area": "构建优化",
+          "difficulty": "medium",
+          "description": "分析 index.js 中 safeByteCutoff 计算逻辑，确认其对不同 alphabet 长度的兼容性。"
+        }
+      ],
+      "contributionSetup": {
+        "devEnv": "Node.js 22/24/26+ 与 pnpm",
+        "build": "pnpm run test:size",
+        "test": "pnpm run test:coverage",
+        "lint": "pnpm run test:lint"
+      },
+      "entryFiles": [
+        {
+          "file": "package.json",
+          "description": "定义项目依赖、脚本与构建限制。",
+          "reason": "核心配置入口，包含安装与测试命令。"
+        },
+        {
+          "file": "index.js",
+          "description": "核心随机 ID 生成逻辑。",
+          "reason": "实现主要功能，需理解熵分布与字节截取算法。"
+        },
+        {
+          "file": "test/index.test.js",
+          "description": "单元测试入口。",
+          "reason": "验证核心功能在不同环境下的表现。"
+        }
+      ],
+      "notesForNewcomers": [
+        {
+          "tip": "使用 npx nanoid 可直接生成 ID，无需全局安装，适合快速验证。"
+        },
+        {
+          "tip": "注意 PouchDB/CouchDB 场景下 ID 不能以下划线开头，需手动添加前缀。"
+        }
+      ]
+    }
+  },
+  "stop_reason": "report_completed",
+  "usage": [
+    {
+      "stage": "explorer",
+      "usage": {
+        "prompt_tokens": 5845,
+        "completion_tokens": 1506,
+        "total_tokens": 7351
+      },
+      "elapsed_seconds": 25.328,
+      "cache_hit": false,
+      "new_model_requests": 1,
+      "config_id": "e1157f14e68a39770c8df543",
+      "attempt_id": "e32c075b9fbc4b01bee699f1921e1465"
+    },
+    {
+      "stage": "mentor",
+      "usage": {
+        "prompt_tokens": 5636,
+        "completion_tokens": 1686,
+        "total_tokens": 7322
+      },
+      "elapsed_seconds": 27.781,
+      "cache_hit": false,
+      "new_model_requests": 1,
+      "config_id": "e1157f14e68a39770c8df543",
+      "attempt_id": "2a2ee83c61a648f4b657be96cfce84d0"
+    },
+    {
+      "stage": "contributor",
+      "usage": {
+        "prompt_tokens": 5182,
+        "completion_tokens": 1285,
+        "total_tokens": 6467
+      },
+      "elapsed_seconds": 21.344,
+      "cache_hit": false,
+      "new_model_requests": 1,
+      "config_id": "e1157f14e68a39770c8df543",
+      "attempt_id": "421a0478a13949698b729d19b55b76b9"
+    }
+  ],
+  "elapsed_seconds": 75.906,
+  "error": null,
+  "versions": {
+    "repomentor": "0.1.0",
+    "model": "repomentor-qwen35-4b-8k-2a654d98e6fb:latest",
+    "model_digest": "7fe32e715877038e39d5259b9cb8f57a46d7389dcc5300cedadc09250e063011",
+    "config_id": "e1157f14e68a39770c8df543",
+    "index_id": "22f348d001aecc28e504f594",
+    "report_strategy": "deterministic-selection-rag-v3"
+  },
+  "harness": {
+    "stages": {
+      "explorer": {
+        "status": "completed",
+        "plan": {
+          "goal": "介绍仓库的用途、类型、技术栈、入口文件和主要模块职责。readme package pyproject index main __init__ src",
+          "rationale": "Deterministic BM25 selection for local report",
+          "questions": [],
+          "actions": [],
+          "files": [
+            {
+              "path": "index.js",
+              "purpose": "本地报告源码核验",
+              "priority": "high"
+            },
+            {
+              "path": "test/index.test.js",
+              "purpose": "本地报告源码核验",
+              "priority": "high"
+            },
+            {
+              "path": "README.md",
+              "purpose": "本地报告源码核验",
+              "priority": "high"
+            },
+            {
+              "path": "README.zh-CN.md",
+              "purpose": "本地报告源码核验",
+              "priority": "high"
+            },
+            {
+              "path": "README.ko.md",
+              "purpose": "本地报告源码核验",
+              "priority": "high"
+            },
+            {
+              "path": "README.ar.md",
+              "purpose": "本地报告源码核验",
+              "priority": "high"
+            },
+            {
+              "path": "README.ru.md",
+              "purpose": "本地报告源码核验",
+              "priority": "high"
+            },
+            {
+              "path": "package.json",
+              "purpose": "本地报告源码核验",
+              "priority": "high"
+            }
+          ],
+          "stopConditions": [
+            "Selected bounded source excerpts are available"
+          ]
+        },
+        "examinedPaths": [
+          "index.js",
+          "test/index.test.js",
+          "README.md",
+          "README.zh-CN.md",
+          "README.ko.md",
+          "README.ar.md",
+          "README.ru.md",
+          "package.json"
+        ],
+        "skippedPaths": [],
+        "unresolvedQuestions": [],
+        "skillPolicy": {
+          "skillNames": [
+            "analyze-generic"
+          ],
+          "allowedTools": [
+            "search_symbols",
+            "trace_module_dependencies",
+            "find_related_tests"
+          ],
+          "preferredTools": [
+            "trace_module_dependencies",
+            "find_related_tests"
+          ],
+          "recommendedQuestions": [
+            "Where is the public or runtime entry point?",
+            "Which modules implement the main control flow?",
+            "How is the core behavior verified?"
+          ],
+          "evidenceRequirements": [
+            "One public or runtime entry file",
+            "One core implementation file",
+            "One representative test or an explicit coverage gap"
+          ],
+          "stopConditions": [
+            "Entry, core responsibility, and verification path are supported or explicitly unresolved"
+          ],
+          "maxDiscoveryActions": 3,
+          "maxEvidenceFiles": 8
+        },
+        "discoveryActionsUsed": 0,
+        "stopReason": "evidence_batch_completed"
+      },
+      "mentor": {
+        "status": "completed",
+        "plan": {
+          "goal": "解释核心实现、静态依赖与架构，给出从入口到实现再到测试的阅读路径。src index core __init__ test",
+          "rationale": "Deterministic BM25 selection for local report",
+          "questions": [],
+          "actions": [],
+          "files": [
+            {
+              "path": "index.js",
+              "purpose": "本地报告源码核验",
+              "priority": "high"
+            },
+            {
+              "path": "test/index.test.js",
+              "purpose": "本地报告源码核验",
+              "priority": "high"
+            },
+            {
+              "path": "README.md",
+              "purpose": "本地报告源码核验",
+              "priority": "high"
+            },
+            {
+              "path": "README.zh-CN.md",
+              "purpose": "本地报告源码核验",
+              "priority": "high"
+            },
+            {
+              "path": ".github/workflows/test.yml",
+              "purpose": "本地报告源码核验",
+              "priority": "high"
+            },
+            {
+              "path": "test/pool.test.js",
+              "purpose": "本地报告源码核验",
+              "priority": "high"
+            },
+            {
+              "path": "test/non-secure.test.js",
+              "purpose": "本地报告源码核验",
+              "priority": "high"
+            },
+            {
+              "path": "README.ko.md",
+              "purpose": "本地报告源码核验",
+              "priority": "high"
+            }
+          ],
+          "stopConditions": [
+            "Selected bounded source excerpts are available"
+          ]
+        },
+        "examinedPaths": [
+          "README.md",
+          "README.zh-CN.md",
+          ".github/workflows/test.yml",
+          "test/pool.test.js",
+          "test/non-secure.test.js",
+          "README.ko.md",
+          "index.js",
+          "test/index.test.js"
+        ],
+        "skippedPaths": [],
+        "unresolvedQuestions": [],
+        "skillPolicy": {
+          "skillNames": [
+            "analyze-generic"
+          ],
+          "allowedTools": [
+            "search_symbols",
+            "trace_module_dependencies",
+            "find_related_tests"
+          ],
+          "preferredTools": [
+            "trace_module_dependencies",
+            "find_related_tests"
+          ],
+          "recommendedQuestions": [
+            "Where is the public or runtime entry point?",
+            "Which modules implement the main control flow?",
+            "How is the core behavior verified?"
+          ],
+          "evidenceRequirements": [
+            "One public or runtime entry file",
+            "One core implementation file",
+            "One representative test or an explicit coverage gap"
+          ],
+          "stopConditions": [
+            "Entry, core responsibility, and verification path are supported or explicitly unresolved"
+          ],
+          "maxDiscoveryActions": 3,
+          "maxEvidenceFiles": 8
+        },
+        "discoveryActionsUsed": 0,
+        "stopReason": "global_evidence_budget_exhausted"
+      },
+      "contributor": {
+        "status": "completed",
+        "plan": null,
+        "examinedPaths": [],
+        "skippedPaths": [],
+        "unresolvedQuestions": [],
+        "skillPolicy": null,
+        "discoveryActionsUsed": 0,
+        "stopReason": null
+      }
+    },
+    "budget": {
+      "maxEvidenceBatches": 2,
+      "maxFilesRead": 18,
+      "maxEvidenceBytes": 88000,
+      "usedEvidenceBatches": 2,
+      "filesRead": 14,
+      "evidenceBytes": 88000
+    },
+    "observations": [],
+    "ledger": {
+      "index.js": {
+        "status": "available",
+        "attempts": [
+          {
+            "phase": "explorer",
+            "status": "available",
+            "bytes": 6159
+          },
+          {
+            "phase": "mentor",
+            "status": "reused",
+            "bytes": 0,
+            "reason": "already_available"
+          }
+        ]
+      },
+      "test/index.test.js": {
+        "status": "available",
+        "attempts": [
+          {
+            "phase": "explorer",
+            "status": "available",
+            "bytes": 9559
+          },
+          {
+            "phase": "mentor",
+            "status": "reused",
+            "bytes": 0,
+            "reason": "already_available"
+          }
+        ]
+      },
+      "README.md": {
+        "status": "available",
+        "attempts": [
+          {
+            "phase": "explorer",
+            "status": "partial",
+            "bytes": 13583
+          },
+          {
+            "phase": "mentor",
+            "status": "available",
+            "bytes": 13655
+          }
+        ]
+      },
+      "README.zh-CN.md": {
+        "status": "available",
+        "attempts": [
+          {
+            "phase": "explorer",
+            "status": "partial",
+            "bytes": 4000
+          },
+          {
+            "phase": "mentor",
+            "status": "available",
+            "bytes": 12752
+          }
+        ]
+      },
+      "README.ko.md": {
+        "status": "partial",
+        "attempts": [
+          {
+            "phase": "explorer",
+            "status": "partial",
+            "bytes": 4000
+          },
+          {
+            "phase": "mentor",
+            "status": "partial",
+            "bytes": 8618
+          }
+        ]
+      },
+      "README.ar.md": {
+        "status": "partial",
+        "attempts": [
+          {
+            "phase": "explorer",
+            "status": "partial",
+            "bytes": 4000
+          }
+        ]
+      },
+      "README.ru.md": {
+        "status": "partial",
+        "attempts": [
+          {
+            "phase": "explorer",
+            "status": "partial",
+            "bytes": 4000
+          }
+        ]
+      },
+      "package.json": {
+        "status": "available",
+        "attempts": [
+          {
+            "phase": "explorer",
+            "status": "available",
+            "bytes": 2699
+          }
+        ]
+      },
+      ".github/workflows/test.yml": {
+        "status": "available",
+        "attempts": [
+          {
+            "phase": "mentor",
+            "status": "available",
+            "bytes": 1267
+          }
+        ]
+      },
+      "test/pool.test.js": {
+        "status": "available",
+        "attempts": [
+          {
+            "phase": "mentor",
+            "status": "available",
+            "bytes": 438
+          }
+        ]
+      },
+      "test/non-secure.test.js": {
+        "status": "available",
+        "attempts": [
+          {
+            "phase": "mentor",
+            "status": "available",
+            "bytes": 3270
+          }
+        ]
+      }
+    }
+  }
+}

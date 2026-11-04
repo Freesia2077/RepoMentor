@@ -1,0 +1,390 @@
+{
+  "reviewer": "Codex",
+  "method": "Nonblind diagnostic source inspection, selected cases; not a representative semantic benchmark",
+  "human_approved": false,
+  "aggregate_accuracy": null,
+  "training_use": "Forbidden: these are validation cases",
+  "cases": [
+    {
+      "source": "generation.jsonl",
+      "task_id": "developit--mitt-p4-cross_map",
+      "condition": "syntax_bm25",
+      "attempt_id": "7d688e90c2984bc3bcb00c60ea342ba0",
+      "question": "mitt 传入 Map 后是否复用？结合 src/index.ts 与 test/index_test.ts 的初始化和 on 测试说明。",
+      "raw_answer": {
+        "answer": "是的，mitt 传入 Map 后不会复用该 Map 对象，而是会创建一个新的内部 Map 来存储事件监听器。",
+        "insufficient_evidence": false,
+        "citations": [
+          {
+            "path": "test/index_test.ts",
+            "start_line": 41,
+            "end_line": 42
+          },
+          {
+            "path": "test/index_test.ts",
+            "start_line": 18,
+            "end_line": 18
+          }
+        ]
+      },
+      "gold_reference": {
+        "required_facts": [
+          "复用传入的 Map；on 对同一 Map 写入事件监听器；测试通过外部 events Map 观察注册结果。"
+        ],
+        "evidence": [
+          {
+            "path": "src/index.ts",
+            "start_line": 46,
+            "end_line": 73,
+            "content_sha256": "715cda3df8acf52c630a8f6c507e7e0e363d6b0505c6da23e3030b336d9d7174"
+          },
+          {
+            "path": "test/index_test.ts",
+            "start_line": 38,
+            "end_line": 61,
+            "content_sha256": "fc694f7d9e030d23ba0438fdaedcb093823c2c95df5feca5080d91946a6d74e8"
+          }
+        ]
+      },
+      "observation": "主结论错误：传入 Map 时实际复用它，回答却声称新建内部 Map。"
+    },
+    {
+      "source": "generation.jsonl",
+      "task_id": "developit--mitt-p4-cross_case",
+      "condition": "syntax_bm25",
+      "attempt_id": "1dbe282e06e54d729a2c1b9acdcd9489",
+      "question": "mitt 的 on 会把事件名统一转成小写吗？结合实现与 should NOT normalize case 测试说明。",
+      "raw_answer": {
+        "answer": "是的，mitt 的 `on` 方法会将事件名统一转成小写。",
+        "insufficient_evidence": false,
+        "citations": [
+          {
+            "path": "test/index_test.ts",
+            "start_line": 79,
+            "end_line": 90
+          }
+        ]
+      },
+      "gold_reference": {
+        "required_facts": [
+          "不转换大小写；按原始 type 访问 Map；测试区分 FOO/foo、Bar/bar 等。"
+        ],
+        "evidence": [
+          {
+            "path": "src/index.ts",
+            "start_line": 66,
+            "end_line": 73,
+            "content_sha256": "0a5bf296ae849cd916f0b4eedbc3b3dbd431acb523f64fede2782b79ff119004"
+          },
+          {
+            "path": "test/index_test.ts",
+            "start_line": 79,
+            "end_line": 90,
+            "content_sha256": "7c7ae10f82f38319cf3cf181161ee7bfb29bde7819610b697836ace1ba119048"
+          }
+        ]
+      },
+      "observation": "主结论错误：回答称统一转小写，引用的测试却明确区分大小写。合法引用范围没有保证蕴含关系。"
+    },
+    {
+      "source": "generation.jsonl",
+      "task_id": "developit--mitt-p4-unknown_runtime",
+      "condition": "syntax_bm25",
+      "attempt_id": "03336ddaedfe490face2e6ffbebd276d",
+      "question": "这个 mitt 仓库在我电脑上今天运行测试的实际通过数和耗时是多少？",
+      "raw_answer": {
+        "answer": "无法提供实际运行测试的通过数和耗时。",
+        "insufficient_evidence": true,
+        "citations": [
+          {
+            "path": ".github/workflows/main.yml",
+            "start_line": 19,
+            "end_line": 23
+          }
+        ]
+      },
+      "gold_reference": {
+        "required_facts": [
+          "固定源码不能证明用户电脑今天的测试运行结果，应说明无法确定。"
+        ],
+        "evidence": []
+      },
+      "observation": "合理拒答，没有编造用户本机测试统计；CI 配置引用不构成真实运行结果。"
+    },
+    {
+      "source": "generation.jsonl",
+      "task_id": "developit--mitt-p4-cross_map",
+      "condition": "syntax_hybrid_rerank",
+      "attempt_id": "81c1252247fb4aa79f535e33b8c36f00",
+      "question": "mitt 传入 Map 后是否复用？结合 src/index.ts 与 test/index_test.ts 的初始化和 on 测试说明。",
+      "raw_answer": {
+        "answer": "是的，mitt 传入 Map 后**不会复用**该 Map 对象，而是会将其作为内部状态持有，并在后续调用中直接引用该传入的 Map。",
+        "insufficient_evidence": false,
+        "citations": [
+          {
+            "path": "src/index.ts",
+            "start_line": 46,
+            "end_line": 52
+          },
+          {
+            "path": "test/index_test.ts",
+            "start_line": 12,
+            "end_line": 22
+          }
+        ]
+      },
+      "gold_reference": {
+        "required_facts": [
+          "复用传入的 Map；on 对同一 Map 写入事件监听器；测试通过外部 events Map 观察注册结果。"
+        ],
+        "evidence": [
+          {
+            "path": "src/index.ts",
+            "start_line": 46,
+            "end_line": 73,
+            "content_sha256": "715cda3df8acf52c630a8f6c507e7e0e363d6b0505c6da23e3030b336d9d7174"
+          },
+          {
+            "path": "test/index_test.ts",
+            "start_line": 38,
+            "end_line": 61,
+            "content_sha256": "fc694f7d9e030d23ba0438fdaedcb093823c2c95df5feca5080d91946a6d74e8"
+          }
+        ]
+      },
+      "observation": "仍不合格：同一句先说不会复用，再说直接引用传入 Map，前后矛盾。源码覆盖改善没有自动解决推理问题。"
+    },
+    {
+      "source": "generation.jsonl",
+      "task_id": "developit--mitt-p4-cross_case",
+      "condition": "syntax_hybrid_rerank",
+      "attempt_id": "37f053242b2f424f90025c86b1a79b8e",
+      "question": "mitt 的 on 会把事件名统一转成小写吗？结合实现与 should NOT normalize case 测试说明。",
+      "raw_answer": {
+        "answer": "不会，mitt 的 on 方法**不会**将事件名统一转成小写。它严格区分大小写，事件名必须完全匹配（包括大小写、特殊字符等）才能被注册和触发。",
+        "insufficient_evidence": false,
+        "citations": [
+          {
+            "path": "test/index_test.ts",
+            "start_line": 79,
+            "end_line": 90
+          }
+        ]
+      },
+      "gold_reference": {
+        "required_facts": [
+          "不转换大小写；按原始 type 访问 Map；测试区分 FOO/foo、Bar/bar 等。"
+        ],
+        "evidence": [
+          {
+            "path": "src/index.ts",
+            "start_line": 66,
+            "end_line": 73,
+            "content_sha256": "0a5bf296ae849cd916f0b4eedbc3b3dbd431acb523f64fede2782b79ff119004"
+          },
+          {
+            "path": "test/index_test.ts",
+            "start_line": 79,
+            "end_line": 90,
+            "content_sha256": "7c7ae10f82f38319cf3cf181161ee7bfb29bde7819610b697836ace1ba119048"
+          }
+        ]
+      },
+      "observation": "主结论得到纠正：明确不归一化大小写。仍未按题意同时解释实现和测试，不能据此给完整性满分。"
+    },
+    {
+      "source": "generation.jsonl",
+      "task_id": "developit--mitt-p4-unknown_runtime",
+      "condition": "syntax_hybrid_rerank",
+      "attempt_id": "72a313b94a9941a59d138e8483208022",
+      "question": "这个 mitt 仓库在我电脑上今天运行测试的实际通过数和耗时是多少？",
+      "raw_answer": {
+        "answer": "无法回答",
+        "insufficient_evidence": true,
+        "citations": []
+      },
+      "gold_reference": {
+        "required_facts": [
+          "固定源码不能证明用户电脑今天的测试运行结果，应说明无法确定。"
+        ],
+        "evidence": []
+      },
+      "observation": "合理拒答，但只有无法回答，缺少说明需要用户本机测试输出，教学价值有限。"
+    },
+    {
+      "source": "generation.jsonl",
+      "task_id": "ai--nanoid-p4-cross_custom",
+      "condition": "syntax_bm25",
+      "attempt_id": "d7be501eff304ed8870e0736a2ee8c84",
+      "question": "customAlphabet 的默认长度在哪里声明，测试如何验证可以覆盖长度？",
+      "raw_answer": {
+        "answer": "customAlphabet 的默认长度没有显式声明为固定值，其默认行为是返回一个接受可选长度参数的函数。验证覆盖长度的测试方法是在调用时传入第二个参数（长度），或者在创建函数时传入第二个参数。",
+        "insufficient_evidence": false,
+        "citations": [
+          {
+            "path": "README.zh-CN.md",
+            "start_line": 158,
+            "end_line": 159
+          },
+          {
+            "path": "README.zh-CN.md",
+            "start_line": 178,
+            "end_line": 179
+          },
+          {
+            "path": "test/index.test.js",
+            "start_line": 179,
+            "end_line": 180
+          },
+          {
+            "path": "test/index.test.js",
+            "start_line": 211,
+            "end_line": 212
+          },
+          {
+            "path": "test/non-secure.test.js",
+            "start_line": 78,
+            "end_line": 79
+          }
+        ]
+      },
+      "gold_reference": {
+        "required_facts": [
+          "默认长度参数为21；测试 customAlphabet('a') 返回的函数传入10，得到10个a。"
+        ],
+        "evidence": [
+          {
+            "path": "index.js",
+            "start_line": 96,
+            "end_line": 98,
+            "content_sha256": "51ac9a240f93fb28304f6f8b5333191dbceb2cc467932f958ab26178ba587c1c"
+          },
+          {
+            "path": "test/index.test.js",
+            "start_line": 210,
+            "end_line": 213,
+            "content_sha256": "cd5c1b0126978436b4df5d8b80d8f18e6021991a9e5887d6150c59a57c54f1a2"
+          }
+        ]
+      },
+      "observation": "主结论错误：默认长度在 index.js:96 明确为 21；生成器覆盖长度使用其第一个参数，回答的第二个参数表述混淆工厂与返回函数。"
+    },
+    {
+      "source": "generation.jsonl",
+      "task_id": "ai--nanoid-p4-cross_custom",
+      "condition": "syntax_hybrid_rerank",
+      "attempt_id": "816d198de493472ca305ed3a55c8e541",
+      "question": "customAlphabet 的默认长度在哪里声明，测试如何验证可以覆盖长度？",
+      "raw_answer": {
+        "answer": "customAlphabet 的默认长度在 `index.js` 中声明为 21，测试通过直接调用函数（不传第二个参数）或传入 0 来验证覆盖长度。",
+        "insufficient_evidence": false,
+        "citations": [
+          {
+            "path": "index.js",
+            "start_line": 96,
+            "end_line": 96
+          },
+          {
+            "path": "test/index.test.js",
+            "start_line": 211,
+            "end_line": 213
+          },
+          {
+            "path": "test/index.test.js",
+            "start_line": 216,
+            "end_line": 219
+          }
+        ]
+      },
+      "gold_reference": {
+        "required_facts": [
+          "默认长度参数为21；测试 customAlphabet('a') 返回的函数传入10，得到10个a。"
+        ],
+        "evidence": [
+          {
+            "path": "index.js",
+            "start_line": 96,
+            "end_line": 98,
+            "content_sha256": "51ac9a240f93fb28304f6f8b5333191dbceb2cc467932f958ab26178ba587c1c"
+          },
+          {
+            "path": "test/index.test.js",
+            "start_line": 210,
+            "end_line": 213,
+            "content_sha256": "cd5c1b0126978436b4df5d8b80d8f18e6021991a9e5887d6150c59a57c54f1a2"
+          }
+        ]
+      },
+      "observation": "部分纠正：默认长度 21 正确；但漏掉 test/index.test.js:211-212 的 nanoidA(10) 案例，混淆覆盖长度与零长度边界测试。"
+    },
+    {
+      "source": "cli-chat-turn1.json",
+      "attempt_id": "3e7130fca0e244f98b778f25054b83aa",
+      "question": "不传处理器时，off 会直接删除整条事件记录吗？",
+      "raw_answer": {
+        "answer": "是的，当不传处理器（handler）时，`off` 会清空该类型下的所有事件记录。",
+        "insufficient_evidence": false,
+        "citations": [
+          {
+            "path": "src/index.ts",
+            "start_line": 88,
+            "end_line": 89
+          },
+          {
+            "path": "README.md",
+            "start_line": 159,
+            "end_line": 160
+          },
+          {
+            "path": "test/index_test.ts",
+            "start_line": 148,
+            "end_line": 156
+          }
+        ]
+      },
+      "source_reference": "developit/mitt@6b41670516ed8e8b738612f60491995470aa63b3 src/index.ts:82-91",
+      "observation": "回答以是的开头，未明确区分清空监听器数组与删除 Map 键；src/index.ts:88 使用 set(type, [])，没有 delete。"
+    },
+    {
+      "source": "cli-chat-turn2-recovered.json",
+      "attempt_id": "50a22c6d4d0a490aa82386d8b5c5ace4",
+      "question": "它遇到不存在的处理器时，会不会误删最后一项？",
+      "raw_answer": {
+        "answer": "不会误删最后一项。当不传处理器时，`off` 只会删除指定类型下的所有事件记录，而不会影响其他类型的事件。",
+        "insufficient_evidence": false,
+        "citations": [
+          {
+            "path": "test/index_test.ts",
+            "start_line": 148,
+            "end_line": 156
+          }
+        ]
+      },
+      "source_reference": "developit/mitt@6b41670516ed8e8b738612f60491995470aa63b3 src/index.ts:82-91",
+      "observation": "恢复的流程成功，但回答把传入不存在的处理器错读为不传处理器，没有解释 indexOf(-1) >>> 0 防止 splice(-1,1) 误删最后一项。"
+    },
+    {
+      "source": "cli-chat-turn3.json",
+      "attempt_id": "558cbe10a1b94d90b27a35042fb74f86",
+      "question": "off 不传处理器时，事件名这个键还留在映射中吗？",
+      "raw_answer": {
+        "answer": "会。当不传处理器时，`off` 会将该事件名对应的处理器列表清空，导致该事件名从 `all` 映射中不再持有有效数据（虽然 Map 键可能保留，但值为空数组）。",
+        "insufficient_evidence": false,
+        "citations": [
+          {
+            "path": "src/index.ts",
+            "start_line": 88,
+            "end_line": 89
+          },
+          {
+            "path": "test/index_test.ts",
+            "start_line": 152,
+            "end_line": 153
+          }
+        ]
+      },
+      "source_reference": "developit/mitt@6b41670516ed8e8b738612f60491995470aa63b3 src/index.ts:82-91",
+      "observation": "回答说键可能保留，表达仍不精确；当前实现明确保留键并写入空数组。不能用格式成功掩盖事实表述问题。"
+    }
+  ]
+}

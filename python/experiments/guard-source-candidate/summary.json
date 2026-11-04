@@ -1,0 +1,894 @@
+{
+  "questions": 6,
+  "planned_answers": 6,
+  "records": 6,
+  "reviews": {
+    "improvement-confirm-tenacity-03--guard-source": {
+      "candidate_id": "improvement-confirm-tenacity-03--guard-source",
+      "correctness": "correct",
+      "citation_support": "supported",
+      "completeness": "adequate",
+      "abstention": "not_applicable",
+      "entry_scope": "correct",
+      "consistency": "consistent",
+      "claims": [
+        {
+          "claim": "达到停止条件且设置retry_error_callback时，执行回调并返回fallback给调用者，不因reraise=True重新抛ValueError。",
+          "status": "supported",
+          "rationale": "472–476在stop结果为真时先选择回调并return，不添加后面的异常检查；题设已给回调返回fallback，结论与实际分支一致。",
+          "evidence": [
+            {
+              "path": "tenacity/__init__.py",
+              "start_line": 472,
+              "end_line": 486
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "tenacity/__init__.py",
+              "start_line": 472,
+              "end_line": 486,
+              "content": "    def _post_stop_check_actions(self, retry_state: \"RetryCallState\") -> None:\n        if self.iter_state.stop_run_result:\n            if self.retry_error_callback:\n                self._add_action_func(self.retry_error_callback)\n                return\n\n            def exc_check(rs: \"RetryCallState\") -> None:\n                fut = t.cast(\"Future\", rs.outcome)\n                retry_exc = self.retry_error_cls(fut)\n                if self.reraise:\n                    retry_exc.reraise()\n                raise retry_exc from fut.exception()\n\n            self._add_action_func(exc_check)\n            return",
+              "content_sha256": "27f56f54b49fe5b9ece029c0e019a73c8bd869a2f30fdd2abdadb0fc604e0f5c",
+              "visible_to_generator": true
+            }
+          ]
+        },
+        {
+          "claim": "callback优先；未选择回调分支才进入reraise异常重抛分支。",
+          "status": "supported",
+          "rationale": "474–476提前返回使478–485的exc_check成为无回调时的备选分支。",
+          "evidence": [
+            {
+              "path": "tenacity/__init__.py",
+              "start_line": 472,
+              "end_line": 486
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "tenacity/__init__.py",
+              "start_line": 472,
+              "end_line": 486,
+              "content": "    def _post_stop_check_actions(self, retry_state: \"RetryCallState\") -> None:\n        if self.iter_state.stop_run_result:\n            if self.retry_error_callback:\n                self._add_action_func(self.retry_error_callback)\n                return\n\n            def exc_check(rs: \"RetryCallState\") -> None:\n                fut = t.cast(\"Future\", rs.outcome)\n                retry_exc = self.retry_error_cls(fut)\n                if self.reraise:\n                    retry_exc.reraise()\n                raise retry_exc from fut.exception()\n\n            self._add_action_func(exc_check)\n            return",
+              "content_sha256": "27f56f54b49fe5b9ece029c0e019a73c8bd869a2f30fdd2abdadb0fc604e0f5c",
+              "visible_to_generator": true
+            }
+          ]
+        }
+      ],
+      "notes": "问题只要求三次失败后fallback与ValueError的选择及配置优先级，当前回答均正确且原引用472–486实际交付。首句“先执行callback，然后才根据reraise决定”单独看欠严谨，但后文明确“该返回值作为最终结果”“不会抛ValueError”“只有callback未设置或未被调用才reraise”，对题设给出一致的互斥分支含义；不把优先级概述视为又执行两条路径，也不要求解释未问的全部action调度链。",
+      "key_points": null,
+      "candidate_sha256": "e1d7a2e455967f68391512b2f8d877b79f94bafe27192b638056242e86a413b1",
+      "reviewer": "Codex (current session)",
+      "review_type": "model_assisted_nonblind_development_review",
+      "human_approved": false,
+      "training_eligible": false,
+      "result_sha256": "b6f14c9b8e66d957317670b06e2a27db21ec3d3c8987093b7aeab4445c8607a0"
+    },
+    "improvement-confirm-tenacity-04--guard-source": {
+      "candidate_id": "improvement-confirm-tenacity-04--guard-source",
+      "correctness": "correct",
+      "citation_support": "partial",
+      "completeness": "adequate",
+      "abstention": "not_applicable",
+      "entry_scope": "correct",
+      "consistency": "consistent",
+      "claims": [
+        {
+          "claim": "本次disabled同步调用只运行一次、传播原始ValueError，不包装RetryError。",
+          "status": "supported",
+          "rationale": "同题同步测试1697–1710及1671–1683直接验证一次调用和ValueError；无需依赖async入口来证明。",
+          "evidence": [
+            {
+              "path": "tests/test_tenacity.py",
+              "start_line": 1697,
+              "end_line": 1710
+            },
+            {
+              "path": "tests/test_tenacity.py",
+              "start_line": 1671,
+              "end_line": 1683
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "tests/test_tenacity.py",
+              "start_line": 1697,
+              "end_line": 1710,
+              "content": "    def test_enabled_false_via_retry_with(self) -> None:\n        \"\"\"retry_with(enabled=False) disables retrying.\"\"\"\n        call_count = 0\n\n        @retry(stop=tenacity.stop_after_attempt(3))\n        def always_fails() -> None:\n            nonlocal call_count\n            call_count += 1\n            raise ValueError(\"fail\")\n\n        disabled = always_fails.retry_with(enabled=False)\n        with pytest.raises(ValueError, match=\"fail\"):\n            disabled()\n        assert call_count == 1",
+              "content_sha256": "242c3afcac4cc1083736afad59bf8fa683fd6c0c9cbd68c0c4d5f0aa42fc8d71",
+              "visible_to_generator": true
+            },
+            {
+              "path": "tests/test_tenacity.py",
+              "start_line": 1671,
+              "end_line": 1683,
+              "content": "    def test_enabled_false_skips_retry(self) -> None:\n        \"\"\"When enabled=False, the function is called directly without retrying.\"\"\"\n        call_count = 0\n\n        @retry(enabled=False, stop=tenacity.stop_after_attempt(3))\n        def always_fails() -> None:\n            nonlocal call_count\n            call_count += 1\n            raise ValueError(\"fail\")\n\n        with pytest.raises(ValueError, match=\"fail\"):\n            always_fails()\n        assert call_count == 1",
+              "content_sha256": "e63ec5a7dca961ff478b46d4f9ceb7c2c4178fef7c56cd8aea8991bf80a54fe2",
+              "visible_to_generator": true
+            }
+          ]
+        },
+        {
+          "claim": "copy创建新实例，enabled覆盖为False，原策略对象不被原地修改。",
+          "status": "supported",
+          "rationale": "288–321返回self.__class__，用_first_set选择覆盖配置。",
+          "evidence": [
+            {
+              "path": "tenacity/__init__.py",
+              "start_line": 288,
+              "end_line": 321
+            },
+            {
+              "path": "tenacity/__init__.py",
+              "start_line": 186,
+              "end_line": 187
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "tenacity/__init__.py",
+              "start_line": 288,
+              "end_line": 321,
+              "content": "    def copy(\n        self,\n        sleep: t.Callable[[int | float], None] | object = _unset,\n        stop: \"StopBaseT | object\" = _unset,\n        wait: \"WaitBaseT | object\" = _unset,\n        retry: retry_base | object = _unset,\n        before: t.Callable[[\"RetryCallState\"], None] | object = _unset,\n        after: t.Callable[[\"RetryCallState\"], None] | object = _unset,\n        before_sleep: t.Callable[[\"RetryCallState\"], None] | object | None = _unset,\n        reraise: bool | object = _unset,\n        retry_error_cls: type[RetryError] | object = _unset,\n        retry_error_callback: t.Callable[[\"RetryCallState\"], t.Any]\n        | object\n        | None = _unset,\n        name: str | object | None = _unset,\n        enabled: bool | object = _unset,\n    ) -> \"Self\":\n        \"\"\"Copy this object with some parameters changed if needed.\"\"\"\n        return self.__class__(\n            sleep=_first_set(sleep, self.sleep),\n            stop=_first_set(stop, self.stop),\n            wait=_first_set(wait, self.wait),\n            retry=_first_set(retry, self.retry),\n            before=_first_set(before, self.before),\n            after=_first_set(after, self.after),\n            before_sleep=_first_set(before_sleep, self.before_sleep),\n            reraise=_first_set(reraise, self.reraise),\n            retry_error_cls=_first_set(retry_error_cls, self.retry_error_cls),\n            retry_error_callback=_first_set(\n                retry_error_callback, self.retry_error_callback\n            ),\n            name=_first_set(name, self._name),\n            enabled=_first_set(enabled, self.enabled),\n        )",
+              "content_sha256": "c8dc54c3e7342becbdfef871e778349494e86ef2ecc2f556ce767ed763fccd2f",
+              "visible_to_generator": true
+            },
+            {
+              "path": "tenacity/__init__.py",
+              "start_line": 186,
+              "end_line": 187,
+              "content": "def _first_set(first: t.Any | object, second: t.Any) -> t.Any:\n    return second if first is _unset else first",
+              "content_sha256": "c920d2ce7ddf3d283ec85849b1ea68c8eca59b024da0d073e628b10294e522e1",
+              "visible_to_generator": true
+            }
+          ]
+        },
+        {
+          "claim": "retry_with通过copy再wraps构造独立包装，不永久改原wrapped。",
+          "status": "supported",
+          "rationale": "406–407的连接关系正确，但该实现没交付且未引用；693只有类型声明。",
+          "evidence": [
+            {
+              "path": "tenacity/__init__.py",
+              "start_line": 406,
+              "end_line": 407
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "tenacity/__init__.py",
+              "start_line": 406,
+              "end_line": 407,
+              "content": "        def retry_with(*args: t.Any, **kwargs: t.Any) -> \"_RetryDecorated[P, R]\":\n            return self.copy(*args, **kwargs).wraps(f)",
+              "content_sha256": "49f3e9339688c6cf39fbcb80f9fec09c12453e8f8a62dcd16bad0caef49f4225",
+              "visible_to_generator": false
+            }
+          ]
+        }
+      ],
+      "notes": "三个业务结论均准确，且本次disabled条件覆盖历史默认条件。主要来源遗漏是retry_with连接copy的真正同步实现406–407；文中219–220实际来自所引async文件，不能当同步实现，但同步测试充分支持单次异常行为。 本轮guard-source与current-rag-refresh实际context及answer完全一致，保留原事实与引用边界；没有归因于新召回的改善。",
+      "key_points": null,
+      "candidate_sha256": "f24b8c255504c15bc48b6eb1fb343942e5323a24f5d6c0a312c8bbadf5820c49",
+      "reviewer": "Codex (current session)",
+      "review_type": "model_assisted_nonblind_development_review",
+      "human_approved": false,
+      "training_eligible": false,
+      "result_sha256": "247ae3ea44e42ade1f8ba641f4338de012bdf08c6eab081b2a51bd2bc6620ea5"
+    },
+    "improvement-confirm-tenacity-02--guard-source": {
+      "candidate_id": "improvement-confirm-tenacity-02--guard-source",
+      "correctness": "incorrect",
+      "citation_support": "unsupported",
+      "completeness": "partial",
+      "abstention": "not_applicable",
+      "entry_scope": "correct",
+      "consistency": "consistent",
+      "claims": [
+        {
+          "claim": "默认异常重试策略下首次成功也执行after；前两次异常第三次成功时记录第3次。",
+          "status": "contradicted",
+          "rationale": "460–463在不满足重试条件时直接安排返回结果并return，跳过465–466。对应test_after_attempts最终记录2，不是3。",
+          "evidence": [
+            {
+              "path": "tenacity/__init__.py",
+              "start_line": 460,
+              "end_line": 470
+            },
+            {
+              "path": "tests/test_tenacity.py",
+              "start_line": 1853,
+              "end_line": 1870
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "tenacity/__init__.py",
+              "start_line": 460,
+              "end_line": 470,
+              "content": "    def _post_retry_check_actions(self, retry_state: \"RetryCallState\") -> None:\n        if not (self.iter_state.is_explicit_retry or self.iter_state.retry_run_result):\n            self._add_action_func(lambda rs: rs.outcome.result())\n            return\n\n        if self.after is not None:\n            self._add_action_func(self.after)\n\n        self._add_action_func(self._run_wait)\n        self._add_action_func(self._run_stop)\n        self._add_action_func(self._post_stop_check_actions)",
+              "content_sha256": "e431525731d106471ecd4b806e17218680d05c377451e62e0b7c9d9fadccd425",
+              "visible_to_generator": true
+            },
+            {
+              "path": "tests/test_tenacity.py",
+              "start_line": 1853,
+              "end_line": 1870,
+              "content": "    def test_after_attempts(self) -> None:\n        TestBeforeAfterAttempts._attempt_number = 0\n\n        def _after(retry_state: RetryCallState) -> None:\n            TestBeforeAfterAttempts._attempt_number = retry_state.attempt_number\n\n        @retry(\n            wait=tenacity.wait_fixed(0.1),\n            stop=tenacity.stop_after_attempt(3),\n            after=_after,\n        )\n        def _test_after() -> None:\n            if TestBeforeAfterAttempts._attempt_number < 2:\n                raise Exception(\"testing after_attempts handler\")\n\n        _test_after()\n\n        self.assertTrue(TestBeforeAfterAttempts._attempt_number == 2)",
+              "content_sha256": "a1325d17a55b7019d349cfaf8c5c45a3b194635dac22914f8632662e8d599a2b",
+              "visible_to_generator": false
+            }
+          ]
+        },
+        {
+          "claim": "retry_run_result为真表示已有结果，包含成功或异常。",
+          "status": "contradicted",
+          "rationale": "423–424明确把它赋为self.retry(retry_state)的策略判定结果，不是outcome是否存在；默认异常策略对成功结果为False。",
+          "evidence": [
+            {
+              "path": "tenacity/__init__.py",
+              "start_line": 423,
+              "end_line": 424
+            },
+            {
+              "path": "tenacity/retry.py",
+              "start_line": 88,
+              "end_line": 105
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "tenacity/__init__.py",
+              "start_line": 423,
+              "end_line": 424,
+              "content": "    def _add_action_func(self, fn: t.Callable[..., t.Any]) -> None:\n        self.iter_state.actions.append(fn)",
+              "content_sha256": "b9fa832515031fc6cef57b5458a26235c7553d3b248b1336da0648bda17802f3",
+              "visible_to_generator": true
+            },
+            {
+              "path": "tenacity/retry.py",
+              "start_line": 88,
+              "end_line": 105,
+              "content": "class retry_if_exception(retry_base):\n    \"\"\"Retry strategy that retries if an exception verifies a predicate.\"\"\"\n\n    def __init__(self, predicate: typing.Callable[[BaseException], bool]) -> None:\n        self.predicate = predicate\n\n    @override\n    def __call__(self, retry_state: \"RetryCallState\") -> bool:\n        if retry_state.outcome is None:\n            raise RuntimeError(\"__call__() called before outcome was set\")\n\n        if retry_state.outcome.failed:\n            exception = retry_state.outcome.exception()\n            if exception is None:\n                raise RuntimeError(\"outcome failed but the exception is None\")\n            return self.predicate(exception)\n        return False\n",
+              "content_sha256": "4c94d91fd1a0c41ce1b9f7e7f171741e9068d576e65b56360a20c3f9032b95bf",
+              "visible_to_generator": false
+            }
+          ]
+        },
+        {
+          "claim": "test_after.py的test_01_default等支持实际成功调用后自动触发after。",
+          "status": "unsupported",
+          "rationale": "这些测试直接调用after_log返回的回调检查日志格式，不验证重试调度何时选择after。原文虽承认未覆盖两失败一成功计数，仍用attempt_number=3推断回调一定被调用，缺少调度支持。",
+          "evidence": [
+            {
+              "path": "tests/test_after.py",
+              "start_line": 28,
+              "end_line": 48
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "tests/test_after.py",
+              "start_line": 28,
+              "end_line": 48,
+              "content": "    def test_01_default(self) -> None:\n        \"\"\"Test log formatting.\"\"\"\n        log = unittest.mock.MagicMock(spec=\"logging.Logger.log\")\n        logger = unittest.mock.MagicMock(spec=\"logging.Logger\", log=log)\n\n        sec_format = \"%.3g\"\n        delay_since_first_attempt = 0.1\n\n        retry_state = test_tenacity.make_retry_state(\n            self.previous_attempt_number, delay_since_first_attempt\n        )\n        fun = after_log(\n            logger=logger, log_level=self.log_level\n        )  # use default sec_format\n        fun(retry_state)\n        log.assert_called_once_with(\n            self.log_level,\n            f\"Finished call to '{retry_state.get_fn_name()}' \"\n            f\"after {sec_format % retry_state.seconds_since_start}(s), \"\n            f\"this was the {_utils.to_ordinal(retry_state.attempt_number)} time calling it.\",\n        )",
+              "content_sha256": "eaed1c5e4a27609adcb9f7e294dc3837f1a2aaf88cd031cdda6f5b89696600bf",
+              "visible_to_generator": true
+            }
+          ]
+        }
+      ],
+      "notes": "这次461–463的提前返回及423–424的retry策略结果赋值都确实交付；仍误读字段含义并忽略提前return，属于新输入下模型解释失败。旧control缺失该分支是另一个阶段的失败原因。实际test_after_attempts未交付，新回答承认未见具体计数测试，不强求它凭未给测试证明边界，但主结论已被可见控制流反证。",
+      "key_points": null,
+      "candidate_sha256": "abb9be745703eafe8066f86d6fefe64fbd44d38da23b32dfd7c1bf32fffff527",
+      "reviewer": "Codex (current session)",
+      "review_type": "model_assisted_nonblind_development_review",
+      "human_approved": false,
+      "training_eligible": false,
+      "result_sha256": "23262c0a323321d70abe838a4aaecf04d5a2488df09fb7e676396622d956d6da"
+    },
+    "q-bbad3968026fefab--guard-source": {
+      "candidate_id": "q-bbad3968026fefab--guard-source",
+      "correctness": "correct",
+      "citation_support": "supported",
+      "completeness": "adequate",
+      "abstention": "not_applicable",
+      "entry_scope": "correct",
+      "consistency": "consistent",
+      "claims": [
+        {
+          "claim": "override=False且环境已存在键时continue，不覆盖。",
+          "status": "supported",
+          "rationale": "109-110提前跳过键。",
+          "evidence": [
+            {
+              "path": "src/dotenv/main.py",
+              "start_line": 108,
+              "end_line": 110
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "src/dotenv/main.py",
+              "start_line": 108,
+              "end_line": 110,
+              "content": "        for k, v in self.dict().items():\n            if k in os.environ and not self.override:\n                continue",
+              "content_sha256": "7d13f95acd9b1419c44a4070ef3d0032425829231136c2c8d9ef0d0b3434b968",
+              "visible_to_generator": true
+            }
+          ]
+        },
+        {
+          "claim": "None跳过赋值，空字符串不属于None因此在未被提前跳过时仍写入环境。",
+          "status": "supported",
+          "rationale": "111-112只检查is not None，空串仍可赋值；答案也正确说明覆盖/键不存在前提。",
+          "evidence": [
+            {
+              "path": "src/dotenv/main.py",
+              "start_line": 108,
+              "end_line": 114
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "src/dotenv/main.py",
+              "start_line": 108,
+              "end_line": 114,
+              "content": "        for k, v in self.dict().items():\n            if k in os.environ and not self.override:\n                continue\n            if v is not None:\n                os.environ[k] = v\n\n        return True",
+              "content_sha256": "c97788b294dfe1c204ceb0a8e89248590f09a49d1f4c486cbfdd132369ec66e7",
+              "visible_to_generator": true
+            }
+          ]
+        }
+      ],
+      "notes": "准确分清已有键跳过与值为None跳过两层条件，未把空字符串当作None。 本轮guard-source与current-rag-refresh实际context及answer完全一致，保留原事实与引用边界；没有归因于新召回的改善。",
+      "key_points": null,
+      "candidate_sha256": "9fbcf535d0b48a9e2ef46a237e62847c598725810a2ddb76cddf10b23d53cbaa",
+      "reviewer": "Codex (current session)",
+      "review_type": "model_assisted_nonblind_development_review",
+      "human_approved": false,
+      "training_eligible": false,
+      "result_sha256": "e3120d1b7c240d3359cd9ecf47604220bcddda0f8fd79890e8fcf36d28f42207"
+    },
+    "improvement-confirm-tenacity-01--guard-source": {
+      "candidate_id": "improvement-confirm-tenacity-01--guard-source",
+      "correctness": "partially_correct",
+      "citation_support": "partial",
+      "completeness": "partial",
+      "abstention": "not_applicable",
+      "entry_scope": "correct",
+      "consistency": "consistent",
+      "claims": [
+        {
+          "claim": "stop_after_delay(10)不能保证9秒失败后不再睡到12秒。",
+          "status": "supported",
+          "rationale": "该策略只比较本次已耗时9与10，117并未加upcoming_sleep；100–107也明确可能超限。",
+          "evidence": [
+            {
+              "path": "tenacity/stop.py",
+              "start_line": 100,
+              "end_line": 117
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "tenacity/stop.py",
+              "start_line": 100,
+              "end_line": 117,
+              "content": "class stop_after_delay(stop_base):\n    \"\"\"\n    Stop when the time from the first attempt >= limit.\n\n    Note: `max_delay` will be exceeded, so when used with a `wait`, the actual total delay will be greater\n    than `max_delay` by some of the final sleep period before `max_delay` is exceeded.\n\n    If you need stricter timing with waits, consider `stop_before_delay` instead.\n    \"\"\"\n\n    def __init__(self, max_delay: _utils.time_unit_type) -> None:\n        self.max_delay = _utils.to_seconds(max_delay)\n\n    @override\n    def __call__(self, retry_state: \"RetryCallState\") -> bool:\n        if retry_state.seconds_since_start is None:\n            raise RuntimeError(\"__call__() called but seconds_since_start is not set\")\n        return retry_state.seconds_since_start >= self.max_delay",
+              "content_sha256": "8bbfc79cff11c4df0bcd8d54d8685bc55f260d405fccf99ad103fe29f382a3f3",
+              "visible_to_generator": true
+            }
+          ]
+        },
+        {
+          "claim": "当总耗时已达到10秒，仍会执行最后一次实际wait导致12秒。",
+          "status": "contradicted",
+          "rationale": "真正流程先算upcoming_sleep再stop，已达10时stop_after_delay为True，走终止分支不再调度DoSleep。题设超限发生在9秒判未停止后睡3秒。",
+          "evidence": [
+            {
+              "path": "tenacity/stop.py",
+              "start_line": 114,
+              "end_line": 117
+            },
+            {
+              "path": "tenacity/__init__.py",
+              "start_line": 468,
+              "end_line": 500
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "tenacity/stop.py",
+              "start_line": 114,
+              "end_line": 117,
+              "content": "    def __call__(self, retry_state: \"RetryCallState\") -> bool:\n        if retry_state.seconds_since_start is None:\n            raise RuntimeError(\"__call__() called but seconds_since_start is not set\")\n        return retry_state.seconds_since_start >= self.max_delay",
+              "content_sha256": "4ce74b04ed036ba05cb74a3227ef0f4474abdad73e20d675fa8da22b2340e2f5",
+              "visible_to_generator": true
+            },
+            {
+              "path": "tenacity/__init__.py",
+              "start_line": 468,
+              "end_line": 500,
+              "content": "        self._add_action_func(self._run_wait)\n        self._add_action_func(self._run_stop)\n        self._add_action_func(self._post_stop_check_actions)\n\n    def _post_stop_check_actions(self, retry_state: \"RetryCallState\") -> None:\n        if self.iter_state.stop_run_result:\n            if self.retry_error_callback:\n                self._add_action_func(self.retry_error_callback)\n                return\n\n            def exc_check(rs: \"RetryCallState\") -> None:\n                fut = t.cast(\"Future\", rs.outcome)\n                retry_exc = self.retry_error_cls(fut)\n                if self.reraise:\n                    retry_exc.reraise()\n                raise retry_exc from fut.exception()\n\n            self._add_action_func(exc_check)\n            return\n\n        def next_action(rs: \"RetryCallState\") -> None:\n            sleep = rs.upcoming_sleep\n            rs.next_action = RetryAction(sleep)\n            rs.idle_for += sleep\n            self.statistics[\"idle_for\"] += sleep\n            self.statistics[\"attempt_number\"] += 1\n\n        self._add_action_func(next_action)\n\n        if self.before_sleep is not None:\n            self._add_action_func(self.before_sleep)\n\n        self._add_action_func(lambda rs: DoSleep(rs.upcoming_sleep))",
+              "content_sha256": "e13577c3e00314c3404d45954fec1331fb39713b0b3477d875fa41afdbcc61ac",
+              "visible_to_generator": false
+            }
+          ]
+        },
+        {
+          "claim": "应改用stop_before_delay。",
+          "status": "supported",
+          "rationale": "120–138把seconds_since_start与upcoming_sleep相加后比较阈值。",
+          "evidence": [
+            {
+              "path": "tenacity/stop.py",
+              "start_line": 120,
+              "end_line": 138
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "tenacity/stop.py",
+              "start_line": 120,
+              "end_line": 138,
+              "content": "class stop_before_delay(stop_base):\n    \"\"\"\n    Stop right before the next attempt would take place after the time from the first attempt >= limit.\n\n    Most useful when you are using with a `wait` function like wait_random_exponential, but need to make\n    sure that the max_delay is not exceeded.\n    \"\"\"\n\n    def __init__(self, max_delay: _utils.time_unit_type) -> None:\n        self.max_delay = _utils.to_seconds(max_delay)\n\n    @override\n    def __call__(self, retry_state: \"RetryCallState\") -> bool:\n        if retry_state.seconds_since_start is None:\n            raise RuntimeError(\"__call__() called but seconds_since_start is not set\")\n        return (\n            retry_state.seconds_since_start + retry_state.upcoming_sleep\n            >= self.max_delay\n        )",
+              "content_sha256": "46eb9706d81e5376279c20254630b76adb71f39cd06271c162be9d3069024b85",
+              "visible_to_generator": false
+            }
+          ]
+        },
+        {
+          "claim": "Tenacity先执行wait策略进行实际等待，再调用stop判断。",
+          "status": "contradicted",
+          "rationale": "429–430先计算等待值，468–470按序计算wait与stop；只有未停时500才加DoSleep。将等待计算与真正sleep混为一谈。",
+          "evidence": [
+            {
+              "path": "tenacity/__init__.py",
+              "start_line": 429,
+              "end_line": 434
+            },
+            {
+              "path": "tenacity/__init__.py",
+              "start_line": 460,
+              "end_line": 500
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "tenacity/__init__.py",
+              "start_line": 429,
+              "end_line": 434,
+              "content": "    def _run_wait(self, retry_state: \"RetryCallState\") -> None:\n        retry_state.upcoming_sleep = self.wait(retry_state)\n\n    def _run_stop(self, retry_state: \"RetryCallState\") -> None:\n        self.statistics[\"delay_since_first_attempt\"] = retry_state.seconds_since_start\n        self.iter_state.stop_run_result = self.stop(retry_state)",
+              "content_sha256": "b9a52d49eafde6dbe9dd39bf3d6685a1729abd662f172299b157bf6d6e8d7357",
+              "visible_to_generator": false
+            },
+            {
+              "path": "tenacity/__init__.py",
+              "start_line": 460,
+              "end_line": 500,
+              "content": "    def _post_retry_check_actions(self, retry_state: \"RetryCallState\") -> None:\n        if not (self.iter_state.is_explicit_retry or self.iter_state.retry_run_result):\n            self._add_action_func(lambda rs: rs.outcome.result())\n            return\n\n        if self.after is not None:\n            self._add_action_func(self.after)\n\n        self._add_action_func(self._run_wait)\n        self._add_action_func(self._run_stop)\n        self._add_action_func(self._post_stop_check_actions)\n\n    def _post_stop_check_actions(self, retry_state: \"RetryCallState\") -> None:\n        if self.iter_state.stop_run_result:\n            if self.retry_error_callback:\n                self._add_action_func(self.retry_error_callback)\n                return\n\n            def exc_check(rs: \"RetryCallState\") -> None:\n                fut = t.cast(\"Future\", rs.outcome)\n                retry_exc = self.retry_error_cls(fut)\n                if self.reraise:\n                    retry_exc.reraise()\n                raise retry_exc from fut.exception()\n\n            self._add_action_func(exc_check)\n            return\n\n        def next_action(rs: \"RetryCallState\") -> None:\n            sleep = rs.upcoming_sleep\n            rs.next_action = RetryAction(sleep)\n            rs.idle_for += sleep\n            self.statistics[\"idle_for\"] += sleep\n            self.statistics[\"attempt_number\"] += 1\n\n        self._add_action_func(next_action)\n\n        if self.before_sleep is not None:\n            self._add_action_func(self.before_sleep)\n\n        self._add_action_func(lambda rs: DoSleep(rs.upcoming_sleep))",
+              "content_sha256": "367460bfa9128d9fa5a8011ccfe24290748b882b45f94ed25e96398fc860276c",
+              "visible_to_generator": false
+            }
+          ]
+        }
+      ],
+      "notes": "结论和替代策略名正确；题目明确要求的调用顺序答错，且没有说明next sleep相加的具体判定。当前实际context无120–138和429–500，不能借旧充分源码实验替代该输入事实。 本轮guard-source与current-rag-refresh实际context及answer完全一致，保留原事实与引用边界；没有归因于新召回的改善。",
+      "key_points": null,
+      "candidate_sha256": "ed442126f8fa647af33a51214e08c696d67e2bb15831ba046a359895bcc00ef0",
+      "reviewer": "Codex (current session)",
+      "review_type": "model_assisted_nonblind_development_review",
+      "human_approved": false,
+      "training_eligible": false,
+      "result_sha256": "b555eb0ec13b275dbc6c8541c63c213e477686d7815acc8b0f96b82c343c58b8"
+    },
+    "improvement-confirm-blinker-05--guard-source": {
+      "candidate_id": "improvement-confirm-blinker-05--guard-source",
+      "correctness": "correct",
+      "citation_support": "not_applicable",
+      "completeness": "adequate",
+      "abstention": "appropriate",
+      "entry_scope": "not_applicable",
+      "consistency": "consistent",
+      "claims": [
+        {
+          "claim": "没有日志、埋点或进程访问，库源码不足以给出公司24小时订单信号数和最慢回调耗时。",
+          "status": "unverifiable",
+          "rationale": "题目明确不给运行数据，正确拒答；实际数值本就不可从静态快照验证，不能为拒答强求不存在的生产源码证明。",
+          "evidence": [],
+          "verified_evidence": []
+        }
+      ],
+      "notes": "insufficient_evidence=true，无编造次数或耗时。答复覆盖两个私有指标，不要求额外日志采集设计。 本轮guard-source与current-rag-refresh实际context及answer完全一致，保留原事实与引用边界；没有归因于新召回的改善。",
+      "key_points": null,
+      "candidate_sha256": "26b4217e58c3e615ca9358e534ca60b314f41aff112021ae6006f5363ac30b27",
+      "reviewer": "Codex (current session)",
+      "review_type": "model_assisted_nonblind_development_review",
+      "human_approved": false,
+      "training_eligible": false,
+      "result_sha256": "9a07eb184dc9ba8ff885bd75d10d246ba5b2d82bfac2cbabbbacfb9d30335d82"
+    }
+  },
+  "groups": {
+    "all/bm25_code": {
+      "records": 6,
+      "success": 6,
+      "model_requests": 6,
+      "tool_calls": 0,
+      "episodes_using_tools": 0,
+      "citation_ranges_valid": 6,
+      "initial_reference_complete": 1,
+      "final_reference_complete": 1,
+      "initial_nonblank_reference_complete": 1,
+      "final_nonblank_reference_complete": 1,
+      "requests_without_usage": 0,
+      "requests_without_elapsed": 0,
+      "prompt_tokens": 13784,
+      "completion_tokens": 1575,
+      "generator_seconds": 76.892,
+      "reviewed": 6,
+      "factually_correct": 4,
+      "core_supported": 3,
+      "fully_resolved": 3,
+      "insufficiency_flag_true": 1,
+      "insufficiency_flag_false": 0
+    },
+    "revealed-confirmation-development/bm25_code": {
+      "records": 5,
+      "success": 5,
+      "model_requests": 5,
+      "tool_calls": 0,
+      "episodes_using_tools": 0,
+      "citation_ranges_valid": 5,
+      "initial_reference_complete": 0,
+      "final_reference_complete": 0,
+      "initial_nonblank_reference_complete": 0,
+      "final_nonblank_reference_complete": 0,
+      "requests_without_usage": 0,
+      "requests_without_elapsed": 0,
+      "prompt_tokens": 10582,
+      "completion_tokens": 1332,
+      "generator_seconds": 65.563,
+      "reviewed": 5,
+      "factually_correct": 3,
+      "core_supported": 2,
+      "fully_resolved": 2,
+      "insufficiency_flag_true": 1,
+      "insufficiency_flag_false": 0
+    },
+    "guard-source-development-diagnostic/bm25_code": {
+      "records": 6,
+      "success": 6,
+      "model_requests": 6,
+      "tool_calls": 0,
+      "episodes_using_tools": 0,
+      "citation_ranges_valid": 6,
+      "initial_reference_complete": 1,
+      "final_reference_complete": 1,
+      "initial_nonblank_reference_complete": 1,
+      "final_nonblank_reference_complete": 1,
+      "requests_without_usage": 0,
+      "requests_without_elapsed": 0,
+      "prompt_tokens": 13784,
+      "completion_tokens": 1575,
+      "generator_seconds": 76.892,
+      "reviewed": 6,
+      "factually_correct": 4,
+      "core_supported": 3,
+      "fully_resolved": 3,
+      "insufficiency_flag_true": 1,
+      "insufficiency_flag_false": 0
+    },
+    "answerable/bm25_code": {
+      "records": 5,
+      "success": 5,
+      "model_requests": 5,
+      "tool_calls": 0,
+      "episodes_using_tools": 0,
+      "citation_ranges_valid": 5,
+      "initial_reference_complete": 1,
+      "final_reference_complete": 1,
+      "initial_nonblank_reference_complete": 1,
+      "final_nonblank_reference_complete": 1,
+      "requests_without_usage": 0,
+      "requests_without_elapsed": 0,
+      "prompt_tokens": 11833,
+      "completion_tokens": 1445,
+      "generator_seconds": 70.892,
+      "reviewed": 5,
+      "factually_correct": 3,
+      "core_supported": 2,
+      "fully_resolved": 2
+    },
+    "added-confirmation/bm25_code": {
+      "records": 1,
+      "success": 1,
+      "model_requests": 1,
+      "tool_calls": 0,
+      "episodes_using_tools": 0,
+      "citation_ranges_valid": 1,
+      "initial_reference_complete": 1,
+      "final_reference_complete": 1,
+      "initial_nonblank_reference_complete": 1,
+      "final_nonblank_reference_complete": 1,
+      "requests_without_usage": 0,
+      "requests_without_elapsed": 0,
+      "prompt_tokens": 3202,
+      "completion_tokens": 243,
+      "generator_seconds": 11.329,
+      "reviewed": 1,
+      "factually_correct": 1,
+      "core_supported": 1,
+      "fully_resolved": 1
+    },
+    "unanswerable/bm25_code": {
+      "records": 1,
+      "success": 1,
+      "model_requests": 1,
+      "tool_calls": 0,
+      "episodes_using_tools": 0,
+      "citation_ranges_valid": 1,
+      "insufficiency_flag_true": 1,
+      "insufficiency_flag_false": 0,
+      "requests_without_usage": 0,
+      "requests_without_elapsed": 0,
+      "prompt_tokens": 1951,
+      "completion_tokens": 130,
+      "generator_seconds": 6.0,
+      "reviewed": 1,
+      "factually_correct": 1,
+      "core_supported": 1,
+      "fully_resolved": 1
+    }
+  },
+  "retrieval": {
+    "shared_initial": {
+      "answerable": 5,
+      "reference_complete": 1,
+      "nonblank_reference_complete": 1
+    }
+  },
+  "new_requests": 6,
+  "combined_requests": 1331,
+  "paid_requests": 0,
+  "human_approved": false,
+  "training_eligible": false,
+  "reporting_implementation": "4432a399824bc989792b734caf26caf8da5ada5fef0941d184fd5a00d4ae2e6b",
+  "usage_observation_note": "Token/time sums include observed values only. Missing usage and elapsed time remain unknown in raw records; reservations still count every sent or ambiguous request.",
+  "checks": {
+    "decision": "retain_narrow_source_recall_fix",
+    "predeclared_gate": "At least one target improves from materially wrong to a correct source-supported core answer, with no known-correct protection regression or lost asked conditions. Judge actual source truth/citations/test explanation, not reference coverage or parser success. Stop/after may remain wrong and must be kept. Retain only if useful net gain; do not tune another wording or add field keywords.",
+    "root_source_review": "Accepted independent six-case judgment against the fixed source and original visible citations. Callback result and priority are correct; first sentence is imprecise but the full answer explicitly selects callback return and excludes reraise. After remains materially wrong. No reviewer supplement was supplied to generation.",
+    "independent_review": "artifacts/identifier-recall-2026-10-27/review-candidate.json",
+    "matched_control": "experiments/current-rag-refresh/summary.json",
+    "gate": {
+      "predeclared_gate": "At least one target improves from materially wrong to a correct source-supported core answer, with no known-correct protection regression or lost asked conditions. Judge actual source truth/citations/test explanation, not reference coverage or parser success. Stop/after may remain wrong and must be kept. Retain only if useful net gain; do not tune another wording or add field keywords.",
+      "passed": true,
+      "decision": "retain_narrow_source_recall_fix",
+      "improved_targets": [
+        "improvement-confirm-tenacity-03"
+      ],
+      "unresolved_targets": [
+        "improvement-confirm-tenacity-02"
+      ],
+      "unsolved_negative": "improvement-confirm-tenacity-01",
+      "protection_regressions": [],
+      "basis": "callback从实质错误改为原引用支持的正确答案；after仍错；三道保护题及stop负例的实际上下文和答案字节内容保持一致。此为已知开发题定向配对，不是泛化准确率，也非Agent收益。",
+      "paired": [
+        {
+          "task_id": "improvement-confirm-tenacity-03",
+          "control_case_id": "improvement-confirm-tenacity-03--current-rag",
+          "candidate_case_id": "improvement-confirm-tenacity-03--guard-source",
+          "same_system_and_history": true,
+          "same_payload_except_context": true,
+          "same_configuration": true,
+          "same_context": false,
+          "same_answer": false,
+          "control_quality": {
+            "core_supported": false,
+            "fully_resolved": false
+          },
+          "candidate_quality": {
+            "core_supported": true,
+            "fully_resolved": true
+          }
+        },
+        {
+          "task_id": "improvement-confirm-tenacity-04",
+          "control_case_id": "improvement-confirm-tenacity-04--current-rag",
+          "candidate_case_id": "improvement-confirm-tenacity-04--guard-source",
+          "same_system_and_history": true,
+          "same_payload_except_context": true,
+          "same_configuration": true,
+          "same_context": true,
+          "same_answer": true,
+          "control_quality": {
+            "core_supported": false,
+            "fully_resolved": false
+          },
+          "candidate_quality": {
+            "core_supported": false,
+            "fully_resolved": false
+          }
+        },
+        {
+          "task_id": "improvement-confirm-tenacity-02",
+          "control_case_id": "improvement-confirm-tenacity-02--current-rag",
+          "candidate_case_id": "improvement-confirm-tenacity-02--guard-source",
+          "same_system_and_history": true,
+          "same_payload_except_context": true,
+          "same_configuration": true,
+          "same_context": false,
+          "same_answer": false,
+          "control_quality": {
+            "core_supported": false,
+            "fully_resolved": false
+          },
+          "candidate_quality": {
+            "core_supported": false,
+            "fully_resolved": false
+          }
+        },
+        {
+          "task_id": "q-bbad3968026fefab",
+          "control_case_id": "q-bbad3968026fefab--current-rag",
+          "candidate_case_id": "q-bbad3968026fefab--guard-source",
+          "same_system_and_history": true,
+          "same_payload_except_context": true,
+          "same_configuration": true,
+          "same_context": true,
+          "same_answer": true,
+          "control_quality": {
+            "core_supported": true,
+            "fully_resolved": true
+          },
+          "candidate_quality": {
+            "core_supported": true,
+            "fully_resolved": true
+          }
+        },
+        {
+          "task_id": "improvement-confirm-tenacity-01",
+          "control_case_id": "improvement-confirm-tenacity-01--current-rag",
+          "candidate_case_id": "improvement-confirm-tenacity-01--guard-source",
+          "same_system_and_history": true,
+          "same_payload_except_context": true,
+          "same_configuration": true,
+          "same_context": true,
+          "same_answer": true,
+          "control_quality": {
+            "core_supported": false,
+            "fully_resolved": false
+          },
+          "candidate_quality": {
+            "core_supported": false,
+            "fully_resolved": false
+          }
+        },
+        {
+          "task_id": "improvement-confirm-blinker-05",
+          "control_case_id": "improvement-confirm-blinker-05--current-rag",
+          "candidate_case_id": "improvement-confirm-blinker-05--guard-source",
+          "same_system_and_history": true,
+          "same_payload_except_context": true,
+          "same_configuration": true,
+          "same_context": true,
+          "same_answer": true,
+          "control_quality": {
+            "core_supported": true,
+            "fully_resolved": true
+          },
+          "candidate_quality": {
+            "core_supported": true,
+            "fully_resolved": true
+          }
+        }
+      ],
+      "control_core_supported": 2,
+      "candidate_core_supported": 3,
+      "control_fully_resolved": 2,
+      "candidate_fully_resolved": 3,
+      "correctness": {
+        "correct": 4,
+        "incorrect": 1,
+        "partially_correct": 1
+      }
+    },
+    "offline_retrieval": {
+      "replay36": {
+        "cases": 36,
+        "answerable": 31,
+        "changed_inputs": 2,
+        "reference_lines_before": 553,
+        "reference_lines_after": 575,
+        "complete_before": 23,
+        "complete_after": 23,
+        "changed_cases": [
+          "improvement-confirm-tenacity-02",
+          "improvement-confirm-tenacity-03"
+        ],
+        "gained_cases": [
+          {
+            "task_id": "improvement-confirm-tenacity-02",
+            "lines": 9
+          },
+          {
+            "task_id": "improvement-confirm-tenacity-03",
+            "lines": 13
+          }
+        ],
+        "lost_cases": []
+      },
+      "replay70": {
+        "cases": 70,
+        "answerable": 62,
+        "changed_inputs": 2,
+        "reference_lines_before": 1151,
+        "reference_lines_after": 1173,
+        "complete_before": 48,
+        "complete_after": 48,
+        "changed_cases": [
+          "improvement-confirm-tenacity-02",
+          "improvement-confirm-tenacity-03"
+        ],
+        "gained_cases": [
+          {
+            "task_id": "improvement-confirm-tenacity-02",
+            "lines": 9
+          },
+          {
+            "task_id": "improvement-confirm-tenacity-03",
+            "lines": 13
+          }
+        ],
+        "lost_cases": []
+      }
+    },
+    "offline_evidence": "artifacts/identifier-recall-2026-10-27/guard-final-diagnostic.json",
+    "offline_evidence_sha256": "ef28ee9ff00ca5293fc1983d78a2ed36907d59ef8e745538d42114ecd6bd8dd8",
+    "production_change": {
+      "files": [
+        "src/repomentor/code_navigation.py"
+      ],
+      "new_modules": 0,
+      "new_scripts": 0,
+      "effective_core_lines_added": 23,
+      "settings_prompt_schema_source_limits_unchanged": true
+    },
+    "validation": {
+      "offline_pytest_passed": 320,
+      "deselected": 1,
+      "ruff": "passed",
+      "target_repository_execution": false
+    },
+    "developer_trial": [
+      {
+        "case_id": "improvement-confirm-tenacity-03--guard-source",
+        "command": "D:\\anaconda\\envs\\repomentor\\python.exe -s -X utf8 -m repomentor.cli inspect-run experiments\\guard-source-candidate\\results.jsonl --case-id improvement-confirm-tenacity-03--guard-source",
+        "exit_code": 0,
+        "stdout_sha256": "38e0aa631d29a1a5a2db40023fc02a109cdbdaca1502709678e660608fb0681e",
+        "stdout_chars": 2133,
+        "stderr": "",
+        "business_usable": true,
+        "notes": "原引用和交付窗口直接显示callback分支提前return，足以核对本题fallback优先结论；答案可用，首句仍建议简化。",
+        "model_requests": 0
+      },
+      {
+        "case_id": "improvement-confirm-tenacity-02--guard-source",
+        "command": "D:\\anaconda\\envs\\repomentor\\python.exe -s -X utf8 -m repomentor.cli inspect-run experiments\\guard-source-candidate\\results.jsonl --case-id improvement-confirm-tenacity-02--guard-source",
+        "exit_code": 0,
+        "stdout_sha256": "d4661debbf699ae63c04bc8b4b1675c7c6ee5270d0c9cf471d5234216512f3c1",
+        "stdout_chars": 2514,
+        "stderr": "",
+        "business_usable": false,
+        "notes": "inspect-run显示465引文所在整个460–470窗口，461–463提前return可见，能现场发现原答案误读；第3次结论不可用。",
+        "model_requests": 0
+      }
+    ],
+    "not_an_overall_accuracy_or_agent_gain_claim": true,
+    "final_test_repositories_remain_sealed": true
+  },
+  "scope": "Only configuration-guard source recall in the existing AST symbol index. Original fixed RAG daily local Qwen settings, system/schema/question/history, topK=6 and source budget unchanged. Match six frozen current-rag-refresh cases: after and callback missed-branch targets; wait/stop unsolved negative; retry_with clone, DotEnv condition and private-state refusal protections. Source reads are location candidates, not new execution edges. No new module, loop, tool, prompt, model configuration or training. No automatic retry."
+}

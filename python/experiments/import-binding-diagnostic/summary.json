@@ -1,0 +1,321 @@
+{
+  "questions": 1,
+  "planned_answers": 1,
+  "records": 1,
+  "reviews": {
+    "literal-confirm-requests-json-01--import-line-only": {
+      "candidate_id": "literal-confirm-requests-json-01--import-line-only",
+      "correctness": "correct",
+      "citation_support": "supported",
+      "completeness": "adequate",
+      "abstention": "not_applicable",
+      "entry_scope": "correct",
+      "consistency": "consistent",
+      "claims": [
+        {
+          "claim": "题设普通非JSON正文的Response.json()解析失败会抛Requests公开JSONDecodeError，不因HTTP200返回None。",
+          "status": "supported",
+          "rationale": "json947–980在两条解析路径捕获解码异常后重抛RequestsJSONDecodeError，953–954明确公开异常。新增49行确认该名称是公开JSONDecodeError的导入别名而非子类。正式答案没有再虚构别名之间的继承层级；低层测试也在HTTP200无效JSON响应上使用raises公开异常。",
+          "evidence": [
+            {
+              "path": "src/requests/models.py",
+              "start_line": 947,
+              "end_line": 980
+            },
+            {
+              "path": "src/requests/models.py",
+              "start_line": 49,
+              "end_line": 49
+            },
+            {
+              "path": "tests/test_lowlevel.py",
+              "start_line": 407,
+              "end_line": 428
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "src/requests/models.py",
+              "start_line": 947,
+              "end_line": 980,
+              "content": "    def json(self, **kwargs):\n        r\"\"\"Decodes the JSON response body (if any) as a Python object.\n\n        This may return a dictionary, list, etc. depending on what is in the response.\n\n        :param \\*\\*kwargs: Optional arguments that ``json.loads`` takes.\n        :raises requests.exceptions.JSONDecodeError: If the response body does not\n            contain valid json.\n        \"\"\"\n\n        if not self.encoding and self.content and len(self.content) > 3:\n            # No encoding set. JSON RFC 4627 section 3 states we should expect\n            # UTF-8, -16 or -32. Detect which one to use; If the detection or\n            # decoding fails, fall back to `self.text` (using charset_normalizer to make\n            # a best guess).\n            encoding = guess_json_utf(self.content)\n            if encoding is not None:\n                try:\n                    return complexjson.loads(self.content.decode(encoding), **kwargs)\n                except UnicodeDecodeError:\n                    # Wrong UTF codec detected; usually because it's not UTF-8\n                    # but some other 8-bit codec.  This is an RFC violation,\n                    # and the server didn't bother to tell us what codec *was*\n                    # used.\n                    pass\n                except JSONDecodeError as e:\n                    raise RequestsJSONDecodeError(e.msg, e.doc, e.pos)\n\n        try:\n            return complexjson.loads(self.text, **kwargs)\n        except JSONDecodeError as e:\n            # Catch JSON-related errors and raise as requests.JSONDecodeError\n            # This aliases json.JSONDecodeError and simplejson.JSONDecodeError\n            raise RequestsJSONDecodeError(e.msg, e.doc, e.pos)",
+              "content_sha256": "7b68ddad64db2f4768718871b5185fe70c643366ce325b2adc8607340fcfd10e",
+              "visible_to_generator": true
+            },
+            {
+              "path": "src/requests/models.py",
+              "start_line": 49,
+              "end_line": 49,
+              "content": "from .exceptions import JSONDecodeError as RequestsJSONDecodeError",
+              "content_sha256": "e2bd2e7b432d1335f77ce53fef0fcde925e5a7cdad58f3bbbcfcb08aedff587b",
+              "visible_to_generator": true
+            },
+            {
+              "path": "tests/test_lowlevel.py",
+              "start_line": 407,
+              "end_line": 428,
+              "content": "def test_json_decode_compatibility_for_alt_utf_encodings():\n\n    def response_handler(sock):\n        consume_socket_content(sock, timeout=0.5)\n        sock.send(\n            b'HTTP/1.1 200 OK\\r\\n'\n            b'Content-Length: 18\\r\\n\\r\\n'\n            b'\\xff\\xfe{\\x00\"\\x00K0\"\\x00=\\x00\"\\x00\\xab0\"\\x00\\r\\n'\n        )\n\n    close_server = threading.Event()\n    server = Server(response_handler, wait_to_close_event=close_server)\n\n    with server as (host, port):\n        url = f'http://{host}:{port}/'\n        r = requests.get(url)\n    r.encoding = None\n    with pytest.raises(requests.exceptions.JSONDecodeError) as excinfo:\n        r.json()\n    assert isinstance(excinfo.value, requests.exceptions.RequestException)\n    assert isinstance(excinfo.value, JSONDecodeError)\n    assert r.text not in str(excinfo.value)",
+              "content_sha256": "17898ba276087482ad90c099f27c690160bf41b3bfbc6dee200e2ad98129b619",
+              "visible_to_generator": true
+            }
+          ]
+        },
+        {
+          "claim": "公开requests.exceptions.JSONDecodeError属于RequestException派生体系，可以由except requests.exceptions.RequestException捕获。",
+          "status": "supported",
+          "rationale": "正式引用的两份测试均对r.json()的实际异常assert isinstance(...,RequestException)，这已直接支持捕获兼容性。评审补读exceptions27–31确认经InvalidJSONError间接继承；该未交付声明不倒灌为生成来源。答案说“继承/子类”未声称直接父类，因此与真实继承链相符。",
+          "evidence": [
+            {
+              "path": "tests/test_requests.py",
+              "start_line": 2847,
+              "end_line": 2850
+            },
+            {
+              "path": "tests/test_lowlevel.py",
+              "start_line": 424,
+              "end_line": 427
+            },
+            {
+              "path": "src/requests/exceptions.py",
+              "start_line": 27,
+              "end_line": 32
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "tests/test_requests.py",
+              "start_line": 2847,
+              "end_line": 2850,
+              "content": "        with pytest.raises(requests.exceptions.JSONDecodeError) as excinfo:\n            r.json()\n        assert isinstance(excinfo.value, RequestException)\n        assert isinstance(excinfo.value, JSONDecodeError)",
+              "content_sha256": "afe3e8a048be245632d89c94e2f856f2be67a79ea0ef7d6ae184a81edc855217",
+              "visible_to_generator": true
+            },
+            {
+              "path": "tests/test_lowlevel.py",
+              "start_line": 424,
+              "end_line": 427,
+              "content": "    with pytest.raises(requests.exceptions.JSONDecodeError) as excinfo:\n        r.json()\n    assert isinstance(excinfo.value, requests.exceptions.RequestException)\n    assert isinstance(excinfo.value, JSONDecodeError)",
+              "content_sha256": "95014144f43a9db7c075055e8134efb684e52d16f3e363133f987aca223eec63",
+              "visible_to_generator": true
+            },
+            {
+              "path": "src/requests/exceptions.py",
+              "start_line": 27,
+              "end_line": 32,
+              "content": "class InvalidJSONError(RequestException):\n    \"\"\"A JSON error occurred.\"\"\"\n\n\nclass JSONDecodeError(InvalidJSONError, CompatJSONDecodeError):\n    \"\"\"Couldn't decode the text into json\"\"\"",
+              "content_sha256": "e82b33efd289eca7795deae1d8d57cc422132de8f4c7c0c4362294eeb265640a",
+              "visible_to_generator": false
+            }
+          ]
+        },
+        {
+          "claim": "业务应按异常路径处理失败，可使用try/except，不能把该解析失败当作函数返回None。",
+          "status": "supported",
+          "rationale": "两条源码分支均重抛解码异常；tests中pytest.raises而非返回值断言也验证异常路径。这里的业务建议针对题设无效JSON，不混淆合法JSON文本null可解码为None，也未限定只能在特定调用层捕获。",
+          "evidence": [
+            {
+              "path": "src/requests/models.py",
+              "start_line": 965,
+              "end_line": 980
+            },
+            {
+              "path": "tests/test_requests.py",
+              "start_line": 2847,
+              "end_line": 2848
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "src/requests/models.py",
+              "start_line": 965,
+              "end_line": 980,
+              "content": "                    return complexjson.loads(self.content.decode(encoding), **kwargs)\n                except UnicodeDecodeError:\n                    # Wrong UTF codec detected; usually because it's not UTF-8\n                    # but some other 8-bit codec.  This is an RFC violation,\n                    # and the server didn't bother to tell us what codec *was*\n                    # used.\n                    pass\n                except JSONDecodeError as e:\n                    raise RequestsJSONDecodeError(e.msg, e.doc, e.pos)\n\n        try:\n            return complexjson.loads(self.text, **kwargs)\n        except JSONDecodeError as e:\n            # Catch JSON-related errors and raise as requests.JSONDecodeError\n            # This aliases json.JSONDecodeError and simplejson.JSONDecodeError\n            raise RequestsJSONDecodeError(e.msg, e.doc, e.pos)",
+              "content_sha256": "ac5817fa1545494e373771c192d370e6716b6353a18ccafc6f3ab21c2ea2624c",
+              "visible_to_generator": true
+            },
+            {
+              "path": "tests/test_requests.py",
+              "start_line": 2847,
+              "end_line": 2848,
+              "content": "        with pytest.raises(requests.exceptions.JSONDecodeError) as excinfo:\n            r.json()",
+              "content_sha256": "7973b218553fdb38db5a14312403bbff8bdc8167ae033389f0a0961f104d5863",
+              "visible_to_generator": true
+            }
+          ]
+        },
+        {
+          "claim": "仓库兼容性测试检查异常同时是RequestException和JSONDecodeError实例，并断言响应正文不包含在异常字符串中。",
+          "status": "supported",
+          "rationale": "test_requests2849–2851和test_lowlevel426–428真实包含这些关键断言；正式引用给出测试位置。未把测试中的网络代码说成本轮执行，也未声称构造或运行了新的测试。",
+          "evidence": [
+            {
+              "path": "tests/test_requests.py",
+              "start_line": 2845,
+              "end_line": 2851
+            },
+            {
+              "path": "tests/test_lowlevel.py",
+              "start_line": 424,
+              "end_line": 428
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "tests/test_requests.py",
+              "start_line": 2845,
+              "end_line": 2851,
+              "content": "    def test_json_decode_compatibility(self, httpbin):\n        r = requests.get(httpbin(\"bytes/20\"))\n        with pytest.raises(requests.exceptions.JSONDecodeError) as excinfo:\n            r.json()\n        assert isinstance(excinfo.value, RequestException)\n        assert isinstance(excinfo.value, JSONDecodeError)\n        assert r.text not in str(excinfo.value)",
+              "content_sha256": "5edd5cacad883159f0a17999c4f95a29ce745be1a70c3d434b4a61f2ba097ec3",
+              "visible_to_generator": true
+            },
+            {
+              "path": "tests/test_lowlevel.py",
+              "start_line": 424,
+              "end_line": 428,
+              "content": "    with pytest.raises(requests.exceptions.JSONDecodeError) as excinfo:\n        r.json()\n    assert isinstance(excinfo.value, requests.exceptions.RequestException)\n    assert isinstance(excinfo.value, JSONDecodeError)\n    assert r.text not in str(excinfo.value)",
+              "content_sha256": "18f00c36e459077ac14e09929f5c1aa2efaabe691318f2c21ae96f5b2814271f",
+              "visible_to_generator": true
+            }
+          ]
+        }
+      ],
+      "notes": "整答覆盖失败不是None、公开异常、RequestException兼容、实现依据与真实关键测试断言，未发现新的错误补充。models49为本次生成者实际可见的新增单行；exceptions27–32为评审额外核验、非交付。正式引用虽未单列49，但json公开异常文档和两份兼容性测试已支持输出中的公开异常与catch结论。仅是保留6原窗再加1行的手选来源诊断；通过不说明正常RAG已经召回该绑定，也不证明该行是唯一可能修复方法或已具备迁移收益。",
+      "key_points": null,
+      "candidate_sha256": "6d9d142106571f3a52878ea18b46e3ff589d1beda4d9244498fad0fda3535df8",
+      "reviewer": "Codex (current session)",
+      "review_type": "model_assisted_nonblind_development_review",
+      "human_approved": false,
+      "training_eligible": false,
+      "result_sha256": "371795f13a586218f497c4d7ce29069b631c60999d13aa05f0543cba087a1a55"
+    }
+  },
+  "groups": {
+    "all/oracle": {
+      "records": 1,
+      "success": 1,
+      "model_requests": 1,
+      "tool_calls": 0,
+      "episodes_using_tools": 0,
+      "citation_ranges_valid": 1,
+      "initial_reference_complete": 1,
+      "final_reference_complete": 1,
+      "initial_nonblank_reference_complete": 1,
+      "final_nonblank_reference_complete": 1,
+      "requests_without_usage": 0,
+      "requests_without_elapsed": 0,
+      "prompt_tokens": 3026,
+      "completion_tokens": 413,
+      "generator_seconds": 27.578,
+      "reviewed": 1,
+      "factually_correct": 1,
+      "core_supported": 1,
+      "fully_resolved": 1
+    },
+    "literal-test-new-question-confirmation/oracle": {
+      "records": 1,
+      "success": 1,
+      "model_requests": 1,
+      "tool_calls": 0,
+      "episodes_using_tools": 0,
+      "citation_ranges_valid": 1,
+      "initial_reference_complete": 1,
+      "final_reference_complete": 1,
+      "initial_nonblank_reference_complete": 1,
+      "final_nonblank_reference_complete": 1,
+      "requests_without_usage": 0,
+      "requests_without_elapsed": 0,
+      "prompt_tokens": 3026,
+      "completion_tokens": 413,
+      "generator_seconds": 27.578,
+      "reviewed": 1,
+      "factually_correct": 1,
+      "core_supported": 1,
+      "fully_resolved": 1
+    },
+    "known-failure-source-diagnostic/oracle": {
+      "records": 1,
+      "success": 1,
+      "model_requests": 1,
+      "tool_calls": 0,
+      "episodes_using_tools": 0,
+      "citation_ranges_valid": 1,
+      "initial_reference_complete": 1,
+      "final_reference_complete": 1,
+      "initial_nonblank_reference_complete": 1,
+      "final_nonblank_reference_complete": 1,
+      "requests_without_usage": 0,
+      "requests_without_elapsed": 0,
+      "prompt_tokens": 3026,
+      "completion_tokens": 413,
+      "generator_seconds": 27.578,
+      "reviewed": 1,
+      "factually_correct": 1,
+      "core_supported": 1,
+      "fully_resolved": 1
+    },
+    "answerable/oracle": {
+      "records": 1,
+      "success": 1,
+      "model_requests": 1,
+      "tool_calls": 0,
+      "episodes_using_tools": 0,
+      "citation_ranges_valid": 1,
+      "initial_reference_complete": 1,
+      "final_reference_complete": 1,
+      "initial_nonblank_reference_complete": 1,
+      "final_nonblank_reference_complete": 1,
+      "requests_without_usage": 0,
+      "requests_without_elapsed": 0,
+      "prompt_tokens": 3026,
+      "completion_tokens": 413,
+      "generator_seconds": 27.578,
+      "reviewed": 1,
+      "factually_correct": 1,
+      "core_supported": 1,
+      "fully_resolved": 1
+    }
+  },
+  "retrieval": {
+    "shared_initial": {
+      "answerable": 1,
+      "reference_complete": 0,
+      "nonblank_reference_complete": 0
+    }
+  },
+  "new_requests": 1,
+  "combined_requests": 1400,
+  "paid_requests": 0,
+  "human_approved": false,
+  "training_eligible": false,
+  "reporting_implementation": "4432a399824bc989792b734caf26caf8da5ada5fef0941d184fd5a00d4ae2e6b",
+  "usage_observation_note": "Token/time sums include observed values only. Missing usage and elapsed time remain unknown in raw records; reservations still count every sent or ambiguous request.",
+  "checks": {
+    "source_addition_diagnostic_passed": true,
+    "normal_retrieval_gain_demonstrated": false,
+    "only_added_source": "src/requests/models.py49 from .exceptions import JSONDecodeError as RequestsJSONDecodeError",
+    "original_six_windows_preserved": true,
+    "diagnostic_windows": 7,
+    "system_schema_sampling_and_noncontext_payload_unchanged": true,
+    "prior_prepare_failure": "Missing content_sha256 in manually constructed extra span rejected before dataset freeze/dispatch; corrected with source hash. No model dispatch in failed preparation.",
+    "gate": {
+      "fact_correct": true,
+      "core_supported": true,
+      "fully_resolved": true,
+      "alias_subclass_error_removed": true,
+      "new_unsupported_material_claims": false,
+      "decision": "source_diagnostic_pass_only",
+      "next_condition": "可考虑正常预算检索中的通用静态import绑定召回；仍需正常检索门槛与保护审计后才可采用。"
+    },
+    "scope": {
+      "source": "experiments/import-binding-diagnostic",
+      "control": "experiments/literal-test-confirmation",
+      "kind": "hand_selected_source_addition_diagnostic",
+      "normal_rag_gain": false,
+      "unseen_confirmation": false,
+      "reviewer_model_calls": 0,
+      "production_code_changes": 0,
+      "overall_accuracy": "not_estimated_selected_development_case"
+    }
+  },
+  "scope": "One revealed Requests failure, unchanged daily Q4/prompt/schema/sampling. Preserve every originally delivered source and add only actual models.py49 import alias line. Explicit source-addition diagnostic, not normal retrieval gain, not an unseen confirmation or overall accuracy estimate. No new model/tool/prompt/configuration."
+}

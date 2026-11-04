@@ -1,0 +1,664 @@
+[
+  {
+    "case_id": "qa-developit--mitt-p4-cross_case",
+    "kind": "qa",
+    "task_id": "developit--mitt-p4-cross_case",
+    "split": "validation",
+    "snapshot_id": "dfdc0816797bf578d0363591",
+    "repository": "developit/mitt",
+    "commit_sha": "6b41670516ed8e8b738612f60491995470aa63b3",
+    "question": "mitt 的 on 会把事件名统一转成小写吗？结合实现与 should NOT normalize case 测试说明。",
+    "reference": {
+      "gold": {
+        "required_facts": [
+          "不转换大小写；按原始 type 访问 Map；测试区分 FOO/foo、Bar/bar 等。"
+        ],
+        "evidence": [
+          {
+            "path": "src/index.ts",
+            "start_line": 66,
+            "end_line": 73,
+            "content_sha256": "0a5bf296ae849cd916f0b4eedbc3b3dbd431acb523f64fede2782b79ff119004"
+          },
+          {
+            "path": "test/index_test.ts",
+            "start_line": 79,
+            "end_line": 90,
+            "content_sha256": "7c7ae10f82f38319cf3cf181161ee7bfb29bde7819610b697836ace1ba119048"
+          }
+        ]
+      },
+      "human_approved": false
+    },
+    "answer": {
+      "answer": "mitt 的 on 方法**不会**将事件名统一转成小写，事件名保持原样存储和匹配。",
+      "citations": [
+        {
+          "path": "test/index_test.ts",
+          "start_line": 79,
+          "end_line": 90
+        },
+        {
+          "path": "src/index.ts",
+          "start_line": 66,
+          "end_line": 73
+        }
+      ],
+      "insufficient_evidence": false
+    },
+    "source_context": {
+      "qa": [
+        {
+          "path": "test/index_test.ts",
+          "start_line": 79,
+          "end_line": 82,
+          "content": "\t\tit('should NOT normalize case', () => {\n\t\t\tconst foo = () => {};\n\t\t\tinst.on('FOO', foo);\n\t\t\tinst.on('Bar', foo);",
+          "content_sha256": "30fc02c648e297d7012210b79b9b1a1cca3dbe2435c95423ad50334db661c67a"
+        },
+        {
+          "path": "test/index_test.ts",
+          "start_line": 121,
+          "end_line": 124,
+          "content": "\t\tit('should NOT normalize case', () => {\n\t\t\tconst foo = () => {};\n\t\t\tinst.on('FOO', foo);\n\t\t\tinst.on('Bar', foo);",
+          "content_sha256": "30fc02c648e297d7012210b79b9b1a1cca3dbe2435c95423ad50334db661c67a"
+        },
+        {
+          "path": "src/index.ts",
+          "start_line": 2,
+          "end_line": 4,
+          "content": "\n// An event handler can take an optional event argument\n// and should not return a value",
+          "content_sha256": "b76ab6ec6297367d8cacf2fe3ba4457a776e26469d194315e7601ada88854639"
+        },
+        {
+          "path": "test/index_test.ts",
+          "start_line": 79,
+          "end_line": 106,
+          "content": "\t\tit('should NOT normalize case', () => {\n\t\t\tconst foo = () => {};\n\t\t\tinst.on('FOO', foo);\n\t\t\tinst.on('Bar', foo);\n\t\t\tinst.on('baz:baT!', foo);\n\n\t\t\texpect(events.get('FOO')).to.deep.equal([foo]);\n\t\t\texpect(events.has('foo')).to.equal(false);\n\t\t\texpect(events.get('Bar')).to.deep.equal([foo]);\n\t\t\texpect(events.has('bar')).to.equal(false);\n\t\t\texpect(events.get('baz:baT!')).to.deep.equal([foo]);\n\t\t});\n\n\t\tit('can take symbols for event types', () => {\n\t\t\tconst foo = () => {};\n\t\t\tinst.on(eventType, foo);\n\t\t\texpect(events.get(eventType)).to.deep.equal([foo]);\n\t\t});\n\n\t\t// Adding the same listener multiple times should register it multiple times.\n\t\t// See https://nodejs.org/api/events.html#events_emitter_on_eventname_listener\n\t\tit('should add duplicate listeners', () => {\n\t\t\tconst foo = () => {};\n\t\t\tinst.on('foo', foo);\n\t\t\tinst.on('foo', foo);\n\t\t\texpect(events.get('foo')).to.deep.equal([foo, foo]);\n\t\t});\n\t});",
+          "content_sha256": "2802dafc8cbbf5aa864a78106e935675c9534d36ef02774e1c05c6c811645bcc"
+        },
+        {
+          "path": "src/index.ts",
+          "start_line": 1,
+          "end_line": 50,
+          "content": "export type EventType = string | symbol;\n\n// An event handler can take an optional event argument\n// and should not return a value\nexport type Handler<T = unknown> = (event: T) => void;\nexport type WildcardHandler<T = Record<string, unknown>> = (\n\ttype: keyof T,\n\tevent: T[keyof T]\n) => void;\n\n// An array of all currently registered event handlers for a type\nexport type EventHandlerList<T = unknown> = Array<Handler<T>>;\nexport type WildCardEventHandlerList<T = Record<string, unknown>> = Array<\n\tWildcardHandler<T>\n>;\n\n// A map of event types and their corresponding event handlers.\nexport type EventHandlerMap<Events extends Record<EventType, unknown>> = Map<\n\tkeyof Events | '*',\n\tEventHandlerList<Events[keyof Events]> | WildCardEventHandlerList<Events>\n>;\n\nexport interface Emitter<Events extends Record<EventType, unknown>> {\n\tall: EventHandlerMap<Events>;\n\n\ton<Key extends keyof Events>(type: Key, handler: Handler<Events[Key]>): void;\n\ton(type: '*', handler: WildcardHandler<Events>): void;\n\n\toff<Key extends keyof Events>(\n\t\ttype: Key,\n\t\thandler?: Handler<Events[Key]>\n\t): void;\n\toff(type: '*', handler: WildcardHandler<Events>): void;\n\n\temit<Key extends keyof Events>(type: Key, event: Events[Key]): void;\n\temit<Key extends keyof Events>(\n\t\ttype: undefined extends Events[Key] ? Key : never\n\t): void;\n}\n\n/**\n * Mitt: Tiny (~200b) functional event emitter / pubsub.\n * @name mitt\n * @returns {Mitt}\n */\nexport default function mitt<Events extends Record<EventType, unknown>>(\n\tall?: EventHandlerMap<Events>\n): Emitter<Events> {\n\ttype GenericEventHandler =\n\t\t| Handler<Events[keyof Events]>",
+          "content_sha256": "636378778afc10cf45932b8a4ec56799c684ad9b835ef7371bd9977836e98d9c"
+        },
+        {
+          "path": "src/index.ts",
+          "start_line": 51,
+          "end_line": 100,
+          "content": "\t\t| WildcardHandler<Events>;\n\tall = all || new Map();\n\n\treturn {\n\t\t/**\n\t\t * A Map of event names to registered handler functions.\n\t\t */\n\t\tall,\n\n\t\t/**\n\t\t * Register an event handler for the given type.\n\t\t * @param {string|symbol} type Type of event to listen for, or `'*'` for all events\n\t\t * @param {Function} handler Function to call in response to given event\n\t\t * @memberOf mitt\n\t\t */\n\t\ton<Key extends keyof Events>(type: Key, handler: GenericEventHandler) {\n\t\t\tconst handlers: Array<GenericEventHandler> | undefined = all!.get(type);\n\t\t\tif (handlers) {\n\t\t\t\thandlers.push(handler);\n\t\t\t} else {\n\t\t\t\tall!.set(type, [handler] as EventHandlerList<Events[keyof Events]>);\n\t\t\t}\n\t\t},\n\n\t\t/**\n\t\t * Remove an event handler for the given type.\n\t\t * If `handler` is omitted, all handlers of the given type are removed.\n\t\t * @param {string|symbol} type Type of event to unregister `handler` from (`'*'` to remove a wildcard handler)\n\t\t * @param {Function} [handler] Handler function to remove\n\t\t * @memberOf mitt\n\t\t */\n\t\toff<Key extends keyof Events>(type: Key, handler?: GenericEventHandler) {\n\t\t\tconst handlers: Array<GenericEventHandler> | undefined = all!.get(type);\n\t\t\tif (handlers) {\n\t\t\t\tif (handler) {\n\t\t\t\t\thandlers.splice(handlers.indexOf(handler) >>> 0, 1);\n\t\t\t\t} else {\n\t\t\t\t\tall!.set(type, []);\n\t\t\t\t}\n\t\t\t}\n\t\t},\n\n\t\t/**\n\t\t * Invoke all handlers for the given type.\n\t\t * If present, `'*'` handlers are invoked after type-matched handlers.\n\t\t *\n\t\t * Note: Manually firing '*' handlers is not supported.\n\t\t *\n\t\t * @param {string|symbol} type The event type to invoke\n\t\t * @param {Any} [evt] Any value (object is recommended and powerful), passed to each handler",
+          "content_sha256": "4b54ad38e84d87c4b7660159361ba0e0e874688040539b5a9b66420a74a282e2"
+        }
+      ]
+    },
+    "workflow_status": "success",
+    "human_approved": false,
+    "task_success": null
+  },
+  {
+    "case_id": "qa-ai--nanoid-p4-unknown_business",
+    "kind": "qa",
+    "task_id": "ai--nanoid-p4-unknown_business",
+    "split": "validation",
+    "snapshot_id": "30e277e52d238ad871cb5684",
+    "repository": "ai/nanoid",
+    "commit_sha": "57009b5eb8d757ae39bf5f4361dd30c9f23391b7",
+    "question": "我们公司生产环境昨天用 nanoid 生成了多少个 ID，碰撞次数是多少？",
+    "reference": {
+      "gold": {
+        "required_facts": [
+          "源码不包含公司生产环境昨天的调用与碰撞统计，应说明无法确定。"
+        ],
+        "evidence": []
+      },
+      "human_approved": false
+    },
+    "answer": {
+      "answer": "无法回答。",
+      "citations": [],
+      "insufficient_evidence": true
+    },
+    "source_context": {
+      "qa": [
+        {
+          "path": "bin/nanoid.js",
+          "start_line": 6,
+          "end_line": 7,
+          "content": "import { customAlphabet, nanoid } from '../index.js'\n",
+          "content_sha256": "d8efd9fed299b082a1acaf75c248ff00cd8356c405194d9716ab968f8038eee6"
+        },
+        {
+          "path": "bin/nanoid.js",
+          "start_line": 25,
+          "end_line": 28,
+          "content": "  $ nanoid [options]\n\nOptions\n  -s, --size       Generated ID size",
+          "content_sha256": "e4c22cc7448e8d62fc42af158c8ce71cfd6b4d2cded0d30d62bcde9d6792fc85"
+        },
+        {
+          "path": "index.browser.js",
+          "start_line": 75,
+          "end_line": 78,
+          "content": "export let nanoid = (size = 21) => {\n  let id = ''\n  let bytes = crypto.getRandomValues(new Uint8Array((size |= 0)))\n  while (size--) {",
+          "content_sha256": "ddffd11825dfb8bb6cb28d94acba6221909705ef6678099fda0fe578fa0703e9"
+        },
+        {
+          "path": "bin/nanoid.js",
+          "start_line": 1,
+          "end_line": 64,
+          "content": "#!/usr/bin/env node\n\nimport { readFileSync } from 'node:fs'\nimport { join } from 'node:path'\n\nimport { customAlphabet, nanoid } from '../index.js'\n\nfunction print(msg) {\n  process.stdout.write(msg + '\\n')\n}\n\nfunction error(msg) {\n  process.stderr.write(msg + '\\n')\n  process.exit(1)\n}\n\nif (process.argv.includes('--version') || process.argv.includes('-v')) {\n  let json = readFileSync(join(import.meta.dirname, '..', 'package.json'))\n  print(JSON.parse(json).version)\n  process.exit()\n}\n\nif (process.argv.includes('--help') || process.argv.includes('-h')) {\n  print(`Usage\n  $ nanoid [options]\n\nOptions\n  -s, --size       Generated ID size\n  -a, --alphabet   Alphabet to use\n  -v, --version    Show version number\n  -h, --help       Show this help\n\nExamples\n  $ nanoid -s 15\n  S9sBF77U6sDB8Yg\n\n  $ nanoid --size 10 --alphabet abc\n  bcabababca`)\n  process.exit()\n}\n\nlet alphabet, size\nfor (let i = 2; i < process.argv.length; i++) {\n  let arg = process.argv[i]\n  if (arg === '--size' || arg === '-s') {\n    size = Number(process.argv[i + 1])\n    i += 1\n    if (Number.isNaN(size) || size <= 0) {\n      error('Size must be positive integer')\n    }\n  } else if (arg === '--alphabet' || arg === '-a') {\n    alphabet = process.argv[i + 1]\n    i += 1\n  } else {\n    error('Unknown argument ' + arg)\n  }\n}\n\nif (alphabet) {\n  let customNanoid = customAlphabet(alphabet, size)\n  print(customNanoid())\n} else {\n  print(nanoid(size))\n}",
+          "content_sha256": "a40fd0fd73703fb14c959a755085a1ea549f8818ecabe921f46f10f81a12f3fc"
+        }
+      ]
+    },
+    "workflow_status": "success",
+    "human_approved": false,
+    "task_success": null
+  },
+  {
+    "case_id": "report-mitt",
+    "kind": "report",
+    "task_id": "developit--mitt-p4-cross_case",
+    "split": "validation",
+    "snapshot_id": "dfdc0816797bf578d0363591",
+    "repository": "developit/mitt",
+    "commit_sha": "6b41670516ed8e8b738612f60491995470aa63b3",
+    "question": "mitt 的 on 会把事件名统一转成小写吗？结合实现与 should NOT normalize case 测试说明。",
+    "reference": {
+      "human_approved": false,
+      "rubric": [
+        "Each role grounds repository claims in its own observed sources.",
+        "Project purpose, entry points, architecture and reading path are usable.",
+        "Setup/test commands need observed support; suggestions are not real issues."
+      ]
+    },
+    "answer": {
+      "explorer": {
+        "evidenceClaims": [
+          {
+            "claim": "用途：轻量级功能型事件发射器/发布订阅系统，支持通配符事件监听，无依赖，兼容 IE9+。",
+            "confidence": "high",
+            "evidence": [
+              {
+                "path": "README.md",
+                "supports": "L11-L19"
+              }
+            ]
+          },
+          {
+            "claim": "技术栈：TypeScript 类型定义，基于 Map 实现事件映射，支持 ES6 和 CommonJS 模块。",
+            "confidence": "high",
+            "evidence": [
+              {
+                "path": "src/index.ts",
+                "supports": "L1-L21"
+              }
+            ]
+          },
+          {
+            "claim": "入口文件：src/index.ts 导出默认 mitt 函数及类型定义。",
+            "confidence": "high",
+            "evidence": [
+              {
+                "path": "src/index.ts",
+                "supports": "L46-L49"
+              }
+            ]
+          }
+        ],
+        "evidenceCoverage": {
+          "examinedFiles": [
+            "README.md",
+            "src/index.ts"
+          ],
+          "gaps": []
+        },
+        "projectType": {
+          "primary": "EventEmitter",
+          "secondary": [
+            "PubSub",
+            "Functional API"
+          ]
+        },
+        "techStack": {
+          "language": "TypeScript",
+          "framework": "None",
+          "buildTool": "None"
+        },
+        "fileCount": 13,
+        "entryPoints": [
+          {
+            "file": "src/index.ts",
+            "role": "Main entry point"
+          }
+        ],
+        "moduleMap": [
+          {
+            "path": "src/index.ts",
+            "responsibility": "导出 mitt 函数、类型定义及事件处理逻辑。",
+            "importance": "core",
+            "justification": "L46-L49 定义核心 mitt 函数，L1-L21 定义类型系统。"
+          }
+        ],
+        "directorySummary": "项目根目录包含 README.md 和 src/index.ts，无其他源码文件。",
+        "projectSummary": "Mitt 是一个微型事件发射器，旨在浏览器和任何 JavaScript 运行时中使用，无依赖且支持 IE9+。它提供类似 Node.js EventEmitter 的功能，但采用函数式 API（不依赖 this），支持通配符事件监听。代码由 TypeScript 定义，通过 src/index.ts 导出。"
+      },
+      "mentor": {
+        "evidenceClaims": [],
+        "evidenceCoverage": {
+          "examinedFiles": [],
+          "gaps": [
+            {
+              "kind": "missing_evidence",
+              "subject": "无法提供核心实现、静态依赖与架构的解释，因为 context 为空。",
+              "summary": "缺少源码上下文以验证路径和行号。",
+              "severity": "high"
+            }
+          ]
+        },
+        "architectureOverview": "无法提供，context 为空。",
+        "dependencyGraph": {
+          "staticDependencies": [],
+          "runtimeDependencies": []
+        },
+        "readingPath": [
+          {
+            "step": 1,
+            "file": "src/index.py",
+            "why": "作为入口点，通常包含主函数调用。"
+          },
+          {
+            "step": 2,
+            "file": "src/core/__init__.py",
+            "why": "核心模块的导出点，包含核心逻辑。"
+          },
+          {
+            "step": 3,
+            "file": "test/test_core.py",
+            "why": "验证核心功能的测试用例。"
+          }
+        ],
+        "keyPatterns": [],
+        "codeConventions": [
+          {
+            "rule": "未知",
+            "example": "未知"
+          }
+        ]
+      },
+      "contributor": {
+        "evidenceClaims": [],
+        "evidenceCoverage": {
+          "examinedFiles": [],
+          "gaps": [
+            {
+              "kind": "missing_evidence",
+              "subject": "项目文档和配置信息",
+              "summary": "context 为空，无法提供安装、开发、测试方式及入门建议。",
+              "severity": "high"
+            }
+          ]
+        },
+        "goodFirstIssues": [],
+        "contributionSetup": {
+          "devEnv": null,
+          "build": null,
+          "test": null,
+          "lint": null
+        },
+        "entryFiles": [],
+        "notesForNewcomers": [
+          {
+            "tip": "无法提供具体建议，因缺少项目文档和配置上下文。"
+          }
+        ]
+      }
+    },
+    "source_context": {
+      "explorer": [
+        {
+          "path": "README.md",
+          "start_line": 1,
+          "end_line": 50,
+          "content": "<p align=\"center\">\n  <img src=\"https://i.imgur.com/BqsX9NT.png\" width=\"300\" height=\"300\" alt=\"mitt\">\n  <br>\n  <a href=\"https://www.npmjs.org/package/mitt\"><img src=\"https://img.shields.io/npm/v/mitt.svg\" alt=\"npm\"></a>\n  <img src=\"https://github.com/developit/mitt/workflows/CI/badge.svg\" alt=\"build status\">\n  <a href=\"https://unpkg.com/mitt/dist/mitt.js\"><img src=\"https://img.badgesize.io/https://unpkg.com/mitt/dist/mitt.js?compression=gzip\" alt=\"gzip size\"></a>\n</p>\n\n# Mitt\n\n> Tiny 200b functional event emitter / pubsub.\n\n-   **Microscopic:** weighs less than 200 bytes gzipped\n-   **Useful:** a wildcard `\"*\"` event type listens to all events\n-   **Familiar:** same names & ideas as [Node's EventEmitter](https://nodejs.org/api/events.html#events_class_eventemitter)\n-   **Functional:** methods don't rely on `this`\n-   **Great Name:** somehow [mitt](https://npm.im/mitt) wasn't taken\n\nMitt was made for the browser, but works in any JavaScript runtime. It has no dependencies and supports IE9+.\n\n## Table of Contents\n\n-   [Install](#install)\n-   [Usage](#usage)\n-   [Examples & Demos](#examples--demos)\n-   [API](#api)\n-   [Contribute](#contribute)\n-   [License](#license)\n\n## Install\n\nThis project uses [node](http://nodejs.org) and [npm](https://npmjs.com). Go check them out if you don't have them locally installed.\n\n```sh\n$ npm install --save mitt\n```\n\nThen with a module bundler like [rollup](http://rollupjs.org/) or [webpack](https://webpack.js.org/), use as you would anything else:\n\n```javascript\n// using ES6 modules\nimport mitt from 'mitt'\n\n// using CommonJS modules\nvar mitt = require('mitt')\n```\n\nThe [UMD](https://github.com/umdjs/umd) build is also available on [unpkg](https://unpkg.com):\n\n```html",
+          "content_sha256": "fb4e27a57ec36ec2af2c91ef248a1858ab4c51e8da0a7b9c70d52ef4f0f3852f"
+        },
+        {
+          "path": "src/index.ts",
+          "start_line": 1,
+          "end_line": 50,
+          "content": "export type EventType = string | symbol;\n\n// An event handler can take an optional event argument\n// and should not return a value\nexport type Handler<T = unknown> = (event: T) => void;\nexport type WildcardHandler<T = Record<string, unknown>> = (\n\ttype: keyof T,\n\tevent: T[keyof T]\n) => void;\n\n// An array of all currently registered event handlers for a type\nexport type EventHandlerList<T = unknown> = Array<Handler<T>>;\nexport type WildCardEventHandlerList<T = Record<string, unknown>> = Array<\n\tWildcardHandler<T>\n>;\n\n// A map of event types and their corresponding event handlers.\nexport type EventHandlerMap<Events extends Record<EventType, unknown>> = Map<\n\tkeyof Events | '*',\n\tEventHandlerList<Events[keyof Events]> | WildCardEventHandlerList<Events>\n>;\n\nexport interface Emitter<Events extends Record<EventType, unknown>> {\n\tall: EventHandlerMap<Events>;\n\n\ton<Key extends keyof Events>(type: Key, handler: Handler<Events[Key]>): void;\n\ton(type: '*', handler: WildcardHandler<Events>): void;\n\n\toff<Key extends keyof Events>(\n\t\ttype: Key,\n\t\thandler?: Handler<Events[Key]>\n\t): void;\n\toff(type: '*', handler: WildcardHandler<Events>): void;\n\n\temit<Key extends keyof Events>(type: Key, event: Events[Key]): void;\n\temit<Key extends keyof Events>(\n\t\ttype: undefined extends Events[Key] ? Key : never\n\t): void;\n}\n\n/**\n * Mitt: Tiny (~200b) functional event emitter / pubsub.\n * @name mitt\n * @returns {Mitt}\n */\nexport default function mitt<Events extends Record<EventType, unknown>>(\n\tall?: EventHandlerMap<Events>\n): Emitter<Events> {\n\ttype GenericEventHandler =\n\t\t| Handler<Events[keyof Events]>",
+          "content_sha256": "636378778afc10cf45932b8a4ec56799c684ad9b835ef7371bd9977836e98d9c"
+        }
+      ],
+      "mentor": [],
+      "contributor": []
+    },
+    "workflow_status": "success",
+    "human_approved": false,
+    "task_success": null
+  },
+  {
+    "case_id": "report-schedule",
+    "kind": "report",
+    "task_id": "dbader--schedule-01",
+    "split": "validation",
+    "snapshot_id": "9999db891acf16c1a1fd96b5",
+    "repository": "dbader/schedule",
+    "commit_sha": "82a43db1b938d8fdf60103bd41f329e06c8d3651",
+    "question": "run_pending 是否补跑所有错过的调度次数？",
+    "reference": {
+      "human_approved": false,
+      "rubric": [
+        "Each role grounds repository claims in its own observed sources.",
+        "Project purpose, entry points, architecture and reading path are usable.",
+        "Setup/test commands need observed support; suggestions are not real issues."
+      ]
+    },
+    "answer": {
+      "explorer": {
+        "evidenceClaims": [
+          {
+            "claim": "用途：用于人类友好的周期性任务调度，支持在进程内运行 Python 函数或任何可调用对象。",
+            "confidence": "high",
+            "evidence": [
+              {
+                "path": "schedule/__init__.py",
+                "supports": "L2-L9"
+              }
+            ]
+          },
+          {
+            "claim": "类型：轻量级、无外部依赖的进程内调度器，采用构建器模式配置。",
+            "confidence": "high",
+            "evidence": [
+              {
+                "path": "schedule/__init__.py",
+                "supports": "L6-L7, L16-L17"
+              }
+            ]
+          },
+          {
+            "claim": "技术栈：Python 3.7+，核心无依赖，可选依赖 pytz（时区），构建工具为 setuptools。",
+            "confidence": "high",
+            "evidence": [
+              {
+                "path": "pyproject.toml",
+                "supports": "L12-L13, L20, L2"
+              },
+              {
+                "path": "schedule/__init__.py",
+                "supports": "L18"
+              }
+            ]
+          },
+          {
+            "claim": "入口文件：schedule/__init__.py，导出核心调度逻辑。",
+            "confidence": "high",
+            "evidence": [
+              {
+                "path": "schedule/__init__.py",
+                "supports": "L1-L50"
+              }
+            ]
+          },
+          {
+            "claim": "主要模块职责：__init__.py 提供文档、导入及核心调度功能；pyproject.toml 定义项目元数据与构建配置。",
+            "confidence": "high",
+            "evidence": [
+              {
+                "path": "schedule/__init__.py",
+                "supports": "L1-L50"
+              },
+              {
+                "path": "pyproject.toml",
+                "supports": "L1-L26"
+              }
+            ]
+          }
+        ],
+        "evidenceCoverage": {
+          "examinedFiles": [
+            "pyproject.toml",
+            "schedule/__init__.py"
+          ],
+          "gaps": []
+        },
+        "projectType": {
+          "primary": "Python 库",
+          "secondary": []
+        },
+        "techStack": {
+          "language": "Python",
+          "framework": "None",
+          "buildTool": "setuptools"
+        },
+        "fileCount": 32,
+        "entryPoints": [
+          {
+            "file": "schedule/__init__.py",
+            "role": "核心调度逻辑与 API 导出"
+          }
+        ],
+        "moduleMap": [
+          {
+            "path": "schedule/__init__.py",
+            "responsibility": "提供项目文档、核心调度功能及依赖导入",
+            "importance": "core",
+            "justification": "包含主要功能描述、使用示例及核心代码逻辑"
+          },
+          {
+            "path": "pyproject.toml",
+            "responsibility": "定义项目元数据、构建系统及依赖关系",
+            "importance": "core",
+            "justification": "指定构建后端、Python 版本要求及可选依赖"
+          },
+          {
+            "path": "README.rst",
+            "responsibility": "项目文档（引用自 pyproject.toml）",
+            "importance": "core",
+            "justification": "被 pyproject.toml 指向，但内容未在 context 中"
+          }
+        ],
+        "directorySummary": "仓库包含核心调度逻辑（schedule/__init__.py）和构建配置（pyproject.toml），旨在提供轻量级、无外部依赖的进程内任务调度器。",
+        "projectSummary": "这是一个名为 'schedule' 的 Python 库，用于在进程内以人类友好的方式调度周期性任务。它采用构建器模式，无外部依赖，支持 Python 3.7+，并提供了丰富的时间调度语法。"
+      },
+      "mentor": {
+        "evidenceClaims": [],
+        "evidenceCoverage": {
+          "examinedFiles": [],
+          "gaps": [
+            {
+              "kind": "missing_evidence",
+              "subject": "无法提供核心实现、静态依赖与架构的解释，因为 context 为空。",
+              "summary": "缺少源码上下文以验证路径和行号。",
+              "severity": "high"
+            }
+          ]
+        },
+        "architectureOverview": "无法提供，context 为空。",
+        "dependencyGraph": {
+          "staticDependencies": [],
+          "runtimeDependencies": []
+        },
+        "readingPath": [
+          {
+            "step": 1,
+            "file": "src/index.py",
+            "why": "作为入口点，通常包含主函数调用。"
+          },
+          {
+            "step": 2,
+            "file": "src/core/__init__.py",
+            "why": "核心模块的导出点，包含核心逻辑。"
+          },
+          {
+            "step": 3,
+            "file": "test/test_core.py",
+            "why": "验证核心功能的测试用例。"
+          }
+        ],
+        "keyPatterns": [],
+        "codeConventions": [
+          {
+            "rule": "未知",
+            "example": "未知"
+          }
+        ]
+      },
+      "contributor": {
+        "evidenceClaims": [
+          {
+            "claim": "安装方式：使用 `pip install schedule` 或 `pip install schedule[timezone]` 安装可选依赖。",
+            "confidence": "high",
+            "evidence": [
+              {
+                "path": "pyproject.toml",
+                "supports": "L19-L20"
+              }
+            ]
+          },
+          {
+            "claim": "开发方式：安装 `requirements-dev.txt` 依赖，使用 `pytest` 运行测试，`black` 格式化代码，`Sphinx` 编译文档。",
+            "confidence": "high",
+            "evidence": [
+              {
+                "path": "docs/development.rst",
+                "supports": "L8-L12, L18-L22, L27-L31, L35-L47"
+              }
+            ]
+          },
+          {
+            "claim": "测试方式：使用 `pytest` 运行，支持覆盖率检查 (`--cov`) 和代码格式化检查 (`--flake8`)。",
+            "confidence": "high",
+            "evidence": [
+              {
+                "path": "docs/development.rst",
+                "supports": "L18-L22"
+              }
+            ]
+          }
+        ],
+        "evidenceCoverage": {
+          "examinedFiles": [
+            ".github/workflows/ci.yml",
+            "docs/development.rst",
+            "docs/faq.rst",
+            "pyproject.toml",
+            "schedule/__init__.py"
+          ],
+          "gaps": []
+        },
+        "goodFirstIssues": [
+          {
+            "area": "开发",
+            "difficulty": "medium",
+            "description": "如何配置 `black` 版本为 20.8b1 以满足项目要求。"
+          },
+          {
+            "area": "测试",
+            "difficulty": "medium",
+            "description": "如何运行带覆盖率报告的测试命令。"
+          }
+        ],
+        "contributionSetup": {
+          "devEnv": "pip install -r requirements-dev.txt",
+          "build": "python3 -m build --wheel",
+          "test": "py.test test_schedule.py --flake8 schedule -v --cov schedule --cov-report term-missing",
+          "lint": "black ."
+        },
+        "entryFiles": [
+          {
+            "file": "README.rst",
+            "description": "包含项目简介、安装说明和基础用法示例。",
+            "reason": "L9"
+          },
+          {
+            "file": "docs/development.rst",
+            "description": "详细指导开发环境搭建、测试运行、代码格式化和文档编译。",
+            "reason": "L1-L68"
+          },
+          {
+            "file": "pyproject.toml",
+            "description": "定义项目构建系统、依赖项及可选依赖（如 timezone）。",
+            "reason": "L1-L26"
+          }
+        ],
+        "notesForNewcomers": [
+          {
+            "tip": "项目无外部依赖，但测试和开发需要 `pytest`, `black`, `flake8` 等工具。"
+          },
+          {
+            "tip": "文档使用 `reStructuredText` 编写，需 `Sphinx` 编译。"
+          }
+        ]
+      }
+    },
+    "source_context": {
+      "explorer": [
+        {
+          "path": "pyproject.toml",
+          "start_line": 1,
+          "end_line": 26,
+          "content": "[build-system]\nrequires = [\"setuptools >= 61.0\"]\nbuild-backend = \"setuptools.build_meta\"\n\n[project]\nname = \"schedule\"\ndescription = \"Job scheduling for humans.\"\ndynamic = [\"version\", \"classifiers\", \"keywords\", \"authors\"]\nreadme = \"README.rst\"\nlicense = {text = \"MIT License\"}\n\nrequires-python = \">= 3.7\"\ndependencies = []\n\nmaintainers = [\n  {name = \"Sijmen Huizenga\"}\n]\n\n[project.optional-dependencies]\ntimezone = [\"pytz\"]\n\n[project.urls]\nDocumentation = \"https://schedule.readthedocs.io\"\nRepository = \"https://github.com/dbader/schedule.git\"\nIssues = \"https://github.com/dbader/schedule/issues\"\nChangelog = \"https://github.com/dbader/schedule/blob/master/HISTORY.rst\"",
+          "content_sha256": "b7be80fcfc72fc142f62f33728e65f905426de025a15c0d7ea692cf179f831da"
+        },
+        {
+          "path": "schedule/__init__.py",
+          "start_line": 1,
+          "end_line": 50,
+          "content": "\"\"\"\nPython job scheduling for humans.\n\ngithub.com/dbader/schedule\n\nAn in-process scheduler for periodic jobs that uses the builder pattern\nfor configuration. Schedule lets you run Python functions (or any other\ncallable) periodically at pre-determined intervals using a simple,\nhuman-friendly syntax.\n\nInspired by Addam Wiggins' article \"Rethinking Cron\" [1] and the\n\"clockwork\" Ruby module [2][3].\n\nFeatures:\n    - A simple to use API for scheduling jobs.\n    - Very lightweight and no external dependencies.\n    - Excellent test coverage.\n    - Tested on Python 3.7, 3.8, 3.9, 3.10, 3.11 and 3.12\n\nUsage:\n    >>> import schedule\n    >>> import time\n\n    >>> def job(message='stuff'):\n    >>>     print(\"I'm working on:\", message)\n\n    >>> schedule.every(10).minutes.do(job)\n    >>> schedule.every(5).to(10).days.do(job)\n    >>> schedule.every().hour.do(job, message='things')\n    >>> schedule.every().day.at(\"10:30\").do(job)\n\n    >>> while True:\n    >>>     schedule.run_pending()\n    >>>     time.sleep(1)\n\n[1] https://adam.herokuapp.com/past/2010/4/13/rethinking_cron/\n[2] https://github.com/Rykian/clockwork\n[3] https://adam.herokuapp.com/past/2010/6/30/replace_cron_with_clockwork/\n\"\"\"\n\nfrom collections.abc import Hashable\nimport datetime\nimport functools\nimport logging\nimport random\nimport re\nimport time\nfrom typing import Set, List, Optional, Callable, Union\n\nlogger = logging.getLogger(\"schedule\")",
+          "content_sha256": "96974112593b467c7d5c86b563ff46c981c198c4b69ac88e90eb85d00019f09c"
+        }
+      ],
+      "mentor": [],
+      "contributor": [
+        {
+          "path": "pyproject.toml",
+          "start_line": 1,
+          "end_line": 26,
+          "content": "[build-system]\nrequires = [\"setuptools >= 61.0\"]\nbuild-backend = \"setuptools.build_meta\"\n\n[project]\nname = \"schedule\"\ndescription = \"Job scheduling for humans.\"\ndynamic = [\"version\", \"classifiers\", \"keywords\", \"authors\"]\nreadme = \"README.rst\"\nlicense = {text = \"MIT License\"}\n\nrequires-python = \">= 3.7\"\ndependencies = []\n\nmaintainers = [\n  {name = \"Sijmen Huizenga\"}\n]\n\n[project.optional-dependencies]\ntimezone = [\"pytz\"]\n\n[project.urls]\nDocumentation = \"https://schedule.readthedocs.io\"\nRepository = \"https://github.com/dbader/schedule.git\"\nIssues = \"https://github.com/dbader/schedule/issues\"\nChangelog = \"https://github.com/dbader/schedule/blob/master/HISTORY.rst\"",
+          "content_sha256": "b7be80fcfc72fc142f62f33728e65f905426de025a15c0d7ea692cf179f831da"
+        },
+        {
+          "path": "schedule/__init__.py",
+          "start_line": 1,
+          "end_line": 50,
+          "content": "\"\"\"\nPython job scheduling for humans.\n\ngithub.com/dbader/schedule\n\nAn in-process scheduler for periodic jobs that uses the builder pattern\nfor configuration. Schedule lets you run Python functions (or any other\ncallable) periodically at pre-determined intervals using a simple,\nhuman-friendly syntax.\n\nInspired by Addam Wiggins' article \"Rethinking Cron\" [1] and the\n\"clockwork\" Ruby module [2][3].\n\nFeatures:\n    - A simple to use API for scheduling jobs.\n    - Very lightweight and no external dependencies.\n    - Excellent test coverage.\n    - Tested on Python 3.7, 3.8, 3.9, 3.10, 3.11 and 3.12\n\nUsage:\n    >>> import schedule\n    >>> import time\n\n    >>> def job(message='stuff'):\n    >>>     print(\"I'm working on:\", message)\n\n    >>> schedule.every(10).minutes.do(job)\n    >>> schedule.every(5).to(10).days.do(job)\n    >>> schedule.every().hour.do(job, message='things')\n    >>> schedule.every().day.at(\"10:30\").do(job)\n\n    >>> while True:\n    >>>     schedule.run_pending()\n    >>>     time.sleep(1)\n\n[1] https://adam.herokuapp.com/past/2010/4/13/rethinking_cron/\n[2] https://github.com/Rykian/clockwork\n[3] https://adam.herokuapp.com/past/2010/6/30/replace_cron_with_clockwork/\n\"\"\"\n\nfrom collections.abc import Hashable\nimport datetime\nimport functools\nimport logging\nimport random\nimport re\nimport time\nfrom typing import Set, List, Optional, Callable, Union\n\nlogger = logging.getLogger(\"schedule\")",
+          "content_sha256": "96974112593b467c7d5c86b563ff46c981c198c4b69ac88e90eb85d00019f09c"
+        },
+        {
+          "path": ".github/workflows/ci.yml",
+          "start_line": 1,
+          "end_line": 4,
+          "content": "name: Tests\n\non:\n  push:",
+          "content_sha256": "58cd080ccc60a455ae921805dd71ab183ac7c472f2dee404876829d638dfff45"
+        },
+        {
+          "path": "docs/development.rst",
+          "start_line": 1,
+          "end_line": 4,
+          "content": "Development\n===========\n\nThese instructions are geared towards people who want to help develop this library.",
+          "content_sha256": "fe63b41b42119f2c79166f302acd01272437fc73a690e72f9f11b8ba6edfa4a5"
+        },
+        {
+          "path": "docs/faq.rst",
+          "start_line": 1,
+          "end_line": 4,
+          "content": "Frequently Asked Questions\n==========================\n\nFrequently asked questions on the usage of schedule.",
+          "content_sha256": "57d590e520d9c56db66213f99468a14335d20ebb8b04e42cdb493c34433bcccf"
+        },
+        {
+          "path": "docs/development.rst",
+          "start_line": 1,
+          "end_line": 68,
+          "content": "Development\n===========\n\nThese instructions are geared towards people who want to help develop this library.\n\nPreparing for development\n-------------------------\nAll required tooling and libraries can be installed using the ``requirements-dev.txt`` file:\n\n.. code-block:: bash\n\n    pip install -r requirements-dev.txt\n\n\nRunning tests\n-------------\n\n``pytest`` is used to run tests. Run all tests with coverage and formatting checks:\n\n.. code-block:: bash\n\n    py.test test_schedule.py --flake8 schedule -v --cov schedule --cov-report term-missing\n\nFormatting the code\n-------------------\nThis project uses `black formatter <https://black.readthedocs.io/en/stable/>`_.\nTo format the code, run:\n\n.. code-block:: bash\n\n    black .\n\nMake sure you use version 20.8b1 of black.\n\nCompiling documentation\n-----------------------\n\nThe documentation is written in `reStructuredText <https://docutils.sourceforge.io/rst.html>`_.\nIt is processed using `Sphinx <http://www.sphinx-doc.org/en/1.4.8/tutorial.html>`_ using the `alabaster <https://alabaster.readthedocs.io/en/latest/>`_ theme.\nAfter installing the development requirements it is just a matter of running:\n\n.. code-block:: bash\n\n    cd docs\n    make html\n\nThe resulting html can be found in ``docs/_build/html``\n\nPublish a new version\n---------------------\n\nUpdate the ``HISTORY.rst`` and ``AUTHORS.rst`` files.\nBump the version in ``setup.py`` and ``docs/conf.py``.\nMerge these changes into master. Finally:\n\n.. code-block:: bash\n\n    git tag X.Y.Z -m \"Release X.Y.Z\"\n    git push --tags\n\n    pip install --upgrade setuptools twine wheel\n    python3 -m build --wheel\n    # For https://test.pypi.org/project/schedule/\n    twine upload --repository schedule-test dist/*\n    # For https://pypi.org/project/schedule/\n    twine upload --repository schedule dist/*\n\nThis project follows `semantic versioning <https://semver.org/>`_.`",
+          "content_sha256": "0e3a9f4bc97602c882086ef96aea4a76e77f3582dfa3e82aa99370f57741f825"
+        }
+      ]
+    },
+    "workflow_status": "success",
+    "human_approved": false,
+    "task_success": null
+  }
+]

@@ -1,0 +1,2216 @@
+{
+  "questions": 9,
+  "planned_answers": 18,
+  "records": 18,
+  "reviews": {
+    "q-35441446c0f3e154--hybrid_rerank": {
+      "candidate_id": "q-35441446c0f3e154--hybrid_rerank",
+      "correctness": "correct",
+      "citation_support": "supported",
+      "completeness": "partial",
+      "abstention": "not_applicable",
+      "entry_scope": "correct",
+      "consistency": "consistent",
+      "claims": [
+        {
+          "claim": "on按原始type存Map，不小写",
+          "status": "supported",
+          "rationale": "get/set直接使用type",
+          "evidence": [
+            {
+              "path": "src/index.ts",
+              "start_line": 66,
+              "end_line": 73
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "src/index.ts",
+              "start_line": 66,
+              "end_line": 73,
+              "content": "\t\ton<Key extends keyof Events>(type: Key, handler: GenericEventHandler) {\n\t\t\tconst handlers: Array<GenericEventHandler> | undefined = all!.get(type);\n\t\t\tif (handlers) {\n\t\t\t\thandlers.push(handler);\n\t\t\t} else {\n\t\t\t\tall!.set(type, [handler] as EventHandlerList<Events[keyof Events]>);\n\t\t\t}\n\t\t},",
+              "content_sha256": "0a5bf296ae849cd916f0b4eedbc3b3dbd431acb523f64fede2782b79ff119004",
+              "visible_to_generator": true
+            }
+          ]
+        },
+        {
+          "claim": "测试证明保留大小写及特殊键",
+          "status": "supported",
+          "rationale": "原测试有FOO/foo和Bar/bar对比及混合符号键",
+          "evidence": [
+            {
+              "path": "test/index_test.ts",
+              "start_line": 79,
+              "end_line": 90
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "test/index_test.ts",
+              "start_line": 79,
+              "end_line": 90,
+              "content": "\t\tit('should NOT normalize case', () => {\n\t\t\tconst foo = () => {};\n\t\t\tinst.on('FOO', foo);\n\t\t\tinst.on('Bar', foo);\n\t\t\tinst.on('baz:baT!', foo);\n\n\t\t\texpect(events.get('FOO')).to.deep.equal([foo]);\n\t\t\texpect(events.has('foo')).to.equal(false);\n\t\t\texpect(events.get('Bar')).to.deep.equal([foo]);\n\t\t\texpect(events.has('bar')).to.equal(false);\n\t\t\texpect(events.get('baz:baT!')).to.deep.equal([foo]);\n\t\t});",
+              "content_sha256": "7c7ae10f82f38319cf3cf181161ee7bfb29bde7819610b697836ace1ba119048",
+              "visible_to_generator": true
+            }
+          ]
+        },
+        {
+          "claim": "具体测试输入与断言",
+          "status": "unverifiable",
+          "rationale": "正文只概括测试结论，没有按既有口径解释FOO/foo或Bar/bar具体断言",
+          "evidence": [
+            {
+              "path": "test/index_test.ts",
+              "start_line": 79,
+              "end_line": 90
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "test/index_test.ts",
+              "start_line": 79,
+              "end_line": 90,
+              "content": "\t\tit('should NOT normalize case', () => {\n\t\t\tconst foo = () => {};\n\t\t\tinst.on('FOO', foo);\n\t\t\tinst.on('Bar', foo);\n\t\t\tinst.on('baz:baT!', foo);\n\n\t\t\texpect(events.get('FOO')).to.deep.equal([foo]);\n\t\t\texpect(events.has('foo')).to.equal(false);\n\t\t\texpect(events.get('Bar')).to.deep.equal([foo]);\n\t\t\texpect(events.has('bar')).to.equal(false);\n\t\t\texpect(events.get('baz:baT!')).to.deep.equal([foo]);\n\t\t});",
+              "content_sha256": "7c7ae10f82f38319cf3cf181161ee7bfb29bde7819610b697836ace1ba119048",
+              "visible_to_generator": true
+            }
+          ]
+        }
+      ],
+      "notes": "沿用此前具体测试要求；事实正确，概括测试行为不足以替代实际输入/断言。",
+      "key_points": null,
+      "candidate_sha256": "13f8370c25da6fcd547b880d8c1bdeced40862503c5ae70e6fbd15aa68b0f522",
+      "reviewer": "Codex (current session)",
+      "review_type": "model_assisted_nonblind_development_review",
+      "human_approved": false,
+      "training_eligible": false,
+      "result_sha256": "cb398e87ecc64ea51f5937dc4bbba5ea144ebb8ad0f5165f8cb918ef5a065c89"
+    },
+    "q-f33bdd28fc012276--hybrid_rerank": {
+      "candidate_id": "q-f33bdd28fc012276--hybrid_rerank",
+      "correctness": "correct",
+      "citation_support": "supported",
+      "completeness": "partial",
+      "abstention": "not_applicable",
+      "entry_scope": "correct",
+      "consistency": "consistent",
+      "claims": [
+        {
+          "claim": "已有键getitem更新顺序，contains不更新",
+          "status": "supported",
+          "rationale": "getitem取值后touch；contains只查底层字典",
+          "evidence": [
+            {
+              "path": "src/cachetools/__init__.py",
+              "start_line": 294,
+              "end_line": 298
+            },
+            {
+              "path": "src/cachetools/__init__.py",
+              "start_line": 103,
+              "end_line": 104
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "src/cachetools/__init__.py",
+              "start_line": 294,
+              "end_line": 298,
+              "content": "    def __getitem__(self, key, cache_getitem=Cache.__getitem__):\n        value = cache_getitem(self, key)\n        if key in self:  # __missing__ may not store item\n            self.__touch(key)\n        return value",
+              "content_sha256": "5ad59483f065104c2f24c4743c8ec6f05fdf6b357a01e453b1d0a77d0ae03935",
+              "visible_to_generator": true
+            },
+            {
+              "path": "src/cachetools/__init__.py",
+              "start_line": 103,
+              "end_line": 104,
+              "content": "    def __contains__(self, key):\n        return key in self.__data",
+              "content_sha256": "4adc1029719bce8bf16121691ed41452e495257a8e3f28a654e8c4cee690795b",
+              "visible_to_generator": true
+            }
+          ]
+        },
+        {
+          "claim": "题目要求的touch移动末尾和存在性条件解释",
+          "status": "unverifiable",
+          "rationale": "只有结论，未解释所要求的实现机制",
+          "evidence": [
+            {
+              "path": "src/cachetools/__init__.py",
+              "start_line": 321,
+              "end_line": 326
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "src/cachetools/__init__.py",
+              "start_line": 321,
+              "end_line": 326,
+              "content": "    def __touch(self, key):\n        \"\"\"Mark as recently used\"\"\"\n        try:\n            self.__order.move_to_end(key)\n        except KeyError:\n            self.__order[key] = None",
+              "content_sha256": "a2691d1e2bec417d646f645ce9460bb9d8f12675f5f77c3572816b910526a6ff",
+              "visible_to_generator": true
+            }
+          ]
+        }
+      ],
+      "notes": "与原同题标准一致，核心结论正确但必要解释未完成；SDK用了整理阶段仍丢解释。",
+      "key_points": null,
+      "candidate_sha256": "36d3bd5d183c8d98f853da6e7cc7a793f81d43a048cc6bf2d833f36a57c0593b",
+      "reviewer": "Codex (current session)",
+      "review_type": "model_assisted_nonblind_development_review",
+      "human_approved": false,
+      "training_eligible": false,
+      "result_sha256": "e15cc169b305173b30a18547fff154f2e1b358cbb6e20c4bc765713ec8bc13f9"
+    },
+    "q-4cfe308994156f5d--hybrid_rerank": {
+      "candidate_id": "q-4cfe308994156f5d--hybrid_rerank",
+      "correctness": "partially_correct",
+      "citation_support": "partial",
+      "completeness": "adequate",
+      "abstention": "not_applicable",
+      "entry_scope": "correct",
+      "consistency": "consistent",
+      "claims": [
+        {
+          "claim": "单null转换为空字符串",
+          "status": "contradicted",
+          "rationale": "空串拼接null为字符串null，不是空串",
+          "evidence": [
+            {
+              "path": "source/index.js",
+              "start_line": 175,
+              "end_line": 177
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "source/index.js",
+              "start_line": 175,
+              "end_line": 177,
+              "content": "\t\tif (arguments_.length === 1) {\n\t\t\t// eslint-disable-next-line no-implicit-coercion\n\t\t\treturn applyStyle(builder, '' + arguments_[0]);",
+              "content_sha256": "788ae374f13c1bf8afb7520d9664a3ad6989513f9500a2f3c121c4ecd0d539ef",
+              "visible_to_generator": true
+            }
+          ]
+        },
+        {
+          "claim": "双null/undefined结果为一个空格",
+          "status": "supported",
+          "rationale": "两个nullish值各为空串，中间仍有空格",
+          "evidence": [
+            {
+              "path": "source/index.js",
+              "start_line": 180,
+              "end_line": 182
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "source/index.js",
+              "start_line": 180,
+              "end_line": 182,
+              "content": "\t\tif (arguments_.length === 2) {\n\t\t\t// The template literal matches `Array#join` coercion (`null` and `undefined` become empty, objects use `toString`) while being faster.\n\t\t\treturn applyStyle(builder, `${arguments_[0] ?? ''} ${arguments_[1] ?? ''}`);",
+              "content_sha256": "c9b069b91a293ab687132211e0bcbc4159a56ecf7ff1c0fa6efeffea61fb200f",
+              "visible_to_generator": true
+            }
+          ]
+        }
+      ],
+      "notes": "较此前残句回答更完整，但新增单参数转换错误；不能以完整性换事实错误。",
+      "key_points": null,
+      "candidate_sha256": "1b147abf90e0fa372af5982ba6153e28bf947a49317f9a1ab8b9c373dfa8a12c",
+      "reviewer": "Codex (current session)",
+      "review_type": "model_assisted_nonblind_development_review",
+      "human_approved": false,
+      "training_eligible": false,
+      "result_sha256": "ca3f698ec1675956b8553ceeb02df41cdd03abf003dc44c120ad54e0735a0e25"
+    },
+    "q-f33bdd28fc012276--agentic": {
+      "candidate_id": "q-f33bdd28fc012276--agentic",
+      "correctness": "correct",
+      "citation_support": "supported",
+      "completeness": "partial",
+      "abstention": "not_applicable",
+      "entry_scope": "correct",
+      "consistency": "consistent",
+      "claims": [
+        {
+          "claim": "已有键getitem更新顺序，contains不更新",
+          "status": "supported",
+          "rationale": "getitem取值后touch；contains只查底层字典",
+          "evidence": [
+            {
+              "path": "src/cachetools/__init__.py",
+              "start_line": 294,
+              "end_line": 298
+            },
+            {
+              "path": "src/cachetools/__init__.py",
+              "start_line": 103,
+              "end_line": 104
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "src/cachetools/__init__.py",
+              "start_line": 294,
+              "end_line": 298,
+              "content": "    def __getitem__(self, key, cache_getitem=Cache.__getitem__):\n        value = cache_getitem(self, key)\n        if key in self:  # __missing__ may not store item\n            self.__touch(key)\n        return value",
+              "content_sha256": "5ad59483f065104c2f24c4743c8ec6f05fdf6b357a01e453b1d0a77d0ae03935",
+              "visible_to_generator": true
+            },
+            {
+              "path": "src/cachetools/__init__.py",
+              "start_line": 103,
+              "end_line": 104,
+              "content": "    def __contains__(self, key):\n        return key in self.__data",
+              "content_sha256": "4adc1029719bce8bf16121691ed41452e495257a8e3f28a654e8c4cee690795b",
+              "visible_to_generator": true
+            }
+          ]
+        },
+        {
+          "claim": "题目要求的touch移动末尾和存在性条件解释",
+          "status": "unverifiable",
+          "rationale": "只有结论，未解释所要求的实现机制",
+          "evidence": [
+            {
+              "path": "src/cachetools/__init__.py",
+              "start_line": 321,
+              "end_line": 326
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "src/cachetools/__init__.py",
+              "start_line": 321,
+              "end_line": 326,
+              "content": "    def __touch(self, key):\n        \"\"\"Mark as recently used\"\"\"\n        try:\n            self.__order.move_to_end(key)\n        except KeyError:\n            self.__order[key] = None",
+              "content_sha256": "a2691d1e2bec417d646f645ce9460bb9d8f12675f5f77c3572816b910526a6ff",
+              "visible_to_generator": true
+            }
+          ]
+        }
+      ],
+      "notes": "与原同题标准一致，核心结论正确但必要解释未完成；SDK用了整理阶段仍丢解释。",
+      "key_points": null,
+      "candidate_sha256": "d75ad8a5ef3b3fceac276fdf2704a409ba87a4097fa2cf9e608b092b8bdb8206",
+      "reviewer": "Codex (current session)",
+      "review_type": "model_assisted_nonblind_development_review",
+      "human_approved": false,
+      "training_eligible": false,
+      "result_sha256": "58c6d0b7864bdc69c4f3215047b99605c88e2a7a4f2af8d54d19ad574ea5d8bf"
+    },
+    "q-4c35fdb83cf995e0--agentic": {
+      "candidate_id": "q-4c35fdb83cf995e0--agentic",
+      "correctness": "unverifiable",
+      "citation_support": "unverifiable",
+      "completeness": "unverifiable",
+      "abstention": "unverifiable",
+      "entry_scope": "unverifiable",
+      "consistency": "unverifiable",
+      "claims": [
+        {
+          "claim": "该请求的可发布最终答案",
+          "status": "unverifiable",
+          "rationale": "两次原始调用保留，但invalid_citations后answer为None，不能把拒绝的研究/整理稿重包装为答案",
+          "evidence": [],
+          "verified_evidence": []
+        }
+      ],
+      "notes": "原始研究和整理输出仍保留；工作流invalid_citations，无可发布答案，不按错误或正确强行语义打分。",
+      "key_points": null,
+      "candidate_sha256": "3927d4049a1040ee6ef35d890ce1c430d2d765bfd3a022a15a0b4e8af684e9ff",
+      "reviewer": "Codex (current session)",
+      "review_type": "model_assisted_nonblind_development_review",
+      "human_approved": false,
+      "training_eligible": false,
+      "result_sha256": "fb1d45f7631519afc910b6ddc1a0bff34a9501b65788b95cb18200590ae23674"
+    },
+    "q-f94258ac48ef550c--agentic": {
+      "candidate_id": "q-f94258ac48ef550c--agentic",
+      "correctness": "correct",
+      "citation_support": "supported",
+      "completeness": "partial",
+      "abstention": "not_applicable",
+      "entry_scope": "correct",
+      "consistency": "consistent",
+      "claims": [
+        {
+          "claim": "choices用slice复制，非法值抛InvalidArgumentError",
+          "status": "supported",
+          "rationale": "182和184-188支持",
+          "evidence": [
+            {
+              "path": "lib/option.js",
+              "start_line": 181,
+              "end_line": 188
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "lib/option.js",
+              "start_line": 181,
+              "end_line": 188,
+              "content": "  choices(values) {\n    this.argChoices = values.slice();\n    this.parseArg = (arg, previous) => {\n      if (!this.argChoices.includes(arg)) {\n        throw new InvalidArgumentError(\n          `Allowed choices are ${this.argChoices.join(', ')}.`,\n        );\n      }",
+              "content_sha256": "88ffa14e502e044d07e655b54a95609ffab636c8d39f1ed8dd970b248ce71390",
+              "visible_to_generator": true
+            }
+          ]
+        },
+        {
+          "claim": "variadic通过_collectValue累计数组",
+          "status": "supported",
+          "rationale": "实现确实委派收集，并在已有数组时push",
+          "evidence": [
+            {
+              "path": "lib/option.js",
+              "start_line": 189,
+              "end_line": 190
+            },
+            {
+              "path": "lib/option.js",
+              "start_line": 165,
+              "end_line": 172
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "lib/option.js",
+              "start_line": 189,
+              "end_line": 190,
+              "content": "      if (this.variadic) {\n        return this._collectValue(arg, previous);",
+              "content_sha256": "fcaddc439cf0da3e4fd4c2e43da0e8f942c95435c1a7e4b01699857e92407f9c",
+              "visible_to_generator": true
+            },
+            {
+              "path": "lib/option.js",
+              "start_line": 165,
+              "end_line": 172,
+              "content": "  _collectValue(value, previous) {\n    if (previous === this.defaultValue || !Array.isArray(previous)) {\n      return [value];\n    }\n\n    previous.push(value);\n    return previous;\n  }",
+              "content_sha256": "1c8d2f48b967aaae1864a9bccb9d122dee369b37fbf0467616e50c0e229faddc",
+              "visible_to_generator": true
+            }
+          ]
+        },
+        {
+          "claim": "默认值或previous非数组时新建，其他情况复用的条件",
+          "status": "unverifiable",
+          "rationale": "整理后的回答只说累计同一数组，未解释重置与新建条件",
+          "evidence": [
+            {
+              "path": "lib/option.js",
+              "start_line": 165,
+              "end_line": 172
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "lib/option.js",
+              "start_line": 165,
+              "end_line": 172,
+              "content": "  _collectValue(value, previous) {\n    if (previous === this.defaultValue || !Array.isArray(previous)) {\n      return [value];\n    }\n\n    previous.push(value);\n    return previous;\n  }",
+              "content_sha256": "1c8d2f48b967aaae1864a9bccb9d122dee369b37fbf0467616e50c0e229faddc",
+              "visible_to_generator": true
+            }
+          ]
+        }
+      ],
+      "notes": "沿用旧两阶段同题口径：概括收集方向正确，必要分支未解释完整；未断言永远不新建。",
+      "key_points": null,
+      "candidate_sha256": "a387bee06c00f1244c487bbbd8cd85edf90a7d7baf77d19e6a254948260c561b",
+      "reviewer": "Codex (current session)",
+      "review_type": "model_assisted_nonblind_development_review",
+      "human_approved": false,
+      "training_eligible": false,
+      "result_sha256": "b5d9614a403bea8356bd161bba14331190787441739c9885848a86110004c810"
+    },
+    "q-1803ac7237f279cd--hybrid_rerank": {
+      "candidate_id": "q-1803ac7237f279cd--hybrid_rerank",
+      "correctness": "correct",
+      "citation_support": "not_applicable",
+      "completeness": "partial",
+      "abstention": "appropriate",
+      "entry_scope": "correct",
+      "consistency": "contradictory",
+      "claims": [
+        {
+          "claim": "不能仅凭库源码知道生产DATABASE_URL",
+          "status": "supported",
+          "rationale": "当前只有库源码，没有私有生产运行值，拒答方向正确",
+          "evidence": [
+            {
+              "path": "src/dotenv/main.py",
+              "start_line": 65,
+              "end_line": 77
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "src/dotenv/main.py",
+              "start_line": 65,
+              "end_line": 77,
+              "content": "    def _get_stream(self) -> Iterator[IO[str]]:\n        if self.dotenv_path and _is_file_or_fifo(self.dotenv_path):\n            with open(self.dotenv_path, encoding=self.encoding) as stream:\n                yield stream\n        elif self.stream is not None:\n            yield self.stream\n        else:\n            if self.verbose:\n                logger.info(\n                    \"python-dotenv could not find configuration file %s.\",\n                    self.dotenv_path or \".env\",\n                )\n            yield io.StringIO(\"\")",
+              "content_sha256": "eea643951a34e8525b4b592ec51131d4835fe1d7e75216f20b0f268c3b36b470",
+              "visible_to_generator": true
+            }
+          ]
+        },
+        {
+          "claim": "需要实际进程或部署配置的具体缺口",
+          "status": "unverifiable",
+          "rationale": "正文仅“不能”，没有说明所缺信息",
+          "evidence": [
+            {
+              "path": "src/dotenv/main.py",
+              "start_line": 65,
+              "end_line": 77
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "src/dotenv/main.py",
+              "start_line": 65,
+              "end_line": 77,
+              "content": "    def _get_stream(self) -> Iterator[IO[str]]:\n        if self.dotenv_path and _is_file_or_fifo(self.dotenv_path):\n            with open(self.dotenv_path, encoding=self.encoding) as stream:\n                yield stream\n        elif self.stream is not None:\n            yield self.stream\n        else:\n            if self.verbose:\n                logger.info(\n                    \"python-dotenv could not find configuration file %s.\",\n                    self.dotenv_path or \".env\",\n                )\n            yield io.StringIO(\"\")",
+              "content_sha256": "eea643951a34e8525b4b592ec51131d4835fe1d7e75216f20b0f268c3b36b470",
+              "visible_to_generator": true
+            }
+          ]
+        }
+      ],
+      "notes": "正文只有否定词，拒答方向正确但缺少具体理由；insufficient_evidence=False与拒答矛盾。",
+      "key_points": null,
+      "candidate_sha256": "818466cbf5ff2234bc3f051750c9e2179790fee934593538fffd057b8bf5fab2",
+      "reviewer": "Codex (current session)",
+      "review_type": "model_assisted_nonblind_development_review",
+      "human_approved": false,
+      "training_eligible": false,
+      "result_sha256": "acd8ce006fa5080b8653313add1edb4564e5f207738b40af5e963b078976a03e"
+    },
+    "q-bc525cfef5654a48--hybrid_rerank": {
+      "candidate_id": "q-bc525cfef5654a48--hybrid_rerank",
+      "correctness": "correct",
+      "citation_support": "supported",
+      "completeness": "partial",
+      "abstention": "not_applicable",
+      "entry_scope": "correct",
+      "consistency": "consistent",
+      "claims": [
+        {
+          "claim": "write先缓存，达到阈值或close刷新",
+          "status": "supported",
+          "rationale": "write与close调用flush",
+          "evidence": [
+            {
+              "path": "tinydb/middlewares.py",
+              "start_line": 108,
+              "end_line": 118
+            },
+            {
+              "path": "tinydb/middlewares.py",
+              "start_line": 132,
+              "end_line": 142
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "tinydb/middlewares.py",
+              "start_line": 108,
+              "end_line": 118,
+              "content": "    def write(self, data):\n        if self._closed:\n            raise ValueError('I/O operation on closed storage')\n\n        # Store data in cache\n        self.cache = data\n        self._cache_modified_count += 1\n\n        # Check if we need to flush the cache\n        if self._cache_modified_count >= self.WRITE_CACHE_SIZE:\n            self.flush()",
+              "content_sha256": "f8217fbc2430dcbe3cd6bbee26f1c3a73d542d394afd633bf41a5337a6a037a2",
+              "visible_to_generator": true
+            },
+            {
+              "path": "tinydb/middlewares.py",
+              "start_line": 132,
+              "end_line": 142,
+              "content": "    def close(self):\n        if self._closed:\n            return\n\n        # Flush potentially unwritten data\n        self.flush()\n\n        # Let the storage clean up too\n        self.storage.close()\n        self._closed = True\n        self.cache = None",
+              "content_sha256": "5cb0e556a8140a9acfae759731e888671c6bacf10aad1b2a74a6aab1537a3062",
+              "visible_to_generator": true
+            }
+          ]
+        },
+        {
+          "claim": "重复close直接返回",
+          "status": "supported",
+          "rationale": "133-134直接返回",
+          "evidence": [
+            {
+              "path": "tinydb/middlewares.py",
+              "start_line": 132,
+              "end_line": 142
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "tinydb/middlewares.py",
+              "start_line": 132,
+              "end_line": 142,
+              "content": "    def close(self):\n        if self._closed:\n            return\n\n        # Flush potentially unwritten data\n        self.flush()\n\n        # Let the storage clean up too\n        self.storage.close()\n        self._closed = True\n        self.cache = None",
+              "content_sha256": "5cb0e556a8140a9acfae759731e888671c6bacf10aad1b2a74a6aab1537a3062",
+              "visible_to_generator": true
+            }
+          ]
+        },
+        {
+          "claim": "flush只在脏计数大于零写回并清零",
+          "status": "unverifiable",
+          "rationale": "正文未解释所需flush机制",
+          "evidence": [
+            {
+              "path": "tinydb/middlewares.py",
+              "start_line": 120,
+              "end_line": 130
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "tinydb/middlewares.py",
+              "start_line": 120,
+              "end_line": 130,
+              "content": "    def flush(self):\n        \"\"\"\n        Flush all unwritten data to disk.\n        \"\"\"\n        if self._closed:\n            raise ValueError('I/O operation on closed storage')\n\n        if self._cache_modified_count > 0:\n            # Force-flush the cache by writing the data to the storage\n            self.storage.write(self.cache)\n            self._cache_modified_count = 0",
+              "content_sha256": "9f55111eb68845c747c0ddd17aeb139554d67e7de60e4869c14241deaa8a2e42",
+              "visible_to_generator": true
+            }
+          ]
+        }
+      ],
+      "notes": "答案与恢复批次固定RAG逐字相同，沿用正确/支持/部分覆盖，不因换检索器提分。",
+      "key_points": null,
+      "candidate_sha256": "7636554c4a229fc964037c67d7a4ebc005ba87ad97ae431370d35d19552654fd",
+      "reviewer": "Codex (current session)",
+      "review_type": "model_assisted_nonblind_development_review",
+      "human_approved": false,
+      "training_eligible": false,
+      "result_sha256": "74df6f4b904689fd198874f5ca92bba7b0ccfbf28ccd424d577843d15ca1ec5d"
+    },
+    "q-b73aeb622c828d8e--hybrid_rerank": {
+      "candidate_id": "q-b73aeb622c828d8e--hybrid_rerank",
+      "correctness": "incorrect",
+      "citation_support": "partial",
+      "completeness": "adequate",
+      "abstention": "not_applicable",
+      "entry_scope": "correct",
+      "consistency": "consistent",
+      "claims": [
+        {
+          "claim": "customAlphabet(ab,2.9)生成器不传size时长度21",
+          "status": "contradicted",
+          "rationale": "显式defaultSize=2.9应覆盖21，size|0得到2",
+          "evidence": [
+            {
+              "path": "non-secure/index.js",
+              "start_line": 5,
+              "end_line": 17
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "non-secure/index.js",
+              "start_line": 5,
+              "end_line": 17,
+              "content": "export let customAlphabet = (alphabet, defaultSize = 21) => {\n  return (size = defaultSize) => {\n    let id = ''\n    // A compact alternative for `for (var i = 0; i < step; i++)`.\n    // `> 0` stops a negative size from looping forever.\n    let i = size | 0\n    while (i-- > 0) {\n      // `| 0` is more compact and faster than `Math.floor()`.\n      id += alphabet[(Math.random() * alphabet.length) | 0]\n    }\n    return id\n  }\n}",
+              "content_sha256": "2c113cd0c7efeb52d28a5dcdfed1c6ad8ede5af8c85e850aa9252d2f3f3ddede",
+              "visible_to_generator": true
+            }
+          ]
+        },
+        {
+          "claim": "size0/-1都不进入循环，返回长度0",
+          "status": "supported",
+          "rationale": "while(i-- >0)支持",
+          "evidence": [
+            {
+              "path": "non-secure/index.js",
+              "start_line": 9,
+              "end_line": 15
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "non-secure/index.js",
+              "start_line": 9,
+              "end_line": 15,
+              "content": "    // `> 0` stops a negative size from looping forever.\n    let i = size | 0\n    while (i-- > 0) {\n      // `| 0` is more compact and faster than `Math.floor()`.\n      id += alphabet[(Math.random() * alphabet.length) | 0]\n    }\n    return id",
+              "content_sha256": "e87dd28d852fee10e79a396f5ac0ddc59a687edc0a3d231c5f812f80b923b69a",
+              "visible_to_generator": true
+            }
+          ]
+        },
+        {
+          "claim": "测试证明0及负数输出空串",
+          "status": "supported",
+          "rationale": "实际测试调用与断言均吻合",
+          "evidence": [
+            {
+              "path": "test/non-secure.test.js",
+              "start_line": 72,
+              "end_line": 75
+            },
+            {
+              "path": "test/non-secure.test.js",
+              "start_line": 125,
+              "end_line": 128
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "test/non-secure.test.js",
+              "start_line": 72,
+              "end_line": 75,
+              "content": "    test('is ready for 0 size', () => {\n      equal(customAlphabet('abc')(0), '')\n      equal(customAlphabet('abc', 0)(0), '')\n    })",
+              "content_sha256": "936eec9df30831981f19c04edb768f578fabca563fd28e4272413c99cb6ec936",
+              "visible_to_generator": true
+            },
+            {
+              "path": "test/non-secure.test.js",
+              "start_line": 125,
+              "end_line": 128,
+              "content": "test('does not hang on negative size (customAlphabet)', () => {\n  equal(customAlphabet('abcdef')(-1), '')\n  equal(customAlphabet('abcdef', -5)(), '')\n})",
+              "content_sha256": "73e6dba91bfef6103d4f180bedf4b0cc47c5f34c12e5314481a904c5b1bf36a4",
+              "visible_to_generator": true
+            }
+          ]
+        }
+      ],
+      "notes": "显式实参仍被默认21覆盖，事实错误；SDK还省略位运算和循环解释。测试引用正确不能修复题干计算错误。",
+      "key_points": null,
+      "candidate_sha256": "34495cc8119502d81ecb51a093c83b9c1d2db1b9f45c66e5705a14a9fba06fce",
+      "reviewer": "Codex (current session)",
+      "review_type": "model_assisted_nonblind_development_review",
+      "human_approved": false,
+      "training_eligible": false,
+      "result_sha256": "e375e2ba83b5504883527b54e7ecea81e831039f9aab3269769cf88b30128be1"
+    },
+    "q-4c35fdb83cf995e0--hybrid_rerank": {
+      "candidate_id": "q-4c35fdb83cf995e0--hybrid_rerank",
+      "correctness": "correct",
+      "citation_support": "partial",
+      "completeness": "partial",
+      "abstention": "not_applicable",
+      "entry_scope": "correct",
+      "consistency": "consistent",
+      "claims": [
+        {
+          "claim": "Session.request构造Request并prepare_request",
+          "status": "supported",
+          "rationale": "真实快照支持，但实际初始输入仍缺562-575，500-546正式引文不是构造段",
+          "evidence": [
+            {
+              "path": "src/requests/sessions.py",
+              "start_line": 562,
+              "end_line": 575
+            },
+            {
+              "path": "src/requests/sessions.py",
+              "start_line": 457,
+              "end_line": 498
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "src/requests/sessions.py",
+              "start_line": 562,
+              "end_line": 575,
+              "content": "        # Create the Request.\n        req = Request(\n            method=method.upper(),\n            url=url,\n            headers=headers,\n            files=files,\n            data=data or {},\n            json=json,\n            params=params or {},\n            auth=auth,\n            cookies=cookies,\n            hooks=hooks,\n        )\n        prep = self.prepare_request(req)",
+              "content_sha256": "4a00780a9a851b5f7970461bf942d043d49bdc96ab37f8000e91ef53bb8152b3",
+              "visible_to_generator": false
+            },
+            {
+              "path": "src/requests/sessions.py",
+              "start_line": 457,
+              "end_line": 498,
+              "content": "    def prepare_request(self, request):\n        \"\"\"Constructs a :class:`PreparedRequest <PreparedRequest>` for\n        transmission and returns it. The :class:`PreparedRequest` has settings\n        merged from the :class:`Request <Request>` instance and those of the\n        :class:`Session`.\n\n        :param request: :class:`Request` instance to prepare with this\n            session's settings.\n        :rtype: requests.PreparedRequest\n        \"\"\"\n        cookies = request.cookies or {}\n\n        # Bootstrap CookieJar.\n        if not isinstance(cookies, cookielib.CookieJar):\n            cookies = cookiejar_from_dict(cookies)\n\n        # Merge with session cookies\n        merged_cookies = merge_cookies(\n            merge_cookies(RequestsCookieJar(), self.cookies), cookies\n        )\n\n        # Set environment's basic authentication if not explicitly set.\n        auth = request.auth\n        if self.trust_env and not auth and not self.auth:\n            auth = get_netrc_auth(request.url)\n\n        p = PreparedRequest()\n        p.prepare(\n            method=request.method.upper(),\n            url=request.url,\n            files=request.files,\n            data=request.data,\n            json=request.json,\n            headers=merge_setting(\n                request.headers, self.headers, dict_class=CaseInsensitiveDict\n            ),\n            params=merge_setting(request.params, self.params),\n            auth=merge_setting(auth, self.auth),\n            cookies=merged_cookies,\n            hooks=merge_hooks(request.hooks, self.hooks),\n        )\n        return p",
+              "content_sha256": "baeb7869093ce107e16cdf41af8b32cdd478477acfaee3b39f1441d45c9c420c",
+              "visible_to_generator": true
+            }
+          ]
+        },
+        {
+          "claim": "timeout由request进入send kwargs",
+          "status": "supported",
+          "rationale": "实际在584-589直接写send_kwargs后self.send，未交付也未正式引用",
+          "evidence": [
+            {
+              "path": "src/requests/sessions.py",
+              "start_line": 583,
+              "end_line": 591
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "src/requests/sessions.py",
+              "start_line": 583,
+              "end_line": 591,
+              "content": "        # Send the request.\n        send_kwargs = {\n            \"timeout\": timeout,\n            \"allow_redirects\": allow_redirects,\n        }\n        send_kwargs.update(settings)\n        resp = self.send(prep, **send_kwargs)\n\n        return resp",
+              "content_sha256": "460783af2ca882b5242638826b0fa028e9c7fda5880d34320d409046e4a3b8ec",
+              "visible_to_generator": false
+            }
+          ]
+        },
+        {
+          "claim": "get_adapter选择后adapter.send发送",
+          "status": "supported",
+          "rationale": "实际696-703可核验",
+          "evidence": [
+            {
+              "path": "src/requests/sessions.py",
+              "start_line": 696,
+              "end_line": 703
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "src/requests/sessions.py",
+              "start_line": 696,
+              "end_line": 703,
+              "content": "        # Get the appropriate adapter to use\n        adapter = self.get_adapter(url=request.url)\n\n        # Start time (approximately) of the request\n        start = preferred_clock()\n\n        # Send the request\n        r = adapter.send(request, **kwargs)",
+              "content_sha256": "302f989ba13a428b3a263b394ccdbbaa34c931d0b0da1292518504099dd58ef5",
+              "visible_to_generator": true
+            }
+          ]
+        }
+      ],
+      "notes": "与旧BM25恢复回答方向一致，源代码未交付的事实只能由复核者确认，不算grounded核心；阅读链仍缺关键调用绑定。",
+      "key_points": null,
+      "candidate_sha256": "03911baff1de89f312acc1adec3a52fd1e46fb1dd48653aff7f8f30f77aadfe6",
+      "reviewer": "Codex (current session)",
+      "review_type": "model_assisted_nonblind_development_review",
+      "human_approved": false,
+      "training_eligible": false,
+      "result_sha256": "1f1b59f4bcf159a85e189334da2e4d02b92e2271bbb50a328a17f88301def2f9"
+    },
+    "q-1803ac7237f279cd--agentic": {
+      "candidate_id": "q-1803ac7237f279cd--agentic",
+      "correctness": "correct",
+      "citation_support": "not_applicable",
+      "completeness": "adequate",
+      "abstention": "appropriate",
+      "entry_scope": "correct",
+      "consistency": "contradictory",
+      "claims": [
+        {
+          "claim": "仅凭库源码无法知道生产DATABASE_URL",
+          "status": "supported",
+          "rationale": "当前没有生产进程值，拒答适当",
+          "evidence": [
+            {
+              "path": "src/dotenv/main.py",
+              "start_line": 65,
+              "end_line": 77
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "src/dotenv/main.py",
+              "start_line": 65,
+              "end_line": 77,
+              "content": "    def _get_stream(self) -> Iterator[IO[str]]:\n        if self.dotenv_path and _is_file_or_fifo(self.dotenv_path):\n            with open(self.dotenv_path, encoding=self.encoding) as stream:\n                yield stream\n        elif self.stream is not None:\n            yield self.stream\n        else:\n            if self.verbose:\n                logger.info(\n                    \"python-dotenv could not find configuration file %s.\",\n                    self.dotenv_path or \".env\",\n                )\n            yield io.StringIO(\"\")",
+              "content_sha256": "eea643951a34e8525b4b592ec51131d4835fe1d7e75216f20b0f268c3b36b470",
+              "visible_to_generator": true
+            }
+          ]
+        }
+      ],
+      "notes": "沿用同题拒答口径：正文逻辑正确，但insufficient_evidence=False与正文矛盾；私有题单列。",
+      "key_points": null,
+      "candidate_sha256": "f49e77681af6691469fda2efad12dfd2264698a37fa729b94ff11037ab29b1e1",
+      "reviewer": "Codex (current session)",
+      "review_type": "model_assisted_nonblind_development_review",
+      "human_approved": false,
+      "training_eligible": false,
+      "result_sha256": "9d5b3347c7c72d07861d0b0429302f78acadfd044ff189e79c10be2fcf7f545d"
+    },
+    "q-71b59398a21ab6c3--hybrid_rerank": {
+      "candidate_id": "q-71b59398a21ab6c3--hybrid_rerank",
+      "correctness": "incorrect",
+      "citation_support": "unsupported",
+      "completeness": "adequate",
+      "abstention": "not_applicable",
+      "entry_scope": "mixed",
+      "consistency": "consistent",
+      "claims": [
+        {
+          "claim": "cached在info=False调用无info的_wrapper",
+          "status": "supported",
+          "rationale": "入口分支正确",
+          "evidence": [
+            {
+              "path": "src/cachetools/__init__.py",
+              "start_line": 738,
+              "end_line": 745
+            },
+            {
+              "path": "src/cachetools/__init__.py",
+              "start_line": 762,
+              "end_line": 766
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "src/cachetools/__init__.py",
+              "start_line": 738,
+              "end_line": 745,
+              "content": "def cached(cache, key=keys.hashkey, lock=None, condition=None, info=False):\n    \"\"\"Decorator to wrap a function with a memoizing callable that saves\n    results in a cache.\n\n    \"\"\"\n    from ._cached import _wrapper\n\n    def decorator(func):",
+              "content_sha256": "d7888f4bd28e10e6ddd94d43c704cf71ecee9976defe36614fa7bd93163a5db7",
+              "visible_to_generator": true
+            },
+            {
+              "path": "src/cachetools/__init__.py",
+              "start_line": 762,
+              "end_line": 766,
+              "content": "            return _wrapper(func, cache, key, lock, condition, info=make_info)\n        else:\n            return _wrapper(func, cache, key, lock, condition)\n\n    return decorator",
+              "content_sha256": "b5886109655b7075d811d7462371759eba72912ce5dfc133307c66e1602cad4d",
+              "visible_to_generator": true
+            }
+          ]
+        },
+        {
+          "claim": "默认无锁无condition的wrapper维护hits并使用setdefault",
+          "status": "contradicted",
+          "rationale": "实际选_unlocked，直接cache[k]，无统计；正文解释_locked_info",
+          "evidence": [
+            {
+              "path": "src/cachetools/_cached.py",
+              "start_line": 263,
+              "end_line": 280
+            },
+            {
+              "path": "src/cachetools/_cached.py",
+              "start_line": 216,
+              "end_line": 232
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "src/cachetools/_cached.py",
+              "start_line": 263,
+              "end_line": 280,
+              "content": "    else:\n        if cache is None:\n            wrapper = _uncached(func)\n        elif cond is not None and lock is not None:\n            wrapper = _condition(func, cache, key, lock, cond)\n        elif cond is not None:\n            wrapper = _condition(func, cache, key, cond, cond)\n        elif lock is not None:\n            wrapper = _locked(func, cache, key, lock)\n        else:\n            wrapper = _unlocked(func, cache, key)\n        wrapper.cache_info = None\n\n    wrapper.cache = cache\n    wrapper.cache_key = key\n    wrapper.cache_lock = lock if lock is not None else cond\n    wrapper.cache_condition = cond\n    return wrapper",
+              "content_sha256": "4a818d1041713d454d0f7b8d33a785416e7db5fa9e958827e503bb1a42b58f92",
+              "visible_to_generator": false
+            },
+            {
+              "path": "src/cachetools/_cached.py",
+              "start_line": 216,
+              "end_line": 232,
+              "content": "def _unlocked(func, cache, key):\n    def wrapper(*args, **kwargs):\n        k = key(*args, **kwargs)\n        try:\n            return cache[k]\n        except KeyError:\n            pass  # key not found\n        v = func(*args, **kwargs)\n        try:\n            cache[k] = v\n        except ValueError:\n            pass  # value too large\n        return v\n\n    functools.update_wrapper(wrapper, func)\n    wrapper.cache_clear = lambda: cache.clear()\n    return wrapper",
+              "content_sha256": "79bc0b99f2032e0c48e73ad58d413ffce26f91afb630f20918e3ea680faee469",
+              "visible_to_generator": false
+            }
+          ]
+        },
+        {
+          "claim": "默认cache_clear重置hits/misses",
+          "status": "contradicted",
+          "rationale": "实际_unlocked只调用cache.clear",
+          "evidence": [
+            {
+              "path": "src/cachetools/_cached.py",
+              "start_line": 230,
+              "end_line": 232
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "src/cachetools/_cached.py",
+              "start_line": 230,
+              "end_line": 232,
+              "content": "    functools.update_wrapper(wrapper, func)\n    wrapper.cache_clear = lambda: cache.clear()\n    return wrapper",
+              "content_sha256": "381fea2e1e6e10a86533c853c075faab3d08cdaec60f0d61cc1f774ac75009e6",
+              "visible_to_generator": false
+            }
+          ]
+        }
+      ],
+      "notes": "错误分支持续存在；实际没用工具读取_wrapper/_unlocked，引用可见也不是语义支持。",
+      "key_points": null,
+      "candidate_sha256": "12ef9cf05c3ce3b6d4498f4cf6076597325a78dcc87a760f85dbc636ed9584f3",
+      "reviewer": "Codex (current session)",
+      "review_type": "model_assisted_nonblind_development_review",
+      "human_approved": false,
+      "training_eligible": false,
+      "result_sha256": "58efc6179c7578e4cb8e88e497d333eba3da105469a87c8571e48a5df6203d30"
+    },
+    "q-bc525cfef5654a48--agentic": {
+      "candidate_id": "q-bc525cfef5654a48--agentic",
+      "correctness": "correct",
+      "citation_support": "supported",
+      "completeness": "partial",
+      "abstention": "not_applicable",
+      "entry_scope": "correct",
+      "consistency": "consistent",
+      "claims": [
+        {
+          "claim": "write不逐次写底层，达到阈值或close刷新",
+          "status": "supported",
+          "rationale": "write及close调用flush",
+          "evidence": [
+            {
+              "path": "tinydb/middlewares.py",
+              "start_line": 108,
+              "end_line": 118
+            },
+            {
+              "path": "tinydb/middlewares.py",
+              "start_line": 132,
+              "end_line": 142
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "tinydb/middlewares.py",
+              "start_line": 108,
+              "end_line": 118,
+              "content": "    def write(self, data):\n        if self._closed:\n            raise ValueError('I/O operation on closed storage')\n\n        # Store data in cache\n        self.cache = data\n        self._cache_modified_count += 1\n\n        # Check if we need to flush the cache\n        if self._cache_modified_count >= self.WRITE_CACHE_SIZE:\n            self.flush()",
+              "content_sha256": "f8217fbc2430dcbe3cd6bbee26f1c3a73d542d394afd633bf41a5337a6a037a2",
+              "visible_to_generator": true
+            },
+            {
+              "path": "tinydb/middlewares.py",
+              "start_line": 132,
+              "end_line": 142,
+              "content": "    def close(self):\n        if self._closed:\n            return\n\n        # Flush potentially unwritten data\n        self.flush()\n\n        # Let the storage clean up too\n        self.storage.close()\n        self._closed = True\n        self.cache = None",
+              "content_sha256": "5cb0e556a8140a9acfae759731e888671c6bacf10aad1b2a74a6aab1537a3062",
+              "visible_to_generator": true
+            }
+          ]
+        },
+        {
+          "claim": "重复close直接返回",
+          "status": "supported",
+          "rationale": "已关闭分支返回",
+          "evidence": [
+            {
+              "path": "tinydb/middlewares.py",
+              "start_line": 132,
+              "end_line": 142
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "tinydb/middlewares.py",
+              "start_line": 132,
+              "end_line": 142,
+              "content": "    def close(self):\n        if self._closed:\n            return\n\n        # Flush potentially unwritten data\n        self.flush()\n\n        # Let the storage clean up too\n        self.storage.close()\n        self._closed = True\n        self.cache = None",
+              "content_sha256": "5cb0e556a8140a9acfae759731e888671c6bacf10aad1b2a74a6aab1537a3062",
+              "visible_to_generator": true
+            }
+          ]
+        },
+        {
+          "claim": "flush仅有脏计数时写回并清零，close还关闭存储",
+          "status": "unverifiable",
+          "rationale": "整理后正文未覆盖所需机制",
+          "evidence": [
+            {
+              "path": "tinydb/middlewares.py",
+              "start_line": 120,
+              "end_line": 142
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "tinydb/middlewares.py",
+              "start_line": 120,
+              "end_line": 142,
+              "content": "    def flush(self):\n        \"\"\"\n        Flush all unwritten data to disk.\n        \"\"\"\n        if self._closed:\n            raise ValueError('I/O operation on closed storage')\n\n        if self._cache_modified_count > 0:\n            # Force-flush the cache by writing the data to the storage\n            self.storage.write(self.cache)\n            self._cache_modified_count = 0\n\n    def close(self):\n        if self._closed:\n            return\n\n        # Flush potentially unwritten data\n        self.flush()\n\n        # Let the storage clean up too\n        self.storage.close()\n        self._closed = True\n        self.cache = None",
+              "content_sha256": "ceaf6dc5426374a92ea5d88c26ba776ef406d1be75dedbc1dd6b86e4956da546",
+              "visible_to_generator": false
+            }
+          ]
+        }
+      ],
+      "notes": "仍按原标准部分完成；研究/整理两阶段没有保证解释完整。",
+      "key_points": null,
+      "candidate_sha256": "23949a68f36a94650d42c9fdb4b0b8d7e0e5e81f319433c216589f10d4b16bab",
+      "reviewer": "Codex (current session)",
+      "review_type": "model_assisted_nonblind_development_review",
+      "human_approved": false,
+      "training_eligible": false,
+      "result_sha256": "c6d5bbfb5cce7bbd1e362addb7c3359c376ffac28830f0b6eeb989ae8eb5c7fa"
+    },
+    "q-71b59398a21ab6c3--agentic": {
+      "candidate_id": "q-71b59398a21ab6c3--agentic",
+      "correctness": "incorrect",
+      "citation_support": "unsupported",
+      "completeness": "adequate",
+      "abstention": "not_applicable",
+      "entry_scope": "mixed",
+      "consistency": "consistent",
+      "claims": [
+        {
+          "claim": "cached在info=False调用无info的_wrapper",
+          "status": "supported",
+          "rationale": "入口分支正确",
+          "evidence": [
+            {
+              "path": "src/cachetools/__init__.py",
+              "start_line": 738,
+              "end_line": 745
+            },
+            {
+              "path": "src/cachetools/__init__.py",
+              "start_line": 762,
+              "end_line": 766
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "src/cachetools/__init__.py",
+              "start_line": 738,
+              "end_line": 745,
+              "content": "def cached(cache, key=keys.hashkey, lock=None, condition=None, info=False):\n    \"\"\"Decorator to wrap a function with a memoizing callable that saves\n    results in a cache.\n\n    \"\"\"\n    from ._cached import _wrapper\n\n    def decorator(func):",
+              "content_sha256": "d7888f4bd28e10e6ddd94d43c704cf71ecee9976defe36614fa7bd93163a5db7",
+              "visible_to_generator": true
+            },
+            {
+              "path": "src/cachetools/__init__.py",
+              "start_line": 762,
+              "end_line": 766,
+              "content": "            return _wrapper(func, cache, key, lock, condition, info=make_info)\n        else:\n            return _wrapper(func, cache, key, lock, condition)\n\n    return decorator",
+              "content_sha256": "b5886109655b7075d811d7462371759eba72912ce5dfc133307c66e1602cad4d",
+              "visible_to_generator": true
+            }
+          ]
+        },
+        {
+          "claim": "默认无锁无condition的wrapper维护hits并使用setdefault",
+          "status": "contradicted",
+          "rationale": "实际选_unlocked，直接cache[k]，无统计；正文解释_locked_info",
+          "evidence": [
+            {
+              "path": "src/cachetools/_cached.py",
+              "start_line": 263,
+              "end_line": 280
+            },
+            {
+              "path": "src/cachetools/_cached.py",
+              "start_line": 216,
+              "end_line": 232
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "src/cachetools/_cached.py",
+              "start_line": 263,
+              "end_line": 280,
+              "content": "    else:\n        if cache is None:\n            wrapper = _uncached(func)\n        elif cond is not None and lock is not None:\n            wrapper = _condition(func, cache, key, lock, cond)\n        elif cond is not None:\n            wrapper = _condition(func, cache, key, cond, cond)\n        elif lock is not None:\n            wrapper = _locked(func, cache, key, lock)\n        else:\n            wrapper = _unlocked(func, cache, key)\n        wrapper.cache_info = None\n\n    wrapper.cache = cache\n    wrapper.cache_key = key\n    wrapper.cache_lock = lock if lock is not None else cond\n    wrapper.cache_condition = cond\n    return wrapper",
+              "content_sha256": "4a818d1041713d454d0f7b8d33a785416e7db5fa9e958827e503bb1a42b58f92",
+              "visible_to_generator": false
+            },
+            {
+              "path": "src/cachetools/_cached.py",
+              "start_line": 216,
+              "end_line": 232,
+              "content": "def _unlocked(func, cache, key):\n    def wrapper(*args, **kwargs):\n        k = key(*args, **kwargs)\n        try:\n            return cache[k]\n        except KeyError:\n            pass  # key not found\n        v = func(*args, **kwargs)\n        try:\n            cache[k] = v\n        except ValueError:\n            pass  # value too large\n        return v\n\n    functools.update_wrapper(wrapper, func)\n    wrapper.cache_clear = lambda: cache.clear()\n    return wrapper",
+              "content_sha256": "79bc0b99f2032e0c48e73ad58d413ffce26f91afb630f20918e3ea680faee469",
+              "visible_to_generator": false
+            }
+          ]
+        },
+        {
+          "claim": "默认cache_clear重置hits/misses",
+          "status": "contradicted",
+          "rationale": "实际_unlocked只调用cache.clear",
+          "evidence": [
+            {
+              "path": "src/cachetools/_cached.py",
+              "start_line": 230,
+              "end_line": 232
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "src/cachetools/_cached.py",
+              "start_line": 230,
+              "end_line": 232,
+              "content": "    functools.update_wrapper(wrapper, func)\n    wrapper.cache_clear = lambda: cache.clear()\n    return wrapper",
+              "content_sha256": "381fea2e1e6e10a86533c853c075faab3d08cdaec60f0d61cc1f774ac75009e6",
+              "visible_to_generator": false
+            }
+          ]
+        }
+      ],
+      "notes": "错误分支持续存在；实际没用工具读取_wrapper/_unlocked，引用可见也不是语义支持。",
+      "key_points": null,
+      "candidate_sha256": "1866e1a789226e56a54c6aa0d6898d890cee56cc500ac501bb5bca88d2a83216",
+      "reviewer": "Codex (current session)",
+      "review_type": "model_assisted_nonblind_development_review",
+      "human_approved": false,
+      "training_eligible": false,
+      "result_sha256": "222df055e531d6bf32ac3cc64709684d77d1b02ef8723dd18c4219ce59fc994b"
+    },
+    "q-f94258ac48ef550c--hybrid_rerank": {
+      "candidate_id": "q-f94258ac48ef550c--hybrid_rerank",
+      "correctness": "correct",
+      "citation_support": "supported",
+      "completeness": "adequate",
+      "abstention": "not_applicable",
+      "entry_scope": "correct",
+      "consistency": "consistent",
+      "claims": [
+        {
+          "claim": "values.slice浅拷贝，双方修改数组互不影响",
+          "status": "supported",
+          "rationale": "实现与两个具体测试证明",
+          "evidence": [
+            {
+              "path": "lib/option.js",
+              "start_line": 181,
+              "end_line": 182
+            },
+            {
+              "path": "tests/options.choices.test.js",
+              "start_line": 36,
+              "end_line": 42
+            },
+            {
+              "path": "tests/options.choices.test.js",
+              "start_line": 44,
+              "end_line": 54
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "lib/option.js",
+              "start_line": 181,
+              "end_line": 182,
+              "content": "  choices(values) {\n    this.argChoices = values.slice();",
+              "content_sha256": "acf510518cd5a74aeee2de1c99501c6db92f0223a93a34319f112c02a8477f3a",
+              "visible_to_generator": true
+            },
+            {
+              "path": "tests/options.choices.test.js",
+              "start_line": 36,
+              "end_line": 42,
+              "content": "    test('when choices called and argChoices later changed then parameter does not change', () => {\n      const original = ['red', 'blue', 'green'];\n      const param = original.slice();\n      const option = new commander.Option('--colour <shade>').choices(param);\n      option.argChoices.push('purple');\n      assert.deepEqual(param, original);\n    });",
+              "content_sha256": "9357b3e15748184cda4dfd3201ef01eb77db6c8b90d48b4486dc5124120e4e67",
+              "visible_to_generator": true
+            },
+            {
+              "path": "tests/options.choices.test.js",
+              "start_line": 44,
+              "end_line": 54,
+              "content": "    test('when choices called and parameter changed the choices does not change', () => {\n      const program = createTestCommand();\n      const param = ['red', 'blue'];\n      program.addOption(\n        new commander.Option('--colour <shade>').choices(param),\n      );\n      param.push('orange');\n      assert.throws(() => {\n        program.parse(['--colour', 'orange'], { from: 'user' });\n      });\n    });",
+              "content_sha256": "2ad94c2d16cee39f209ad7f87a562db107f6653aad2b909fd80987e99a86c738",
+              "visible_to_generator": true
+            }
+          ]
+        },
+        {
+          "claim": "非法值抛InvalidArgumentError",
+          "status": "supported",
+          "rationale": "includes与异常分支",
+          "evidence": [
+            {
+              "path": "lib/option.js",
+              "start_line": 183,
+              "end_line": 188
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "lib/option.js",
+              "start_line": 183,
+              "end_line": 188,
+              "content": "    this.parseArg = (arg, previous) => {\n      if (!this.argChoices.includes(arg)) {\n        throw new InvalidArgumentError(\n          `Allowed choices are ${this.argChoices.join(', ')}.`,\n        );\n      }",
+              "content_sha256": "1b2a7b626677505ef341c4b4f969692cb297482594d1fd58b704bd7a4bb95a98",
+              "visible_to_generator": true
+            }
+          ]
+        },
+        {
+          "claim": "variadic_collectValue默认或非数组时新建，否则push",
+          "status": "supported",
+          "rationale": "调用及分支支持；沿用此前同题对主要机制的正式引文口径",
+          "evidence": [
+            {
+              "path": "lib/option.js",
+              "start_line": 165,
+              "end_line": 172
+            },
+            {
+              "path": "lib/option.js",
+              "start_line": 189,
+              "end_line": 190
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "lib/option.js",
+              "start_line": 165,
+              "end_line": 172,
+              "content": "  _collectValue(value, previous) {\n    if (previous === this.defaultValue || !Array.isArray(previous)) {\n      return [value];\n    }\n\n    previous.push(value);\n    return previous;\n  }",
+              "content_sha256": "1c8d2f48b967aaae1864a9bccb9d122dee369b37fbf0467616e50c0e229faddc",
+              "visible_to_generator": true
+            },
+            {
+              "path": "lib/option.js",
+              "start_line": 189,
+              "end_line": 190,
+              "content": "      if (this.variadic) {\n        return this._collectValue(arg, previous);",
+              "content_sha256": "fcaddc439cf0da3e4fd4c2e43da0e8f942c95435c1a7e4b01699857e92407f9c",
+              "visible_to_generator": true
+            }
+          ]
+        }
+      ],
+      "notes": "覆盖全部必要子问；不在新批次额外加严调用链接引用要求。",
+      "key_points": null,
+      "candidate_sha256": "b0c64b0afbdcd34ba13062581e19821c193136d1b2b86117b2d59fd3d63633d7",
+      "reviewer": "Codex (current session)",
+      "review_type": "model_assisted_nonblind_development_review",
+      "human_approved": false,
+      "training_eligible": false,
+      "result_sha256": "647844b71a575b92a4c86baed789f6f238f78c4751ac07357e725473a41d028d"
+    },
+    "q-35441446c0f3e154--agentic": {
+      "candidate_id": "q-35441446c0f3e154--agentic",
+      "correctness": "correct",
+      "citation_support": "supported",
+      "completeness": "insufficient",
+      "abstention": "not_applicable",
+      "entry_scope": "correct",
+      "consistency": "consistent",
+      "claims": [
+        {
+          "claim": "on不会把事件名小写",
+          "status": "supported",
+          "rationale": "实现按原始type键保存",
+          "evidence": [
+            {
+              "path": "src/index.ts",
+              "start_line": 66,
+              "end_line": 73
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "src/index.ts",
+              "start_line": 66,
+              "end_line": 73,
+              "content": "\t\ton<Key extends keyof Events>(type: Key, handler: GenericEventHandler) {\n\t\t\tconst handlers: Array<GenericEventHandler> | undefined = all!.get(type);\n\t\t\tif (handlers) {\n\t\t\t\thandlers.push(handler);\n\t\t\t} else {\n\t\t\t\tall!.set(type, [handler] as EventHandlerList<Events[keyof Events]>);\n\t\t\t}\n\t\t},",
+              "content_sha256": "0a5bf296ae849cd916f0b4eedbc3b3dbd431acb523f64fede2782b79ff119004",
+              "visible_to_generator": true
+            }
+          ]
+        },
+        {
+          "claim": "题目要求的实现机制和should NOT normalize case断言",
+          "status": "unverifiable",
+          "rationale": "最终只保留否定结论，没有解释Map或具体测试",
+          "evidence": [
+            {
+              "path": "test/index_test.ts",
+              "start_line": 79,
+              "end_line": 90
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "test/index_test.ts",
+              "start_line": 79,
+              "end_line": 90,
+              "content": "\t\tit('should NOT normalize case', () => {\n\t\t\tconst foo = () => {};\n\t\t\tinst.on('FOO', foo);\n\t\t\tinst.on('Bar', foo);\n\t\t\tinst.on('baz:baT!', foo);\n\n\t\t\texpect(events.get('FOO')).to.deep.equal([foo]);\n\t\t\texpect(events.has('foo')).to.equal(false);\n\t\t\texpect(events.get('Bar')).to.deep.equal([foo]);\n\t\t\texpect(events.has('bar')).to.equal(false);\n\t\t\texpect(events.get('baz:baT!')).to.deep.equal([foo]);\n\t\t});",
+              "content_sha256": "7c7ae10f82f38319cf3cf181161ee7bfb29bde7819610b697836ace1ba119048",
+              "visible_to_generator": true
+            }
+          ]
+        }
+      ],
+      "notes": "事实方向正确，但两阶段把研究解释压成一句结论，按原口径不算完整。",
+      "key_points": null,
+      "candidate_sha256": "6e0f1a474e6ecd582e78e5791a2427d5e486b6ee9974df5c3e735734bd49437c",
+      "reviewer": "Codex (current session)",
+      "review_type": "model_assisted_nonblind_development_review",
+      "human_approved": false,
+      "training_eligible": false,
+      "result_sha256": "1025bdef37a1168cbc5f8deccfca58975719855de1d646e8b30a0b526d377f87"
+    },
+    "q-b73aeb622c828d8e--agentic": {
+      "candidate_id": "q-b73aeb622c828d8e--agentic",
+      "correctness": "incorrect",
+      "citation_support": "partial",
+      "completeness": "partial",
+      "abstention": "not_applicable",
+      "entry_scope": "correct",
+      "consistency": "consistent",
+      "claims": [
+        {
+          "claim": "customAlphabet(ab,2.9)生成器不传size时长度21",
+          "status": "contradicted",
+          "rationale": "显式defaultSize=2.9应覆盖21，size|0得到2",
+          "evidence": [
+            {
+              "path": "non-secure/index.js",
+              "start_line": 5,
+              "end_line": 17
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "non-secure/index.js",
+              "start_line": 5,
+              "end_line": 17,
+              "content": "export let customAlphabet = (alphabet, defaultSize = 21) => {\n  return (size = defaultSize) => {\n    let id = ''\n    // A compact alternative for `for (var i = 0; i < step; i++)`.\n    // `> 0` stops a negative size from looping forever.\n    let i = size | 0\n    while (i-- > 0) {\n      // `| 0` is more compact and faster than `Math.floor()`.\n      id += alphabet[(Math.random() * alphabet.length) | 0]\n    }\n    return id\n  }\n}",
+              "content_sha256": "2c113cd0c7efeb52d28a5dcdfed1c6ad8ede5af8c85e850aa9252d2f3f3ddede",
+              "visible_to_generator": true
+            }
+          ]
+        },
+        {
+          "claim": "size0/-1都不进入循环，返回长度0",
+          "status": "supported",
+          "rationale": "while(i-- >0)支持",
+          "evidence": [
+            {
+              "path": "non-secure/index.js",
+              "start_line": 9,
+              "end_line": 15
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "non-secure/index.js",
+              "start_line": 9,
+              "end_line": 15,
+              "content": "    // `> 0` stops a negative size from looping forever.\n    let i = size | 0\n    while (i-- > 0) {\n      // `| 0` is more compact and faster than `Math.floor()`.\n      id += alphabet[(Math.random() * alphabet.length) | 0]\n    }\n    return id",
+              "content_sha256": "e87dd28d852fee10e79a396f5ac0ddc59a687edc0a3d231c5f812f80b923b69a",
+              "visible_to_generator": true
+            }
+          ]
+        }
+      ],
+      "notes": "显式实参仍被默认21覆盖，事实错误；SDK还省略位运算和循环解释。测试引用正确不能修复题干计算错误。",
+      "key_points": null,
+      "candidate_sha256": "a03e2b9540789f36c592be2b654ba5830632e20b63c9273152037ef99e1b910b",
+      "reviewer": "Codex (current session)",
+      "review_type": "model_assisted_nonblind_development_review",
+      "human_approved": false,
+      "training_eligible": false,
+      "result_sha256": "09808f20a794d941f585384d1193abea309e5be87bded61b688e870280abb0c1"
+    },
+    "q-4cfe308994156f5d--agentic": {
+      "candidate_id": "q-4cfe308994156f5d--agentic",
+      "correctness": "partially_correct",
+      "citation_support": "partial",
+      "completeness": "adequate",
+      "abstention": "not_applicable",
+      "entry_scope": "correct",
+      "consistency": "consistent",
+      "claims": [
+        {
+          "claim": "单null转换为空串",
+          "status": "contradicted",
+          "rationale": "实际隐式拼接为字符串null",
+          "evidence": [
+            {
+              "path": "source/index.js",
+              "start_line": 175,
+              "end_line": 177
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "source/index.js",
+              "start_line": 175,
+              "end_line": 177,
+              "content": "\t\tif (arguments_.length === 1) {\n\t\t\t// eslint-disable-next-line no-implicit-coercion\n\t\t\treturn applyStyle(builder, '' + arguments_[0]);",
+              "content_sha256": "788ae374f13c1bf8afb7520d9664a3ad6989513f9500a2f3c121c4ecd0d539ef",
+              "visible_to_generator": true
+            }
+          ]
+        },
+        {
+          "claim": "双null/undefined结果为一个空格",
+          "status": "supported",
+          "rationale": "两个空值字符串之间保留空格",
+          "evidence": [
+            {
+              "path": "source/index.js",
+              "start_line": 180,
+              "end_line": 182
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "source/index.js",
+              "start_line": 180,
+              "end_line": 182,
+              "content": "\t\tif (arguments_.length === 2) {\n\t\t\t// The template literal matches `Array#join` coercion (`null` and `undefined` become empty, objects use `toString`) while being faster.\n\t\t\treturn applyStyle(builder, `${arguments_[0] ?? ''} ${arguments_[1] ?? ''}`);",
+              "content_sha256": "c9b069b91a293ab687132211e0bcbc4159a56ecf7ff1c0fa6efeffea61fb200f",
+              "visible_to_generator": true
+            }
+          ]
+        }
+      ],
+      "notes": "唯一工具调用为已可见172-198的重复读取，返回already_read且无新源码；最终单参数转换仍错，不能声称工具补查有效。",
+      "key_points": null,
+      "candidate_sha256": "3261cefb72d81209b5a9127f4a13dde574e2fa9fc8db1ca6b165760bd19b264d",
+      "reviewer": "Codex (current session)",
+      "review_type": "model_assisted_nonblind_development_review",
+      "human_approved": false,
+      "training_eligible": false,
+      "result_sha256": "17f0f3999900e328951bdc92692ca88b58665cdca1c2d68b9638b027715ed3f2"
+    }
+  },
+  "groups": {
+    "all/hybrid_rerank": {
+      "records": 9,
+      "success": 9,
+      "model_requests": 9,
+      "tool_calls": 0,
+      "episodes_using_tools": 0,
+      "citation_ranges_valid": 8,
+      "initial_reference_complete": 5,
+      "final_reference_complete": 5,
+      "initial_nonblank_reference_complete": 6,
+      "final_nonblank_reference_complete": 6,
+      "requests_without_usage": 0,
+      "requests_without_elapsed": 0,
+      "prompt_tokens": 18948,
+      "completion_tokens": 2226,
+      "generator_seconds": 103.96900000000001,
+      "reviewed": 9,
+      "factually_correct": 6,
+      "core_supported": 4,
+      "fully_resolved": 1,
+      "insufficiency_flag_true": 0,
+      "insufficiency_flag_false": 1
+    },
+    "older-development/hybrid_rerank": {
+      "records": 1,
+      "success": 1,
+      "model_requests": 1,
+      "tool_calls": 0,
+      "episodes_using_tools": 0,
+      "citation_ranges_valid": 1,
+      "initial_reference_complete": 1,
+      "final_reference_complete": 1,
+      "initial_nonblank_reference_complete": 1,
+      "final_nonblank_reference_complete": 1,
+      "requests_without_usage": 0,
+      "requests_without_elapsed": 0,
+      "prompt_tokens": 3254,
+      "completion_tokens": 175,
+      "generator_seconds": 18.375,
+      "reviewed": 1,
+      "factually_correct": 1,
+      "core_supported": 1,
+      "fully_resolved": 0
+    },
+    "known-regression/hybrid_rerank": {
+      "records": 6,
+      "success": 6,
+      "model_requests": 6,
+      "tool_calls": 0,
+      "episodes_using_tools": 0,
+      "citation_ranges_valid": 6,
+      "initial_reference_complete": 5,
+      "final_reference_complete": 5,
+      "initial_nonblank_reference_complete": 6,
+      "final_nonblank_reference_complete": 6,
+      "requests_without_usage": 0,
+      "requests_without_elapsed": 0,
+      "prompt_tokens": 10085,
+      "completion_tokens": 1528,
+      "generator_seconds": 72.235,
+      "reviewed": 6,
+      "factually_correct": 4,
+      "core_supported": 4,
+      "fully_resolved": 1
+    },
+    "answerable/hybrid_rerank": {
+      "records": 8,
+      "success": 8,
+      "model_requests": 8,
+      "tool_calls": 0,
+      "episodes_using_tools": 0,
+      "citation_ranges_valid": 7,
+      "initial_reference_complete": 5,
+      "final_reference_complete": 5,
+      "initial_nonblank_reference_complete": 6,
+      "final_nonblank_reference_complete": 6,
+      "requests_without_usage": 0,
+      "requests_without_elapsed": 0,
+      "prompt_tokens": 15605,
+      "completion_tokens": 2154,
+      "generator_seconds": 98.906,
+      "reviewed": 8,
+      "factually_correct": 5,
+      "core_supported": 4,
+      "fully_resolved": 1
+    },
+    "added-confirmation/hybrid_rerank": {
+      "records": 3,
+      "success": 3,
+      "model_requests": 3,
+      "tool_calls": 0,
+      "episodes_using_tools": 0,
+      "citation_ranges_valid": 3,
+      "initial_reference_complete": 2,
+      "final_reference_complete": 2,
+      "initial_nonblank_reference_complete": 3,
+      "final_nonblank_reference_complete": 3,
+      "requests_without_usage": 0,
+      "requests_without_elapsed": 0,
+      "prompt_tokens": 3907,
+      "completion_tokens": 773,
+      "generator_seconds": 30.828,
+      "reviewed": 3,
+      "factually_correct": 3,
+      "core_supported": 3,
+      "fully_resolved": 1
+    },
+    "added-retrieval-development/hybrid_rerank": {
+      "records": 2,
+      "success": 2,
+      "model_requests": 2,
+      "tool_calls": 0,
+      "episodes_using_tools": 0,
+      "citation_ranges_valid": 2,
+      "initial_reference_complete": 1,
+      "final_reference_complete": 1,
+      "initial_nonblank_reference_complete": 1,
+      "final_nonblank_reference_complete": 1,
+      "requests_without_usage": 0,
+      "requests_without_elapsed": 0,
+      "prompt_tokens": 4803,
+      "completion_tokens": 218,
+      "generator_seconds": 11.501,
+      "reviewed": 2,
+      "factually_correct": 1,
+      "core_supported": 0,
+      "fully_resolved": 0,
+      "insufficiency_flag_true": 0,
+      "insufficiency_flag_false": 1
+    },
+    "all/agentic": {
+      "records": 9,
+      "success": 8,
+      "model_requests": 19,
+      "tool_calls": 1,
+      "episodes_using_tools": 1,
+      "citation_ranges_valid": 8,
+      "initial_reference_complete": 5,
+      "final_reference_complete": 5,
+      "initial_nonblank_reference_complete": 6,
+      "final_nonblank_reference_complete": 6,
+      "requests_without_usage": 0,
+      "requests_without_elapsed": 0,
+      "prompt_tokens": 84196,
+      "completion_tokens": 8440,
+      "generator_seconds": 376.11099999999993,
+      "reviewed": 9,
+      "factually_correct": 5,
+      "core_supported": 4,
+      "fully_resolved": 0,
+      "failed": 1,
+      "insufficiency_flag_true": 0,
+      "insufficiency_flag_false": 1
+    },
+    "added-confirmation/agentic": {
+      "records": 3,
+      "success": 3,
+      "model_requests": 6,
+      "tool_calls": 0,
+      "episodes_using_tools": 0,
+      "citation_ranges_valid": 3,
+      "initial_reference_complete": 2,
+      "final_reference_complete": 2,
+      "initial_nonblank_reference_complete": 3,
+      "final_nonblank_reference_complete": 3,
+      "requests_without_usage": 0,
+      "requests_without_elapsed": 0,
+      "prompt_tokens": 22318,
+      "completion_tokens": 1987,
+      "generator_seconds": 88.54700000000001,
+      "reviewed": 3,
+      "factually_correct": 3,
+      "core_supported": 3,
+      "fully_resolved": 0
+    },
+    "known-regression/agentic": {
+      "records": 6,
+      "success": 6,
+      "model_requests": 13,
+      "tool_calls": 1,
+      "episodes_using_tools": 1,
+      "citation_ranges_valid": 6,
+      "initial_reference_complete": 5,
+      "final_reference_complete": 5,
+      "initial_nonblank_reference_complete": 6,
+      "final_nonblank_reference_complete": 6,
+      "requests_without_usage": 0,
+      "requests_without_elapsed": 0,
+      "prompt_tokens": 49282,
+      "completion_tokens": 4275,
+      "generator_seconds": 189.484,
+      "reviewed": 6,
+      "factually_correct": 4,
+      "core_supported": 4,
+      "fully_resolved": 0
+    },
+    "answerable/agentic": {
+      "records": 8,
+      "success": 7,
+      "model_requests": 17,
+      "tool_calls": 1,
+      "episodes_using_tools": 1,
+      "citation_ranges_valid": 7,
+      "initial_reference_complete": 5,
+      "final_reference_complete": 5,
+      "initial_nonblank_reference_complete": 6,
+      "final_nonblank_reference_complete": 6,
+      "requests_without_usage": 0,
+      "requests_without_elapsed": 0,
+      "prompt_tokens": 73653,
+      "completion_tokens": 8175,
+      "generator_seconds": 358.7509999999999,
+      "reviewed": 8,
+      "factually_correct": 4,
+      "core_supported": 4,
+      "fully_resolved": 0,
+      "failed": 1
+    },
+    "business-confirmation-known-repositories/agentic": {
+      "records": 2,
+      "failed": 1,
+      "model_requests": 4,
+      "tool_calls": 0,
+      "episodes_using_tools": 0,
+      "citation_ranges_valid": 1,
+      "initial_reference_complete": 0,
+      "final_reference_complete": 0,
+      "initial_nonblank_reference_complete": 0,
+      "final_nonblank_reference_complete": 0,
+      "requests_without_usage": 0,
+      "requests_without_elapsed": 0,
+      "prompt_tokens": 24371,
+      "completion_tokens": 3900,
+      "generator_seconds": 169.26699999999997,
+      "reviewed": 2,
+      "factually_correct": 0,
+      "core_supported": 0,
+      "fully_resolved": 0,
+      "success": 1
+    },
+    "known-source-gap/agentic": {
+      "records": 2,
+      "failed": 1,
+      "model_requests": 4,
+      "tool_calls": 0,
+      "episodes_using_tools": 0,
+      "citation_ranges_valid": 1,
+      "initial_reference_complete": 0,
+      "final_reference_complete": 0,
+      "initial_nonblank_reference_complete": 0,
+      "final_nonblank_reference_complete": 0,
+      "requests_without_usage": 0,
+      "requests_without_elapsed": 0,
+      "prompt_tokens": 24371,
+      "completion_tokens": 3900,
+      "generator_seconds": 169.26699999999997,
+      "reviewed": 2,
+      "factually_correct": 0,
+      "core_supported": 0,
+      "fully_resolved": 0,
+      "success": 1
+    },
+    "private-information/hybrid_rerank": {
+      "records": 1,
+      "success": 1,
+      "model_requests": 1,
+      "tool_calls": 0,
+      "episodes_using_tools": 0,
+      "citation_ranges_valid": 1,
+      "insufficiency_flag_true": 0,
+      "insufficiency_flag_false": 1,
+      "requests_without_usage": 0,
+      "requests_without_elapsed": 0,
+      "prompt_tokens": 3343,
+      "completion_tokens": 72,
+      "generator_seconds": 5.063,
+      "reviewed": 1,
+      "factually_correct": 1,
+      "core_supported": 0,
+      "fully_resolved": 0
+    },
+    "unanswerable/hybrid_rerank": {
+      "records": 1,
+      "success": 1,
+      "model_requests": 1,
+      "tool_calls": 0,
+      "episodes_using_tools": 0,
+      "citation_ranges_valid": 1,
+      "insufficiency_flag_true": 0,
+      "insufficiency_flag_false": 1,
+      "requests_without_usage": 0,
+      "requests_without_elapsed": 0,
+      "prompt_tokens": 3343,
+      "completion_tokens": 72,
+      "generator_seconds": 5.063,
+      "reviewed": 1,
+      "factually_correct": 1,
+      "core_supported": 0,
+      "fully_resolved": 0
+    },
+    "older-confirmation/hybrid_rerank": {
+      "records": 1,
+      "success": 1,
+      "model_requests": 1,
+      "tool_calls": 0,
+      "episodes_using_tools": 0,
+      "citation_ranges_valid": 1,
+      "initial_reference_complete": 1,
+      "final_reference_complete": 1,
+      "initial_nonblank_reference_complete": 1,
+      "final_nonblank_reference_complete": 1,
+      "requests_without_usage": 0,
+      "requests_without_elapsed": 0,
+      "prompt_tokens": 1464,
+      "completion_tokens": 434,
+      "generator_seconds": 16.594,
+      "reviewed": 1,
+      "factually_correct": 0,
+      "core_supported": 0,
+      "fully_resolved": 0
+    },
+    "business-confirmation-known-repositories/hybrid_rerank": {
+      "records": 2,
+      "success": 2,
+      "model_requests": 2,
+      "tool_calls": 0,
+      "episodes_using_tools": 0,
+      "citation_ranges_valid": 1,
+      "initial_reference_complete": 0,
+      "final_reference_complete": 0,
+      "initial_nonblank_reference_complete": 0,
+      "final_nonblank_reference_complete": 0,
+      "requests_without_usage": 0,
+      "requests_without_elapsed": 0,
+      "prompt_tokens": 5520,
+      "completion_tokens": 626,
+      "generator_seconds": 26.671,
+      "reviewed": 2,
+      "factually_correct": 1,
+      "core_supported": 0,
+      "fully_resolved": 0
+    },
+    "known-source-gap/hybrid_rerank": {
+      "records": 2,
+      "success": 2,
+      "model_requests": 2,
+      "tool_calls": 0,
+      "episodes_using_tools": 0,
+      "citation_ranges_valid": 1,
+      "initial_reference_complete": 0,
+      "final_reference_complete": 0,
+      "initial_nonblank_reference_complete": 0,
+      "final_nonblank_reference_complete": 0,
+      "requests_without_usage": 0,
+      "requests_without_elapsed": 0,
+      "prompt_tokens": 5520,
+      "completion_tokens": 626,
+      "generator_seconds": 26.671,
+      "reviewed": 2,
+      "factually_correct": 1,
+      "core_supported": 0,
+      "fully_resolved": 0
+    },
+    "added-retrieval-development/agentic": {
+      "records": 2,
+      "success": 2,
+      "model_requests": 5,
+      "tool_calls": 1,
+      "episodes_using_tools": 1,
+      "citation_ranges_valid": 2,
+      "insufficiency_flag_true": 0,
+      "insufficiency_flag_false": 1,
+      "requests_without_usage": 0,
+      "requests_without_elapsed": 0,
+      "prompt_tokens": 20808,
+      "completion_tokens": 1164,
+      "generator_seconds": 55.079,
+      "reviewed": 2,
+      "factually_correct": 1,
+      "core_supported": 0,
+      "fully_resolved": 0,
+      "initial_reference_complete": 1,
+      "final_reference_complete": 1,
+      "initial_nonblank_reference_complete": 1,
+      "final_nonblank_reference_complete": 1
+    },
+    "private-information/agentic": {
+      "records": 1,
+      "success": 1,
+      "model_requests": 2,
+      "tool_calls": 0,
+      "episodes_using_tools": 0,
+      "citation_ranges_valid": 1,
+      "insufficiency_flag_true": 0,
+      "insufficiency_flag_false": 1,
+      "requests_without_usage": 0,
+      "requests_without_elapsed": 0,
+      "prompt_tokens": 10543,
+      "completion_tokens": 265,
+      "generator_seconds": 17.36,
+      "reviewed": 1,
+      "factually_correct": 1,
+      "core_supported": 0,
+      "fully_resolved": 0
+    },
+    "unanswerable/agentic": {
+      "records": 1,
+      "success": 1,
+      "model_requests": 2,
+      "tool_calls": 0,
+      "episodes_using_tools": 0,
+      "citation_ranges_valid": 1,
+      "insufficiency_flag_true": 0,
+      "insufficiency_flag_false": 1,
+      "requests_without_usage": 0,
+      "requests_without_elapsed": 0,
+      "prompt_tokens": 10543,
+      "completion_tokens": 265,
+      "generator_seconds": 17.36,
+      "reviewed": 1,
+      "factually_correct": 1,
+      "core_supported": 0,
+      "fully_resolved": 0
+    },
+    "older-development/agentic": {
+      "records": 1,
+      "success": 1,
+      "model_requests": 2,
+      "tool_calls": 0,
+      "episodes_using_tools": 0,
+      "citation_ranges_valid": 1,
+      "initial_reference_complete": 1,
+      "final_reference_complete": 1,
+      "initial_nonblank_reference_complete": 1,
+      "final_nonblank_reference_complete": 1,
+      "requests_without_usage": 0,
+      "requests_without_elapsed": 0,
+      "prompt_tokens": 9824,
+      "completion_tokens": 409,
+      "generator_seconds": 22.297,
+      "reviewed": 1,
+      "factually_correct": 1,
+      "core_supported": 1,
+      "fully_resolved": 0
+    },
+    "older-confirmation/agentic": {
+      "records": 1,
+      "success": 1,
+      "model_requests": 2,
+      "tool_calls": 0,
+      "episodes_using_tools": 0,
+      "citation_ranges_valid": 1,
+      "initial_reference_complete": 1,
+      "final_reference_complete": 1,
+      "initial_nonblank_reference_complete": 1,
+      "final_nonblank_reference_complete": 1,
+      "requests_without_usage": 0,
+      "requests_without_elapsed": 0,
+      "prompt_tokens": 6875,
+      "completion_tokens": 980,
+      "generator_seconds": 40.921,
+      "reviewed": 1,
+      "factually_correct": 0,
+      "core_supported": 0,
+      "fully_resolved": 0
+    }
+  },
+  "retrieval": {
+    "shared_initial": {
+      "answerable": 8,
+      "reference_complete": 5,
+      "nonblank_reference_complete": 6
+    }
+  },
+  "new_requests": 28,
+  "combined_requests": 1150,
+  "paid_requests": 0,
+  "human_approved": false,
+  "training_eligible": false,
+  "reporting_implementation": "226f781b1bd21803d06bc9dd9fb7a39593d220befea7e09f6c07490ecf4a06a9",
+  "usage_observation_note": "Token/time sums include observed values only. Missing usage and elapsed time remain unknown in raw records; reservations still count every sent or ambiguous request.",
+  "checks": {
+    "implementation_zip_sha256": "9dada7b4d754e35653147125137a8eb038a7685bedc3224478ff3a96113c0b1d",
+    "archive_scope": "All runtime source/assets, Python tests and fixture files, scripts, launcher and dependency manifests/locks. No model settings, credentials,weights or runtime databases; generation identity/settings are embedded in dataset.",
+    "archive_files": 195,
+    "parent_implementation_zip_sha256": "b347feb549b1babcc6d80c02439d058d87cbb6cd57be8f4bbb386204db9eb7e8",
+    "scope": "Configuration/workflow reconstruction, not exact rollback; old all-source snapshot missing. No source rule additions.",
+    "reduction": {
+      "modules_before": 56,
+      "modules_after": 56,
+      "nonblank_noncomment_lines_before": 8932,
+      "nonblank_noncomment_lines_after": 8821,
+      "benchmark_conditions_before": 16,
+      "benchmark_conditions_after": 9,
+      "sdk_answer_flows_before": 3,
+      "sdk_answer_flows_after": 1,
+      "new_runtime_modules": 0
+    },
+    "owner_authorization": {
+      "prior_actual": 1122,
+      "this_max": 63,
+      "combined_reserved_max": 1185,
+      "authorized_ceiling": 1186,
+      "paid": 0,
+      "automatic_retries": 0
+    },
+    "historical_archive_entries_verified": 1333,
+    "prepared_inputs_verified_http_blocked": 18,
+    "offline_pytest": "292 passed,1 deselected in125.75s; complete final offline run before generation",
+    "ruff": "src/scripts/tests all passed, no cache",
+    "archive_bytes_match_pre_generation": true,
+    "matched_prior_recovery": {
+      "all_eight_answerable": {
+        "hybrid_rerank": {
+          "before": {
+            "questions": 8,
+            "factually_correct": 6,
+            "unverifiable": 0,
+            "core_supported": 5,
+            "fully_resolved": 1
+          },
+          "after": {
+            "questions": 8,
+            "factually_correct": 5,
+            "unverifiable": 0,
+            "core_supported": 4,
+            "fully_resolved": 1
+          }
+        },
+        "agentic": {
+          "before": {
+            "questions": 8,
+            "factually_correct": 4,
+            "unverifiable": 0,
+            "core_supported": 4,
+            "fully_resolved": 2
+          },
+          "after": {
+            "questions": 8,
+            "factually_correct": 4,
+            "unverifiable": 1,
+            "core_supported": 4,
+            "fully_resolved": 0
+          }
+        }
+      },
+      "six_regression": {
+        "hybrid_rerank": {
+          "before": {
+            "questions": 6,
+            "factually_correct": 5,
+            "unverifiable": 0,
+            "core_supported": 5,
+            "fully_resolved": 1
+          },
+          "after": {
+            "questions": 6,
+            "factually_correct": 4,
+            "unverifiable": 0,
+            "core_supported": 4,
+            "fully_resolved": 1
+          }
+        },
+        "agentic": {
+          "before": {
+            "questions": 6,
+            "factually_correct": 4,
+            "unverifiable": 0,
+            "core_supported": 4,
+            "fully_resolved": 2
+          },
+          "after": {
+            "questions": 6,
+            "factually_correct": 4,
+            "unverifiable": 0,
+            "core_supported": 4,
+            "fully_resolved": 0
+          }
+        }
+      },
+      "two_gaps": {
+        "hybrid_rerank": {
+          "before": {
+            "questions": 2,
+            "factually_correct": 1,
+            "unverifiable": 0,
+            "core_supported": 0,
+            "fully_resolved": 0
+          },
+          "after": {
+            "questions": 2,
+            "factually_correct": 1,
+            "unverifiable": 0,
+            "core_supported": 0,
+            "fully_resolved": 0
+          }
+        },
+        "agentic": {
+          "before": {
+            "questions": 2,
+            "factually_correct": 0,
+            "unverifiable": 0,
+            "core_supported": 0,
+            "fully_resolved": 0
+          },
+          "after": {
+            "questions": 2,
+            "factually_correct": 0,
+            "unverifiable": 1,
+            "core_supported": 0,
+            "fully_resolved": 0
+          }
+        }
+      }
+    },
+    "fallback_saved_input_proof": [
+      {
+        "task_id": "q-f94258ac48ef550c",
+        "messages_equal": true,
+        "wire_hash_equal": true,
+        "wire_sha256": "d2858d1cd1d67418ef573b5d2281244a8ab064a1d1f1a6204f1358404662db2c"
+      },
+      {
+        "task_id": "q-bc525cfef5654a48",
+        "messages_equal": true,
+        "wire_hash_equal": true,
+        "wire_sha256": "18ad830b4d80710b8b813f1603ce0e96ab0cbd54ba8f9c9bc19f89fc95d92482"
+      },
+      {
+        "task_id": "q-35441446c0f3e154",
+        "messages_equal": true,
+        "wire_hash_equal": true,
+        "wire_sha256": "b0d70cc5c33767add145b1361c325eb167ae7c2fbee81c605c30c297848ed5d9"
+      },
+      {
+        "task_id": "q-f33bdd28fc012276",
+        "messages_equal": true,
+        "wire_hash_equal": true,
+        "wire_sha256": "ef6c4e4cf80adc918d508d14d1915c9f269e715fc2daa7c809e1ee57a9adc4dc"
+      },
+      {
+        "task_id": "q-b73aeb622c828d8e",
+        "messages_equal": true,
+        "wire_hash_equal": true,
+        "wire_sha256": "8ca3724738d7e8d978d143ebc965a290e2c83f09bc4a7e2a92d35327490750d3"
+      },
+      {
+        "task_id": "q-4cfe308994156f5d",
+        "messages_equal": true,
+        "wire_hash_equal": true,
+        "wire_sha256": "f0b5cb65763b4821b801587dbf24ba6d89e366dd0d85618de81bdfce2d858c23"
+      },
+      {
+        "task_id": "q-71b59398a21ab6c3",
+        "messages_equal": true,
+        "wire_hash_equal": true,
+        "wire_sha256": "66580258c24102488a84b03bd041c78f31223be6e14d8dfeaadc327b292058e6"
+      },
+      {
+        "task_id": "q-4c35fdb83cf995e0",
+        "messages_equal": true,
+        "wire_hash_equal": true,
+        "wire_sha256": "10291558f7bb74ed6d1c611e4755da501076f302396c45b7fc017a42700c2ca5"
+      },
+      {
+        "task_id": "q-1803ac7237f279cd",
+        "messages_equal": true,
+        "wire_hash_equal": true,
+        "wire_sha256": "ff9ca9c9f7b6313ae964aebcb85ba25f8b5dd0f1585c59b5e18d8d7fadf27650"
+      }
+    ],
+    "fallback_interpretation": "All9 BM25 inputs and wire hashes exactly match sealed recovery records; reuse those records rather than spending more requests. These are historical answers, not newly generated default answers.",
+    "acceptance": {
+      "passed": false,
+      "fixed_facts_nonregression": false,
+      "fixed_core_nonregression": false,
+      "sdk_original_six_facts_recovered": false,
+      "gap_tool_reads_useful": false,
+      "decision": "Withdraw hybrid-rerank default candidate. Keep simpler fixed code-aware BM25/CPU default; hybrid and SDK remain explicit options. No further tuning or generation."
+    },
+    "sdk_tool_use": {
+      "episodes": 9,
+      "episodes_using_tools": 1,
+      "tool_calls": 1,
+      "useful_new_source_reads": 0,
+      "gap_episodes_using_tools": 0,
+      "only_tool_result": "Chalk read_code172-198 already_read; initial and final source unchanged."
+    },
+    "finalization_tradeoff": "LRU research draft contains contradictory opening but correct detailed mechanism. Finalizer corrects opening but drops mechanism. Choices draft states correct reset branches then overgeneralizes; finalizer drops branch detail. Cannot simply publish research draft or assume finalization preserves explanations.",
+    "terminal_status_counts": {
+      "success": 17,
+      "failed": 1
+    },
+    "failure_codes": {
+      "invalid_citations": 1
+    },
+    "request_accounting": {
+      "prior": 1122,
+      "new": 28,
+      "combined": 1150,
+      "authorized_ceiling": 1186,
+      "unused": 36,
+      "paid": 0,
+      "automatic_retries": 0
+    },
+    "generator_service": "Managed Ollama4732 and direct owned runner stopped after18 outputs. No more generation.",
+    "review_consistency": "Same rubrics as recovery: concrete test explanation, conditional mechanisms, citations and refusal flag distinguished. No omitted requirements added. Missing SDK Requests answer stays unverifiable, not forcibly incorrect.",
+    "post_seal_default_withdrawal": {
+      "decision": "Apply these two-file substitutions after generator-version verification and sealing; this changes implementation identity, so future historical checks use verify_archives. Full generation source archive plus exact substitutions reconstruct active defaults.",
+      "patches": [
+        {
+          "file": "src/repomentor/retrieval_policy.py",
+          "before_sha256": "26b81a0e4938db26fd87fad21ff1c429ec1a3b8981bc726fbaf6ff7c67fd37f0",
+          "after_sha256": "7ca67580c2dbae5b8e0ae4254f8731783b3115152b785b570a9239d8f8e4566b",
+          "literal_replacements": [
+            [
+              "DEFAULT_RETRIEVAL = RetrievalPolicy(retriever=\"hybrid-rerank\", device=\"cuda\")",
+              "DEFAULT_RETRIEVAL = RetrievalPolicy()"
+            ]
+          ]
+        },
+        {
+          "file": "tests/test_sdk_agent.py",
+          "before_sha256": "504c6f6cbae909f2c9eb2e770561e99b126e10c902e2a2b1975a5a0661635112",
+          "after_sha256": "7d4567812e12e46ece66c38739056fabfb584989835638c17199ead4b427e2ae",
+          "literal_replacements": [
+            [
+              "test_cli_default_uses_fixed_rag_and_shared_hybrid_policy",
+              "test_cli_default_uses_fixed_rag_and_shared_lexical_policy"
+            ],
+            [
+              "== \"hybrid-rerank\"",
+              "== \"bm25\""
+            ],
+            [
+              "assert selected[0][\"device\"] == \"cuda\"",
+              "assert selected[0][\"device\"] == \"cpu\""
+            ]
+          ]
+        }
+      ],
+      "new_model_requests": 0,
+      "test_receipt": "Post-withdrawal targeted CLI tests recorded in current project documentation, not rewritten into sealed generation results."
+    },
+    "offline_verified_records_http_blocked": 18,
+    "all_reviews_source_validated": 18,
+    "completed_test_directories_cleaned": 4,
+    "public_file_count": 4,
+    "notes_pages": 8,
+    "active_default_candidate_accepted": false,
+    "redundant_plan_removed": "Exact declared plan embedded in dataset; private duplicate removed."
+  },
+  "scope": "Reconstruct historical hybrid-rerank fixed RAG plus one SDK research/finalize workflow, not exact historical source rollback. Nine existing public identities: six known regressions, two known gaps, one private-info refusal; 18 answers. Same initial retrieval, model,16K,2048 final,temperature0. SDK research1536, max6 calls/6 tools/360sec. No prompt variants, sampling, retries, paid APIs, training or new questions. Compare same-task frozen recovery and historical system independently, not pooled scores; components changed together so no single-factor causality. Fixed candidate must not lose facts/core against latest same8 answerable baseline; SDK original-six factual recovery and explanation quality reported separately. Useful gap tool reads required before claiming agent improvement. Nonblind selected development, not unseen confirmation."
+}

@@ -1,0 +1,250 @@
+{
+  "task_id": "more-itertools--more-itertools-01",
+  "repository": "more-itertools/more-itertools",
+  "split": "validation",
+  "index_id": "b4d3e5eb0556cdd3c3f806e8",
+  "base_index_id": "fb23b2448652dcd7e7b7d6a4",
+  "chunk_ids_sha256": "7af6208af2310a614614e94ad8ac1cd663ed9b1ef9fe9b99cee480106dccb7c1",
+  "retriever": "hybrid-rerank",
+  "metrics": {
+    "recall_at_6": 1.0,
+    "recall_at_20": 1.0,
+    "mrr": 1.0,
+    "target_overlap_recall_at_6": 1.0,
+    "target_overlap_recall_at_20": 1.0,
+    "line_coverage_at_6": 1.0
+  },
+  "first_query_seconds": 3.3225852000000486,
+  "warm_query_seconds": 0.010150999999950727,
+  "index_open_build_seconds": 0.3142740999999205,
+  "chunks": 1653,
+  "candidates": [
+    {
+      "snapshot_id": "34bbe4aa95c559925b195310",
+      "chunk_id": "6b29edc6bf735c70e2100fdd",
+      "path": "more_itertools/recipes.py",
+      "start_line": 113,
+      "end_line": 126,
+      "content_hash": "0156fc9cc7252191d82f4e1c818fcf4294efc2c998fa98704de0b683fa2e067b",
+      "content": "def take(n, iterable):\n    \"\"\"Return first *n* items of the *iterable* as a list.\n\n        >>> take(3, range(10))\n        [0, 1, 2]\n\n    If there are fewer than *n* items in the iterable, all of them are\n    returned.\n\n        >>> take(10, range(3))\n        [0, 1, 2]\n\n    \"\"\"\n    return list(islice(iterable, n))",
+      "symbol": "take",
+      "truncated": false
+    },
+    {
+      "snapshot_id": "34bbe4aa95c559925b195310",
+      "chunk_id": "3197f32e44c66569056be26c",
+      "path": "more_itertools/more.py",
+      "start_line": 1269,
+      "end_line": 1281,
+      "content_hash": "6ba7579fdb930c96012009a9281e8d31e25d2a8bea5c6389e438cb86a7a890ba",
+      "content": "    The number of items requested can be larger than the number of items in\n    the iterable:\n\n        >>> iterable = [1, 2, 3, 4, 5]\n        >>> head, iterable = spy(iterable, 10)\n        >>> head\n        [1, 2, 3, 4, 5]\n        >>> list(iterable)\n        [1, 2, 3, 4, 5]\n\n    \"\"\"\n    p, q = tee(iterable)\n    return take(n, q), p",
+      "symbol": "spy",
+      "truncated": false
+    },
+    {
+      "snapshot_id": "34bbe4aa95c559925b195310",
+      "chunk_id": "c5a5dc8662140b47eabdf93e",
+      "path": "more_itertools/more.py",
+      "start_line": 237,
+      "end_line": 241,
+      "content_hash": "7dc1baa364cdd8b09f302de7aa1160152aa74ba8c60bf93b47b0d480e80d43af",
+      "content": "    iterator = iter(partial(take, n, iter(iterable)), [])\n    if strict:\n        if n is None:\n            raise ValueError('n must not be None when using strict mode.')\n",
+      "symbol": "chunked",
+      "truncated": false
+    },
+    {
+      "snapshot_id": "34bbe4aa95c559925b195310",
+      "chunk_id": "c22ad6932c5ff750fc514d46",
+      "path": "tests/test_recipes.py",
+      "start_line": 30,
+      "end_line": 53,
+      "content_hash": "57b05123a3a223dc844d8430e7be53a9695841481cbca0713b8a244e18bbd061",
+      "content": "class TakeTests(TestCase):\n    \"\"\"Tests for ``take()``\"\"\"\n\n    def test_simple_take(self):\n        \"\"\"Test basic usage\"\"\"\n        t = mi.take(5, range(10))\n        self.assertEqual(t, [0, 1, 2, 3, 4])\n\n    def test_null_take(self):\n        \"\"\"Check the null case\"\"\"\n        t = mi.take(0, range(10))\n        self.assertEqual(t, [])\n\n    def test_negative_take(self):\n        \"\"\"Make sure taking negative items results in a ValueError\"\"\"\n        self.assertRaises(ValueError, lambda: mi.take(-3, range(10)))\n\n    def test_take_too_much(self):\n        \"\"\"Taking more than an iterator has remaining should return what the\n        iterator has remaining.\n\n        \"\"\"\n        t = mi.take(10, range(5))\n        self.assertEqual(t, [0, 1, 2, 3, 4])",
+      "symbol": "TakeTests",
+      "truncated": false
+    },
+    {
+      "snapshot_id": "34bbe4aa95c559925b195310",
+      "chunk_id": "33bb498f4c9245772bfc1680",
+      "path": "tests/test_more.py",
+      "start_line": 3728,
+      "end_line": 3738,
+      "content_hash": "9cb09c5ec866cb89a71f3781788c340bb9de5a94a1c315cc75d7a53bbce06a68",
+      "content": "    def test_forward(self):\n        iterable = [str(n) for n in range(10)]\n\n        s = mi.seekable(iterable)\n        self.assertEqual(mi.take(1, s), iterable[:1])  # Normal iteration\n\n        s.seek(3)  # Skip over index 2\n        self.assertEqual(list(s), iterable[3:])  # Result is similar to slicing\n\n        s.seek(0)  # Back to 0\n        self.assertEqual(list(s), iterable)  # No difference in result",
+      "symbol": "SeekableTest.test_forward",
+      "truncated": false
+    },
+    {
+      "snapshot_id": "34bbe4aa95c559925b195310",
+      "chunk_id": "8be66e9a1935aef88a446941",
+      "path": "tests/test_more.py",
+      "start_line": 3752,
+      "end_line": 3765,
+      "content_hash": "d3547a6c976f0a318ea4d924c42c1161095e79454600efdd3ddbb899c0576105",
+      "content": "    def test_elements(self):\n        iterable = map(str, count())\n\n        s = mi.seekable(iterable)\n        mi.take(10, s)\n\n        elements = s.elements()\n        self.assertEqual(\n            [elements[i] for i in range(10)], [str(n) for n in range(10)]\n        )\n        self.assertEqual(len(elements), 10)\n\n        mi.take(10, s)\n        self.assertEqual(list(elements), [str(n) for n in range(20)])",
+      "symbol": "SeekableTest.test_elements",
+      "truncated": false
+    },
+    {
+      "snapshot_id": "34bbe4aa95c559925b195310",
+      "chunk_id": "1eddf7e420c526eed92f5762",
+      "path": "tests/test_more.py",
+      "start_line": 3719,
+      "end_line": 3726,
+      "content_hash": "80f72dfb439cce84e182976b71b9418e3fc1fee5575afd0be3a031b75d5ddc4e",
+      "content": "    def test_partial_reset(self):\n        iterable = [str(n) for n in range(10)]\n\n        s = mi.seekable(iterable)\n        self.assertEqual(mi.take(5, s), iterable[:5])  # Normal iteration\n\n        s.seek(1)\n        self.assertEqual(list(s), iterable[1:])  # Get the rest of the iterable",
+      "symbol": "SeekableTest.test_partial_reset",
+      "truncated": false
+    },
+    {
+      "snapshot_id": "34bbe4aa95c559925b195310",
+      "chunk_id": "badcdcd8c001aa38a91958f2",
+      "path": "tests/test_more.py",
+      "start_line": 3740,
+      "end_line": 3750,
+      "content_hash": "c5ed9ca45a0c33811d67b206a89ff4ea60622c4ad9d739cceb87f4ca712ba35d",
+      "content": "    def test_past_end(self):\n        iterable = [str(n) for n in range(10)]\n\n        s = mi.seekable(iterable)\n        self.assertEqual(mi.take(1, s), iterable[:1])  # Normal iteration\n\n        s.seek(20)\n        self.assertEqual(list(s), [])  # Iterable is exhausted\n\n        s.seek(0)  # Back to 0\n        self.assertEqual(list(s), iterable)  # No difference in result",
+      "symbol": "SeekableTest.test_past_end",
+      "truncated": false
+    },
+    {
+      "snapshot_id": "34bbe4aa95c559925b195310",
+      "chunk_id": "29e3ded3568a18b90dbff80f",
+      "path": "more_itertools/recipes.py",
+      "start_line": 272,
+      "end_line": 279,
+      "content_hash": "287ead6c442756c49b60d9669acfa0d84a1b8106caff029bf385e1991401d32f",
+      "content": "def ncycles(iterable, n):\n    \"\"\"Returns the sequence elements *n* times\n\n    >>> list(ncycles([\"a\", \"b\"], 3))\n    ['a', 'b', 'a', 'b', 'a', 'b']\n\n    \"\"\"\n    return chain.from_iterable(repeat(tuple(iterable), n))",
+      "symbol": "ncycles",
+      "truncated": false
+    },
+    {
+      "snapshot_id": "34bbe4aa95c559925b195310",
+      "chunk_id": "506e22b8918bc89f7451d423",
+      "path": "tests/test_more.py",
+      "start_line": 3767,
+      "end_line": 3776,
+      "content_hash": "1dbd527f49b4b5640bcacae3a8bd3dfe733d20e6ba6f0ad001a7b698c47a0f40",
+      "content": "    def test_maxlen(self):\n        iterable = map(str, count())\n\n        s = mi.seekable(iterable, maxlen=4)\n        self.assertEqual(mi.take(10, s), [str(n) for n in range(10)])\n        self.assertEqual(list(s.elements()), ['6', '7', '8', '9'])\n\n        s.seek(0)\n        self.assertEqual(mi.take(14, s), [str(n) for n in range(6, 20)])\n        self.assertEqual(list(s.elements()), ['16', '17', '18', '19'])",
+      "symbol": "SeekableTest.test_maxlen",
+      "truncated": false
+    },
+    {
+      "snapshot_id": "34bbe4aa95c559925b195310",
+      "chunk_id": "f35dc8260415725e1cb02b75",
+      "path": "more_itertools/recipes.py",
+      "start_line": 790,
+      "end_line": 795,
+      "content_hash": "978fea17dd4db2ccea7faa81573cb140edb2dc7eaec780326dee7e252a9efe5f",
+      "content": "def _sliding_window_islice(iterable, n):\n    # Fast path for small, non-zero values of n.\n    iterators = tee(iterable, n)\n    for i, iterator in enumerate(iterators):\n        next(islice(iterator, i, i), None)\n    return zip(*iterators)",
+      "symbol": "_sliding_window_islice",
+      "truncated": false
+    },
+    {
+      "snapshot_id": "34bbe4aa95c559925b195310",
+      "chunk_id": "55218efbd9e5125521498a2b",
+      "path": "tests/test_more.py",
+      "start_line": 2102,
+      "end_line": 2107,
+      "content_hash": "5f5f96408afc708873bfc0fcf1fc493dd429256ec99150ca2559d235b7211282",
+      "content": "    def test_basic(self):\n        slice_length = 10\n        iterable = (str(x) for x in range(5))\n        actual = mi.take(slice_length, mi.repeat_last(iterable))\n        expected = ['0', '1', '2', '3', '4', '4', '4', '4', '4', '4']\n        self.assertEqual(actual, expected)",
+      "symbol": "RepeatLastTests.test_basic",
+      "truncated": false
+    },
+    {
+      "snapshot_id": "34bbe4aa95c559925b195310",
+      "chunk_id": "c1693b48bbf0b06adb7d8243",
+      "path": "tests/test_more.py",
+      "start_line": 5714,
+      "end_line": 5719,
+      "content_hash": "ea08924591763f1733bdd557dd827b21133547cb90503522f29e524da789bad5",
+      "content": "    def test_basic(self):\n        iterable = ['a', 'b', 'c', 'd']\n        n = 4\n        actual = list(mi.strictly_n(iter(iterable), n))\n        expected = iterable\n        self.assertEqual(actual, expected)",
+      "symbol": "StrictlyNTests.test_basic",
+      "truncated": false
+    },
+    {
+      "snapshot_id": "34bbe4aa95c559925b195310",
+      "chunk_id": "6951a21d62b6e5876b1292e6",
+      "path": "tests/test_more.py",
+      "start_line": 2087,
+      "end_line": 2092,
+      "content_hash": "b68a8e15d51d168f98670620d669a73d5ebf730951b2fea04204ffdcee69bb71",
+      "content": "    def test_empty_iterable(self):\n        slice_length = 3\n        iterable = iter([])\n        actual = mi.take(slice_length, mi.repeat_last(iterable))\n        expected = [None] * slice_length\n        self.assertEqual(actual, expected)",
+      "symbol": "RepeatLastTests.test_empty_iterable",
+      "truncated": false
+    },
+    {
+      "snapshot_id": "34bbe4aa95c559925b195310",
+      "chunk_id": "4efa57318a00fea1d27a9a33",
+      "path": "more_itertools/more.py",
+      "start_line": 1875,
+      "end_line": 1886,
+      "content_hash": "41551f38fa62e70360ae6fa399abe7da44d5e02b10c6e1430e4970969285918d",
+      "content": "    This function uses :func:`itertools.tee` and may require significant\n    storage.\n\n    If you need the order items in the smaller iterables to match the\n    original iterable, see :func:`divide`.\n\n    \"\"\"\n    if n < 1:\n        raise ValueError('n must be at least 1')\n\n    children = tee(iterable, n)\n    return [islice(it, index, None, n) for index, it in enumerate(children)]",
+      "symbol": "distribute",
+      "truncated": false
+    },
+    {
+      "snapshot_id": "34bbe4aa95c559925b195310",
+      "chunk_id": "f0b38fadc892d1c71ac86233",
+      "path": "tests/test_more.py",
+      "start_line": 1987,
+      "end_line": 1996,
+      "content_hash": "a4749848991c74f72ef437db424a60a3af3d5e67cf2e0e466f6241736819d869",
+      "content": "    def test_no_n(self):\n        seq = [1, 2, 3]\n\n        # No fillvalue\n        self.assertEqual(mi.take(5, mi.padded(seq)), [1, 2, 3, None, None])\n\n        # With fillvalue\n        self.assertEqual(\n            mi.take(5, mi.padded(seq, fillvalue='')), [1, 2, 3, '', '']\n        )",
+      "symbol": "PaddedTest.test_no_n",
+      "truncated": false
+    },
+    {
+      "snapshot_id": "34bbe4aa95c559925b195310",
+      "chunk_id": "4a75335420340f43eddc360f",
+      "path": "tests/test_recipes.py",
+      "start_line": 1107,
+      "end_line": 1119,
+      "content_hash": "5bb7312e5b5ee193b41aab3886e03306fcfdd26629c478d35240afba998c1596",
+      "content": "    def test_basic(self):\n        iterable = range(1, 5 + 1)\n        for n, expected in (\n            (1, [(1,), (2,), (3,), (4,), (5,)]),\n            (2, [(1, 2), (3, 4), (5,)]),\n            (3, [(1, 2, 3), (4, 5)]),\n            (4, [(1, 2, 3, 4), (5,)]),\n            (5, [(1, 2, 3, 4, 5)]),\n            (6, [(1, 2, 3, 4, 5)]),\n        ):\n            with self.subTest(n=n):\n                actual = list(mi.batched(iterable, n))\n                self.assertEqual(actual, expected)",
+      "symbol": "BatchedTests.test_basic",
+      "truncated": false
+    },
+    {
+      "snapshot_id": "34bbe4aa95c559925b195310",
+      "chunk_id": "5ac525d71b1ee746e8039cec",
+      "path": "tests/test_more.py",
+      "start_line": 765,
+      "end_line": 767,
+      "content_hash": "a993a1adb9365bcd3e81a1eb124daae35c37dea8e82a95c2b1bc76c113ad75a9",
+      "content": "    def test_basic(self):\n        it = iter(['item'])\n        self.assertEqual(mi.one(it), 'item')",
+      "symbol": "OneTests.test_basic",
+      "truncated": false
+    },
+    {
+      "snapshot_id": "34bbe4aa95c559925b195310",
+      "chunk_id": "f01b5ae7c3b67136f3de751d",
+      "path": ".github/ISSUE_TEMPLATE/propose-a-new-itertool.md",
+      "start_line": 10,
+      "end_line": 12,
+      "content_hash": "ee955d826d2d7de1f6f5299b878bae992ac8a10346295d787201f54aeb25a00d",
+      "content": "### Description\n<!-- Explain what your proposed itertools does here -->\n",
+      "symbol": "Description",
+      "truncated": false
+    },
+    {
+      "snapshot_id": "34bbe4aa95c559925b195310",
+      "chunk_id": "0a87a320774ca634b6a8bda8",
+      "path": "tests/test_more.py",
+      "start_line": 2439,
+      "end_line": 2440,
+      "content_hash": "529c83a46c64a0152213652efa604df8262253aea42da17f2b43b92c41989e6d",
+      "content": "    def test_single(self):\n        self.assertEqual(list(mi.always_iterable(1)), [1])",
+      "symbol": "TestAlwaysIterable.test_single",
+      "truncated": false
+    }
+  ],
+  "neural_work": {
+    "embedding_hits": 1,
+    "embedding_new": 0,
+    "rerank_hits": 9,
+    "rerank_new": 11
+  },
+  "generation_requests": 0
+}

@@ -1,0 +1,303 @@
+{
+  "questions": 1,
+  "planned_answers": 1,
+  "records": 1,
+  "reviews": {
+    "new-confirm-tinydb-remove-02--literal-test": {
+      "candidate_id": "new-confirm-tinydb-remove-02--literal-test",
+      "correctness": "correct",
+      "citation_support": "supported",
+      "completeness": "adequate",
+      "abstention": "not_applicable",
+      "entry_scope": "correct",
+      "consistency": "consistent",
+      "claims": [
+        {
+          "claim": "doc_id=7存在、99缺失时remove(doc_ids=[7,99])不因99缺失整体报错，仅删除7并返回[7]。",
+          "status": "supported",
+          "rationale": "641–664在updater中先筛选当前存在的请求ID、再删除并返回removed_ids；给定只有7存在，99被静默跳过。题目两个具体结果与实现一致。",
+          "evidence": [
+            {
+              "path": "tinydb/table.py",
+              "start_line": 641,
+              "end_line": 664
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "tinydb/table.py",
+              "start_line": 641,
+              "end_line": 664,
+              "content": "        if doc_ids is not None:\n            # This function returns the list of IDs for the documents that\n            # have been removed. Document IDs that don't exist in the table\n            # are silently skipped, mirroring the behaviour of\n            # ``get(doc_ids=...)`` (see issue #591). The list of *actually*\n            # removed IDs is determined inside the updater so it reflects the\n            # table state at write time.\n            requested_ids = list(doc_ids)\n            removed_ids: list[int] = []\n\n            def updater(table: dict):\n                # Filter to IDs that exist *before* performing any removals,\n                # so the operation is atomic: either every existing target is\n                # removed, or none is.\n                removed_ids.extend(\n                    doc_id for doc_id in requested_ids if doc_id in table\n                )\n                for doc_id in removed_ids:\n                    del table[doc_id]\n\n            # Perform the remove operation\n            self._update_table(updater)\n\n            return removed_ids",
+              "content_sha256": "7694f9b0ad28084d6e59cf37382f1d56df66026462020e361b337676b53e0b71",
+              "visible_to_generator": true
+            }
+          ]
+        },
+        {
+          "claim": "完全不传cond或doc_ids的remove()不清全表，而抛RuntimeError并提示truncate()。",
+          "status": "supported",
+          "rationale": "两个参数均默认None，既不进入641分支也不进入666分支，最终696明确抛RuntimeError('Use truncate() to remove all documents')；原引用覆盖696。",
+          "evidence": [
+            {
+              "path": "tinydb/table.py",
+              "start_line": 625,
+              "end_line": 641
+            },
+            {
+              "path": "tinydb/table.py",
+              "start_line": 666,
+              "end_line": 696
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "tinydb/table.py",
+              "start_line": 625,
+              "end_line": 641,
+              "content": "    def remove(\n        self,\n        cond: Optional[QueryLike] = None,\n        doc_ids: Optional[Iterable[int]] = None,\n    ) -> list[int]:\n        \"\"\"\n        Remove all matching documents.\n\n        When ``doc_ids`` is given, IDs that don't refer to an existing\n        document are silently skipped, and the returned list only contains\n        the IDs that were actually removed.\n\n        :param cond: the condition to check against\n        :param doc_ids: a list of document IDs\n        :returns: a list containing the removed documents' ID\n        \"\"\"\n        if doc_ids is not None:",
+              "content_sha256": "d384827fca5e9865a2014148ce0b257f2ac559183b2fa74c6c8b717b489a73ab",
+              "visible_to_generator": true
+            },
+            {
+              "path": "tinydb/table.py",
+              "start_line": 666,
+              "end_line": 696,
+              "content": "        if cond is not None:\n            removed_ids = []\n\n            # This updater function will be called with the table data\n            # as its first argument. See ``Table._update`` for details on this\n            # operation\n            def updater(table: dict):\n                # We need to convince MyPy (the static type checker) that\n                # the ``cond is not None`` invariant still holds true when\n                # the updater function is called\n                _cond = cast(QueryLike, cond)\n\n                # We need to convert the keys iterator to a list because\n                # we may remove entries from the ``table`` dict during\n                # iteration and doing this without the list conversion would\n                # result in an exception (RuntimeError: dictionary changed size\n                # during iteration)\n                for doc_id in list(table.keys()):\n                    if _cond(table[doc_id]):\n                        # Add document ID to list of removed document IDs\n                        removed_ids.append(doc_id)\n\n                        # Remove document from the table\n                        table.pop(doc_id)\n\n            # Perform the remove operation\n            self._update_table(updater)\n\n            return removed_ids\n\n        raise RuntimeError('Use truncate() to remove all documents')",
+              "content_sha256": "b992ef278ac5564b53f8ae6e2ca6d0f51b76affc8c3b2357dbd20172e9af3755",
+              "visible_to_generator": true
+            }
+          ]
+        },
+        {
+          "claim": "test_doc_id_missing_consistency和test_remove_ids_missing证明缺失ID的remove不抛异常且返回空列表。",
+          "status": "supported",
+          "rationale": "364和230均实际断言db.remove(doc_ids=[99]) == []；231还验证表长度保持3。正文指的是remove缺失ID行为，没有编造对所有方法都返回同一值。",
+          "evidence": [
+            {
+              "path": "tests/test_tinydb.py",
+              "start_line": 226,
+              "end_line": 231
+            },
+            {
+              "path": "tests/test_tinydb.py",
+              "start_line": 358,
+              "end_line": 364
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "tests/test_tinydb.py",
+              "start_line": 226,
+              "end_line": 231,
+              "content": "def test_remove_ids_missing(db: TinyDB):\n    # Removing by a non-existent doc_id should not raise; the returned list\n    # only contains IDs that were actually removed. This mirrors the silent\n    # behaviour of ``get(doc_id=N)`` / ``get(doc_ids=[N])``.\n    assert db.remove(doc_ids=[99]) == []\n    assert len(db) == 3",
+              "content_sha256": "85e3d57bd4971aedf887029a43de8bae816c631a673f85578234052e531411e5",
+              "visible_to_generator": true
+            },
+            {
+              "path": "tests/test_tinydb.py",
+              "start_line": 358,
+              "end_line": 364,
+              "content": "def test_doc_id_missing_consistency(db: TinyDB):\n    # ``get``, ``update`` and ``remove`` must all behave consistently when\n    # given an ID that does not exist (see #591). None of them should raise.\n    assert db.get(doc_id=99) is None\n    assert db.get(doc_ids=[99]) == []\n    assert db.update({'int': 9}, doc_ids=[99]) == []\n    assert db.remove(doc_ids=[99]) == []",
+              "content_sha256": "0d02a53bc3c8f6314d2bf49f6a0f60c083f7ff518a0e0a704394780eda0812ab",
+              "visible_to_generator": true
+            }
+          ]
+        },
+        {
+          "claim": "test_remove_all_fails以pytest.raises(RuntimeError)包围无参数db.remove()，验证无参保护。",
+          "status": "supported",
+          "rationale": "205–207是实际单独测试，完整交付给此生成；回答明确测试名、无参输入和RuntimeError断言，不再把生产raise当测试或说测试不存在。",
+          "evidence": [
+            {
+              "path": "tests/test_tinydb.py",
+              "start_line": 205,
+              "end_line": 207
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "tests/test_tinydb.py",
+              "start_line": 205,
+              "end_line": 207,
+              "content": "def test_remove_all_fails(db: TinyDB):\n    with pytest.raises(RuntimeError):\n        db.remove()",
+              "content_sha256": "7141fb8991338c114c483a934988e310240b4c582863adda01800b22cb187988",
+              "visible_to_generator": true
+            }
+          ]
+        }
+      ],
+      "notes": "逐项覆盖删除/返回结果、缺失ID处理、无参保护、真实测试及关键断言，全部主结论有本轮交付来源支持。混合ID测试234–242不在本次输入，答案没有声称看到该测试；混合输入的[7]结论由已交付完整实现推导。没有追加未问事务性、重复ID或模型运行结果。原控制错称不存在专门无参断言，本次修正该实质错误。",
+      "key_points": null,
+      "candidate_sha256": "cea3f3121700eb8a0f90d41c7eea35c2f14a65c7a873853f8d3f291b81e7228d",
+      "reviewer": "Codex (current session)",
+      "review_type": "model_assisted_nonblind_development_review",
+      "human_approved": false,
+      "training_eligible": false,
+      "result_sha256": "670c6b373065d45dcb9794cc9e71c18de4a3efb823ab937dcb294cc12a7fe6ce"
+    }
+  },
+  "groups": {
+    "all/bm25_code": {
+      "records": 1,
+      "success": 1,
+      "model_requests": 1,
+      "tool_calls": 0,
+      "episodes_using_tools": 0,
+      "citation_ranges_valid": 1,
+      "initial_reference_complete": 0,
+      "final_reference_complete": 0,
+      "initial_nonblank_reference_complete": 0,
+      "final_nonblank_reference_complete": 0,
+      "requests_without_usage": 0,
+      "requests_without_elapsed": 0,
+      "prompt_tokens": 3137,
+      "completion_tokens": 479,
+      "generator_seconds": 30.109,
+      "reviewed": 1,
+      "factually_correct": 1,
+      "core_supported": 1,
+      "fully_resolved": 1
+    },
+    "new-question-confirmation/bm25_code": {
+      "records": 1,
+      "success": 1,
+      "model_requests": 1,
+      "tool_calls": 0,
+      "episodes_using_tools": 0,
+      "citation_ranges_valid": 1,
+      "initial_reference_complete": 0,
+      "final_reference_complete": 0,
+      "initial_nonblank_reference_complete": 0,
+      "final_nonblank_reference_complete": 0,
+      "requests_without_usage": 0,
+      "requests_without_elapsed": 0,
+      "prompt_tokens": 3137,
+      "completion_tokens": 479,
+      "generator_seconds": 30.109,
+      "reviewed": 1,
+      "factually_correct": 1,
+      "core_supported": 1,
+      "fully_resolved": 1
+    },
+    "known-failure-repair/bm25_code": {
+      "records": 1,
+      "success": 1,
+      "model_requests": 1,
+      "tool_calls": 0,
+      "episodes_using_tools": 0,
+      "citation_ranges_valid": 1,
+      "initial_reference_complete": 0,
+      "final_reference_complete": 0,
+      "initial_nonblank_reference_complete": 0,
+      "final_nonblank_reference_complete": 0,
+      "requests_without_usage": 0,
+      "requests_without_elapsed": 0,
+      "prompt_tokens": 3137,
+      "completion_tokens": 479,
+      "generator_seconds": 30.109,
+      "reviewed": 1,
+      "factually_correct": 1,
+      "core_supported": 1,
+      "fully_resolved": 1
+    },
+    "answerable/bm25_code": {
+      "records": 1,
+      "success": 1,
+      "model_requests": 1,
+      "tool_calls": 0,
+      "episodes_using_tools": 0,
+      "citation_ranges_valid": 1,
+      "initial_reference_complete": 0,
+      "final_reference_complete": 0,
+      "initial_nonblank_reference_complete": 0,
+      "final_nonblank_reference_complete": 0,
+      "requests_without_usage": 0,
+      "requests_without_elapsed": 0,
+      "prompt_tokens": 3137,
+      "completion_tokens": 479,
+      "generator_seconds": 30.109,
+      "reviewed": 1,
+      "factually_correct": 1,
+      "core_supported": 1,
+      "fully_resolved": 1
+    }
+  },
+  "retrieval": {
+    "shared_initial": {
+      "answerable": 1,
+      "reference_complete": 0,
+      "nonblank_reference_complete": 0
+    }
+  },
+  "new_requests": 1,
+  "combined_requests": 1387,
+  "paid_requests": 0,
+  "human_approved": false,
+  "training_eligible": false,
+  "reporting_implementation": "4432a399824bc989792b734caf26caf8da5ada5fef0941d184fd5a00d4ae2e6b",
+  "usage_observation_note": "Token/time sums include observed values only. Missing usage and elapsed time remain unknown in raw records; reservations still count every sent or ambiguous request.",
+  "checks": {
+    "accepted": true,
+    "gate_frozen_before_generation": true,
+    "paired_known_target": {
+      "batch": "experiments/new-question-q4-confirmation",
+      "case_id": "new-confirm-tinydb-remove-02--q4-fixed",
+      "result_sha256": "fa3930a43db74ef38dc71a5ac115105642d6d53359eac677af8b718444549364",
+      "before": {
+        "factually_correct": false,
+        "core_supported": false,
+        "fully_resolved": false
+      },
+      "after": {
+        "factually_correct": true,
+        "core_supported": true,
+        "fully_resolved": true
+      },
+      "settings_equal": true,
+      "system_message_equal": true,
+      "user_payload_except_context_equal": true,
+      "original_failure": "原回答明确错误声称测试文件没有专门针对无参异常的断言；实际205–207早已存在但未交付。原始记录/评审均未修改。"
+    },
+    "offline_inputs": {
+      "questions": 75,
+      "unchanged": 74,
+      "changed_ids": [
+        "new-confirm-tinydb-remove-02"
+      ],
+      "other_source_loss": false,
+      "all_within_original_budgets": true,
+      "reference_nonblank_before": 1359,
+      "reference_nonblank_after": 1353,
+      "tradeoff": "TinyDB swaps tests/test_tinydb.py234–242 mixed-ID test for205–207 no-argument guard; full implementation and missing-only test retained. No monotonic reference-coverage claim."
+    },
+    "saved_wire_protections": {
+      "improvement-confirm-blinker-02": {
+        "control_batch": "current-rag-refresh",
+        "case_id": "improvement-confirm-blinker-02--current-rag",
+        "body_sha256": "f3f11894a2c1c01a17c14c301fbb58f3746fea36152ff927b418a67f8ee12f3d",
+        "identical": true
+      },
+      "q-f33bdd28fc012276": {
+        "control_batch": "current-rag-refresh",
+        "case_id": "q-f33bdd28fc012276--current-rag",
+        "body_sha256": "c316b7607cfcefa22a58cf8ec9badc7019f5fe3995de3ac7c454bc9210353ffa",
+        "identical": true
+      },
+      "improvement-confirm-blinker-05": {
+        "control_batch": "current-rag-refresh",
+        "case_id": "improvement-confirm-blinker-05--current-rag",
+        "body_sha256": "1ba088a15ea930ee2b710a9ab38d56577544ebe6eeeee8e5326834049cc6daa6",
+        "identical": true
+      },
+      "new-confirm-schedule-random-03": {
+        "control_batch": "new-question-q4-confirmation",
+        "case_id": "new-confirm-schedule-random-03--q4-fixed",
+        "body_sha256": "f41d498cb4ed1ae14f78015ed228eaa26f5eede6d3c2955ce744f518bc06d219",
+        "identical": true
+      }
+    },
+    "scope": "One known-failure repair; four saved exact-input protections, no newly generated protection answers and no updated overall accuracy. Same daily Q4, no model/settings/prompt/schema changes. Candidate adds no runtime module, tool, configuration or model request to normal retrieval."
+  },
+  "scope": "One known TinyDB failure, original daily Q4, unchanged sampling, prompt, schema and six-unit/8KB retrieval caps. Candidate adds literal zero-argument test recall only when a single reliable Python symbol and explicit test request are present. 75-task offline audit changed only this question. No new general accuracy estimate, no human approval, no target-code execution, no new model, no training."
+}

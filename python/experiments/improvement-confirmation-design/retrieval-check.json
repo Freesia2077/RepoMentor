@@ -1,0 +1,535 @@
+{
+  "schema": "repomentor.confirmation-offline-retrieval.v1",
+  "design_manifest_sha256": "bde01987a623b56c497994994e65f7fb5322c5d9ed6ce0b11c20adfafde1ea92",
+  "generator_requests": 0,
+  "network_connects_allowed": false,
+  "policy": {
+    "chunker": "syntax",
+    "retriever": "bm25",
+    "device": "cpu",
+    "query_expansion": true,
+    "code_aware": true,
+    "top_k": 6,
+    "candidate_k": 20,
+    "chunk_size": 768,
+    "source_bytes": 8000,
+    "max_lines": 40,
+    "overlap_lines": 8
+  },
+  "rows": [
+    {
+      "task_id": "improvement-confirm-blinker-01",
+      "input_sha256": "858846c5cde3087a946e6186a037fd6c341e0a02b8b37e4013dc2e732677abf7",
+      "index_id": "b13e7fa1bbece28b3659cc66",
+      "strict_reference_range_coverage": 0.0,
+      "all_nonblank_reference_lines_present": false,
+      "source_ranges": [
+        {
+          "path": "tests/test_signals.py",
+          "start_line": 397,
+          "end_line": 414,
+          "content": "def test_no_double_send() -> None:\n    sentinel = []\n\n    def received(sender: t.Any) -> None:\n        sentinel.append(sender)\n\n    sig = blinker.Signal()\n\n    sig.connect(received, 123)\n    sig.connect(received)\n\n    assert not sentinel\n    sig.send()\n    assert sentinel == [None]\n    sig.send(123)\n    assert sentinel == [None, 123]\n    sig.send()\n    assert sentinel == [None, 123, None]",
+          "content_sha256": "4353e18c11322c495e1fdbb3a93dce8268bf596ea5f68492bcf670f6ff205e47"
+        },
+        {
+          "path": "tests/test_signals.py",
+          "start_line": 311,
+          "end_line": 339,
+          "content": "def test_filtered_receiver() -> None:\n    sentinel = []\n\n    def received(sender: t.Any) -> None:\n        sentinel.append(sender)\n\n    sig = blinker.Signal()\n\n    sig.connect(received, 123)\n\n    assert not sentinel\n    sig.send()\n    assert not sentinel\n    sig.send(123)\n    assert sentinel == [123]\n    sig.send()\n    assert sentinel == [123]\n\n    sig.disconnect(received, 123)\n    sig.send(123)\n    assert sentinel == [123]\n\n    sig.connect(received, 123)\n    sig.send(123)\n    assert sentinel == [123, 123]\n\n    sig.disconnect(received)\n    sig.send(123)\n    assert sentinel == [123, 123]",
+          "content_sha256": "868013130e908e7cd68c88565c8b6bde7b90f9549bb221e626db109b81e984cd"
+        },
+        {
+          "path": "tests/test_signals.py",
+          "start_line": 161,
+          "end_line": 201,
+          "content": "def test_empty_bucket_growth() -> None:\n    def senders() -> tuple[int, int]:\n        return (\n            len(sig._by_sender),\n            sum(len(i) for i in sig._by_sender.values()),\n        )\n\n    def receivers() -> tuple[int, int]:\n        return (\n            len(sig._by_receiver),\n            sum(len(i) for i in sig._by_receiver.values()),\n        )\n\n    sentinel = Sentinel()\n    sig = blinker.Signal()\n    receiver1 = sentinel.make_receiver(\"receiver1\")\n    receiver2 = sentinel.make_receiver(\"receiver2\")\n\n    class Sender:\n        \"\"\"A weakref-able object.\"\"\"\n\n    sender = Sender()\n    sig.connect(receiver1, sender=sender)\n    sig.connect(receiver2, sender=sender)\n\n    assert senders() == (1, 2)\n    assert receivers() == (2, 2)\n\n    sig.disconnect(receiver1, sender=sender)\n\n    assert senders() == (1, 1)\n    assert receivers() == (2, 1)\n\n    sig.disconnect(receiver2, sender=sender)\n\n    assert senders() == (1, 0)\n    assert receivers() == (2, 0)\n\n    sig._cleanup_bookkeeping()\n    assert senders() == (0, 0)\n    assert receivers() == (0, 0)",
+          "content_sha256": "24b143c7d9c6ac1acfbbfefb9933be3557ec82bab9f684440083317efd59a41b"
+        },
+        {
+          "path": "tests/test_signals.py",
+          "start_line": 417,
+          "end_line": 450,
+          "content": "def test_has_receivers() -> None:\n    def received(_: t.Any) -> None:\n        return None\n\n    sig = blinker.Signal()\n    assert not sig.has_receivers_for(None)\n    assert not sig.has_receivers_for(blinker.ANY)\n\n    sig.connect(received, \"xyz\")\n    assert not sig.has_receivers_for(None)\n    assert not sig.has_receivers_for(blinker.ANY)\n    assert sig.has_receivers_for(\"xyz\")\n\n    class Object:\n        pass\n\n    o = Object()\n\n    sig.connect(received, o)\n    assert sig.has_receivers_for(o)\n\n    del received\n    collect_acyclic_refs()\n\n    assert not sig.has_receivers_for(\"xyz\")\n    assert list(sig.receivers_for(\"xyz\")) == []\n    assert list(sig.receivers_for(o)) == []\n\n    sig.connect(lambda sender: None, weak=False)\n    assert sig.has_receivers_for(\"xyz\")\n    assert sig.has_receivers_for(o)\n    assert sig.has_receivers_for(None)\n    assert sig.has_receivers_for(blinker.ANY)\n    assert sig.has_receivers_for(\"xyz\")",
+          "content_sha256": "2f47feb4755430bcf158e2df9d4a98bbc98fb0566a7fb8c72bb54842742f023e"
+        },
+        {
+          "path": "tests/test_signals.py",
+          "start_line": 466,
+          "end_line": 480,
+          "content": "def test_mute_signal() -> None:\n    sentinel = []\n\n    def received(sender: t.Any) -> None:\n        sentinel.append(sender)\n\n    sig = blinker.Signal()\n    sig.connect(received)\n\n    sig.send(123)\n    assert 123 in sentinel\n\n    with sig.muted():\n        sig.send(456)\n    assert 456 not in sentinel",
+          "content_sha256": "3cb5085ece59771919057adc8fbb06e2358d19632af27b1ff8484701f147591e"
+        },
+        {
+          "path": "tests/test_signals.py",
+          "start_line": 123,
+          "end_line": 158,
+          "content": "def test_signal_signals_weak_sender() -> None:\n    sentinel = Sentinel()\n    sig = blinker.Signal()\n\n    connected = sentinel.make_receiver(\"receiver_connected\")\n    disconnected = sentinel.make_receiver(\"receiver_disconnected\")\n    receiver1 = sentinel.make_receiver(\"receiver1\")\n    receiver2 = sentinel.make_receiver(\"receiver2\")\n\n    class Sender:\n        \"\"\"A weakref-able object.\"\"\"\n\n    sig.receiver_connected.connect(connected)\n    sig.receiver_disconnected.connect(disconnected)\n\n    sender1 = Sender()\n    sig.connect(receiver1, sender=sender1, weak=False)\n    # regular disconnect of weak-able sender works fine\n    sig.disconnect(receiver1, sender=sender1)\n\n    assert len(sentinel) == 2\n\n    del sentinel[:]\n    sender2 = Sender()\n    sig.connect(receiver2, sender=sender2, weak=False)\n\n    # force sender2 to go out of scope\n    del sender2\n    collect_acyclic_refs()\n\n    # no disconnect signal is fired\n    assert len(sentinel) == 1\n\n    # and everything really is disconnected\n    sig.send(\"abc\")\n    assert len(sentinel) == 1",
+          "content_sha256": "4bbf1f6c9993236dd7820b58ef17b908bf8f8c5ee2915a87fed98ba08262ee63"
+        }
+      ],
+      "budget_fits": true
+    },
+    {
+      "task_id": "improvement-confirm-blinker-02",
+      "input_sha256": "3b4f5019383f82f54153ea00031804143838f167747f1711f93bb91dfe77611e",
+      "index_id": "b13e7fa1bbece28b3659cc66",
+      "strict_reference_range_coverage": 0.25,
+      "all_nonblank_reference_lines_present": false,
+      "source_ranges": [
+        {
+          "path": "tests/test_signals.py",
+          "start_line": 311,
+          "end_line": 339,
+          "content": "def test_filtered_receiver() -> None:\n    sentinel = []\n\n    def received(sender: t.Any) -> None:\n        sentinel.append(sender)\n\n    sig = blinker.Signal()\n\n    sig.connect(received, 123)\n\n    assert not sentinel\n    sig.send()\n    assert not sentinel\n    sig.send(123)\n    assert sentinel == [123]\n    sig.send()\n    assert sentinel == [123]\n\n    sig.disconnect(received, 123)\n    sig.send(123)\n    assert sentinel == [123]\n\n    sig.connect(received, 123)\n    sig.send(123)\n    assert sentinel == [123, 123]\n\n    sig.disconnect(received)\n    sig.send(123)\n    assert sentinel == [123, 123]",
+          "content_sha256": "868013130e908e7cd68c88565c8b6bde7b90f9549bb221e626db109b81e984cd"
+        },
+        {
+          "path": "tests/test_signals.py",
+          "start_line": 397,
+          "end_line": 414,
+          "content": "def test_no_double_send() -> None:\n    sentinel = []\n\n    def received(sender: t.Any) -> None:\n        sentinel.append(sender)\n\n    sig = blinker.Signal()\n\n    sig.connect(received, 123)\n    sig.connect(received)\n\n    assert not sentinel\n    sig.send()\n    assert sentinel == [None]\n    sig.send(123)\n    assert sentinel == [None, 123]\n    sig.send()\n    assert sentinel == [None, 123, None]",
+          "content_sha256": "4353e18c11322c495e1fdbb3a93dce8268bf596ea5f68492bcf670f6ff205e47"
+        },
+        {
+          "path": "tests/test_signals.py",
+          "start_line": 466,
+          "end_line": 480,
+          "content": "def test_mute_signal() -> None:\n    sentinel = []\n\n    def received(sender: t.Any) -> None:\n        sentinel.append(sender)\n\n    sig = blinker.Signal()\n    sig.connect(received)\n\n    sig.send(123)\n    assert 123 in sentinel\n\n    with sig.muted():\n        sig.send(456)\n    assert 456 not in sentinel",
+          "content_sha256": "3cb5085ece59771919057adc8fbb06e2358d19632af27b1ff8484701f147591e"
+        },
+        {
+          "path": "tests/test_signals.py",
+          "start_line": 370,
+          "end_line": 394,
+          "content": "def test_decorated_receiver() -> None:\n    sentinel = []\n\n    class Object:\n        pass\n\n    obj = Object()\n\n    sig = blinker.Signal()\n\n    @sig.connect_via(obj)\n    def receiver(sender: t.Any, **kw: t.Any) -> None:\n        sentinel.append(kw)\n\n    assert not sentinel\n    sig.send()\n    assert not sentinel\n    sig.send(1)\n    assert not sentinel\n    sig.send(obj)\n    assert sig.receivers\n\n    del receiver\n    collect_acyclic_refs()\n    assert sig.receivers",
+          "content_sha256": "c8a48bc38c6befe31c7a64a684b0355ea949dda3ae0b9502ff3c4bf3642d2b45"
+        },
+        {
+          "path": "tests/test_context.py",
+          "start_line": 10,
+          "end_line": 24,
+          "content": "def test_temp_connection() -> None:\n    sig = Signal()\n\n    canary = []\n\n    def receiver(sender: t.Any) -> None:\n        canary.append(sender)\n\n    sig.send(1)\n    with sig.connected_to(receiver):\n        sig.send(2)\n    sig.send(3)\n\n    assert canary == [2]\n    assert not sig.receivers",
+          "content_sha256": "b9144e20722cac32b09ab91880c3ffb22496c9bea3aef4326458abdf6cd601b8"
+        },
+        {
+          "path": "tests/test_context.py",
+          "start_line": 27,
+          "end_line": 40,
+          "content": "def test_temp_connection_for_sender() -> None:\n    sig = Signal()\n\n    canary = []\n\n    def receiver(sender: t.Any) -> None:\n        canary.append(sender)\n\n    with sig.connected_to(receiver, sender=2):\n        sig.send(1)\n        sig.send(2)\n\n    assert canary == [2]\n    assert not sig.receivers",
+          "content_sha256": "65fd8f777f22120e958d175b00adccbf8da53d188e6cff5b7062e0b974f89cad"
+        }
+      ],
+      "budget_fits": true
+    },
+    {
+      "task_id": "improvement-confirm-blinker-03",
+      "input_sha256": "f57322ec84450b16bbf20046b8740d977592fc903c705954d2c5adbc9969eafd",
+      "index_id": "b13e7fa1bbece28b3659cc66",
+      "strict_reference_range_coverage": 0.0,
+      "all_nonblank_reference_lines_present": false,
+      "source_ranges": [
+        {
+          "path": "tests/test_context.py",
+          "start_line": 57,
+          "end_line": 58,
+          "content": "    def receiver(sender: t.Any) -> None:\n        canary.append(sender)",
+          "content_sha256": "f132781f12ec6b377a19b6c91233ee51aff618d772c60ae22072f07a767072f2"
+        },
+        {
+          "path": "tests/test_context.py",
+          "start_line": 15,
+          "end_line": 16,
+          "content": "    def receiver(sender: t.Any) -> None:\n        canary.append(sender)",
+          "content_sha256": "f132781f12ec6b377a19b6c91233ee51aff618d772c60ae22072f07a767072f2"
+        },
+        {
+          "path": "tests/test_context.py",
+          "start_line": 32,
+          "end_line": 33,
+          "content": "    def receiver(sender: t.Any) -> None:\n        canary.append(sender)",
+          "content_sha256": "f132781f12ec6b377a19b6c91233ee51aff618d772c60ae22072f07a767072f2"
+        },
+        {
+          "path": "tests/test_signals.py",
+          "start_line": 380,
+          "end_line": 382,
+          "content": "    @sig.connect_via(obj)\n    def receiver(sender: t.Any, **kw: t.Any) -> None:\n        sentinel.append(kw)",
+          "content_sha256": "b0a4fa3ce79b7b3a37e1fe9d5cbbe75d624b36cfdefd1d9facedb2b9d0fe9222"
+        },
+        {
+          "path": "tests/test_signals.py",
+          "start_line": 29,
+          "end_line": 30,
+          "content": "        def receiver(*sentby: t.Any, **kw: t.Any) -> None:\n            self.append((key, sentby[0], kw))",
+          "content_sha256": "574b847ac4003ccc1674fc9b8aaa2567d294be58b873bfbba1e1ff18dbd00f19"
+        },
+        {
+          "path": "tests/test_signals.py",
+          "start_line": 289,
+          "end_line": 294,
+          "content": "    class Receiver:\n        def __init__(self, bucket: list[t.Any]) -> None:\n            self.bucket = bucket\n\n        def received(self, sender: t.Any) -> None:\n            self.bucket.append(sender)",
+          "content_sha256": "4678e6d1df1029c80f595bdc5bc5ac397d3d36f89e264af7c7394b968de89c82"
+        }
+      ],
+      "budget_fits": true
+    },
+    {
+      "task_id": "improvement-confirm-blinker-04",
+      "input_sha256": "d263927de3b137159039156f1a2c157984f7e1e493b73f11dfcca91de4984681",
+      "index_id": "b13e7fa1bbece28b3659cc66",
+      "strict_reference_range_coverage": 0.3333333333333333,
+      "all_nonblank_reference_lines_present": false,
+      "source_ranges": [
+        {
+          "path": "tests/test_signals.py",
+          "start_line": 260,
+          "end_line": 283,
+          "content": "async def test_async_receiver() -> None:\n    sentinel = []\n\n    async def received_async(sender: t.Any) -> None:\n        sentinel.append(sender)\n\n    def received(sender: t.Any) -> None:\n        sentinel.append(sender)\n\n    def wrapper(func: c.Callable[..., t.Any]) -> c.Callable[..., None]:\n        async def inner(*args: t.Any, **kwargs: t.Any) -> None:\n            func(*args, **kwargs)\n\n        return inner  # type: ignore[return-value]\n\n    sig = blinker.Signal()\n    sig.connect(received)\n    sig.connect(received_async)\n\n    await sig.send_async(_sync_wrapper=wrapper)  # type: ignore[arg-type]\n    assert len(sentinel) == 2\n\n    with pytest.raises(RuntimeError):\n        sig.send()",
+          "content_sha256": "d66421a34b5b8d969d48dd54f6e4d4528ce331346b2c30019e2b0a1213ca830c"
+        },
+        {
+          "path": "docs/index.rst",
+          "start_line": 267,
+          "end_line": 289,
+          "content": "Both named and anonymous signals can be passed a ``doc`` argument at\nconstruction to set the pydoc help text for the signal.  This\ndocumentation will be picked up by most documentation generators (such\nas sphinx) and is nice for documenting any additional data parameters\nthat will be sent down with the signal.\n\n\nAsync receivers\n---------------\n\nReceivers can be coroutine functions which can be called and awaited\nvia the :meth:`~Signal.send_async` method:\n\n.. code-block:: python\n\n   sig = blinker.Signal()\n\n   async def receiver():\n       ...\n\n   sig.connect(receiver)\n   await sig.send_async()\n",
+          "content_sha256": "7353c77b8d0c5224abc5c9211abb847cbf4dea9d8f3537bb1d7d7a2ec8f8d1e9"
+        },
+        {
+          "path": "docs/index.rst",
+          "start_line": 290,
+          "end_line": 319,
+          "content": "This however requires that all receivers are awaitable which then\nprecludes the usage of :meth:`~Signal.send`. To mix and match the\n:meth:`~Signal.send_async` method takes a ``_sync_wrapper`` argument\nsuch as:\n\n.. code-block:: python\n\n   sig = blinker.Signal()\n\n   def receiver():\n       ...\n\n   sig.connect(receiver)\n\n   def wrapper(func):\n\n       async def inner(*args, **kwargs):\n           func(*args, **kwargs)\n\n       return inner\n\n   await sig.send_async(_sync_wrapper=wrapper)\n\nThe equivalent usage for :meth:`~Signal.send` is via the\n``_async_wrapper`` argument. This usage is will depend on your event\nloop, and in the simple case whereby you aren't running within an\nevent loop the following example can be used:\n\n.. code-block:: python\n",
+          "content_sha256": "223ba308a12ff684984ff6de24a9bdd9aaaffb260f23345dedf5019582238709"
+        },
+        {
+          "path": "tests/test_signals.py",
+          "start_line": 311,
+          "end_line": 339,
+          "content": "def test_filtered_receiver() -> None:\n    sentinel = []\n\n    def received(sender: t.Any) -> None:\n        sentinel.append(sender)\n\n    sig = blinker.Signal()\n\n    sig.connect(received, 123)\n\n    assert not sentinel\n    sig.send()\n    assert not sentinel\n    sig.send(123)\n    assert sentinel == [123]\n    sig.send()\n    assert sentinel == [123]\n\n    sig.disconnect(received, 123)\n    sig.send(123)\n    assert sentinel == [123]\n\n    sig.connect(received, 123)\n    sig.send(123)\n    assert sentinel == [123, 123]\n\n    sig.disconnect(received)\n    sig.send(123)\n    assert sentinel == [123, 123]",
+          "content_sha256": "868013130e908e7cd68c88565c8b6bde7b90f9549bb221e626db109b81e984cd"
+        },
+        {
+          "path": "tests/test_signals.py",
+          "start_line": 397,
+          "end_line": 414,
+          "content": "def test_no_double_send() -> None:\n    sentinel = []\n\n    def received(sender: t.Any) -> None:\n        sentinel.append(sender)\n\n    sig = blinker.Signal()\n\n    sig.connect(received, 123)\n    sig.connect(received)\n\n    assert not sentinel\n    sig.send()\n    assert sentinel == [None]\n    sig.send(123)\n    assert sentinel == [None, 123]\n    sig.send()\n    assert sentinel == [None, 123, None]",
+          "content_sha256": "4353e18c11322c495e1fdbb3a93dce8268bf596ea5f68492bcf670f6ff205e47"
+        },
+        {
+          "path": "tests/test_context.py",
+          "start_line": 10,
+          "end_line": 24,
+          "content": "def test_temp_connection() -> None:\n    sig = Signal()\n\n    canary = []\n\n    def receiver(sender: t.Any) -> None:\n        canary.append(sender)\n\n    sig.send(1)\n    with sig.connected_to(receiver):\n        sig.send(2)\n    sig.send(3)\n\n    assert canary == [2]\n    assert not sig.receivers",
+          "content_sha256": "b9144e20722cac32b09ab91880c3ffb22496c9bea3aef4326458abdf6cd601b8"
+        }
+      ],
+      "budget_fits": true
+    },
+    {
+      "task_id": "improvement-confirm-blinker-05",
+      "input_sha256": "a888d12d7167a2390aaa1a9ab9f2a12da88de2c8f3ce89bd2ca7a7368f9e75fd",
+      "index_id": "b13e7fa1bbece28b3659cc66",
+      "strict_reference_range_coverage": null,
+      "all_nonblank_reference_lines_present": null,
+      "source_ranges": [
+        {
+          "path": "src/blinker/base.py",
+          "start_line": 141,
+          "end_line": 165,
+          "content": "    def connect_via(self, sender: t.Any, weak: bool = False) -> c.Callable[[F], F]:\n        \"\"\"Connect the decorated function to be called when the signal is sent\n        by ``sender``.\n\n        The decorated function will be called when :meth:`send` is called with\n        the given ``sender``, passing ``sender`` as a positional argument along\n        with any extra keyword arguments.\n\n        :param sender: Any object or :data:`ANY`. ``receiver`` will only be\n            called when :meth:`send` is called with this sender. If ``ANY``, the\n            receiver will be called for any sender. A receiver may be connected\n            to multiple senders by calling :meth:`connect` multiple times.\n        :param weak: Track the receiver with a :mod:`weakref`. The receiver will\n            be automatically disconnected when it is garbage collected. When\n            connecting a receiver defined within a function, set to ``False``,\n            otherwise it will be disconnected when the function scope ends.=\n\n        .. versionadded:: 1.1\n        \"\"\"\n\n        def decorator(fn: F) -> F:\n            self.connect(fn, sender, weak)\n            return fn\n\n        return decorator",
+          "content_sha256": "7edaf3aeb71153e329a351347b6f66af92eee072b89ca1922fae6bc242242f08"
+        },
+        {
+          "path": "src/blinker/base.py",
+          "start_line": 499,
+          "end_line": 500,
+          "content": "class _PNamespaceSignal(t.Protocol):\n    def __call__(self, name: str, doc: str | None = None) -> NamedSignal: ...",
+          "content_sha256": "a6cb39cdeb279f7b3ecc9a00d6aa30695cc482cc27830d4771cb20d09bfb9e89"
+        },
+        {
+          "path": ".readthedocs.yaml",
+          "start_line": 1,
+          "end_line": 10,
+          "content": "version: 2\nbuild:\n  os: ubuntu-24.04\n  tools:\n    python: '3.13'\n  commands:\n    - asdf plugin add uv\n    - asdf install uv latest\n    - asdf global uv latest\n    - uv run --group docs sphinx-build -W -b dirhtml docs $READTHEDOCS_OUTPUT/html",
+          "content_sha256": "cb318b30d96e3fc8ce4135d923367bc3ba5e5db6b938521d70293f0340e92a4c"
+        },
+        {
+          "path": "docs/conf.py",
+          "start_line": 25,
+          "end_line": 40,
+          "content": "html_context = {\n    \"project_links\": [\n        ProjectLink(\"PyPI Releases\", \"https://pypi.org/project/blinker/\"),\n        ProjectLink(\"Source Code\", \"https://github.com/pallets-eco/blinker/\"),\n        ProjectLink(\"Issue Tracker\", \"https://github.com/pallets-eco/blinker/issues/\"),\n    ]\n}\nhtml_sidebars = {\n    \"index\": [\"project.html\", \"localtoc.html\", \"searchbox.html\", \"ethicalads.html\"],\n    \"**\": [\"localtoc.html\", \"relations.html\", \"searchbox.html\", \"ethicalads.html\"],\n}\nsinglehtml_sidebars = {\"index\": [\"project.html\", \"localtoc.html\", \"ethicalads.html\"]}\nhtml_static_path = [\"_static\"]\nhtml_logo = \"_static/blinker-named.png\"\nhtml_title = f\"Blinker Documentation ({version})\"\nhtml_show_sourcelink = False",
+          "content_sha256": "6fc082132dd43779b67d5339ccc18a856b93a86c75e340753c6eae0a45783bd0"
+        },
+        {
+          "path": "docs/index.rst",
+          "start_line": 1,
+          "end_line": 28,
+          "content": ".. rst-class:: hide-header\n\nBlinker Documentation\n=====================\n\n.. image:: _static/blinker-named.png\n    :align: center\n\n.. currentmodule:: blinker\n\nBlinker provides fast & simple object-to-object and broadcast\nsignaling for Python objects.\n\nThe core of Blinker is quite small but provides powerful features:\n\n - a global registry of named signals\n - anonymous signals\n - custom name registries\n - permanently or temporarily connected receivers\n - automatically disconnected receivers via weak referencing\n - sending arbitrary data payloads\n - collecting return values from signal receivers\n - thread safety\n\nBlinker was written by Jason Kirtand and is provided under the MIT\nLicense. The library supports Python 3.9 or later.\n\n",
+          "content_sha256": "5b4af8a9183145aebc45dfd9806ce8402a2c07deeb4dd3f4bf9eeb5c2524aa58"
+        }
+      ],
+      "budget_fits": true
+    },
+    {
+      "task_id": "improvement-confirm-tenacity-01",
+      "input_sha256": "5c06ce02e69194dbef1c19cfc79db79e52f0a76e158660fbcf9ecd9f5f6049b1",
+      "index_id": "e25176b95ad58108300b6041",
+      "strict_reference_range_coverage": 0.0,
+      "all_nonblank_reference_lines_present": false,
+      "source_ranges": [
+        {
+          "path": "tenacity/stop.py",
+          "start_line": 100,
+          "end_line": 117,
+          "content": "class stop_after_delay(stop_base):\n    \"\"\"\n    Stop when the time from the first attempt >= limit.\n\n    Note: `max_delay` will be exceeded, so when used with a `wait`, the actual total delay will be greater\n    than `max_delay` by some of the final sleep period before `max_delay` is exceeded.\n\n    If you need stricter timing with waits, consider `stop_before_delay` instead.\n    \"\"\"\n\n    def __init__(self, max_delay: _utils.time_unit_type) -> None:\n        self.max_delay = _utils.to_seconds(max_delay)\n\n    @override\n    def __call__(self, retry_state: \"RetryCallState\") -> bool:\n        if retry_state.seconds_since_start is None:\n            raise RuntimeError(\"__call__() called but seconds_since_start is not set\")\n        return retry_state.seconds_since_start >= self.max_delay",
+          "content_sha256": "8bbfc79cff11c4df0bcd8d54d8685bc55f260d405fccf99ad103fe29f382a3f3"
+        },
+        {
+          "path": "tenacity/__init__.py",
+          "start_line": 846,
+          "end_line": 872,
+          "content": "    \"retry_if_not_exception_message\",\n    \"retry_if_not_exception_type\",\n    \"retry_if_not_result\",\n    \"retry_if_result\",\n    \"retry_never\",\n    \"retry_unless_exception_type\",\n    \"sleep\",\n    \"sleep_using_event\",\n    \"stop_after_attempt\",\n    \"stop_after_delay\",\n    \"stop_all\",\n    \"stop_any\",\n    \"stop_before_delay\",\n    \"stop_never\",\n    \"stop_when_event_set\",\n    \"wait_chain\",\n    \"wait_combine\",\n    \"wait_exception\",\n    \"wait_exponential\",\n    \"wait_exponential_jitter\",\n    \"wait_fixed\",\n    \"wait_full_jitter\",\n    \"wait_incrementing\",\n    \"wait_none\",\n    \"wait_random\",\n    \"wait_random_exponential\",\n]",
+          "content_sha256": "bf6b7b5a267bffdebdff672a1de4b35463bbe002a187b5b6c453618d00af1441"
+        },
+        {
+          "path": "tenacity/__init__.py",
+          "start_line": 43,
+          "end_line": 71,
+          "content": "# Import all built-in retry strategies for easier usage.\nfrom .retry import (\n    retry_all,\n    retry_always,\n    retry_any,\n    retry_base,\n    retry_if_exception,\n    retry_if_exception_cause_type,\n    retry_if_exception_message,\n    retry_if_exception_type,\n    retry_if_not_exception_message,\n    retry_if_not_exception_type,\n    retry_if_not_result,\n    retry_if_result,\n    retry_never,\n    retry_unless_exception_type,\n)\n\n# Import all built-in stop strategies for easier usage.\nfrom .stop import (\n    stop_after_attempt,\n    stop_after_delay,\n    stop_all,\n    stop_any,\n    stop_before_delay,\n    stop_never,\n    stop_when_event_set,\n)\n",
+          "content_sha256": "4768ff021ee319df1f4d0ce81621db48a07a8cb0d729eab759a09d9a9dcb3bc3"
+        },
+        {
+          "path": "doc/source/index.rst",
+          "start_line": 113,
+          "end_line": 139,
+          "content": ".. testcode::\n\n    @retry(stop=stop_after_attempt(7))\n    def stop_after_7_attempts():\n        print(\"Stopping after 7 attempts\")\n        raise Exception\n\nWe don't have all day, so let's set a boundary for how long we should be\nretrying stuff.\n\n.. testcode::\n\n    @retry(stop=stop_after_delay(10))\n    def stop_after_10_s():\n        print(\"Stopping after 10 seconds\")\n        raise Exception\n\nIf you're on a tight deadline, and exceeding your delay time isn't ok,\nthen you can give up on retries one attempt before you would exceed the delay.\n\n.. testcode::\n\n    @retry(stop=stop_before_delay(10))\n    def stop_before_10_s():\n        print(\"Stopping 1 attempt before 10 seconds\")\n        raise Exception\n",
+          "content_sha256": "0e00c1d5356612912f8f153c9d85f9f300464695a367c325ab8f439d1ee1225c"
+        },
+        {
+          "path": "doc/source/index.rst",
+          "start_line": 140,
+          "end_line": 165,
+          "content": "You can combine several stop conditions by using the `|` operator:\n\n.. testcode::\n\n    @retry(stop=(stop_after_delay(10) | stop_after_attempt(5)))\n    def stop_after_10_s_or_5_retries():\n        print(\"Stopping after 10 seconds or 5 retries\")\n        raise Exception\n\nWaiting before retrying\n~~~~~~~~~~~~~~~~~~~~~~~\n\nMost things don't like to be polled as fast as possible, so let's just wait 2\nseconds between retries.\n\n.. testcode::\n\n    @retry(wait=wait_fixed(2))\n    def wait_2_s():\n        print(\"Wait 2 second between retries\")\n        raise Exception\n\nSome things perform best with a bit of randomness injected.\n\n.. testcode::\n",
+          "content_sha256": "1289b655990c37b9b996b64ac39ea86a753eabc5c04deeed25b135b528a195a4"
+        },
+        {
+          "path": "releasenotes/notes/drop-python-3.9-ecfa2d7db9773e96.yaml",
+          "start_line": 1,
+          "end_line": 5,
+          "content": "---\nupgrade:\n  - |\n    Python 3.9 has reached end-of-life and is no longer supported.\n    The minimum supported version is now Python 3.10.",
+          "content_sha256": "87ea3e8fe80015ff0c8baaa2bae2dc61dea003be340ad9c78a53cfe54435ff40"
+        }
+      ],
+      "budget_fits": true
+    },
+    {
+      "task_id": "improvement-confirm-tenacity-02",
+      "input_sha256": "1446e1671e211d94410d7a15eacaf54ff522e0d4937e4203abc9aed15119588e",
+      "index_id": "e25176b95ad58108300b6041",
+      "strict_reference_range_coverage": 0.0,
+      "all_nonblank_reference_lines_present": false,
+      "source_ranges": [
+        {
+          "path": "tests/test_asyncio.py",
+          "start_line": 177,
+          "end_line": 178,
+          "content": "        def after(retry_state: RetryCallState) -> None:\n            attempts.append((retry_state.args[0], retry_state.attempt_number))",
+          "content_sha256": "64ae2592001efb2bb7caf9354abe3f1d7f85a896bd3273cae0446efd0dd91ead"
+        },
+        {
+          "path": "tests/test_after.py",
+          "start_line": 28,
+          "end_line": 48,
+          "content": "    def test_01_default(self) -> None:\n        \"\"\"Test log formatting.\"\"\"\n        log = unittest.mock.MagicMock(spec=\"logging.Logger.log\")\n        logger = unittest.mock.MagicMock(spec=\"logging.Logger\", log=log)\n\n        sec_format = \"%.3g\"\n        delay_since_first_attempt = 0.1\n\n        retry_state = test_tenacity.make_retry_state(\n            self.previous_attempt_number, delay_since_first_attempt\n        )\n        fun = after_log(\n            logger=logger, log_level=self.log_level\n        )  # use default sec_format\n        fun(retry_state)\n        log.assert_called_once_with(\n            self.log_level,\n            f\"Finished call to '{retry_state.get_fn_name()}' \"\n            f\"after {sec_format % retry_state.seconds_since_start}(s), \"\n            f\"this was the {_utils.to_ordinal(retry_state.attempt_number)} time calling it.\",\n        )",
+          "content_sha256": "eaed1c5e4a27609adcb9f7e294dc3837f1a2aaf88cd031cdda6f5b89696600bf"
+        },
+        {
+          "path": "tests/test_after.py",
+          "start_line": 50,
+          "end_line": 66,
+          "content": "    def test_02_none_seconds_since_start(self) -> None:\n        \"\"\"Test log formatting when seconds_since_start is None.\"\"\"\n        log = unittest.mock.MagicMock(spec=\"logging.Logger.log\")\n        logger = unittest.mock.MagicMock(spec=\"logging.Logger\", log=log)\n\n        retry_state = test_tenacity.make_retry_state(self.previous_attempt_number, 0.1)\n        retry_state.outcome_timestamp = None\n        assert retry_state.seconds_since_start is None\n\n        fun = after_log(logger=logger, log_level=self.log_level)\n        fun(retry_state)\n        log.assert_called_once_with(\n            self.log_level,\n            f\"Finished call to '{retry_state.get_fn_name()}' \"\n            f\"after ?(s), \"\n            f\"this was the {_utils.to_ordinal(retry_state.attempt_number)} time calling it.\",\n        )",
+          "content_sha256": "581ff0047be6c0b39f9bb4e44231d2107b3653a6801c5a62b7eb4a98c0ccc1f1"
+        },
+        {
+          "path": "tests/test_after.py",
+          "start_line": 68,
+          "end_line": 86,
+          "content": "    def test_02_custom_sec_format(self) -> None:\n        \"\"\"Test log formatting with custom int format..\"\"\"\n        log = unittest.mock.MagicMock(spec=\"logging.Logger.log\")\n        logger = unittest.mock.MagicMock(spec=\"logging.Logger\", log=log)\n\n        sec_format = \"%.1f\"\n        delay_since_first_attempt = 0.1\n\n        retry_state = test_tenacity.make_retry_state(\n            self.previous_attempt_number, delay_since_first_attempt\n        )\n        fun = after_log(logger=logger, log_level=self.log_level, sec_format=sec_format)\n        fun(retry_state)\n        log.assert_called_once_with(\n            self.log_level,\n            f\"Finished call to '{retry_state.get_fn_name()}' \"\n            f\"after {sec_format % retry_state.seconds_since_start}(s), \"\n            f\"this was the {_utils.to_ordinal(retry_state.attempt_number)} time calling it.\",\n        )",
+          "content_sha256": "0ea83d55482077bca16ced5184fd908d7f501d007d5139c747d4756a930c761d"
+        },
+        {
+          "path": "tests/test_tenacity.py",
+          "start_line": 1559,
+          "end_line": 1563,
+          "content": "    def test_defaults(self) -> None:\n        self.assertTrue(_retryable_default(NoNameErrorAfterCount(5)))\n        self.assertTrue(_retryable_default_f(NoNameErrorAfterCount(5)))\n        self.assertTrue(_retryable_default(NoCustomErrorAfterCount(5)))\n        self.assertTrue(_retryable_default_f(NoCustomErrorAfterCount(5)))",
+          "content_sha256": "9909c07003aa57a2e00ad51cee79e78b322afe0b88fc82257ac8491e75adc130"
+        },
+        {
+          "path": "tests/test_tenacity.py",
+          "start_line": 242,
+          "end_line": 246,
+          "content": "    def test_stop_after_attempt(self) -> None:\n        r = Retrying(stop=tenacity.stop_after_attempt(3))\n        self.assertFalse(r.stop(make_retry_state(2, 6546)))\n        self.assertTrue(r.stop(make_retry_state(3, 6546)))\n        self.assertTrue(r.stop(make_retry_state(4, 6546)))",
+          "content_sha256": "20db3d49d29ab4ae91057848a9ad771d3b51578015ef336bfa79b79ebcd0d5b4"
+        }
+      ],
+      "budget_fits": true
+    },
+    {
+      "task_id": "improvement-confirm-tenacity-03",
+      "input_sha256": "3a7ac38376856183803fda96c6ec348eca48291d11147f291d306b2ed032213a",
+      "index_id": "e25176b95ad58108300b6041",
+      "strict_reference_range_coverage": 0.0,
+      "all_nonblank_reference_lines_present": false,
+      "source_ranges": [
+        {
+          "path": "tenacity/stop.py",
+          "start_line": 89,
+          "end_line": 97,
+          "content": "class stop_after_attempt(stop_base):\n    \"\"\"Stop when the previous attempt >= max_attempt.\"\"\"\n\n    def __init__(self, max_attempt_number: int) -> None:\n        self.max_attempt_number = max_attempt_number\n\n    @override\n    def __call__(self, retry_state: \"RetryCallState\") -> bool:\n        return retry_state.attempt_number >= self.max_attempt_number",
+          "content_sha256": "b3108d750f9cdeb8463efbf651bdc6a9727f2c019f235979f02bc0d57304413e"
+        },
+        {
+          "path": "tenacity/__init__.py",
+          "start_line": 206,
+          "end_line": 217,
+          "content": "    def reraise(self) -> t.NoReturn:\n        if self.last_attempt.failed:\n            exc = self.last_attempt.exception()\n            # When the user explicitly raises TryAgain (typically from within\n            # an \"except\" block), surface the underlying exception that caused\n            # the retry rather than the opaque TryAgain sentinel.\n            if isinstance(exc, TryAgain):\n                cause = exc.__cause__ or exc.__context__\n                if cause is not None:\n                    raise cause.with_traceback(cause.__traceback__) from None\n            raise self.last_attempt.result()\n        raise self",
+          "content_sha256": "490ddb0ed58820d13ecae7bd003e0e1b24447e55343f40ca30cba0490c917aba"
+        },
+        {
+          "path": "tests/test_tenacity.py",
+          "start_line": 2119,
+          "end_line": 2121,
+          "content": "        def retry_error_callback(retry_state: RetryCallState) -> typing.Any:\n            retry_error_callback.called_times += 1  # type: ignore[attr-defined]\n            return retry_state.outcome",
+          "content_sha256": "f77f4b4041e3cddc1b17a9c8f5a6f637af188477897ef7288cfcd95c345e0bac"
+        },
+        {
+          "path": "tenacity/asyncio/__init__.py",
+          "start_line": 76,
+          "end_line": 110,
+          "content": "    def __init__(\n        self,\n        sleep: t.Callable[\n            [int | float], t.Awaitable[None] | None\n        ] = _portable_async_sleep,\n        stop: \"StopBaseT\" = tenacity.stop.stop_never,\n        wait: \"WaitBaseT\" = tenacity.wait.wait_none(),\n        retry: \"SyncRetryBaseT | RetryBaseT\" = tenacity.retry_if_exception_type(),\n        before: t.Callable[\n            [\"RetryCallState\"], t.Awaitable[None] | None\n        ] = before_nothing,\n        after: t.Callable[[\"RetryCallState\"], t.Awaitable[None] | None] = after_nothing,\n        before_sleep: t.Callable[[\"RetryCallState\"], t.Awaitable[None] | None]\n        | None = None,\n        reraise: bool = False,\n        retry_error_cls: type[\"RetryError\"] = RetryError,\n        retry_error_callback: t.Callable[[\"RetryCallState\"], t.Any | t.Awaitable[t.Any]]\n        | None = None,\n        name: str | None = None,\n        enabled: bool = True,\n    ) -> None:\n        super().__init__(\n            sleep=sleep,  # type: ignore[arg-type]\n            stop=stop,\n            wait=wait,\n            retry=retry,  # type: ignore[arg-type]\n            before=before,  # type: ignore[arg-type]\n            after=after,  # type: ignore[arg-type]\n            before_sleep=before_sleep,  # type: ignore[arg-type]\n            reraise=reraise,\n            retry_error_cls=retry_error_cls,\n            retry_error_callback=retry_error_callback,\n            name=name,\n            enabled=enabled,\n        )",
+          "content_sha256": "0c7d79fba44fd37484823b146c2b41654e0b38c3854b676864a82b9fb4e81c52"
+        },
+        {
+          "path": "doc/source/index.rst",
+          "start_line": 395,
+          "end_line": 417,
+          "content": "For example, you can call a custom callback function after all retries failed,\nwithout raising an exception (or you can re-raise or do anything really)\n\n.. testcode::\n\n    def return_last_value(retry_state):\n        \"\"\"return the result of the last call attempt\"\"\"\n        return retry_state.outcome.result()\n\n    def is_false(value):\n        \"\"\"Return True if value is False\"\"\"\n        return value is False\n\n    # will return False after trying 3 times to get a different result\n    @retry(stop=stop_after_attempt(3),\n           retry_error_callback=return_last_value,\n           retry=retry_if_result(is_false))\n    def eventually_return_false():\n        return False\n\nRetryCallState\n~~~~~~~~~~~~~~\n",
+          "content_sha256": "cd836c7a12b1ba2faceb551b68d2ca7b9b4aba28008f2b2ba3dc0770b0ee5033"
+        },
+        {
+          "path": "tests/test_tenacity.py",
+          "start_line": 2091,
+          "end_line": 2100,
+          "content": "        @retry(\n            stop=tenacity.stop_after_attempt(3),\n            retry=tenacity.retry_if_exception_type(ValueError),\n            reraise=True,\n        )\n        def _foobar() -> int:\n            attempts.append(_foobar.retry.statistics[\"attempt_number\"])\n            if len(attempts) < 3:\n                raise ValueError(\"retry\")\n            return 42",
+          "content_sha256": "4e2641da16264f8393a616da55b2566f00665079b466d6ca773842bece534080"
+        }
+      ],
+      "budget_fits": true
+    },
+    {
+      "task_id": "improvement-confirm-tenacity-04",
+      "input_sha256": "399ba399bdf40cb07b996e43c1953342e3c316c4b25dc28e11cd106de67590ed",
+      "index_id": "e25176b95ad58108300b6041",
+      "strict_reference_range_coverage": 0.25,
+      "all_nonblank_reference_lines_present": false,
+      "source_ranges": [
+        {
+          "path": "tenacity/__init__.py",
+          "start_line": 288,
+          "end_line": 321,
+          "content": "    def copy(\n        self,\n        sleep: t.Callable[[int | float], None] | object = _unset,\n        stop: \"StopBaseT | object\" = _unset,\n        wait: \"WaitBaseT | object\" = _unset,\n        retry: retry_base | object = _unset,\n        before: t.Callable[[\"RetryCallState\"], None] | object = _unset,\n        after: t.Callable[[\"RetryCallState\"], None] | object = _unset,\n        before_sleep: t.Callable[[\"RetryCallState\"], None] | object | None = _unset,\n        reraise: bool | object = _unset,\n        retry_error_cls: type[RetryError] | object = _unset,\n        retry_error_callback: t.Callable[[\"RetryCallState\"], t.Any]\n        | object\n        | None = _unset,\n        name: str | object | None = _unset,\n        enabled: bool | object = _unset,\n    ) -> \"Self\":\n        \"\"\"Copy this object with some parameters changed if needed.\"\"\"\n        return self.__class__(\n            sleep=_first_set(sleep, self.sleep),\n            stop=_first_set(stop, self.stop),\n            wait=_first_set(wait, self.wait),\n            retry=_first_set(retry, self.retry),\n            before=_first_set(before, self.before),\n            after=_first_set(after, self.after),\n            before_sleep=_first_set(before_sleep, self.before_sleep),\n            reraise=_first_set(reraise, self.reraise),\n            retry_error_cls=_first_set(retry_error_cls, self.retry_error_cls),\n            retry_error_callback=_first_set(\n                retry_error_callback, self.retry_error_callback\n            ),\n            name=_first_set(name, self._name),\n            enabled=_first_set(enabled, self.enabled),\n        )",
+          "content_sha256": "c8dc54c3e7342becbdfef871e778349494e86ef2ecc2f556ce767ed763fccd2f"
+        },
+        {
+          "path": "tenacity/__init__.py",
+          "start_line": 186,
+          "end_line": 187,
+          "content": "def _first_set(first: t.Any | object, second: t.Any) -> t.Any:\n    return second if first is _unset else first",
+          "content_sha256": "c920d2ce7ddf3d283ec85849b1ea68c8eca59b024da0d073e628b10294e522e1"
+        },
+        {
+          "path": "tests/test_tenacity.py",
+          "start_line": 1697,
+          "end_line": 1710,
+          "content": "    def test_enabled_false_via_retry_with(self) -> None:\n        \"\"\"retry_with(enabled=False) disables retrying.\"\"\"\n        call_count = 0\n\n        @retry(stop=tenacity.stop_after_attempt(3))\n        def always_fails() -> None:\n            nonlocal call_count\n            call_count += 1\n            raise ValueError(\"fail\")\n\n        disabled = always_fails.retry_with(enabled=False)\n        with pytest.raises(ValueError, match=\"fail\"):\n            disabled()\n        assert call_count == 1",
+          "content_sha256": "242c3afcac4cc1083736afad59bf8fa683fd6c0c9cbd68c0c4d5f0aa42fc8d71"
+        },
+        {
+          "path": "tests/test_tenacity.py",
+          "start_line": 1675,
+          "end_line": 1679,
+          "content": "        @retry(enabled=False, stop=tenacity.stop_after_attempt(3))\n        def always_fails() -> None:\n            nonlocal call_count\n            call_count += 1\n            raise ValueError(\"fail\")",
+          "content_sha256": "b46338181a48c1376a3534bb3dad9b437c3053df4e97c5388859349e98516701"
+        },
+        {
+          "path": "tenacity/asyncio/__init__.py",
+          "start_line": 210,
+          "end_line": 239,
+          "content": "    @override\n    def wraps(self, fn: t.Callable[P, R]) -> _RetryDecorated[P, R]:\n        wrapped = super().wraps(fn)\n        # Ensure wrapper is recognized as a coroutine function.\n\n        @functools.wraps(\n            fn, functools.WRAPPER_ASSIGNMENTS + (\"__defaults__\", \"__kwdefaults__\")\n        )\n        async def async_wrapped(*args: t.Any, **kwargs: t.Any) -> t.Any:\n            if not self.enabled:\n                return await fn(*args, **kwargs)  # type: ignore[misc]\n            # Always create a copy to prevent overwriting the local contexts when\n            # calling the same wrapped functions multiple times in the same stack\n            copy = self.copy()\n            # Reuse the same statistics dict rather than rebinding the attribute\n            # so that the stats stay visible through additional decorators that\n            # copy attributes via functools.wraps (which copies the reference to\n            # this dict into the outer wrapper's __dict__). See issue #519.\n            stats = async_wrapped.statistics  # type: ignore[attr-defined]\n            stats.clear()\n            copy._local.statistics = stats  # noqa: SLF001\n            self._local.statistics = stats\n            return await copy(fn, *args, **kwargs)  # type: ignore[type-var]\n\n        # Preserve attributes\n        async_wrapped.retry = self  # type: ignore[attr-defined]\n        async_wrapped.retry_with = wrapped.retry_with  # type: ignore[attr-defined]\n        async_wrapped.statistics = {}  # type: ignore[attr-defined]\n\n        return t.cast(\"_RetryDecorated[P, R]\", async_wrapped)",
+          "content_sha256": "dfd8c0be0463e7a92dc2b8fcb4e99506fc1763a8ec85808bff81a22474d0aad0"
+        },
+        {
+          "path": "tests/test_tenacity.py",
+          "start_line": 1727,
+          "end_line": 1741,
+          "content": "    def test_enabled_false_iter_raises_original_exception(self) -> None:\n        \"\"\"When enabled=False, the iterator protocol raises the original exception,\n        not a RetryError, and the body executes exactly once.\"\"\"\n        call_count = 0\n        retrying = Retrying(\n            enabled=False,\n            stop=tenacity.stop_after_attempt(5),\n            wait=tenacity.wait_none(),\n        )\n        with pytest.raises(ValueError, match=\"fail\"):\n            for attempt in retrying:\n                with attempt:\n                    call_count += 1\n                    raise ValueError(\"fail\")\n        assert call_count == 1",
+          "content_sha256": "d4033deecb3202d35ef414fb4f1a73a0b45d197dcfe50b05f031348450c64b89"
+        }
+      ],
+      "budget_fits": true
+    },
+    {
+      "task_id": "improvement-confirm-tenacity-05",
+      "input_sha256": "c7b45e199c924ee5067ed2cbb59155e1d88bd58301a3ed641de73a75caa3d1e0",
+      "index_id": "e25176b95ad58108300b6041",
+      "strict_reference_range_coverage": null,
+      "all_nonblank_reference_lines_present": null,
+      "source_ranges": [
+        {
+          "path": "tenacity/__init__.py",
+          "start_line": 120,
+          "end_line": 133,
+          "content": "@dataclasses.dataclass(slots=True)\nclass IterState:\n    actions: list[t.Callable[[\"RetryCallState\"], t.Any]] = dataclasses.field(\n        default_factory=list\n    )\n    retry_run_result: bool = False\n    stop_run_result: bool = False\n    is_explicit_retry: bool = False\n\n    def reset(self) -> None:\n        self.actions = []\n        self.retry_run_result = False\n        self.stop_run_result = False\n        self.is_explicit_retry = False",
+          "content_sha256": "1da41922756a1618bb5a1ed2e507d15246d513bff43626e94a7b810deee9875b"
+        },
+        {
+          "path": "tenacity/__init__.py",
+          "start_line": 432,
+          "end_line": 434,
+          "content": "    def _run_stop(self, retry_state: \"RetryCallState\") -> None:\n        self.statistics[\"delay_since_first_attempt\"] = retry_state.seconds_since_start\n        self.iter_state.stop_run_result = self.stop(retry_state)",
+          "content_sha256": "a357baf1d24793625ff48b073472ffb3be1f760a3c76c83597a0e7c7a5f6e65d"
+        },
+        {
+          "path": "tenacity/asyncio/__init__.py",
+          "start_line": 159,
+          "end_line": 164,
+          "content": "    @override\n    async def _run_stop(self, retry_state: \"RetryCallState\") -> None:  # type: ignore[override]\n        self.statistics[\"delay_since_first_attempt\"] = retry_state.seconds_since_start\n        self.iter_state.stop_run_result = await _utils.wrap_to_async_func(self.stop)(\n            retry_state\n        )",
+          "content_sha256": "a8c349c150eb3940100fe422a6847ad2f2f0f5598b1f4bde0da814cad0ba6a3c"
+        },
+        {
+          "path": "tenacity/__init__.py",
+          "start_line": 22,
+          "end_line": 42,
+          "content": "import time\nimport typing as t\nimport warnings\nfrom abc import ABC, abstractmethod\nfrom concurrent import futures\n\nfrom . import _utils\nfrom ._utils import override\n\n# Import all built-in after strategies for easier usage.\nfrom .after import after_log, after_nothing\n\n# Import all built-in before strategies for easier usage.\nfrom .before import before_log, before_nothing\n\n# Import all built-in before sleep strategies for easier usage.\nfrom .before_sleep import before_sleep_log, before_sleep_nothing\n\n# Import all nap strategies for easier usage.\nfrom .nap import sleep, sleep_using_event\n",
+          "content_sha256": "bfb8c48f0941416e3aa77921a0d281c0a3ed1b387c3b46b4dd97efafa3e4534d"
+        },
+        {
+          "path": "releasenotes/notes/clarify-reraise-option-6829667eacf4f599.yaml",
+          "start_line": 1,
+          "end_line": 3,
+          "content": "---\nprelude: >\n    Clarify usage of `reraise` keyword argument",
+          "content_sha256": "6a3c4a4f63bdbf7f0261a36dc3cf5c3f89de2f193281af2fc54ff9543f832ca7"
+        },
+        {
+          "path": "doc/source/index.rst",
+          "start_line": 774,
+          "end_line": 790,
+          "content": "#. Check for open issues or open a fresh issue to start a discussion around a\n   feature idea or a bug.\n#. Fork `the repository`_ on GitHub to start making your changes to the\n   **main** branch (or branch off of it).\n#. Write a test which shows that the bug was fixed or that the feature works as\n   expected.\n#. Add a `changelog <#Changelogs>`_\n#. Make the docs better (or more detailed, or more easier to read, or ...)\n\nRunning the test suite locally::\n\n    uv run poe check    # run tests + build docs\n    uv run poe lint     # run ruff linter\n    uv run poe mypy     # run type checker\n    uv run poe all      # run everything\n\n.. _`the repository`: https://github.com/jd/tenacity",
+          "content_sha256": "5b29d02471af6321531c6288db44a73e1b2d8f101b6f4cc44e372b034d7d00df"
+        }
+      ],
+      "budget_fits": true
+    }
+  ],
+  "interpretation": "Reference-window coverage is a source-delivery diagnostic, not semantic answer correctness. No tasks, references, or retrieval policy tuned from this check."
+}

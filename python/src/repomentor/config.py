@@ -35,7 +35,7 @@ class ModelSettings(Contract):
         }
 
 
-def load_model_settings(path: Path | None = None):
+def load_model_settings(path: Path | None = None, *, _model=ModelSettings):
     """Whole-source precedence: explicit file > PY_SETTINGS > PY model env > default file.
 
     Sources are not merged: a key from one service must not silently use another endpoint.
@@ -47,18 +47,24 @@ def load_model_settings(path: Path | None = None):
         "REPOMENTOR_PY_MODEL": "model",
         "REPOMENTOR_PY_PROVIDER": "provider",
     }
+    if _model is not ModelSettings:
+        fields.update(
+            {
+                "REPOMENTOR_PY_MODEL_REVISION": "model_revision",
+                "REPOMENTOR_PY_QUANTIZATION": "quantization",
+                "REPOMENTOR_PY_SERVER_VERSION": "server_version",
+            }
+        )
     try:
         if path is not None or "REPOMENTOR_PY_SETTINGS" in os.environ:
             selected = Path(path).expanduser() if path is not None else model_settings_path()
-            settings = ModelSettings.model_validate_json(selected.read_text(encoding="utf-8-sig"))
+            settings = _model.model_validate_json(selected.read_text(encoding="utf-8-sig"))
         elif any(name in os.environ for name in fields):
             values = {field: os.environ[name] for name, field in fields.items() if name in os.environ}
             # Require endpoint together with credentials: no implicit provider fallback.
-            settings = ModelSettings.model_validate(values)
+            settings = _model.model_validate(values)
         else:
-            settings = ModelSettings.model_validate_json(
-                model_settings_path().read_text(encoding="utf-8-sig")
-            )
+            settings = _model.model_validate_json(model_settings_path().read_text(encoding="utf-8-sig"))
     except (OSError, ValueError):
         raise ConfigurationError(
             "Configure Python's config/model-settings.json, --settings, or the complete "
@@ -77,11 +83,19 @@ def load_model_settings(path: Path | None = None):
         or url.fragment
     ):
         raise ConfigurationError("model endpoint must be HTTP(S) without embedded credentials/query/fragment")
-    if not settings.model.strip() or not settings.apiKey.get_secret_value().strip():
+    if not settings.model.strip() or (
+        _model is ModelSettings and not settings.apiKey.get_secret_value().strip()
+    ):
         raise ConfigurationError(
             "Fill in the model and API key in Python's own configuration before a live run"
         )
     return settings
+
+
+def load_chat_settings(path: Path | None = None):
+    from .runtimes.chat import ChatSettings
+
+    return load_model_settings(path, _model=ChatSettings)
 
 
 def write_json(path: Path, data):

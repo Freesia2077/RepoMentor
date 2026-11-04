@@ -1,0 +1,2626 @@
+[
+  {
+    "case_id": "qa-developit--mitt-p4-cross_map",
+    "kind": "qa",
+    "task_id": "developit--mitt-p4-cross_map",
+    "split": "validation",
+    "snapshot_id": "dfdc0816797bf578d0363591",
+    "repository": "developit/mitt",
+    "commit_sha": "6b41670516ed8e8b738612f60491995470aa63b3",
+    "question": "mitt 传入 Map 后是否复用？结合 src/index.ts 与 test/index_test.ts 的初始化和 on 测试说明。",
+    "reference": {
+      "gold": {
+        "required_facts": [
+          "复用传入的 Map；on 对同一 Map 写入事件监听器；测试通过外部 events Map 观察注册结果。"
+        ],
+        "evidence": [
+          {
+            "path": "src/index.ts",
+            "start_line": 46,
+            "end_line": 73,
+            "content_sha256": "715cda3df8acf52c630a8f6c507e7e0e363d6b0505c6da23e3030b336d9d7174"
+          },
+          {
+            "path": "test/index_test.ts",
+            "start_line": 38,
+            "end_line": 61,
+            "content_sha256": "fc694f7d9e030d23ba0438fdaedcb093823c2c95df5feca5080d91946a6d74e8"
+          }
+        ]
+      },
+      "human_approved": false
+    },
+    "answer": {
+      "answer": "mitt 传入 Map 后**不自动复用**，而是将传入的 Map 作为内部状态直接返回给调用者。若需复用，必须在创建 mitt 实例时传入同一个 Map 对象。",
+      "citations": [
+        {
+          "path": "src/index.ts",
+          "start_line": 46,
+          "end_line": 52
+        },
+        {
+          "path": "src/index.ts",
+          "start_line": 52,
+          "end_line": 58
+        },
+        {
+          "path": "test/index_test.ts",
+          "start_line": 12,
+          "end_line": 22
+        }
+      ],
+      "insufficient_evidence": false
+    },
+    "source_context": {
+      "qa": [
+        {
+          "path": "src/index.ts",
+          "start_line": 1,
+          "end_line": 94,
+          "content": "export type EventType = string | symbol;\n\n// An event handler can take an optional event argument\n// and should not return a value\nexport type Handler<T = unknown> = (event: T) => void;\nexport type WildcardHandler<T = Record<string, unknown>> = (\n\ttype: keyof T,\n\tevent: T[keyof T]\n) => void;\n\n// An array of all currently registered event handlers for a type\nexport type EventHandlerList<T = unknown> = Array<Handler<T>>;\nexport type WildCardEventHandlerList<T = Record<string, unknown>> = Array<\n\tWildcardHandler<T>\n>;\n\n// A map of event types and their corresponding event handlers.\nexport type EventHandlerMap<Events extends Record<EventType, unknown>> = Map<\n\tkeyof Events | '*',\n\tEventHandlerList<Events[keyof Events]> | WildCardEventHandlerList<Events>\n>;\n\nexport interface Emitter<Events extends Record<EventType, unknown>> {\n\tall: EventHandlerMap<Events>;\n\n\ton<Key extends keyof Events>(type: Key, handler: Handler<Events[Key]>): void;\n\ton(type: '*', handler: WildcardHandler<Events>): void;\n\n\toff<Key extends keyof Events>(\n\t\ttype: Key,\n\t\thandler?: Handler<Events[Key]>\n\t): void;\n\toff(type: '*', handler: WildcardHandler<Events>): void;\n\n\temit<Key extends keyof Events>(type: Key, event: Events[Key]): void;\n\temit<Key extends keyof Events>(\n\t\ttype: undefined extends Events[Key] ? Key : never\n\t): void;\n}\n\n/**\n * Mitt: Tiny (~200b) functional event emitter / pubsub.\n * @name mitt\n * @returns {Mitt}\n */\nexport default function mitt<Events extends Record<EventType, unknown>>(\n\tall?: EventHandlerMap<Events>\n): Emitter<Events> {\n\ttype GenericEventHandler =\n\t\t| Handler<Events[keyof Events]>\n\t\t| WildcardHandler<Events>;\n\tall = all || new Map();\n\n\treturn {\n\t\t/**\n\t\t * A Map of event names to registered handler functions.\n\t\t */\n\t\tall,\n\n\t\t/**\n\t\t * Register an event handler for the given type.\n\t\t * @param {string|symbol} type Type of event to listen for, or `'*'` for all events\n\t\t * @param {Function} handler Function to call in response to given event\n\t\t * @memberOf mitt\n\t\t */\n\t\ton<Key extends keyof Events>(type: Key, handler: GenericEventHandler) {\n\t\t\tconst handlers: Array<GenericEventHandler> | undefined = all!.get(type);\n\t\t\tif (handlers) {\n\t\t\t\thandlers.push(handler);\n\t\t\t} else {\n\t\t\t\tall!.set(type, [handler] as EventHandlerList<Events[keyof Events]>);\n\t\t\t}\n\t\t},\n\n\t\t/**\n\t\t * Remove an event handler for the given type.\n\t\t * If `handler` is omitted, all handlers of the given type are removed.\n\t\t * @param {string|symbol} type Type of event to unregister `handler` from (`'*'` to remove a wildcard handler)\n\t\t * @param {Function} [handler] Handler function to remove\n\t\t * @memberOf mitt\n\t\t */\n\t\toff<Key extends keyof Events>(type: Key, handler?: GenericEventHandler) {\n\t\t\tconst handlers: Array<GenericEventHandler> | undefined = all!.get(type);\n\t\t\tif (handlers) {\n\t\t\t\tif (handler) {\n\t\t\t\t\thandlers.splice(handlers.indexOf(handler) >>> 0, 1);\n\t\t\t\t} else {\n\t\t\t\t\tall!.set(type, []);\n\t\t\t\t}\n\t\t\t}\n\t\t},\n\n\t\t/**\n\t\t * Invoke all handlers for the given type.",
+          "content_sha256": "760c9657c848c2383549aca7a948394953314ff856f2748889ce703fd3983331"
+        },
+        {
+          "path": "test/index_test.ts",
+          "start_line": 1,
+          "end_line": 100,
+          "content": "import mitt, { Emitter, EventHandlerMap } from '..';\nimport chai, { expect } from 'chai';\nimport { spy } from 'sinon';\nimport sinonChai from 'sinon-chai';\nchai.use(sinonChai);\n\ndescribe('mitt', () => {\n\tit('should default export be a function', () => {\n\t\texpect(mitt).to.be.a('function');\n\t});\n\n\tit('should accept an optional event handler map', () => {\n\t\texpect(() => mitt(new Map())).not.to.throw;\n\t\tconst map = new Map();\n\t\tconst a = spy();\n\t\tconst b = spy();\n\t\tmap.set('foo', [a, b]);\n\t\tconst events = mitt<{ foo: undefined }>(map);\n\t\tevents.emit('foo');\n\t\texpect(a).to.have.been.calledOnce;\n\t\texpect(b).to.have.been.calledOnce;\n\t});\n});\n\ndescribe('mitt#', () => {\n\tconst eventType = Symbol('eventType');\n\ttype Events = {\n\t\tfoo: unknown;\n\t\tconstructor: unknown;\n\t\tFOO: unknown;\n\t\tbar: unknown;\n\t\tBar: unknown;\n\t\t'baz:bat!': unknown;\n\t\t'baz:baT!': unknown;\n\t\tFoo: unknown;\n\t\t[eventType]: unknown;\n\t};\n\tlet events: EventHandlerMap<Events>, inst: Emitter<Events>;\n\n\tbeforeEach(() => {\n\t\tevents = new Map();\n\t\tinst = mitt(events);\n\t});\n\n\tdescribe('properties', () => {\n\t\tit('should expose the event handler map', () => {\n\t\t\texpect(inst).to.have.property('all').that.is.a('map');\n\t\t});\n\t});\n\n\tdescribe('on()', () => {\n\t\tit('should be a function', () => {\n\t\t\texpect(inst).to.have.property('on').that.is.a('function');\n\t\t});\n\n\t\tit('should register handler for new type', () => {\n\t\t\tconst foo = () => {};\n\t\t\tinst.on('foo', foo);\n\n\t\t\texpect(events.get('foo')).to.deep.equal([foo]);\n\t\t});\n\n\t\tit('should register handlers for any type strings', () => {\n\t\t\tconst foo = () => {};\n\t\t\tinst.on('constructor', foo);\n\n\t\t\texpect(events.get('constructor')).to.deep.equal([foo]);\n\t\t});\n\n\t\tit('should append handler for existing type', () => {\n\t\t\tconst foo = () => {};\n\t\t\tconst bar = () => {};\n\t\t\tinst.on('foo', foo);\n\t\t\tinst.on('foo', bar);\n\n\t\t\texpect(events.get('foo')).to.deep.equal([foo, bar]);\n\t\t});\n\n\t\tit('should NOT normalize case', () => {\n\t\t\tconst foo = () => {};\n\t\t\tinst.on('FOO', foo);\n\t\t\tinst.on('Bar', foo);\n\t\t\tinst.on('baz:baT!', foo);\n\n\t\t\texpect(events.get('FOO')).to.deep.equal([foo]);\n\t\t\texpect(events.has('foo')).to.equal(false);\n\t\t\texpect(events.get('Bar')).to.deep.equal([foo]);\n\t\t\texpect(events.has('bar')).to.equal(false);\n\t\t\texpect(events.get('baz:baT!')).to.deep.equal([foo]);\n\t\t});\n\n\t\tit('can take symbols for event types', () => {\n\t\t\tconst foo = () => {};\n\t\t\tinst.on(eventType, foo);\n\t\t\texpect(events.get(eventType)).to.deep.equal([foo]);\n\t\t});\n\n\t\t// Adding the same listener multiple times should register it multiple times.\n\t\t// See https://nodejs.org/api/events.html#events_emitter_on_eventname_listener\n\t\tit('should add duplicate listeners', () => {",
+          "content_sha256": "26afbe7a5250fd84233f33a91897920f2293f89ae81cb26e992e8777f7a1574f"
+        },
+        {
+          "path": "test/index_test.ts",
+          "start_line": 100,
+          "end_line": 150,
+          "content": "\t\tit('should add duplicate listeners', () => {\n\t\t\tconst foo = () => {};\n\t\t\tinst.on('foo', foo);\n\t\t\tinst.on('foo', foo);\n\t\t\texpect(events.get('foo')).to.deep.equal([foo, foo]);\n\t\t});\n\t});\n\n\tdescribe('off()', () => {\n\t\tit('should be a function', () => {\n\t\t\texpect(inst).to.have.property('off').that.is.a('function');\n\t\t});\n\n\t\tit('should remove handler for type', () => {\n\t\t\tconst foo = () => {};\n\t\t\tinst.on('foo', foo);\n\t\t\tinst.off('foo', foo);\n\n\t\t\texpect(events.get('foo')).to.be.empty;\n\t\t});\n\n\t\tit('should NOT normalize case', () => {\n\t\t\tconst foo = () => {};\n\t\t\tinst.on('FOO', foo);\n\t\t\tinst.on('Bar', foo);\n\t\t\tinst.on('baz:bat!', foo);\n\n\t\t\tinst.off('FOO', foo);\n\t\t\tinst.off('Bar', foo);\n\t\t\tinst.off('baz:baT!', foo);\n\n\t\t\texpect(events.get('FOO')).to.be.empty;\n\t\t\texpect(events.has('foo')).to.equal(false);\n\t\t\texpect(events.get('Bar')).to.be.empty;\n\t\t\texpect(events.has('bar')).to.equal(false);\n\t\t\texpect(events.get('baz:bat!')).to.have.lengthOf(1);\n\t\t});\n\n\t\tit('should remove only the first matching listener', () => {\n\t\t\tconst foo = () => {};\n\t\t\tinst.on('foo', foo);\n\t\t\tinst.on('foo', foo);\n\t\t\tinst.off('foo', foo);\n\t\t\texpect(events.get('foo')).to.deep.equal([foo]);\n\t\t\tinst.off('foo', foo);\n\t\t\texpect(events.get('foo')).to.deep.equal([]);\n\t\t});\n\n\t\tit('off(\"type\") should remove all handlers of the given type', () => {\n\t\t\tinst.on('foo', () => {});\n\t\t\tinst.on('foo', () => {});",
+          "content_sha256": "d59d2699002bcc3e1a3625581401a7ff5e5b609137c0ddbf782c9a122323b12c"
+        }
+      ]
+    },
+    "workflow_status": "success",
+    "human_approved": false,
+    "task_success": null
+  },
+  {
+    "case_id": "qa-developit--mitt-p4-cross_case",
+    "kind": "qa",
+    "task_id": "developit--mitt-p4-cross_case",
+    "split": "validation",
+    "snapshot_id": "dfdc0816797bf578d0363591",
+    "repository": "developit/mitt",
+    "commit_sha": "6b41670516ed8e8b738612f60491995470aa63b3",
+    "question": "mitt 的 on 会把事件名统一转成小写吗？结合实现与 should NOT normalize case 测试说明。",
+    "reference": {
+      "gold": {
+        "required_facts": [
+          "不转换大小写；按原始 type 访问 Map；测试区分 FOO/foo、Bar/bar 等。"
+        ],
+        "evidence": [
+          {
+            "path": "src/index.ts",
+            "start_line": 66,
+            "end_line": 73,
+            "content_sha256": "0a5bf296ae849cd916f0b4eedbc3b3dbd431acb523f64fede2782b79ff119004"
+          },
+          {
+            "path": "test/index_test.ts",
+            "start_line": 79,
+            "end_line": 90,
+            "content_sha256": "7c7ae10f82f38319cf3cf181161ee7bfb29bde7819610b697836ace1ba119048"
+          }
+        ]
+      },
+      "human_approved": false
+    },
+    "answer": {
+      "answer": "mitt 的 on 方法**不会**将事件名统一转成小写，事件名保持原样存储和匹配。",
+      "citations": [
+        {
+          "path": "test/index_test.ts",
+          "start_line": 79,
+          "end_line": 90
+        },
+        {
+          "path": "src/index.ts",
+          "start_line": 66,
+          "end_line": 73
+        }
+      ],
+      "insufficient_evidence": false
+    },
+    "source_context": {
+      "qa": [
+        {
+          "path": "test/index_test.ts",
+          "start_line": 79,
+          "end_line": 82,
+          "content": "\t\tit('should NOT normalize case', () => {\n\t\t\tconst foo = () => {};\n\t\t\tinst.on('FOO', foo);\n\t\t\tinst.on('Bar', foo);",
+          "content_sha256": "30fc02c648e297d7012210b79b9b1a1cca3dbe2435c95423ad50334db661c67a"
+        },
+        {
+          "path": "test/index_test.ts",
+          "start_line": 121,
+          "end_line": 124,
+          "content": "\t\tit('should NOT normalize case', () => {\n\t\t\tconst foo = () => {};\n\t\t\tinst.on('FOO', foo);\n\t\t\tinst.on('Bar', foo);",
+          "content_sha256": "30fc02c648e297d7012210b79b9b1a1cca3dbe2435c95423ad50334db661c67a"
+        },
+        {
+          "path": "src/index.ts",
+          "start_line": 2,
+          "end_line": 4,
+          "content": "\n// An event handler can take an optional event argument\n// and should not return a value",
+          "content_sha256": "b76ab6ec6297367d8cacf2fe3ba4457a776e26469d194315e7601ada88854639"
+        },
+        {
+          "path": "test/index_test.ts",
+          "start_line": 79,
+          "end_line": 106,
+          "content": "\t\tit('should NOT normalize case', () => {\n\t\t\tconst foo = () => {};\n\t\t\tinst.on('FOO', foo);\n\t\t\tinst.on('Bar', foo);\n\t\t\tinst.on('baz:baT!', foo);\n\n\t\t\texpect(events.get('FOO')).to.deep.equal([foo]);\n\t\t\texpect(events.has('foo')).to.equal(false);\n\t\t\texpect(events.get('Bar')).to.deep.equal([foo]);\n\t\t\texpect(events.has('bar')).to.equal(false);\n\t\t\texpect(events.get('baz:baT!')).to.deep.equal([foo]);\n\t\t});\n\n\t\tit('can take symbols for event types', () => {\n\t\t\tconst foo = () => {};\n\t\t\tinst.on(eventType, foo);\n\t\t\texpect(events.get(eventType)).to.deep.equal([foo]);\n\t\t});\n\n\t\t// Adding the same listener multiple times should register it multiple times.\n\t\t// See https://nodejs.org/api/events.html#events_emitter_on_eventname_listener\n\t\tit('should add duplicate listeners', () => {\n\t\t\tconst foo = () => {};\n\t\t\tinst.on('foo', foo);\n\t\t\tinst.on('foo', foo);\n\t\t\texpect(events.get('foo')).to.deep.equal([foo, foo]);\n\t\t});\n\t});",
+          "content_sha256": "2802dafc8cbbf5aa864a78106e935675c9534d36ef02774e1c05c6c811645bcc"
+        },
+        {
+          "path": "src/index.ts",
+          "start_line": 1,
+          "end_line": 50,
+          "content": "export type EventType = string | symbol;\n\n// An event handler can take an optional event argument\n// and should not return a value\nexport type Handler<T = unknown> = (event: T) => void;\nexport type WildcardHandler<T = Record<string, unknown>> = (\n\ttype: keyof T,\n\tevent: T[keyof T]\n) => void;\n\n// An array of all currently registered event handlers for a type\nexport type EventHandlerList<T = unknown> = Array<Handler<T>>;\nexport type WildCardEventHandlerList<T = Record<string, unknown>> = Array<\n\tWildcardHandler<T>\n>;\n\n// A map of event types and their corresponding event handlers.\nexport type EventHandlerMap<Events extends Record<EventType, unknown>> = Map<\n\tkeyof Events | '*',\n\tEventHandlerList<Events[keyof Events]> | WildCardEventHandlerList<Events>\n>;\n\nexport interface Emitter<Events extends Record<EventType, unknown>> {\n\tall: EventHandlerMap<Events>;\n\n\ton<Key extends keyof Events>(type: Key, handler: Handler<Events[Key]>): void;\n\ton(type: '*', handler: WildcardHandler<Events>): void;\n\n\toff<Key extends keyof Events>(\n\t\ttype: Key,\n\t\thandler?: Handler<Events[Key]>\n\t): void;\n\toff(type: '*', handler: WildcardHandler<Events>): void;\n\n\temit<Key extends keyof Events>(type: Key, event: Events[Key]): void;\n\temit<Key extends keyof Events>(\n\t\ttype: undefined extends Events[Key] ? Key : never\n\t): void;\n}\n\n/**\n * Mitt: Tiny (~200b) functional event emitter / pubsub.\n * @name mitt\n * @returns {Mitt}\n */\nexport default function mitt<Events extends Record<EventType, unknown>>(\n\tall?: EventHandlerMap<Events>\n): Emitter<Events> {\n\ttype GenericEventHandler =\n\t\t| Handler<Events[keyof Events]>",
+          "content_sha256": "636378778afc10cf45932b8a4ec56799c684ad9b835ef7371bd9977836e98d9c"
+        },
+        {
+          "path": "src/index.ts",
+          "start_line": 51,
+          "end_line": 100,
+          "content": "\t\t| WildcardHandler<Events>;\n\tall = all || new Map();\n\n\treturn {\n\t\t/**\n\t\t * A Map of event names to registered handler functions.\n\t\t */\n\t\tall,\n\n\t\t/**\n\t\t * Register an event handler for the given type.\n\t\t * @param {string|symbol} type Type of event to listen for, or `'*'` for all events\n\t\t * @param {Function} handler Function to call in response to given event\n\t\t * @memberOf mitt\n\t\t */\n\t\ton<Key extends keyof Events>(type: Key, handler: GenericEventHandler) {\n\t\t\tconst handlers: Array<GenericEventHandler> | undefined = all!.get(type);\n\t\t\tif (handlers) {\n\t\t\t\thandlers.push(handler);\n\t\t\t} else {\n\t\t\t\tall!.set(type, [handler] as EventHandlerList<Events[keyof Events]>);\n\t\t\t}\n\t\t},\n\n\t\t/**\n\t\t * Remove an event handler for the given type.\n\t\t * If `handler` is omitted, all handlers of the given type are removed.\n\t\t * @param {string|symbol} type Type of event to unregister `handler` from (`'*'` to remove a wildcard handler)\n\t\t * @param {Function} [handler] Handler function to remove\n\t\t * @memberOf mitt\n\t\t */\n\t\toff<Key extends keyof Events>(type: Key, handler?: GenericEventHandler) {\n\t\t\tconst handlers: Array<GenericEventHandler> | undefined = all!.get(type);\n\t\t\tif (handlers) {\n\t\t\t\tif (handler) {\n\t\t\t\t\thandlers.splice(handlers.indexOf(handler) >>> 0, 1);\n\t\t\t\t} else {\n\t\t\t\t\tall!.set(type, []);\n\t\t\t\t}\n\t\t\t}\n\t\t},\n\n\t\t/**\n\t\t * Invoke all handlers for the given type.\n\t\t * If present, `'*'` handlers are invoked after type-matched handlers.\n\t\t *\n\t\t * Note: Manually firing '*' handlers is not supported.\n\t\t *\n\t\t * @param {string|symbol} type The event type to invoke\n\t\t * @param {Any} [evt] Any value (object is recommended and powerful), passed to each handler",
+          "content_sha256": "4b54ad38e84d87c4b7660159361ba0e0e874688040539b5a9b66420a74a282e2"
+        }
+      ]
+    },
+    "workflow_status": "success",
+    "human_approved": false,
+    "task_success": null
+  },
+  {
+    "case_id": "qa-developit--mitt-06",
+    "kind": "qa",
+    "task_id": "developit--mitt-06",
+    "split": "validation",
+    "snapshot_id": "dfdc0816797bf578d0363591",
+    "repository": "developit/mitt",
+    "commit_sha": "6b41670516ed8e8b738612f60491995470aa63b3",
+    "question": "off 传入从未注册的 handler 为什么不会误删最后一个？",
+    "reference": {
+      "gold": {
+        "required_facts": [
+          "indexOf 返回 -1；无符号右移转换成大整数，splice 不会删除末项。"
+        ],
+        "evidence": [
+          {
+            "path": "src/index.ts",
+            "start_line": 82,
+            "end_line": 91,
+            "content_sha256": "3999fdef36669b69849c862d08047c5ed32691b99d7e2ba932a515e43d3324e0"
+          }
+        ]
+      },
+      "human_approved": false
+    },
+    "answer": {
+      "answer": "off 方法不会误删最后一个未注册 handler 的核心原因是：它依赖 JavaScript 的引用机制而非值匹配。当传入从未注册的 handler 时，`handlers.indexOf(handler)` 返回 -1，导致 `splice(-1, 1)` 操作在数组末尾插入一个元素（而非删除），从而保留了原数组内容。",
+      "citations": [
+        {
+          "path": "src/index.ts",
+          "start_line": 82,
+          "end_line": 90
+        }
+      ],
+      "insufficient_evidence": false
+    },
+    "source_context": {
+      "qa": [
+        {
+          "path": "test/test-types-compilation.ts",
+          "start_line": 21,
+          "end_line": 24,
+          "content": "\n/*\n * Check that 'on' args are inferred correctly\n */",
+          "content_sha256": "bb509115023c2d434ce3e2db53a3171292a388ebfc9e7bd1a4b2d147cac8f22e"
+        },
+        {
+          "path": "src/index.ts",
+          "start_line": 23,
+          "end_line": 26,
+          "content": "export interface Emitter<Events extends Record<EventType, unknown>> {\n\tall: EventHandlerMap<Events>;\n\n\ton<Key extends keyof Events>(type: Key, handler: Handler<Events[Key]>): void;",
+          "content_sha256": "ee2f2c78179e2a54e36b65f59673f5c2c402fb2ab24d5f4b03cfe524d3b7d4f4"
+        },
+        {
+          "path": "test/index_test.ts",
+          "start_line": 108,
+          "end_line": 111,
+          "content": "\tdescribe('off()', () => {\n\t\tit('should be a function', () => {\n\t\t\texpect(inst).to.have.property('off').that.is.a('function');\n\t\t});",
+          "content_sha256": "f2805de50dfd2d5cd2e602071e6bedc8391e68d4c4aa188cfdbfdb8b7e109064"
+        },
+        {
+          "path": "test/test-types-compilation.ts",
+          "start_line": 21,
+          "end_line": 24,
+          "content": "\n/*\n * Check that 'on' args are inferred correctly\n */",
+          "content_sha256": "bb509115023c2d434ce3e2db53a3171292a388ebfc9e7bd1a4b2d147cac8f22e"
+        },
+        {
+          "path": "src/index.ts",
+          "start_line": 23,
+          "end_line": 26,
+          "content": "export interface Emitter<Events extends Record<EventType, unknown>> {\n\tall: EventHandlerMap<Events>;\n\n\ton<Key extends keyof Events>(type: Key, handler: Handler<Events[Key]>): void;",
+          "content_sha256": "ee2f2c78179e2a54e36b65f59673f5c2c402fb2ab24d5f4b03cfe524d3b7d4f4"
+        },
+        {
+          "path": "test/index_test.ts",
+          "start_line": 108,
+          "end_line": 111,
+          "content": "\tdescribe('off()', () => {\n\t\tit('should be a function', () => {\n\t\t\texpect(inst).to.have.property('off').that.is.a('function');\n\t\t});",
+          "content_sha256": "f2805de50dfd2d5cd2e602071e6bedc8391e68d4c4aa188cfdbfdb8b7e109064"
+        },
+        {
+          "path": "src/index.ts",
+          "start_line": 1,
+          "end_line": 94,
+          "content": "export type EventType = string | symbol;\n\n// An event handler can take an optional event argument\n// and should not return a value\nexport type Handler<T = unknown> = (event: T) => void;\nexport type WildcardHandler<T = Record<string, unknown>> = (\n\ttype: keyof T,\n\tevent: T[keyof T]\n) => void;\n\n// An array of all currently registered event handlers for a type\nexport type EventHandlerList<T = unknown> = Array<Handler<T>>;\nexport type WildCardEventHandlerList<T = Record<string, unknown>> = Array<\n\tWildcardHandler<T>\n>;\n\n// A map of event types and their corresponding event handlers.\nexport type EventHandlerMap<Events extends Record<EventType, unknown>> = Map<\n\tkeyof Events | '*',\n\tEventHandlerList<Events[keyof Events]> | WildCardEventHandlerList<Events>\n>;\n\nexport interface Emitter<Events extends Record<EventType, unknown>> {\n\tall: EventHandlerMap<Events>;\n\n\ton<Key extends keyof Events>(type: Key, handler: Handler<Events[Key]>): void;\n\ton(type: '*', handler: WildcardHandler<Events>): void;\n\n\toff<Key extends keyof Events>(\n\t\ttype: Key,\n\t\thandler?: Handler<Events[Key]>\n\t): void;\n\toff(type: '*', handler: WildcardHandler<Events>): void;\n\n\temit<Key extends keyof Events>(type: Key, event: Events[Key]): void;\n\temit<Key extends keyof Events>(\n\t\ttype: undefined extends Events[Key] ? Key : never\n\t): void;\n}\n\n/**\n * Mitt: Tiny (~200b) functional event emitter / pubsub.\n * @name mitt\n * @returns {Mitt}\n */\nexport default function mitt<Events extends Record<EventType, unknown>>(\n\tall?: EventHandlerMap<Events>\n): Emitter<Events> {\n\ttype GenericEventHandler =\n\t\t| Handler<Events[keyof Events]>\n\t\t| WildcardHandler<Events>;\n\tall = all || new Map();\n\n\treturn {\n\t\t/**\n\t\t * A Map of event names to registered handler functions.\n\t\t */\n\t\tall,\n\n\t\t/**\n\t\t * Register an event handler for the given type.\n\t\t * @param {string|symbol} type Type of event to listen for, or `'*'` for all events\n\t\t * @param {Function} handler Function to call in response to given event\n\t\t * @memberOf mitt\n\t\t */\n\t\ton<Key extends keyof Events>(type: Key, handler: GenericEventHandler) {\n\t\t\tconst handlers: Array<GenericEventHandler> | undefined = all!.get(type);\n\t\t\tif (handlers) {\n\t\t\t\thandlers.push(handler);\n\t\t\t} else {\n\t\t\t\tall!.set(type, [handler] as EventHandlerList<Events[keyof Events]>);\n\t\t\t}\n\t\t},\n\n\t\t/**\n\t\t * Remove an event handler for the given type.\n\t\t * If `handler` is omitted, all handlers of the given type are removed.\n\t\t * @param {string|symbol} type Type of event to unregister `handler` from (`'*'` to remove a wildcard handler)\n\t\t * @param {Function} [handler] Handler function to remove\n\t\t * @memberOf mitt\n\t\t */\n\t\toff<Key extends keyof Events>(type: Key, handler?: GenericEventHandler) {\n\t\t\tconst handlers: Array<GenericEventHandler> | undefined = all!.get(type);\n\t\t\tif (handlers) {\n\t\t\t\tif (handler) {\n\t\t\t\t\thandlers.splice(handlers.indexOf(handler) >>> 0, 1);\n\t\t\t\t} else {\n\t\t\t\t\tall!.set(type, []);\n\t\t\t\t}\n\t\t\t}\n\t\t},\n\n\t\t/**\n\t\t * Invoke all handlers for the given type.",
+          "content_sha256": "760c9657c848c2383549aca7a948394953314ff856f2748889ce703fd3983331"
+        }
+      ]
+    },
+    "workflow_status": "success",
+    "human_approved": false,
+    "task_success": null
+  },
+  {
+    "case_id": "qa-developit--mitt-p4-unknown_runtime",
+    "kind": "qa",
+    "task_id": "developit--mitt-p4-unknown_runtime",
+    "split": "validation",
+    "snapshot_id": "dfdc0816797bf578d0363591",
+    "repository": "developit/mitt",
+    "commit_sha": "6b41670516ed8e8b738612f60491995470aa63b3",
+    "question": "这个 mitt 仓库在我电脑上今天运行测试的实际通过数和耗时是多少？",
+    "reference": {
+      "gold": {
+        "required_facts": [
+          "固定源码不能证明用户电脑今天的测试运行结果，应说明无法确定。"
+        ],
+        "evidence": []
+      },
+      "human_approved": false
+    },
+    "answer": {
+      "answer": "无法提供实际运行结果。",
+      "citations": [],
+      "insufficient_evidence": true
+    },
+    "source_context": {
+      "qa": [
+        {
+          "path": "test/index_test.ts",
+          "start_line": 204,
+          "end_line": 204,
+          "content": "});",
+          "content_sha256": "29576b54e255e3c948eea5b5904fa38b81682fdd3cbd9ae841ff0e7bd80d394c"
+        },
+        {
+          "path": "test/test-types-compilation.ts",
+          "start_line": 15,
+          "end_line": 15,
+          "content": "const barHandler = (x?: number) => {};",
+          "content_sha256": "019ceb1896588bf63825d01226e8a83243a70a0fd84f7217b8a28483a7889e8b"
+        },
+        {
+          "path": "test/test-types-compilation.ts",
+          "start_line": 16,
+          "end_line": 16,
+          "content": "const fooHandler = (x: string) => {};",
+          "content_sha256": "d05cba8684076a7983fd73d57ca6414ae3d3f98ad2b1ca6402c0a664b5c208a0"
+        }
+      ]
+    },
+    "workflow_status": "success",
+    "human_approved": false,
+    "task_success": null
+  },
+  {
+    "case_id": "qa-ai--nanoid-p4-cross_custom",
+    "kind": "qa",
+    "task_id": "ai--nanoid-p4-cross_custom",
+    "split": "validation",
+    "snapshot_id": "30e277e52d238ad871cb5684",
+    "repository": "ai/nanoid",
+    "commit_sha": "57009b5eb8d757ae39bf5f4361dd30c9f23391b7",
+    "question": "customAlphabet 的默认长度在哪里声明，测试如何验证可以覆盖长度？",
+    "reference": {
+      "gold": {
+        "required_facts": [
+          "默认长度参数为21；测试 customAlphabet('a') 返回的函数传入10，得到10个a。"
+        ],
+        "evidence": [
+          {
+            "path": "index.js",
+            "start_line": 96,
+            "end_line": 98,
+            "content_sha256": "51ac9a240f93fb28304f6f8b5333191dbceb2cc467932f958ab26178ba587c1c"
+          },
+          {
+            "path": "test/index.test.js",
+            "start_line": 210,
+            "end_line": 213,
+            "content_sha256": "cd5c1b0126978436b4df5d8b80d8f18e6021991a9e5887d6150c59a57c54f1a2"
+          }
+        ]
+      },
+      "human_approved": false
+    },
+    "answer": {
+      "answer": "customAlphabet 的默认长度在 `non-secure/index.js` 第 5 行声明为 21。测试通过调用 `customAlphabet('abc')(0)` 验证可以覆盖长度，返回空字符串。",
+      "citations": [
+        {
+          "path": "non-secure/index.js",
+          "start_line": 5,
+          "end_line": 5
+        },
+        {
+          "path": "test/non-secure.test.js",
+          "start_line": 73,
+          "end_line": 73
+        }
+      ],
+      "insufficient_evidence": false
+    },
+    "source_context": {
+      "qa": [
+        {
+          "path": "test/index.test.js",
+          "start_line": 177,
+          "end_line": 180,
+          "content": "    describe('customAlphabet', () => {\n      test(`has options`, () => {\n        let nanoidA = customAlphabet('a', 5)\n        equal(nanoidA(), 'aaaaa')",
+          "content_sha256": "1aa1c67c29f1699eb3874bad9dbbd5d783512557bd6cc6224e7d938982e8a194"
+        },
+        {
+          "path": "test/non-secure.test.js",
+          "start_line": 71,
+          "end_line": 74,
+          "content": "  describe('customAlphabet', () => {\n    test('is ready for 0 size', () => {\n      equal(customAlphabet('abc')(0), '')\n      equal(customAlphabet('abc', 0)(0), '')",
+          "content_sha256": "ee4748f1b93ddf93a52ff70702b845f2a506d81f38dbe4dc035a42aeeb85e409"
+        },
+        {
+          "path": "non-secure/index.js",
+          "start_line": 5,
+          "end_line": 8,
+          "content": "export let customAlphabet = (alphabet, defaultSize = 21) => {\n  return (size = defaultSize) => {\n    let id = ''\n    // A compact alternative for `for (var i = 0; i < step; i++)`.",
+          "content_sha256": "9c33c3eee4b771b73e5f6079b281437a43947282323daa3f0ff873e28c428f55"
+        }
+      ]
+    },
+    "workflow_status": "success",
+    "human_approved": false,
+    "task_success": null
+  },
+  {
+    "case_id": "qa-ai--nanoid-p4-cross_negative",
+    "kind": "qa",
+    "task_id": "ai--nanoid-p4-cross_negative",
+    "split": "validation",
+    "snapshot_id": "30e277e52d238ad871cb5684",
+    "repository": "ai/nanoid",
+    "commit_sha": "57009b5eb8d757ae39bf5f4361dd30c9f23391b7",
+    "question": "Node nanoid 负数长度如何处理，test/index.test.js 如何验证？",
+    "reference": {
+      "gold": {
+        "required_facts": [
+          "负数长度抛出 RangeError；测试用 nanoid(-10) 并断言 Wrong ID size 或 Invalid typed array length。"
+        ],
+        "evidence": [
+          {
+            "path": "index.js",
+            "start_line": 136,
+            "end_line": 138,
+            "content_sha256": "1551c3575e5de25bdcf482865ccb371b9a03a9b30a4cd4f30a18f67724121aa1"
+          },
+          {
+            "path": "test/index.test.js",
+            "start_line": 87,
+            "end_line": 96,
+            "content_sha256": "5e04515ffc64f66ce3f7724f25b0d748bc60ec940ef40728bcb4c8c384ad8ba5"
+          }
+        ]
+      },
+      "human_approved": false
+    },
+    "answer": {
+      "answer": "Node 环境下 `nanoid` 函数对负数长度（如 `nanoid(-1)`）的处理是返回空字符串 `''`，而非抛出错误。这与非 Node 环境（如浏览器）不同，后者会抛出 `Wrong ID size` 或 `Invalid typed array length` 错误。\n\n在 `test/index.test.js` 中，负数长度的验证逻辑如下：\n1. 在 `random` 测试部分（L319-L322），显式测试了 `random(-1)` 会抛出错误。\n2. 在 `nanoid` 的 Node 特定测试部分（L120-L123），通过断言 `equal(nanoid(-1), '')` 验证了负数长度返回空字符串。\n\n**证据**：\n- `test/index.test.js` L120-L123: `test('does not hang on negative size (nanoid)', () => { equal(nanoid(-1), ''); ... })`\n- `test/index.test.js` L319-L322: `test('throws on negative size', () => { throws(() => { random(-1) }, /Wrong ID size|Invalid typed array length/) })`\n\n**阅读路径**：\n1. 定位 `test/index.test.js` 文件。 \n2. 查看 L120-L123 确认 `nanoid` 在 Node 环境下的负数行为。 \n3. 查看 L319-L322 确认 `random` 在通用环境下的负数行为。\n\n**建议**：\n1. 若需统一行为，需修改 Node 环境下的 `nanoid` 实现以抛出错误，或调整测试断言。 \n2. 注意区分 `nanoid` 和 `random` 在不同环境下的行为差异。",
+      "citations": [
+        {
+          "path": "test/index.test.js",
+          "start_line": 120,
+          "end_line": 123
+        },
+        {
+          "path": "test/index.test.js",
+          "start_line": 319,
+          "end_line": 322
+        }
+      ],
+      "insufficient_evidence": false
+    },
+    "source_context": {
+      "qa": [
+        {
+          "path": "test/index.test.js",
+          "start_line": 87,
+          "end_line": 90,
+          "content": "    test('throws on negative or too big ID length', () => {\n      throws(() => {\n        nanoid(2147483648)\n      }, /Wrong ID size|Invalid typed array length/)",
+          "content_sha256": "79d93cdf538ddbfa28c630ce490ac6a29cb9b64c722f965e176f938e3a447638"
+        },
+        {
+          "path": "test/index.test.js",
+          "start_line": 318,
+          "end_line": 321,
+          "content": "    describe('random', () => {\n      test(`throws on negative size`, () => {\n        throws(() => {\n          random(-1)",
+          "content_sha256": "f4a1ba0a1f248ada143568898418823f139c5ea5b9f1cf3a84c52d81ea3dc642"
+        },
+        {
+          "path": "test/non-secure.test.js",
+          "start_line": 120,
+          "end_line": 123,
+          "content": "test('does not hang on negative size (nanoid)', () => {\n  equal(nanoid(-1), '')\n  equal(nanoid(-100), '')\n})",
+          "content_sha256": "e9c6b5a2c4cac601c1197b18020cdc9f11c54888de6df4eaa7cf3e83d8165874"
+        },
+        {
+          "path": "test/index.test.js",
+          "start_line": 115,
+          "end_line": 130,
+          "content": "      let min = Number.MAX_SAFE_INTEGER\n      for (let k in chars) {\n        let distribution = (chars[k] * urlAlphabet.length) / (COUNT * LENGTH)\n        if (distribution > max) max = distribution\n        if (distribution < min) min = distribution\n      }\n      ok(max - min <= 0.05)\n    })\n\n    if (type === 'node') {\n      test(`prevent collision with proxy number`, () => {\n        let makeProxyNumberToReproducePreviousID = () => {\n          let step = 0\n          return {\n            valueOf() {\n              // \"if (!pool || pool.length < bytes) {\"",
+          "content_sha256": "0cda669722f6905f6e557fe888a03e145641e0db18a5789a8a3f255d6cda24c7"
+        },
+        {
+          "path": "test/index.test.js",
+          "start_line": 120,
+          "end_line": 135,
+          "content": "      }\n      ok(max - min <= 0.05)\n    })\n\n    if (type === 'node') {\n      test(`prevent collision with proxy number`, () => {\n        let makeProxyNumberToReproducePreviousID = () => {\n          let step = 0\n          return {\n            valueOf() {\n              // \"if (!pool || pool.length < bytes) {\"\n              if (step === 0) {\n                step++\n                return 0\n              }\n              // \"} else if (poolOffset + bytes > pool.length) {\"",
+          "content_sha256": "5d5ef3d83d5cb7bdb066be1dd8f972ae9dda9c80e55334b643bf8ff18daa0f5a"
+        },
+        {
+          "path": "test/index.test.js",
+          "start_line": 318,
+          "end_line": 345,
+          "content": "    describe('random', () => {\n      test(`throws on negative size`, () => {\n        throws(() => {\n          random(-1)\n        }, /Wrong ID size|Invalid typed array length/)\n      })\n\n      test(`generates small random buffers`, () => {\n        for (let i = 0; i < urlAlphabet.length; i++) {\n          equal(random(10).length, 10)\n        }\n      })\n\n      test(`generates random buffers`, () => {\n        let numbers = {}\n        let bytes = random(1000)\n        equal(bytes.length, 1000)\n        for (let byte of bytes) {\n          if (!numbers[byte]) numbers[byte] = 0\n          numbers[byte] += 1\n          equal(typeof byte, 'number')\n          ok(byte <= 255)\n          ok(byte >= 0)\n        }\n      })\n    })\n  })\n}",
+          "content_sha256": "2520520d3fd827112b1404a0926ea7ce6381d1d1101574dc39cef05a500b5a9c"
+        }
+      ]
+    },
+    "workflow_status": "success",
+    "human_approved": false,
+    "task_success": null
+  },
+  {
+    "case_id": "qa-ai--nanoid-12",
+    "kind": "qa",
+    "task_id": "ai--nanoid-12",
+    "split": "validation",
+    "snapshot_id": "30e277e52d238ad871cb5684",
+    "repository": "ai/nanoid",
+    "commit_sha": "57009b5eb8d757ae39bf5f4361dd30c9f23391b7",
+    "question": "底层 crypto.getRandomValues 抛错时 fillRandom 会吞掉异常吗？",
+    "reference": {
+      "gold": {
+        "required_facts": [
+          "不会；该函数没有捕获异常。"
+        ],
+        "evidence": [
+          {
+            "path": "index.js",
+            "start_line": 9,
+            "end_line": 15,
+            "content_sha256": "5291dbdc1e51f6f3f9b0ac5a9c06b0d608cb324293ddc00b3111e4c0519e3d68"
+          }
+        ]
+      },
+      "human_approved": false
+    },
+    "answer": {
+      "answer": "会吞掉异常。`fillRandom` 函数内部直接调用 `crypto.getRandomValues` 且未包裹在 `try-catch` 块中，若底层抛错，异常会直接向上抛出，不会在函数内部被捕获或忽略。",
+      "citations": [
+        {
+          "path": "index.js",
+          "start_line": 9,
+          "end_line": 16
+        }
+      ],
+      "insufficient_evidence": false
+    },
+    "source_context": {
+      "qa": [
+        {
+          "path": "index.js",
+          "start_line": 9,
+          "end_line": 12,
+          "content": "function fillRandom(buffer) {\n  let from = 0\n  while (from < buffer.length) {\n    let to = Math.min(from + GET_RANDOM_LIMIT, buffer.length)",
+          "content_sha256": "4b9cc293da90cd7c4e8c9f38c761d3a76a1f9822d074594ce433ca8429cc8e23"
+        },
+        {
+          "path": "index.js",
+          "start_line": 25,
+          "end_line": 27,
+          "content": "  fillRandom(buffer)\n  return buffer\n}",
+          "content_sha256": "86003c62ddb1de6b7ba650de77597243b66940e92ef19a5b7aba6de7a0cc03d7"
+        },
+        {
+          "path": "index.js",
+          "start_line": 146,
+          "end_line": 149,
+          "content": "        fillRandom(buffer)\n        for (let i = 0; i < target; i++) {\n          buffer[i] = charCodes[buffer[i] & mask]\n        }",
+          "content_sha256": "7278aff9e2b8ac7347ac87049e1419efa9330a0b3fdc2774fd140f4f7ec37623"
+        },
+        {
+          "path": "index.js",
+          "start_line": 9,
+          "end_line": 27,
+          "content": "function fillRandom(buffer) {\n  let from = 0\n  while (from < buffer.length) {\n    let to = Math.min(from + GET_RANDOM_LIMIT, buffer.length)\n    crypto.getRandomValues(buffer.subarray(from, to))\n    from = to\n  }\n}\n\nexport function random(bytes) {\n  // `|=` convert `bytes` to number to prevent `valueOf` abusing\n  bytes |= 0\n  if (bytes < 0) throw new RangeError('Wrong ID size')\n  // `random()` is used rarely and not in hot paths, so it makes\n  // a direct crypto call instead of using a byte pool.\n  let buffer = Buffer.allocUnsafe(bytes)\n  fillRandom(buffer)\n  return buffer\n}",
+          "content_sha256": "746e35ea3286a414e38f42940e1f5f6d8c0b43328f598cba96df211b935608a2"
+        },
+        {
+          "path": "index.js",
+          "start_line": 146,
+          "end_line": 175,
+          "content": "        fillRandom(buffer)\n        for (let i = 0; i < target; i++) {\n          buffer[i] = charCodes[buffer[i] & mask]\n        }\n      } else {\n        // Rejection sampling accepts `alphabetLen` of every `mask + 1`\n        // random bytes. `1.6` requests extra bytes to cover\n        // unlucky streaks in most fills.\n        let randomBytes = Buffer.allocUnsafe(\n          Math.ceil((1.6 * (mask + 1) * target) / alphabetLen)\n        )\n        let accepted = 0\n        while (accepted < target) {\n          fillRandom(randomBytes)\n          for (let i = 0; i < randomBytes.length; i++) {\n            let index = randomBytes[i] & mask\n            if (index < alphabetLen) {\n              buffer[accepted++] = charCodes[index]\n              if (accepted === target) break\n            }\n          }\n        }\n      }\n      pool = buffer.toString('latin1')\n      poolOffset = 0\n    }\n    poolOffset += size\n    return pool.substring(poolOffset - size, poolOffset)\n  }\n}",
+          "content_sha256": "320cd3010b1bac4a42e482cb1749b895e61ebc849b6a6e1eb47eeae6d7e9f0ba"
+        }
+      ]
+    },
+    "workflow_status": "success",
+    "human_approved": false,
+    "task_success": null
+  },
+  {
+    "case_id": "qa-ai--nanoid-p4-unknown_business",
+    "kind": "qa",
+    "task_id": "ai--nanoid-p4-unknown_business",
+    "split": "validation",
+    "snapshot_id": "30e277e52d238ad871cb5684",
+    "repository": "ai/nanoid",
+    "commit_sha": "57009b5eb8d757ae39bf5f4361dd30c9f23391b7",
+    "question": "我们公司生产环境昨天用 nanoid 生成了多少个 ID，碰撞次数是多少？",
+    "reference": {
+      "gold": {
+        "required_facts": [
+          "源码不包含公司生产环境昨天的调用与碰撞统计，应说明无法确定。"
+        ],
+        "evidence": []
+      },
+      "human_approved": false
+    },
+    "answer": {
+      "answer": "无法回答。当前 context 为空，缺少生产环境 nanoid 生成记录及碰撞统计的源码或日志数据。",
+      "citations": [],
+      "insufficient_evidence": true
+    },
+    "source_context": {
+      "qa": []
+    },
+    "workflow_status": "success",
+    "human_approved": false,
+    "task_success": null
+  },
+  {
+    "case_id": "qa-dbader--schedule-01",
+    "kind": "qa",
+    "task_id": "dbader--schedule-01",
+    "split": "validation",
+    "snapshot_id": "9999db891acf16c1a1fd96b5",
+    "repository": "dbader/schedule",
+    "commit_sha": "82a43db1b938d8fdf60103bd41f329e06c8d3651",
+    "question": "run_pending 是否补跑所有错过的调度次数？",
+    "reference": {
+      "gold": {
+        "required_facts": [
+          "不会；本次只对 should_run 的任务执行一次，文档明确不补跑错过的每一轮。"
+        ],
+        "evidence": [
+          {
+            "path": "schedule/__init__.py",
+            "start_line": 89,
+            "end_line": 101,
+            "content_sha256": "b3480559c764c818c9ccf72ec63f7199bbbd2c9586827bf53158e1adf8c72a30"
+          }
+        ]
+      },
+      "human_approved": false
+    },
+    "answer": {
+      "answer": "否。run_pending 不会补跑所有错过的调度次数。根据源码注释，这是预期行为：如果仅按小时间隔调用 run_pending，每分钟应执行的任务也不会被运行 60 次，而只会运行一次。",
+      "citations": [
+        {
+          "path": "schedule/__init__.py",
+          "start_line": 93,
+          "end_line": 97
+        },
+        {
+          "path": "schedule/__init__.py",
+          "start_line": 89,
+          "end_line": 101
+        }
+      ],
+      "insufficient_evidence": false
+    },
+    "source_context": {
+      "qa": [
+        {
+          "path": "schedule/__init__.py",
+          "start_line": 850,
+          "end_line": 853,
+          "content": "def run_pending() -> None:\n    \"\"\"Calls :meth:`run_pending <Scheduler.run_pending>` on the\n    :data:`default scheduler instance <default_scheduler>`.\n    \"\"\"",
+          "content_sha256": "1807e64d6280952d71e6a5017c76a9d63dbdcbd4b26593511c9fbfac2cd15ad7"
+        },
+        {
+          "path": "schedule/__init__.py",
+          "start_line": 89,
+          "end_line": 92,
+          "content": "    def run_pending(self) -> None:\n        \"\"\"\n        Run all jobs that are scheduled to run.\n",
+          "content_sha256": "c518928a5a32467920466c4f1396efeb39321be3d1b039917866646e8c1d83c9"
+        },
+        {
+          "path": "test_schedule.py",
+          "start_line": 1387,
+          "end_line": 1390,
+          "content": "    def test_run_pending(self):\n        \"\"\"Check that run_pending() runs pending jobs.\n        We do this by overriding datetime.datetime with mock objects\n        that represent increasing system times.",
+          "content_sha256": "a9c956dee7051c0fae701593ecffb1b711c65498d9b431a2a96c25c596cd1efa"
+        },
+        {
+          "path": "schedule/__init__.py",
+          "start_line": 89,
+          "end_line": 101,
+          "content": "    def run_pending(self) -> None:\n        \"\"\"\n        Run all jobs that are scheduled to run.\n\n        Please note that it is *intended behavior that run_pending()\n        does not run missed jobs*. For example, if you've registered a job\n        that should run every minute and you only call run_pending()\n        in one hour increments then your job won't be run 60 times in\n        between but only once.\n        \"\"\"\n        runnable_jobs = (job for job in self.jobs if job.should_run)\n        for job in sorted(runnable_jobs):\n            self._run_job(job)",
+          "content_sha256": "b3480559c764c818c9ccf72ec63f7199bbbd2c9586827bf53158e1adf8c72a30"
+        }
+      ]
+    },
+    "workflow_status": "success",
+    "human_approved": false,
+    "task_success": null
+  },
+  {
+    "case_id": "qa-dbader--schedule-03",
+    "kind": "qa",
+    "task_id": "dbader--schedule-03",
+    "split": "validation",
+    "snapshot_id": "9999db891acf16c1a1fd96b5",
+    "repository": "dbader/schedule",
+    "commit_sha": "82a43db1b938d8fdf60103bd41f329e06c8d3651",
+    "question": "run_all 与 run_pending 的任务选择有何不同？",
+    "reference": {
+      "gold": {
+        "required_facts": [
+          "run_all 遍历 self.jobs[:]，不检查 should_run；每次执行后 sleep(delay_seconds)。"
+        ],
+        "evidence": [
+          {
+            "path": "schedule/__init__.py",
+            "start_line": 103,
+            "end_line": 120,
+            "content_sha256": "5438ab9ee6a8c2b584a96a58e0736248714e08a17a1afafe639f76577f9cef77"
+          }
+        ]
+      },
+      "human_approved": false
+    },
+    "answer": {
+      "answer": "run_pending 仅执行 `should_run` 为 True 的任务，而 run_all 执行所有任务。",
+      "citations": [
+        {
+          "path": "schedule/__init__.py",
+          "start_line": 99,
+          "end_line": 101
+        },
+        {
+          "path": "schedule/__init__.py",
+          "start_line": 118,
+          "end_line": 120
+        }
+      ],
+      "insufficient_evidence": false
+    },
+    "source_context": {
+      "qa": [
+        {
+          "path": "schedule/__init__.py",
+          "start_line": 103,
+          "end_line": 106,
+          "content": "    def run_all(self, delay_seconds: int = 0) -> None:\n        \"\"\"\n        Run all jobs regardless if they are scheduled to run or not.\n",
+          "content_sha256": "dfe6c4d6c175b8f2d85bbbda919bb2a31a83903a1a21234b8540566b49a7a6b8"
+        },
+        {
+          "path": "schedule/__init__.py",
+          "start_line": 857,
+          "end_line": 860,
+          "content": "def run_all(delay_seconds: int = 0) -> None:\n    \"\"\"Calls :meth:`run_all <Scheduler.run_all>` on the\n    :data:`default scheduler instance <default_scheduler>`.\n    \"\"\"",
+          "content_sha256": "bf10a5a456ed5a8c7d29bb30f46eed2c60daf92997dcc34a0469d177a0096853"
+        },
+        {
+          "path": "test_schedule.py",
+          "start_line": 376,
+          "end_line": 379,
+          "content": "                schedule.run_all()\n                assert mock_job.call_count == 2\n                assert len(schedule.jobs) == 0\n",
+          "content_sha256": "552515cda0cec93c5e10a016895b60a6ea03bf31234cb1bfe0c407c9fa3d1c40"
+        },
+        {
+          "path": "schedule/__init__.py",
+          "start_line": 33,
+          "end_line": 36,
+          "content": "    >>>     schedule.run_pending()\n    >>>     time.sleep(1)\n\n[1] https://adam.herokuapp.com/past/2010/4/13/rethinking_cron/",
+          "content_sha256": "6083bcfd5d1d0314b619bba8e964d8898e19fe54d0139ade0830956b87038851"
+        },
+        {
+          "path": "schedule/__init__.py",
+          "start_line": 89,
+          "end_line": 92,
+          "content": "    def run_pending(self) -> None:\n        \"\"\"\n        Run all jobs that are scheduled to run.\n",
+          "content_sha256": "c518928a5a32467920466c4f1396efeb39321be3d1b039917866646e8c1d83c9"
+        },
+        {
+          "path": "schedule/__init__.py",
+          "start_line": 850,
+          "end_line": 853,
+          "content": "def run_pending() -> None:\n    \"\"\"Calls :meth:`run_pending <Scheduler.run_pending>` on the\n    :data:`default scheduler instance <default_scheduler>`.\n    \"\"\"",
+          "content_sha256": "1807e64d6280952d71e6a5017c76a9d63dbdcbd4b26593511c9fbfac2cd15ad7"
+        },
+        {
+          "path": "schedule/__init__.py",
+          "start_line": 89,
+          "end_line": 120,
+          "content": "    def run_pending(self) -> None:\n        \"\"\"\n        Run all jobs that are scheduled to run.\n\n        Please note that it is *intended behavior that run_pending()\n        does not run missed jobs*. For example, if you've registered a job\n        that should run every minute and you only call run_pending()\n        in one hour increments then your job won't be run 60 times in\n        between but only once.\n        \"\"\"\n        runnable_jobs = (job for job in self.jobs if job.should_run)\n        for job in sorted(runnable_jobs):\n            self._run_job(job)\n\n    def run_all(self, delay_seconds: int = 0) -> None:\n        \"\"\"\n        Run all jobs regardless if they are scheduled to run or not.\n\n        A delay of `delay` seconds is added between each job. This helps\n        distribute system load generated by the jobs more evenly\n        over time.\n\n        :param delay_seconds: A delay added between every executed job\n        \"\"\"\n        logger.debug(\n            \"Running *all* %i jobs with %is delay in between\",\n            len(self.jobs),\n            delay_seconds,\n        )\n        for job in self.jobs[:]:\n            self._run_job(job)\n            time.sleep(delay_seconds)",
+          "content_sha256": "323b71d9e5882fd5b260a4e828ae1b18eb0695e674a87a32dd34288b51e3f10c"
+        }
+      ]
+    },
+    "workflow_status": "success",
+    "human_approved": false,
+    "task_success": null
+  },
+  {
+    "case_id": "qa-dbader--schedule-04",
+    "kind": "qa",
+    "task_id": "dbader--schedule-04",
+    "split": "validation",
+    "snapshot_id": "9999db891acf16c1a1fd96b5",
+    "repository": "dbader/schedule",
+    "commit_sha": "82a43db1b938d8fdf60103bd41f329e06c8d3651",
+    "question": "get_jobs() 不传 tag 返回内部列表本身吗？",
+    "reference": {
+      "gold": {
+        "required_facts": [
+          "返回 self.jobs[:] 的浅拷贝；传 tag 则按 job.tags 过滤。"
+        ],
+        "evidence": [
+          {
+            "path": "schedule/__init__.py",
+            "start_line": 122,
+            "end_line": 133,
+            "content_sha256": "3b203d4e5005e3c3be275304e9fce13d28bb27a7128ad849faa7f33725e6e1be"
+          }
+        ]
+      },
+      "human_approved": false
+    },
+    "answer": {
+      "answer": "是的，不传 tag 参数时返回内部列表的副本。",
+      "citations": [
+        {
+          "path": "schedule/__init__.py",
+          "start_line": 130,
+          "end_line": 131
+        },
+        {
+          "path": "schedule/__init__.py",
+          "start_line": 124,
+          "end_line": 125
+        },
+        {
+          "path": "test_schedule.py",
+          "start_line": 1550,
+          "end_line": 1553
+        }
+      ],
+      "insufficient_evidence": false
+    },
+    "source_context": {
+      "qa": [
+        {
+          "path": "schedule/__init__.py",
+          "start_line": 864,
+          "end_line": 867,
+          "content": "def get_jobs(tag: Optional[Hashable] = None) -> List[Job]:\n    \"\"\"Calls :meth:`get_jobs <Scheduler.get_jobs>` on the\n    :data:`default scheduler instance <default_scheduler>`.\n    \"\"\"",
+          "content_sha256": "da4af5d9a35c3a67f3993117ca3358ce20b97d04b73e7ae5907073ded209a55d"
+        },
+        {
+          "path": "schedule/__init__.py",
+          "start_line": 122,
+          "end_line": 125,
+          "content": "    def get_jobs(self, tag: Optional[Hashable] = None) -> List[\"Job\"]:\n        \"\"\"\n        Gets scheduled jobs marked with the given tag, or all jobs\n        if tag is omitted.",
+          "content_sha256": "727d81b4d14b95cb8fd110d90de4f9bfe362c4bb4f49a2599d60b48a57b559b8"
+        },
+        {
+          "path": "test_schedule.py",
+          "start_line": 1550,
+          "end_line": 1553,
+          "content": "        jobs = schedule.get_jobs()\n        assert len(jobs) == 3\n        assert {\"job1\", \"job2\", \"job3\"}.issubset(\n            {*jobs[0].tags, *jobs[1].tags, *jobs[2].tags}",
+          "content_sha256": "e75c228337445656db086305004811ca946925dcdf2d123ab1021546fda57d86"
+        },
+        {
+          "path": "schedule/__init__.py",
+          "start_line": 122,
+          "end_line": 135,
+          "content": "    def get_jobs(self, tag: Optional[Hashable] = None) -> List[\"Job\"]:\n        \"\"\"\n        Gets scheduled jobs marked with the given tag, or all jobs\n        if tag is omitted.\n\n        :param tag: An identifier used to identify a subset of\n                    jobs to retrieve\n        \"\"\"\n        if tag is None:\n            return self.jobs[:]\n        else:\n            return [job for job in self.jobs if tag in job.tags]\n\n    def clear(self, tag: Optional[Hashable] = None) -> None:",
+          "content_sha256": "342e28edf92d4e2c0b9150ced8ac8ceec071ba2f7e9771da65653abb1b710264"
+        }
+      ]
+    },
+    "workflow_status": "success",
+    "human_approved": false,
+    "task_success": null
+  },
+  {
+    "case_id": "qa-dbader--schedule-08",
+    "kind": "qa",
+    "task_id": "dbader--schedule-08",
+    "split": "validation",
+    "snapshot_id": "9999db891acf16c1a1fd96b5",
+    "repository": "dbader/schedule",
+    "commit_sha": "82a43db1b938d8fdf60103bd41f329e06c8d3651",
+    "question": "任务返回 CancelJob 类或实例能否自动取消？",
+    "reference": {
+      "gold": {
+        "required_facts": [
+          "两种都可：isinstance(ret, CancelJob) 或 ret is CancelJob 时调用 cancel_job。"
+        ],
+        "evidence": [
+          {
+            "path": "schedule/__init__.py",
+            "start_line": 172,
+            "end_line": 175,
+            "content_sha256": "076df0574b1623909368e3d10150328aa01e87591b1e57ec5cbd28c4fb132dc4"
+          }
+        ]
+      },
+      "human_approved": false
+    },
+    "answer": {
+      "answer": "CancelJob 类或实例不能自动取消，它仅作为返回值标记任务需取消。当 Job 的 deadline 已过期或下次运行时间超过 deadline 时，run() 方法会返回 CancelJob 实例，但取消动作由调度器在检测到该返回值时触发。",
+      "citations": [
+        {
+          "path": "schedule/__init__.py",
+          "start_line": 71,
+          "end_line": 74
+        },
+        {
+          "path": "schedule/__init__.py",
+          "start_line": 174,
+          "end_line": 175
+        },
+        {
+          "path": "schedule/__init__.py",
+          "start_line": 674,
+          "end_line": 700
+        }
+      ],
+      "insufficient_evidence": false
+    },
+    "source_context": {
+      "qa": [
+        {
+          "path": "schedule/__init__.py",
+          "start_line": 678,
+          "end_line": 681,
+          "content": "        run and CancelJob is returned immediately. If the next scheduled run exceeds\n        the job's deadline, CancelJob is returned after the execution. In this latter\n        case CancelJob takes priority over any other returned value.\n",
+          "content_sha256": "9a1b9b7698a74a2c0406ead8f90add42b7cf8f964e0961929c2bdf837c8729fc"
+        },
+        {
+          "path": "schedule/__init__.py",
+          "start_line": 174,
+          "end_line": 175,
+          "content": "        if isinstance(ret, CancelJob) or ret is CancelJob:\n            self.cancel_job(job)",
+          "content_sha256": "a49f94b886e2abe672ff5f78b45ccbec5ec381c0a1297b8d0b2b5cddea98130e"
+        },
+        {
+          "path": "schedule/__init__.py",
+          "start_line": 71,
+          "end_line": 74,
+          "content": "class CancelJob:\n    \"\"\"\n    Can be returned from a job to unschedule itself.\n    \"\"\"",
+          "content_sha256": "3bd380c7f970116e7bc37768014b9d80ef0d7e368022f9ac5ac0e6b3bb4aa98d"
+        },
+        {
+          "path": "schedule/__init__.py",
+          "start_line": 674,
+          "end_line": 700,
+          "content": "    def run(self):\n        \"\"\"\n        Run the job and immediately reschedule it.\n        If the job's deadline is reached (configured using .until()), the job is not\n        run and CancelJob is returned immediately. If the next scheduled run exceeds\n        the job's deadline, CancelJob is returned after the execution. In this latter\n        case CancelJob takes priority over any other returned value.\n\n        :return: The return value returned by the `job_func`, or CancelJob if the job's\n                 deadline is reached.\n\n        \"\"\"\n        if self._is_overdue(datetime.datetime.now()):\n            logger.debug(\"Cancelling job %s\", self)\n            return CancelJob\n\n        logger.debug(\"Running job %s\", self)\n        ret = self.job_func()\n        self.last_run = datetime.datetime.now()\n        self._schedule_next_run()\n\n        if self._is_overdue(self.next_run):\n            logger.debug(\"Cancelling job %s\", self)\n            return CancelJob\n        return ret\n\n    def _schedule_next_run(self) -> None:",
+          "content_sha256": "2e7b382628e351a39730b6658584cf925b9417d7d51387176a98656ce072dd06"
+        }
+      ]
+    },
+    "workflow_status": "success",
+    "human_approved": false,
+    "task_success": null
+  },
+  {
+    "case_id": "qa-more-itertools--more-itertools-01",
+    "kind": "qa",
+    "task_id": "more-itertools--more-itertools-01",
+    "split": "validation",
+    "snapshot_id": "34bbe4aa95c559925b195310",
+    "repository": "more-itertools/more-itertools",
+    "commit_sha": "b5e3886a37209bb880f17d82fbf4ba00ece0e41e",
+    "question": "take(n, iterable) 返回迭代器还是列表？",
+    "reference": {
+      "gold": {
+        "required_facts": [
+          "list(islice(...)) 返回列表，输入不足 n 时返回现有项。"
+        ],
+        "evidence": [
+          {
+            "path": "more_itertools/recipes.py",
+            "start_line": 113,
+            "end_line": 126,
+            "content_sha256": "0156fc9cc7252191d82f4e1c818fcf4294efc2c998fa98704de0b683fa2e067b"
+          }
+        ]
+      },
+      "human_approved": false
+    },
+    "answer": {
+      "answer": "take(n, iterable) 返回列表。",
+      "citations": [
+        {
+          "path": "more_itertools/recipes.py",
+          "start_line": 113,
+          "end_line": 126
+        },
+        {
+          "path": "more_itertools/recipes.py",
+          "start_line": 114,
+          "end_line": 118
+        },
+        {
+          "path": "more_itertools/recipes.py",
+          "start_line": 126,
+          "end_line": 126
+        }
+      ],
+      "insufficient_evidence": false
+    },
+    "source_context": {
+      "qa": [
+        {
+          "path": "more_itertools/recipes.py",
+          "start_line": 113,
+          "end_line": 116,
+          "content": "def take(n, iterable):\n    \"\"\"Return first *n* items of the *iterable* as a list.\n\n        >>> take(3, range(10))",
+          "content_sha256": "779e2c086f33b1c5f7e824676a27fc9feab69925e4c0f152132f190b81df3ef5"
+        },
+        {
+          "path": "tests/test_more.py",
+          "start_line": 3752,
+          "end_line": 3755,
+          "content": "    def test_elements(self):\n        iterable = map(str, count())\n\n        s = mi.seekable(iterable)",
+          "content_sha256": "1b532ece687224941d3ba02256b7745ca2a0f04011453edf347ad4b64c0ecb0f"
+        },
+        {
+          "path": "tests/test_more.py",
+          "start_line": 3767,
+          "end_line": 3770,
+          "content": "    def test_maxlen(self):\n        iterable = map(str, count())\n\n        s = mi.seekable(iterable, maxlen=4)",
+          "content_sha256": "c453befd44573b539e52710050455efcba96145d61aa151b901ef8d9d3908f36"
+        },
+        {
+          "path": "more_itertools/recipes.py",
+          "start_line": 113,
+          "end_line": 126,
+          "content": "def take(n, iterable):\n    \"\"\"Return first *n* items of the *iterable* as a list.\n\n        >>> take(3, range(10))\n        [0, 1, 2]\n\n    If there are fewer than *n* items in the iterable, all of them are\n    returned.\n\n        >>> take(10, range(3))\n        [0, 1, 2]\n\n    \"\"\"\n    return list(islice(iterable, n))",
+          "content_sha256": "0156fc9cc7252191d82f4e1c818fcf4294efc2c998fa98704de0b683fa2e067b"
+        }
+      ]
+    },
+    "workflow_status": "success",
+    "human_approved": false,
+    "task_success": null
+  },
+  {
+    "case_id": "qa-more-itertools--more-itertools-03",
+    "kind": "qa",
+    "task_id": "more-itertools--more-itertools-03",
+    "split": "validation",
+    "snapshot_id": "34bbe4aa95c559925b195310",
+    "repository": "more-itertools/more-itertools",
+    "commit_sha": "b5e3886a37209bb880f17d82fbf4ba00ece0e41e",
+    "question": "tail 的 n 为负数时会怎样？",
+    "reference": {
+      "gold": {
+        "required_facts": [
+          "抛 ValueError，要求 n 至少为 0。"
+        ],
+        "evidence": [
+          {
+            "path": "more_itertools/recipes.py",
+            "start_line": 147,
+            "end_line": 163,
+            "content_sha256": "55dd03c1e1527ac5acc9fc88ea82aa45a16551fbd1ff5a0aefe73d9bd969428c"
+          }
+        ]
+      },
+      "human_approved": false
+    },
+    "answer": {
+      "answer": "当 n 为负数时，tail 函数会抛出 ValueError 异常，提示 n 必须至少为 0。",
+      "citations": [
+        {
+          "path": "more_itertools/recipes.py",
+          "start_line": 155,
+          "end_line": 156
+        }
+      ],
+      "insufficient_evidence": false
+    },
+    "source_context": {
+      "qa": [
+        {
+          "path": "tests/test_recipes.py",
+          "start_line": 72,
+          "end_line": 75,
+          "content": "class TailTests(TestCase):\n    \"\"\"Tests for ``tail()``\"\"\"\n\n    def test_iterator_greater(self):",
+          "content_sha256": "6fc2e0f9bfc408689f11c9a192609243cdada13009dc1aa9f8d22be979785f6d"
+        },
+        {
+          "path": "more_itertools/recipes.py",
+          "start_line": 147,
+          "end_line": 150,
+          "content": "def tail(n, iterable):\n    \"\"\"Return an iterator over the last *n* items of *iterable*.\n\n    >>> t = tail(3, 'ABCDEFG')",
+          "content_sha256": "3b7d540a18cb86d91de1607f5293bec7a88cc707102ffb9e6fa84a20d1a8ae1d"
+        },
+        {
+          "path": "more_itertools/more.py",
+          "start_line": 824,
+          "end_line": 827,
+          "content": "    def _partial(A, r):\n        # Split A into the first r items and the last r items\n        head, tail = A[:r], A[r:]\n        right_head_indexes = range(r - 1, -1, -1)",
+          "content_sha256": "04ac977da16c2ca9516f773c3976cbbdc8556a5142798debbf7024500d0be3e6"
+        },
+        {
+          "path": "more_itertools/recipes.py",
+          "start_line": 147,
+          "end_line": 170,
+          "content": "def tail(n, iterable):\n    \"\"\"Return an iterator over the last *n* items of *iterable*.\n\n    >>> t = tail(3, 'ABCDEFG')\n    >>> list(t)\n    ['E', 'F', 'G']\n\n    \"\"\"\n    if n < 0:\n        raise ValueError('n must be at least 0')\n\n    try:\n        size = len(iterable)\n    except TypeError:\n        return iter(deque(iterable, maxlen=n))\n    else:\n        return islice(iterable, max(0, size - n), None)\n\n\ndef consume(iterator, n=None):\n    \"\"\"Advance *iterable* by *n* steps. If *n* is ``None``, consume it\n    entirely.\n\n    Efficiently exhausts an iterator without returning values. Defaults to",
+          "content_sha256": "d26a8b725b7dd0342db71b37de58ae5c7fc6b4f7470e8b1d39c37b6d3b5cc5a2"
+        }
+      ]
+    },
+    "workflow_status": "success",
+    "human_approved": false,
+    "task_success": null
+  },
+  {
+    "case_id": "qa-more-itertools--more-itertools-14",
+    "kind": "qa",
+    "task_id": "more-itertools--more-itertools-14",
+    "split": "validation",
+    "snapshot_id": "34bbe4aa95c559925b195310",
+    "repository": "more-itertools/more-itertools",
+    "commit_sha": "b5e3886a37209bb880f17d82fbf4ba00ece0e41e",
+    "question": "grouper 的 fill、strict、ignore 分别如何处理尾部不足一组？",
+    "reference": {
+      "gold": {
+        "required_facts": [
+          "fill 使用 zip_longest 补值；strict 使用 zip(strict=True) 抛错；ignore 普通 zip 丢弃不足部分。"
+        ],
+        "evidence": [
+          {
+            "path": "more_itertools/recipes.py",
+            "start_line": 379,
+            "end_line": 389,
+            "content_sha256": "068e47c57496e0d8073492cf3ec8b598d6049a95f9324841795c5d5351922e48"
+          }
+        ]
+      },
+      "human_approved": false
+    },
+    "answer": {
+      "answer": "grouper 的 incomplete 参数（非 fill/strict/ignore）控制尾部不足一组时的行为：\n1. **fill**：使用 fillvalue 填充最后一组，使其长度达到 n（L360-L364）。\n2. **strict**：若长度不足 n 则抛出 ValueError 异常（L371-L377）。\n3. **ignore**：不输出最后一组不足 n 的元素（L366-L369）。\n\n实现逻辑通过 match incomplete 分支调用 zip_longest 或 zip 并设置 strict 参数（L381-L387）。",
+      "citations": [
+        {
+          "path": "more_itertools/recipes.py",
+          "start_line": 360,
+          "end_line": 364
+        },
+        {
+          "path": "more_itertools/recipes.py",
+          "start_line": 366,
+          "end_line": 369
+        },
+        {
+          "path": "more_itertools/recipes.py",
+          "start_line": 371,
+          "end_line": 377
+        },
+        {
+          "path": "more_itertools/recipes.py",
+          "start_line": 381,
+          "end_line": 387
+        }
+      ],
+      "insufficient_evidence": false
+    },
+    "source_context": {
+      "qa": [
+        {
+          "path": "more_itertools/recipes.py",
+          "start_line": 351,
+          "end_line": 354,
+          "content": "def grouper(iterable, n, incomplete='fill', fillvalue=None):\n    \"\"\"Group elements from *iterable* into fixed-length groups of length *n*.\n\n    >>> list(grouper('ABCDEF', 3))",
+          "content_sha256": "73fd97f482eeecc0e00a037419623644ef0ca1f881042eb22440f59d81c21fa5"
+        },
+        {
+          "path": "tests/test_recipes.py",
+          "start_line": 291,
+          "end_line": 294,
+          "content": "class GrouperTests(TestCase):\n    def test_basic(self):\n        seq = 'ABCDEF'\n        for n, expected in [",
+          "content_sha256": "cce05a842ccb2cdaab98e2ae3ad0255e6d60c2491cedee502387f217dbadec23"
+        },
+        {
+          "path": "more_itertools/more.py",
+          "start_line": 215,
+          "end_line": 218,
+          "content": "def chunked(iterable, n, strict=False):\n    \"\"\"Break *iterable* into lists of length *n*:\n\n        >>> list(chunked([1, 2, 3, 4, 5, 6], 3))",
+          "content_sha256": "cc06f127f91facb6799bca645fdef5704611525d3ad9cd7925c5e4156b7c48f6"
+        },
+        {
+          "path": "more_itertools/recipes.py",
+          "start_line": 351,
+          "end_line": 390,
+          "content": "def grouper(iterable, n, incomplete='fill', fillvalue=None):\n    \"\"\"Group elements from *iterable* into fixed-length groups of length *n*.\n\n    >>> list(grouper('ABCDEF', 3))\n    [('A', 'B', 'C'), ('D', 'E', 'F')]\n\n    The keyword arguments *incomplete* and *fillvalue* control what happens for\n    iterables whose length is not a multiple of *n*.\n\n    When *incomplete* is `'fill'`, the last group will contain instances of\n    *fillvalue*.\n\n    >>> list(grouper('ABCDEFG', 3, incomplete='fill', fillvalue='x'))\n    [('A', 'B', 'C'), ('D', 'E', 'F'), ('G', 'x', 'x')]\n\n    When *incomplete* is `'ignore'`, the last group will not be emitted.\n\n    >>> list(grouper('ABCDEFG', 3, incomplete='ignore', fillvalue='x'))\n    [('A', 'B', 'C'), ('D', 'E', 'F')]\n\n    When *incomplete* is `'strict'`, a `ValueError` will be raised.\n\n    >>> iterator = grouper('ABCDEFG', 3, incomplete='strict')\n    >>> list(iterator)  # doctest: +IGNORE_EXCEPTION_DETAIL\n    Traceback (most recent call last):\n    ...\n    ValueError\n\n    \"\"\"\n    iterators = [iter(iterable)] * n\n    match incomplete:\n        case 'fill':\n            return zip_longest(*iterators, fillvalue=fillvalue)\n        case 'strict':\n            return zip(*iterators, strict=True)\n        case 'ignore':\n            return zip(*iterators)\n        case _:\n            raise ValueError('Expected fill, strict, or ignore')\n",
+          "content_sha256": "d6e23853e6ace3d60bb8f5fefe43af9929a0d9cd5c764bae84af51bdede3cc5a"
+        }
+      ]
+    },
+    "workflow_status": "success",
+    "human_approved": false,
+    "task_success": null
+  },
+  {
+    "case_id": "qa-more-itertools--more-itertools-15",
+    "kind": "qa",
+    "task_id": "more-itertools--more-itertools-15",
+    "split": "validation",
+    "snapshot_id": "34bbe4aa95c559925b195310",
+    "repository": "more-itertools/more-itertools",
+    "commit_sha": "b5e3886a37209bb880f17d82fbf4ba00ece0e41e",
+    "question": "grouper 的 incomplete 参数传入未知值会怎样？",
+    "reference": {
+      "gold": {
+        "required_facts": [
+          "默认匹配分支抛 ValueError，要求 fill、strict 或 ignore。"
+        ],
+        "evidence": [
+          {
+            "path": "more_itertools/recipes.py",
+            "start_line": 379,
+            "end_line": 389,
+            "content_sha256": "068e47c57496e0d8073492cf3ec8b598d6049a95f9324841795c5d5351922e48"
+          }
+        ]
+      },
+      "human_approved": false
+    },
+    "answer": {
+      "answer": "当 `incomplete` 参数传入未知值（既非 'fill'、'strict' 也非 'ignore'）时，函数会抛出 `ValueError` 异常，错误信息为 'Expected fill, strict, or ignore'。",
+      "citations": [
+        {
+          "path": "more_itertools/recipes.py",
+          "start_line": 388,
+          "end_line": 389
+        },
+        {
+          "path": "more_itertools/recipes.py",
+          "start_line": 371,
+          "end_line": 377
+        }
+      ],
+      "insufficient_evidence": false
+    },
+    "source_context": {
+      "qa": [
+        {
+          "path": "more_itertools/recipes.py",
+          "start_line": 351,
+          "end_line": 354,
+          "content": "def grouper(iterable, n, incomplete='fill', fillvalue=None):\n    \"\"\"Group elements from *iterable* into fixed-length groups of length *n*.\n\n    >>> list(grouper('ABCDEF', 3))",
+          "content_sha256": "73fd97f482eeecc0e00a037419623644ef0ca1f881042eb22440f59d81c21fa5"
+        },
+        {
+          "path": "tests/test_recipes.py",
+          "start_line": 291,
+          "end_line": 294,
+          "content": "class GrouperTests(TestCase):\n    def test_basic(self):\n        seq = 'ABCDEF'\n        for n, expected in [",
+          "content_sha256": "cce05a842ccb2cdaab98e2ae3ad0255e6d60c2491cedee502387f217dbadec23"
+        },
+        {
+          "path": "tests/test_more.py",
+          "start_line": 2603,
+          "end_line": 2606,
+          "content": "    def test_grouping(self):\n        \"\"\"Test interaction of adjacent() with groupby_transform()\"\"\"\n        iterable = mi.adjacent(lambda x: x % 5 == 0, range(10))\n        grouper = mi.groupby_transform(iterable, itemgetter(0), itemgetter(1))",
+          "content_sha256": "7dcbb829cdfd8844bd76aa8d89f0015e58b9e4c9e745b188c4edf9395db63cad"
+        },
+        {
+          "path": "more_itertools/recipes.py",
+          "start_line": 351,
+          "end_line": 390,
+          "content": "def grouper(iterable, n, incomplete='fill', fillvalue=None):\n    \"\"\"Group elements from *iterable* into fixed-length groups of length *n*.\n\n    >>> list(grouper('ABCDEF', 3))\n    [('A', 'B', 'C'), ('D', 'E', 'F')]\n\n    The keyword arguments *incomplete* and *fillvalue* control what happens for\n    iterables whose length is not a multiple of *n*.\n\n    When *incomplete* is `'fill'`, the last group will contain instances of\n    *fillvalue*.\n\n    >>> list(grouper('ABCDEFG', 3, incomplete='fill', fillvalue='x'))\n    [('A', 'B', 'C'), ('D', 'E', 'F'), ('G', 'x', 'x')]\n\n    When *incomplete* is `'ignore'`, the last group will not be emitted.\n\n    >>> list(grouper('ABCDEFG', 3, incomplete='ignore', fillvalue='x'))\n    [('A', 'B', 'C'), ('D', 'E', 'F')]\n\n    When *incomplete* is `'strict'`, a `ValueError` will be raised.\n\n    >>> iterator = grouper('ABCDEFG', 3, incomplete='strict')\n    >>> list(iterator)  # doctest: +IGNORE_EXCEPTION_DETAIL\n    Traceback (most recent call last):\n    ...\n    ValueError\n\n    \"\"\"\n    iterators = [iter(iterable)] * n\n    match incomplete:\n        case 'fill':\n            return zip_longest(*iterators, fillvalue=fillvalue)\n        case 'strict':\n            return zip(*iterators, strict=True)\n        case 'ignore':\n            return zip(*iterators)\n        case _:\n            raise ValueError('Expected fill, strict, or ignore')\n",
+          "content_sha256": "d6e23853e6ace3d60bb8f5fefe43af9929a0d9cd5c764bae84af51bdede3cc5a"
+        }
+      ]
+    },
+    "workflow_status": "success",
+    "human_approved": false,
+    "task_success": null
+  },
+  {
+    "case_id": "chat-mitt-1",
+    "kind": "chat",
+    "task_id": "developit--mitt-p4-cross_case",
+    "split": "validation",
+    "snapshot_id": "dfdc0816797bf578d0363591",
+    "repository": "developit/mitt",
+    "commit_sha": "6b41670516ed8e8b738612f60491995470aa63b3",
+    "question": "mitt 的 on 会把事件名统一转成小写吗？结合实现与 should NOT normalize case 测试说明。",
+    "group": "mitt",
+    "turn": 1,
+    "reference": {
+      "gold": {
+        "required_facts": [
+          "不转换大小写；按原始 type 访问 Map；测试区分 FOO/foo、Bar/bar 等。"
+        ],
+        "evidence": [
+          {
+            "path": "src/index.ts",
+            "start_line": 66,
+            "end_line": 73,
+            "content_sha256": "0a5bf296ae849cd916f0b4eedbc3b3dbd431acb523f64fede2782b79ff119004"
+          },
+          {
+            "path": "test/index_test.ts",
+            "start_line": 79,
+            "end_line": 90,
+            "content_sha256": "7c7ae10f82f38319cf3cf181161ee7bfb29bde7819610b697836ace1ba119048"
+          }
+        ]
+      },
+      "human_approved": false
+    },
+    "answer": {
+      "answer": "mitt 的 on 方法**不会**将事件名统一转成小写，事件名保持原样存储和匹配。",
+      "citations": [
+        {
+          "path": "test/index_test.ts",
+          "start_line": 79,
+          "end_line": 90
+        },
+        {
+          "path": "src/index.ts",
+          "start_line": 66,
+          "end_line": 73
+        }
+      ],
+      "insufficient_evidence": false
+    },
+    "source_context": {
+      "qa": [
+        {
+          "path": "test/index_test.ts",
+          "start_line": 79,
+          "end_line": 82,
+          "content": "\t\tit('should NOT normalize case', () => {\n\t\t\tconst foo = () => {};\n\t\t\tinst.on('FOO', foo);\n\t\t\tinst.on('Bar', foo);",
+          "content_sha256": "30fc02c648e297d7012210b79b9b1a1cca3dbe2435c95423ad50334db661c67a"
+        },
+        {
+          "path": "test/index_test.ts",
+          "start_line": 121,
+          "end_line": 124,
+          "content": "\t\tit('should NOT normalize case', () => {\n\t\t\tconst foo = () => {};\n\t\t\tinst.on('FOO', foo);\n\t\t\tinst.on('Bar', foo);",
+          "content_sha256": "30fc02c648e297d7012210b79b9b1a1cca3dbe2435c95423ad50334db661c67a"
+        },
+        {
+          "path": "src/index.ts",
+          "start_line": 2,
+          "end_line": 4,
+          "content": "\n// An event handler can take an optional event argument\n// and should not return a value",
+          "content_sha256": "b76ab6ec6297367d8cacf2fe3ba4457a776e26469d194315e7601ada88854639"
+        },
+        {
+          "path": "test/index_test.ts",
+          "start_line": 79,
+          "end_line": 106,
+          "content": "\t\tit('should NOT normalize case', () => {\n\t\t\tconst foo = () => {};\n\t\t\tinst.on('FOO', foo);\n\t\t\tinst.on('Bar', foo);\n\t\t\tinst.on('baz:baT!', foo);\n\n\t\t\texpect(events.get('FOO')).to.deep.equal([foo]);\n\t\t\texpect(events.has('foo')).to.equal(false);\n\t\t\texpect(events.get('Bar')).to.deep.equal([foo]);\n\t\t\texpect(events.has('bar')).to.equal(false);\n\t\t\texpect(events.get('baz:baT!')).to.deep.equal([foo]);\n\t\t});\n\n\t\tit('can take symbols for event types', () => {\n\t\t\tconst foo = () => {};\n\t\t\tinst.on(eventType, foo);\n\t\t\texpect(events.get(eventType)).to.deep.equal([foo]);\n\t\t});\n\n\t\t// Adding the same listener multiple times should register it multiple times.\n\t\t// See https://nodejs.org/api/events.html#events_emitter_on_eventname_listener\n\t\tit('should add duplicate listeners', () => {\n\t\t\tconst foo = () => {};\n\t\t\tinst.on('foo', foo);\n\t\t\tinst.on('foo', foo);\n\t\t\texpect(events.get('foo')).to.deep.equal([foo, foo]);\n\t\t});\n\t});",
+          "content_sha256": "2802dafc8cbbf5aa864a78106e935675c9534d36ef02774e1c05c6c811645bcc"
+        },
+        {
+          "path": "src/index.ts",
+          "start_line": 1,
+          "end_line": 50,
+          "content": "export type EventType = string | symbol;\n\n// An event handler can take an optional event argument\n// and should not return a value\nexport type Handler<T = unknown> = (event: T) => void;\nexport type WildcardHandler<T = Record<string, unknown>> = (\n\ttype: keyof T,\n\tevent: T[keyof T]\n) => void;\n\n// An array of all currently registered event handlers for a type\nexport type EventHandlerList<T = unknown> = Array<Handler<T>>;\nexport type WildCardEventHandlerList<T = Record<string, unknown>> = Array<\n\tWildcardHandler<T>\n>;\n\n// A map of event types and their corresponding event handlers.\nexport type EventHandlerMap<Events extends Record<EventType, unknown>> = Map<\n\tkeyof Events | '*',\n\tEventHandlerList<Events[keyof Events]> | WildCardEventHandlerList<Events>\n>;\n\nexport interface Emitter<Events extends Record<EventType, unknown>> {\n\tall: EventHandlerMap<Events>;\n\n\ton<Key extends keyof Events>(type: Key, handler: Handler<Events[Key]>): void;\n\ton(type: '*', handler: WildcardHandler<Events>): void;\n\n\toff<Key extends keyof Events>(\n\t\ttype: Key,\n\t\thandler?: Handler<Events[Key]>\n\t): void;\n\toff(type: '*', handler: WildcardHandler<Events>): void;\n\n\temit<Key extends keyof Events>(type: Key, event: Events[Key]): void;\n\temit<Key extends keyof Events>(\n\t\ttype: undefined extends Events[Key] ? Key : never\n\t): void;\n}\n\n/**\n * Mitt: Tiny (~200b) functional event emitter / pubsub.\n * @name mitt\n * @returns {Mitt}\n */\nexport default function mitt<Events extends Record<EventType, unknown>>(\n\tall?: EventHandlerMap<Events>\n): Emitter<Events> {\n\ttype GenericEventHandler =\n\t\t| Handler<Events[keyof Events]>",
+          "content_sha256": "636378778afc10cf45932b8a4ec56799c684ad9b835ef7371bd9977836e98d9c"
+        },
+        {
+          "path": "src/index.ts",
+          "start_line": 51,
+          "end_line": 100,
+          "content": "\t\t| WildcardHandler<Events>;\n\tall = all || new Map();\n\n\treturn {\n\t\t/**\n\t\t * A Map of event names to registered handler functions.\n\t\t */\n\t\tall,\n\n\t\t/**\n\t\t * Register an event handler for the given type.\n\t\t * @param {string|symbol} type Type of event to listen for, or `'*'` for all events\n\t\t * @param {Function} handler Function to call in response to given event\n\t\t * @memberOf mitt\n\t\t */\n\t\ton<Key extends keyof Events>(type: Key, handler: GenericEventHandler) {\n\t\t\tconst handlers: Array<GenericEventHandler> | undefined = all!.get(type);\n\t\t\tif (handlers) {\n\t\t\t\thandlers.push(handler);\n\t\t\t} else {\n\t\t\t\tall!.set(type, [handler] as EventHandlerList<Events[keyof Events]>);\n\t\t\t}\n\t\t},\n\n\t\t/**\n\t\t * Remove an event handler for the given type.\n\t\t * If `handler` is omitted, all handlers of the given type are removed.\n\t\t * @param {string|symbol} type Type of event to unregister `handler` from (`'*'` to remove a wildcard handler)\n\t\t * @param {Function} [handler] Handler function to remove\n\t\t * @memberOf mitt\n\t\t */\n\t\toff<Key extends keyof Events>(type: Key, handler?: GenericEventHandler) {\n\t\t\tconst handlers: Array<GenericEventHandler> | undefined = all!.get(type);\n\t\t\tif (handlers) {\n\t\t\t\tif (handler) {\n\t\t\t\t\thandlers.splice(handlers.indexOf(handler) >>> 0, 1);\n\t\t\t\t} else {\n\t\t\t\t\tall!.set(type, []);\n\t\t\t\t}\n\t\t\t}\n\t\t},\n\n\t\t/**\n\t\t * Invoke all handlers for the given type.\n\t\t * If present, `'*'` handlers are invoked after type-matched handlers.\n\t\t *\n\t\t * Note: Manually firing '*' handlers is not supported.\n\t\t *\n\t\t * @param {string|symbol} type The event type to invoke\n\t\t * @param {Any} [evt] Any value (object is recommended and powerful), passed to each handler",
+          "content_sha256": "4b54ad38e84d87c4b7660159361ba0e0e874688040539b5a9b66420a74a282e2"
+        }
+      ]
+    },
+    "workflow_status": "success",
+    "human_approved": false,
+    "task_success": null
+  },
+  {
+    "case_id": "chat-mitt-2",
+    "kind": "chat",
+    "task_id": "developit--mitt-06",
+    "split": "validation",
+    "snapshot_id": "dfdc0816797bf578d0363591",
+    "repository": "developit/mitt",
+    "commit_sha": "6b41670516ed8e8b738612f60491995470aa63b3",
+    "question": "那么它的 off 传入未注册的 handler 会抛错或误删最后一个吗？",
+    "group": "mitt",
+    "turn": 2,
+    "reference": {
+      "gold": {
+        "required_facts": [
+          "indexOf 返回 -1；无符号右移转换成大整数，splice 不会删除末项。"
+        ],
+        "evidence": [
+          {
+            "path": "src/index.ts",
+            "start_line": 82,
+            "end_line": 91,
+            "content_sha256": "3999fdef36669b69849c862d08047c5ed32691b99d7e2ba932a515e43d3324e0"
+          }
+        ]
+      },
+      "human_approved": false
+    },
+    "answer": {
+      "answer": "off 传入未注册的 handler 不会抛错，但也不会误删最后一个；它仅移除**完全匹配**的事件名对应的所有监听器。由于 mitt 不统一转小写（事件名区分大小写），传入未注册的名称（如 'FOO' 而实际注册的是 'foo'）不会触发任何操作。",
+      "citations": [
+        {
+          "path": "test/index_test.ts",
+          "start_line": 121,
+          "end_line": 136
+        }
+      ],
+      "insufficient_evidence": false
+    },
+    "source_context": {
+      "qa": [
+        {
+          "path": "test/test-types-compilation.ts",
+          "start_line": 21,
+          "end_line": 24,
+          "content": "\n/*\n * Check that 'on' args are inferred correctly\n */",
+          "content_sha256": "bb509115023c2d434ce3e2db53a3171292a388ebfc9e7bd1a4b2d147cac8f22e"
+        },
+        {
+          "path": "test/index_test.ts",
+          "start_line": 108,
+          "end_line": 111,
+          "content": "\tdescribe('off()', () => {\n\t\tit('should be a function', () => {\n\t\t\texpect(inst).to.have.property('off').that.is.a('function');\n\t\t});",
+          "content_sha256": "f2805de50dfd2d5cd2e602071e6bedc8391e68d4c4aa188cfdbfdb8b7e109064"
+        },
+        {
+          "path": "src/index.ts",
+          "start_line": 23,
+          "end_line": 26,
+          "content": "export interface Emitter<Events extends Record<EventType, unknown>> {\n\tall: EventHandlerMap<Events>;\n\n\ton<Key extends keyof Events>(type: Key, handler: Handler<Events[Key]>): void;",
+          "content_sha256": "ee2f2c78179e2a54e36b65f59673f5c2c402fb2ab24d5f4b03cfe524d3b7d4f4"
+        },
+        {
+          "path": "test/test-types-compilation.ts",
+          "start_line": 21,
+          "end_line": 24,
+          "content": "\n/*\n * Check that 'on' args are inferred correctly\n */",
+          "content_sha256": "bb509115023c2d434ce3e2db53a3171292a388ebfc9e7bd1a4b2d147cac8f22e"
+        },
+        {
+          "path": "test/index_test.ts",
+          "start_line": 108,
+          "end_line": 111,
+          "content": "\tdescribe('off()', () => {\n\t\tit('should be a function', () => {\n\t\t\texpect(inst).to.have.property('off').that.is.a('function');\n\t\t});",
+          "content_sha256": "f2805de50dfd2d5cd2e602071e6bedc8391e68d4c4aa188cfdbfdb8b7e109064"
+        },
+        {
+          "path": "src/index.ts",
+          "start_line": 23,
+          "end_line": 26,
+          "content": "export interface Emitter<Events extends Record<EventType, unknown>> {\n\tall: EventHandlerMap<Events>;\n\n\ton<Key extends keyof Events>(type: Key, handler: Handler<Events[Key]>): void;",
+          "content_sha256": "ee2f2c78179e2a54e36b65f59673f5c2c402fb2ab24d5f4b03cfe524d3b7d4f4"
+        },
+        {
+          "path": "test/index_test.ts",
+          "start_line": 108,
+          "end_line": 160,
+          "content": "\tdescribe('off()', () => {\n\t\tit('should be a function', () => {\n\t\t\texpect(inst).to.have.property('off').that.is.a('function');\n\t\t});\n\n\t\tit('should remove handler for type', () => {\n\t\t\tconst foo = () => {};\n\t\t\tinst.on('foo', foo);\n\t\t\tinst.off('foo', foo);\n\n\t\t\texpect(events.get('foo')).to.be.empty;\n\t\t});\n\n\t\tit('should NOT normalize case', () => {\n\t\t\tconst foo = () => {};\n\t\t\tinst.on('FOO', foo);\n\t\t\tinst.on('Bar', foo);\n\t\t\tinst.on('baz:bat!', foo);\n\n\t\t\tinst.off('FOO', foo);\n\t\t\tinst.off('Bar', foo);\n\t\t\tinst.off('baz:baT!', foo);\n\n\t\t\texpect(events.get('FOO')).to.be.empty;\n\t\t\texpect(events.has('foo')).to.equal(false);\n\t\t\texpect(events.get('Bar')).to.be.empty;\n\t\t\texpect(events.has('bar')).to.equal(false);\n\t\t\texpect(events.get('baz:bat!')).to.have.lengthOf(1);\n\t\t});\n\n\t\tit('should remove only the first matching listener', () => {\n\t\t\tconst foo = () => {};\n\t\t\tinst.on('foo', foo);\n\t\t\tinst.on('foo', foo);\n\t\t\tinst.off('foo', foo);\n\t\t\texpect(events.get('foo')).to.deep.equal([foo]);\n\t\t\tinst.off('foo', foo);\n\t\t\texpect(events.get('foo')).to.deep.equal([]);\n\t\t});\n\n\t\tit('off(\"type\") should remove all handlers of the given type', () => {\n\t\t\tinst.on('foo', () => {});\n\t\t\tinst.on('foo', () => {});\n\t\t\tinst.on('bar', () => {});\n\t\t\tinst.off('foo');\n\t\t\texpect(events.get('foo')).to.deep.equal([]);\n\t\t\texpect(events.get('bar')).to.have.length(1);\n\t\t\tinst.off('bar');\n\t\t\texpect(events.get('bar')).to.deep.equal([]);\n\t\t});\n\t});\n\n\tdescribe('emit()', () => {",
+          "content_sha256": "b6e0294d693b1f6883ebd35a150b50e0b13a1eddca2f5344e9cf62f2f3ca2f73"
+        }
+      ]
+    },
+    "workflow_status": "success",
+    "human_approved": false,
+    "task_success": null
+  },
+  {
+    "case_id": "chat-mitt-3",
+    "kind": "chat",
+    "task_id": "developit--mitt-05",
+    "split": "validation",
+    "snapshot_id": "dfdc0816797bf578d0363591",
+    "repository": "developit/mitt",
+    "commit_sha": "6b41670516ed8e8b738612f60491995470aa63b3",
+    "question": "如果这个 off 不传 handler，是删除 Map 的键还是把对应列表清空？",
+    "group": "mitt",
+    "turn": 3,
+    "reference": {
+      "gold": {
+        "required_facts": [
+          "将该 type 的处理器列表置为空数组，Map 的键仍保留。"
+        ],
+        "evidence": [
+          {
+            "path": "src/index.ts",
+            "start_line": 82,
+            "end_line": 91,
+            "content_sha256": "3999fdef36669b69849c862d08047c5ed32691b99d7e2ba932a515e43d3324e0"
+          }
+        ]
+      },
+      "human_approved": false
+    },
+    "answer": {
+      "answer": "off 不传 handler 时，会清空 Map 中该事件名对应的监听器列表（将值设为空数组 []），而不是删除键。",
+      "citations": [
+        {
+          "path": "src/index.ts",
+          "start_line": 88,
+          "end_line": 89
+        }
+      ],
+      "insufficient_evidence": false
+    },
+    "source_context": {
+      "qa": [
+        {
+          "path": "src/index.ts",
+          "start_line": 29,
+          "end_line": 32,
+          "content": "\toff<Key extends keyof Events>(\n\t\ttype: Key,\n\t\thandler?: Handler<Events[Key]>\n\t): void;",
+          "content_sha256": "a411d6ce7446011742c1066bdc91fc3295a70772e12c084b7ce4b204ea3f7b3b"
+        },
+        {
+          "path": "src/index.ts",
+          "start_line": 82,
+          "end_line": 85,
+          "content": "\t\toff<Key extends keyof Events>(type: Key, handler?: GenericEventHandler) {\n\t\t\tconst handlers: Array<GenericEventHandler> | undefined = all!.get(type);\n\t\t\tif (handlers) {\n\t\t\t\tif (handler) {",
+          "content_sha256": "14596831666310704b059c6754e5fb91e7141f48d117fcc10849df34929bea17"
+        },
+        {
+          "path": "test/index_test.ts",
+          "start_line": 108,
+          "end_line": 111,
+          "content": "\tdescribe('off()', () => {\n\t\tit('should be a function', () => {\n\t\t\texpect(inst).to.have.property('off').that.is.a('function');\n\t\t});",
+          "content_sha256": "f2805de50dfd2d5cd2e602071e6bedc8391e68d4c4aa188cfdbfdb8b7e109064"
+        },
+        {
+          "path": "src/index.ts",
+          "start_line": 82,
+          "end_line": 100,
+          "content": "\t\toff<Key extends keyof Events>(type: Key, handler?: GenericEventHandler) {\n\t\t\tconst handlers: Array<GenericEventHandler> | undefined = all!.get(type);\n\t\t\tif (handlers) {\n\t\t\t\tif (handler) {\n\t\t\t\t\thandlers.splice(handlers.indexOf(handler) >>> 0, 1);\n\t\t\t\t} else {\n\t\t\t\t\tall!.set(type, []);\n\t\t\t\t}\n\t\t\t}\n\t\t},\n\n\t\t/**\n\t\t * Invoke all handlers for the given type.\n\t\t * If present, `'*'` handlers are invoked after type-matched handlers.\n\t\t *\n\t\t * Note: Manually firing '*' handlers is not supported.\n\t\t *\n\t\t * @param {string|symbol} type The event type to invoke\n\t\t * @param {Any} [evt] Any value (object is recommended and powerful), passed to each handler",
+          "content_sha256": "8f158f1c8a546b6e58f43003461547399c85beaeeda3d1dc4e21e9b442a26b48"
+        }
+      ]
+    },
+    "workflow_status": "success",
+    "human_approved": false,
+    "task_success": null
+  },
+  {
+    "case_id": "chat-nanoid-1",
+    "kind": "chat",
+    "task_id": "ai--nanoid-p4-cross_custom",
+    "split": "validation",
+    "snapshot_id": "30e277e52d238ad871cb5684",
+    "repository": "ai/nanoid",
+    "commit_sha": "57009b5eb8d757ae39bf5f4361dd30c9f23391b7",
+    "question": "customAlphabet 的默认长度在哪里声明，测试如何验证可以覆盖长度？",
+    "group": "nanoid",
+    "turn": 1,
+    "reference": {
+      "gold": {
+        "required_facts": [
+          "默认长度参数为21；测试 customAlphabet('a') 返回的函数传入10，得到10个a。"
+        ],
+        "evidence": [
+          {
+            "path": "index.js",
+            "start_line": 96,
+            "end_line": 98,
+            "content_sha256": "51ac9a240f93fb28304f6f8b5333191dbceb2cc467932f958ab26178ba587c1c"
+          },
+          {
+            "path": "test/index.test.js",
+            "start_line": 210,
+            "end_line": 213,
+            "content_sha256": "cd5c1b0126978436b4df5d8b80d8f18e6021991a9e5887d6150c59a57c54f1a2"
+          }
+        ]
+      },
+      "human_approved": false
+    },
+    "answer": {
+      "answer": "customAlphabet 的默认长度在 `non-secure/index.js` 第 5 行声明为 21。测试通过调用 `customAlphabet('abc')(0)` 验证可以覆盖长度，返回空字符串。",
+      "citations": [
+        {
+          "path": "non-secure/index.js",
+          "start_line": 5,
+          "end_line": 5
+        },
+        {
+          "path": "test/non-secure.test.js",
+          "start_line": 73,
+          "end_line": 73
+        }
+      ],
+      "insufficient_evidence": false
+    },
+    "source_context": {
+      "qa": [
+        {
+          "path": "test/index.test.js",
+          "start_line": 177,
+          "end_line": 180,
+          "content": "    describe('customAlphabet', () => {\n      test(`has options`, () => {\n        let nanoidA = customAlphabet('a', 5)\n        equal(nanoidA(), 'aaaaa')",
+          "content_sha256": "1aa1c67c29f1699eb3874bad9dbbd5d783512557bd6cc6224e7d938982e8a194"
+        },
+        {
+          "path": "test/non-secure.test.js",
+          "start_line": 71,
+          "end_line": 74,
+          "content": "  describe('customAlphabet', () => {\n    test('is ready for 0 size', () => {\n      equal(customAlphabet('abc')(0), '')\n      equal(customAlphabet('abc', 0)(0), '')",
+          "content_sha256": "ee4748f1b93ddf93a52ff70702b845f2a506d81f38dbe4dc035a42aeeb85e409"
+        },
+        {
+          "path": "non-secure/index.js",
+          "start_line": 5,
+          "end_line": 8,
+          "content": "export let customAlphabet = (alphabet, defaultSize = 21) => {\n  return (size = defaultSize) => {\n    let id = ''\n    // A compact alternative for `for (var i = 0; i < step; i++)`.",
+          "content_sha256": "9c33c3eee4b771b73e5f6079b281437a43947282323daa3f0ff873e28c428f55"
+        }
+      ]
+    },
+    "workflow_status": "success",
+    "human_approved": false,
+    "task_success": null
+  },
+  {
+    "case_id": "chat-nanoid-2",
+    "kind": "chat",
+    "task_id": "ai--nanoid-p4-cross_custom",
+    "split": "validation",
+    "snapshot_id": "30e277e52d238ad871cb5684",
+    "repository": "ai/nanoid",
+    "commit_sha": "57009b5eb8d757ae39bf5f4361dd30c9f23391b7",
+    "question": "那么它返回的函数可以在每次调用时再次指定长度吗？请核对测试的实际调用。",
+    "group": "nanoid",
+    "turn": 2,
+    "reference": {
+      "gold": {
+        "required_facts": [
+          "默认长度参数为21；测试 customAlphabet('a') 返回的函数传入10，得到10个a。"
+        ],
+        "evidence": [
+          {
+            "path": "index.js",
+            "start_line": 96,
+            "end_line": 98,
+            "content_sha256": "51ac9a240f93fb28304f6f8b5333191dbceb2cc467932f958ab26178ba587c1c"
+          },
+          {
+            "path": "test/index.test.js",
+            "start_line": 210,
+            "end_line": 213,
+            "content_sha256": "cd5c1b0126978436b4df5d8b80d8f18e6021991a9e5887d6150c59a57c54f1a2"
+          }
+        ]
+      },
+      "human_approved": false
+    },
+    "answer": {
+      "answer": "可以。每次调用 `customAlphabet` 时传入第二个参数即可指定长度。测试中 `customAlphabet('abc', 0)(0)` 和 `customAlphabet('abcdef', -5)()` 均验证了调用时传入长度参数的有效性。",
+      "citations": [
+        {
+          "path": "test/non-secure.test.js",
+          "start_line": 73,
+          "end_line": 74
+        },
+        {
+          "path": "test/non-secure.test.js",
+          "start_line": 126,
+          "end_line": 127
+        },
+        {
+          "path": "test/index.test.js",
+          "start_line": 179,
+          "end_line": 180
+        }
+      ],
+      "insufficient_evidence": false
+    },
+    "source_context": {
+      "qa": [
+        {
+          "path": "test/non-secure.test.js",
+          "start_line": 125,
+          "end_line": 128,
+          "content": "test('does not hang on negative size (customAlphabet)', () => {\n  equal(customAlphabet('abcdef')(-1), '')\n  equal(customAlphabet('abcdef', -5)(), '')\n})",
+          "content_sha256": "73e6dba91bfef6103d4f180bedf4b0cc47c5f34c12e5314481a904c5b1bf36a4"
+        },
+        {
+          "path": "test/index.test.js",
+          "start_line": 177,
+          "end_line": 180,
+          "content": "    describe('customAlphabet', () => {\n      test(`has options`, () => {\n        let nanoidA = customAlphabet('a', 5)\n        equal(nanoidA(), 'aaaaa')",
+          "content_sha256": "1aa1c67c29f1699eb3874bad9dbbd5d783512557bd6cc6224e7d938982e8a194"
+        },
+        {
+          "path": "test/non-secure.test.js",
+          "start_line": 71,
+          "end_line": 74,
+          "content": "  describe('customAlphabet', () => {\n    test('is ready for 0 size', () => {\n      equal(customAlphabet('abc')(0), '')\n      equal(customAlphabet('abc', 0)(0), '')",
+          "content_sha256": "ee4748f1b93ddf93a52ff70702b845f2a506d81f38dbe4dc035a42aeeb85e409"
+        }
+      ]
+    },
+    "workflow_status": "success",
+    "human_approved": false,
+    "task_success": null
+  },
+  {
+    "case_id": "chat-nanoid-3",
+    "kind": "chat",
+    "task_id": "ai--nanoid-p4-cross_negative",
+    "split": "validation",
+    "snapshot_id": "30e277e52d238ad871cb5684",
+    "repository": "ai/nanoid",
+    "commit_sha": "57009b5eb8d757ae39bf5f4361dd30c9f23391b7",
+    "question": "切换到 Node 版 nanoid：它收到负数长度会怎样？不要混入其他入口的行为。",
+    "group": "nanoid",
+    "turn": 3,
+    "reference": {
+      "gold": {
+        "required_facts": [
+          "负数长度抛出 RangeError；测试用 nanoid(-10) 并断言 Wrong ID size 或 Invalid typed array length。"
+        ],
+        "evidence": [
+          {
+            "path": "index.js",
+            "start_line": 136,
+            "end_line": 138,
+            "content_sha256": "1551c3575e5de25bdcf482865ccb371b9a03a9b30a4cd4f30a18f67724121aa1"
+          },
+          {
+            "path": "test/index.test.js",
+            "start_line": 87,
+            "end_line": 96,
+            "content_sha256": "5e04515ffc64f66ce3f7724f25b0d748bc60ec940ef40728bcb4c8c384ad8ba5"
+          }
+        ]
+      },
+      "human_approved": false
+    },
+    "answer": {
+      "answer": "切换到 Node 版后，收到负数长度会将其截断为 0。Node 版（`bin/nanoid.js`）依赖 `../index.js` 中的 `customAlphabet`，而 `index.browser.js` 第 77 行使用 `size |= 0` 将负数强制转为 0，导致不生成字符。",
+      "citations": [
+        {
+          "path": "bin/nanoid.js",
+          "start_line": 6,
+          "end_line": 6
+        },
+        {
+          "path": "bin/nanoid.js",
+          "start_line": 25,
+          "end_line": 28
+        },
+        {
+          "path": "index.browser.js",
+          "start_line": 75,
+          "end_line": 78
+        }
+      ],
+      "insufficient_evidence": false
+    },
+    "source_context": {
+      "qa": [
+        {
+          "path": "bin/nanoid.js",
+          "start_line": 6,
+          "end_line": 7,
+          "content": "import { customAlphabet, nanoid } from '../index.js'\n",
+          "content_sha256": "d8efd9fed299b082a1acaf75c248ff00cd8356c405194d9716ab968f8038eee6"
+        },
+        {
+          "path": "bin/nanoid.js",
+          "start_line": 25,
+          "end_line": 28,
+          "content": "  $ nanoid [options]\n\nOptions\n  -s, --size       Generated ID size",
+          "content_sha256": "e4c22cc7448e8d62fc42af158c8ce71cfd6b4d2cded0d30d62bcde9d6792fc85"
+        },
+        {
+          "path": "index.browser.js",
+          "start_line": 75,
+          "end_line": 78,
+          "content": "export let nanoid = (size = 21) => {\n  let id = ''\n  let bytes = crypto.getRandomValues(new Uint8Array((size |= 0)))\n  while (size--) {",
+          "content_sha256": "ddffd11825dfb8bb6cb28d94acba6221909705ef6678099fda0fe578fa0703e9"
+        }
+      ]
+    },
+    "workflow_status": "success",
+    "human_approved": false,
+    "task_success": null
+  },
+  {
+    "case_id": "chat-schedule-1",
+    "kind": "chat",
+    "task_id": "dbader--schedule-01",
+    "split": "validation",
+    "snapshot_id": "9999db891acf16c1a1fd96b5",
+    "repository": "dbader/schedule",
+    "commit_sha": "82a43db1b938d8fdf60103bd41f329e06c8d3651",
+    "question": "run_pending 是否补跑所有错过的调度次数？",
+    "group": "schedule",
+    "turn": 1,
+    "reference": {
+      "gold": {
+        "required_facts": [
+          "不会；本次只对 should_run 的任务执行一次，文档明确不补跑错过的每一轮。"
+        ],
+        "evidence": [
+          {
+            "path": "schedule/__init__.py",
+            "start_line": 89,
+            "end_line": 101,
+            "content_sha256": "b3480559c764c818c9ccf72ec63f7199bbbd2c9586827bf53158e1adf8c72a30"
+          }
+        ]
+      },
+      "human_approved": false
+    },
+    "answer": {
+      "answer": "否。run_pending 不会补跑所有错过的调度次数。根据源码注释，这是预期行为：如果仅按小时间隔调用 run_pending，每分钟应执行的任务也不会被运行 60 次，而只会运行一次。",
+      "citations": [
+        {
+          "path": "schedule/__init__.py",
+          "start_line": 93,
+          "end_line": 97
+        },
+        {
+          "path": "schedule/__init__.py",
+          "start_line": 89,
+          "end_line": 101
+        }
+      ],
+      "insufficient_evidence": false
+    },
+    "source_context": {
+      "qa": [
+        {
+          "path": "schedule/__init__.py",
+          "start_line": 850,
+          "end_line": 853,
+          "content": "def run_pending() -> None:\n    \"\"\"Calls :meth:`run_pending <Scheduler.run_pending>` on the\n    :data:`default scheduler instance <default_scheduler>`.\n    \"\"\"",
+          "content_sha256": "1807e64d6280952d71e6a5017c76a9d63dbdcbd4b26593511c9fbfac2cd15ad7"
+        },
+        {
+          "path": "schedule/__init__.py",
+          "start_line": 89,
+          "end_line": 92,
+          "content": "    def run_pending(self) -> None:\n        \"\"\"\n        Run all jobs that are scheduled to run.\n",
+          "content_sha256": "c518928a5a32467920466c4f1396efeb39321be3d1b039917866646e8c1d83c9"
+        },
+        {
+          "path": "test_schedule.py",
+          "start_line": 1387,
+          "end_line": 1390,
+          "content": "    def test_run_pending(self):\n        \"\"\"Check that run_pending() runs pending jobs.\n        We do this by overriding datetime.datetime with mock objects\n        that represent increasing system times.",
+          "content_sha256": "a9c956dee7051c0fae701593ecffb1b711c65498d9b431a2a96c25c596cd1efa"
+        },
+        {
+          "path": "schedule/__init__.py",
+          "start_line": 89,
+          "end_line": 101,
+          "content": "    def run_pending(self) -> None:\n        \"\"\"\n        Run all jobs that are scheduled to run.\n\n        Please note that it is *intended behavior that run_pending()\n        does not run missed jobs*. For example, if you've registered a job\n        that should run every minute and you only call run_pending()\n        in one hour increments then your job won't be run 60 times in\n        between but only once.\n        \"\"\"\n        runnable_jobs = (job for job in self.jobs if job.should_run)\n        for job in sorted(runnable_jobs):\n            self._run_job(job)",
+          "content_sha256": "b3480559c764c818c9ccf72ec63f7199bbbd2c9586827bf53158e1adf8c72a30"
+        }
+      ]
+    },
+    "workflow_status": "success",
+    "human_approved": false,
+    "task_success": null
+  },
+  {
+    "case_id": "chat-schedule-2",
+    "kind": "chat",
+    "task_id": "dbader--schedule-03",
+    "split": "validation",
+    "snapshot_id": "9999db891acf16c1a1fd96b5",
+    "repository": "dbader/schedule",
+    "commit_sha": "82a43db1b938d8fdf60103bd41f329e06c8d3651",
+    "question": "那么 run_all 与这个 run_pending 在执行条件上有什么区别？",
+    "group": "schedule",
+    "turn": 2,
+    "reference": {
+      "gold": {
+        "required_facts": [
+          "run_all 遍历 self.jobs[:]，不检查 should_run；每次执行后 sleep(delay_seconds)。"
+        ],
+        "evidence": [
+          {
+            "path": "schedule/__init__.py",
+            "start_line": 103,
+            "end_line": 120,
+            "content_sha256": "5438ab9ee6a8c2b584a96a58e0736248714e08a17a1afafe639f76577f9cef77"
+          }
+        ]
+      },
+      "human_approved": false
+    },
+    "answer": {
+      "answer": "run_all 会无条件执行所有任务，而 run_pending 仅执行已调度但未执行的任务。",
+      "citations": [
+        {
+          "path": "schedule/__init__.py",
+          "start_line": 105,
+          "end_line": 105
+        },
+        {
+          "path": "schedule/__init__.py",
+          "start_line": 857,
+          "end_line": 860
+        }
+      ],
+      "insufficient_evidence": false
+    },
+    "source_context": {
+      "qa": [
+        {
+          "path": "schedule/__init__.py",
+          "start_line": 103,
+          "end_line": 106,
+          "content": "    def run_all(self, delay_seconds: int = 0) -> None:\n        \"\"\"\n        Run all jobs regardless if they are scheduled to run or not.\n",
+          "content_sha256": "dfe6c4d6c175b8f2d85bbbda919bb2a31a83903a1a21234b8540566b49a7a6b8"
+        },
+        {
+          "path": "schedule/__init__.py",
+          "start_line": 857,
+          "end_line": 860,
+          "content": "def run_all(delay_seconds: int = 0) -> None:\n    \"\"\"Calls :meth:`run_all <Scheduler.run_all>` on the\n    :data:`default scheduler instance <default_scheduler>`.\n    \"\"\"",
+          "content_sha256": "bf10a5a456ed5a8c7d29bb30f46eed2c60daf92997dcc34a0469d177a0096853"
+        },
+        {
+          "path": "test_schedule.py",
+          "start_line": 376,
+          "end_line": 379,
+          "content": "                schedule.run_all()\n                assert mock_job.call_count == 2\n                assert len(schedule.jobs) == 0\n",
+          "content_sha256": "552515cda0cec93c5e10a016895b60a6ea03bf31234cb1bfe0c407c9fa3d1c40"
+        }
+      ]
+    },
+    "workflow_status": "success",
+    "human_approved": false,
+    "task_success": null
+  },
+  {
+    "case_id": "chat-schedule-3",
+    "kind": "chat",
+    "task_id": "dbader--schedule-06",
+    "split": "validation",
+    "snapshot_id": "9999db891acf16c1a1fd96b5",
+    "repository": "dbader/schedule",
+    "commit_sha": "82a43db1b938d8fdf60103bd41f329e06c8d3651",
+    "question": "这个 Scheduler 的 cancel_job 删除未注册任务会抛 ValueError 吗？",
+    "group": "schedule",
+    "turn": 3,
+    "reference": {
+      "gold": {
+        "required_facts": [
+          "不会；捕获 remove 的 ValueError 并记录日志。"
+        ],
+        "evidence": [
+          {
+            "path": "schedule/__init__.py",
+            "start_line": 150,
+            "end_line": 160,
+            "content_sha256": "58f00e361905c332f9dc35c7d05923aaf63eec5043390e1b7172b3e429cdb9b2"
+          }
+        ]
+      },
+      "human_approved": false
+    },
+    "answer": {
+      "answer": "会。当调用 `Scheduler.cancel_job` 删除未注册任务时，会抛出 `ValueError`。",
+      "citations": [
+        {
+          "path": "schedule/__init__.py",
+          "start_line": 159,
+          "end_line": 160
+        }
+      ],
+      "insufficient_evidence": false
+    },
+    "source_context": {
+      "qa": [
+        {
+          "path": "schedule/__init__.py",
+          "start_line": 878,
+          "end_line": 881,
+          "content": "def cancel_job(job: Job) -> None:\n    \"\"\"Calls :meth:`cancel_job <Scheduler.cancel_job>` on the\n    :data:`default scheduler instance <default_scheduler>`.\n    \"\"\"",
+          "content_sha256": "5931bd52cb43814046b9f5f47d35a23d4e61dfb0dfa0ea2c055c7512b7afc045"
+        },
+        {
+          "path": "schedule/__init__.py",
+          "start_line": 150,
+          "end_line": 153,
+          "content": "    def cancel_job(self, job: \"Job\") -> None:\n        \"\"\"\n        Delete a scheduled job.\n",
+          "content_sha256": "c7c2bcebb2cfa8ba4b3df2b8d909385546af43d0214b47e28ce74e001f012bd5"
+        },
+        {
+          "path": "schedule/__init__.py",
+          "start_line": 175,
+          "end_line": 175,
+          "content": "            self.cancel_job(job)",
+          "content_sha256": "5e7dc72e19f6cf8e966c26b5f92cd94f02d2533f659599c1f099d0a1369780ab"
+        },
+        {
+          "path": "schedule/__init__.py",
+          "start_line": 150,
+          "end_line": 165,
+          "content": "    def cancel_job(self, job: \"Job\") -> None:\n        \"\"\"\n        Delete a scheduled job.\n\n        :param job: The job to be unscheduled\n        \"\"\"\n        try:\n            logger.debug('Cancelling job \"%s\"', str(job))\n            self.jobs.remove(job)\n        except ValueError:\n            logger.debug('Cancelling not-scheduled job \"%s\"', str(job))\n\n    def every(self, interval: int = 1) -> \"Job\":\n        \"\"\"\n        Schedule a new periodic job.\n",
+          "content_sha256": "0afebf14c9a00b3e980860ca54409c8c460384d798f2fee53a86a5aeaafc4c7c"
+        }
+      ]
+    },
+    "workflow_status": "success",
+    "human_approved": false,
+    "task_success": null
+  },
+  {
+    "case_id": "chat-itertools-1",
+    "kind": "chat",
+    "task_id": "more-itertools--more-itertools-01",
+    "split": "validation",
+    "snapshot_id": "34bbe4aa95c559925b195310",
+    "repository": "more-itertools/more-itertools",
+    "commit_sha": "b5e3886a37209bb880f17d82fbf4ba00ece0e41e",
+    "question": "take(n, iterable) 返回迭代器还是列表？",
+    "group": "itertools",
+    "turn": 1,
+    "reference": {
+      "gold": {
+        "required_facts": [
+          "list(islice(...)) 返回列表，输入不足 n 时返回现有项。"
+        ],
+        "evidence": [
+          {
+            "path": "more_itertools/recipes.py",
+            "start_line": 113,
+            "end_line": 126,
+            "content_sha256": "0156fc9cc7252191d82f4e1c818fcf4294efc2c998fa98704de0b683fa2e067b"
+          }
+        ]
+      },
+      "human_approved": false
+    },
+    "answer": {
+      "answer": "take(n, iterable) 返回列表。",
+      "citations": [
+        {
+          "path": "more_itertools/recipes.py",
+          "start_line": 113,
+          "end_line": 126
+        },
+        {
+          "path": "more_itertools/recipes.py",
+          "start_line": 114,
+          "end_line": 118
+        },
+        {
+          "path": "more_itertools/recipes.py",
+          "start_line": 126,
+          "end_line": 126
+        }
+      ],
+      "insufficient_evidence": false
+    },
+    "source_context": {
+      "qa": [
+        {
+          "path": "more_itertools/recipes.py",
+          "start_line": 113,
+          "end_line": 116,
+          "content": "def take(n, iterable):\n    \"\"\"Return first *n* items of the *iterable* as a list.\n\n        >>> take(3, range(10))",
+          "content_sha256": "779e2c086f33b1c5f7e824676a27fc9feab69925e4c0f152132f190b81df3ef5"
+        },
+        {
+          "path": "tests/test_more.py",
+          "start_line": 3752,
+          "end_line": 3755,
+          "content": "    def test_elements(self):\n        iterable = map(str, count())\n\n        s = mi.seekable(iterable)",
+          "content_sha256": "1b532ece687224941d3ba02256b7745ca2a0f04011453edf347ad4b64c0ecb0f"
+        },
+        {
+          "path": "tests/test_more.py",
+          "start_line": 3767,
+          "end_line": 3770,
+          "content": "    def test_maxlen(self):\n        iterable = map(str, count())\n\n        s = mi.seekable(iterable, maxlen=4)",
+          "content_sha256": "c453befd44573b539e52710050455efcba96145d61aa151b901ef8d9d3908f36"
+        },
+        {
+          "path": "more_itertools/recipes.py",
+          "start_line": 113,
+          "end_line": 126,
+          "content": "def take(n, iterable):\n    \"\"\"Return first *n* items of the *iterable* as a list.\n\n        >>> take(3, range(10))\n        [0, 1, 2]\n\n    If there are fewer than *n* items in the iterable, all of them are\n    returned.\n\n        >>> take(10, range(3))\n        [0, 1, 2]\n\n    \"\"\"\n    return list(islice(iterable, n))",
+          "content_sha256": "0156fc9cc7252191d82f4e1c818fcf4294efc2c998fa98704de0b683fa2e067b"
+        }
+      ]
+    },
+    "workflow_status": "success",
+    "human_approved": false,
+    "task_success": null
+  },
+  {
+    "case_id": "chat-itertools-2",
+    "kind": "chat",
+    "task_id": "more-itertools--more-itertools-01",
+    "split": "validation",
+    "snapshot_id": "34bbe4aa95c559925b195310",
+    "repository": "more-itertools/more-itertools",
+    "commit_sha": "b5e3886a37209bb880f17d82fbf4ba00ece0e41e",
+    "question": "那么它在输入不足 n 项时会补齐还是只返回已有元素？",
+    "group": "itertools",
+    "turn": 2,
+    "reference": {
+      "gold": {
+        "required_facts": [
+          "list(islice(...)) 返回列表，输入不足 n 时返回现有项。"
+        ],
+        "evidence": [
+          {
+            "path": "more_itertools/recipes.py",
+            "start_line": 113,
+            "end_line": 126,
+            "content_sha256": "0156fc9cc7252191d82f4e1c818fcf4294efc2c998fa98704de0b683fa2e067b"
+          }
+        ]
+      },
+      "human_approved": false
+    },
+    "answer": {
+      "answer": "只返回已有元素，不足部分不补齐。",
+      "citations": [
+        {
+          "path": "more_itertools/recipes.py",
+          "start_line": 114,
+          "end_line": 114
+        }
+      ],
+      "insufficient_evidence": false
+    },
+    "source_context": {
+      "qa": [
+        {
+          "path": "more_itertools/recipes.py",
+          "start_line": 113,
+          "end_line": 116,
+          "content": "def take(n, iterable):\n    \"\"\"Return first *n* items of the *iterable* as a list.\n\n        >>> take(3, range(10))",
+          "content_sha256": "779e2c086f33b1c5f7e824676a27fc9feab69925e4c0f152132f190b81df3ef5"
+        },
+        {
+          "path": "tests/test_more.py",
+          "start_line": 3752,
+          "end_line": 3755,
+          "content": "    def test_elements(self):\n        iterable = map(str, count())\n\n        s = mi.seekable(iterable)",
+          "content_sha256": "1b532ece687224941d3ba02256b7745ca2a0f04011453edf347ad4b64c0ecb0f"
+        },
+        {
+          "path": "tests/test_more.py",
+          "start_line": 3767,
+          "end_line": 3770,
+          "content": "    def test_maxlen(self):\n        iterable = map(str, count())\n\n        s = mi.seekable(iterable, maxlen=4)",
+          "content_sha256": "c453befd44573b539e52710050455efcba96145d61aa151b901ef8d9d3908f36"
+        }
+      ]
+    },
+    "workflow_status": "success",
+    "human_approved": false,
+    "task_success": null
+  },
+  {
+    "case_id": "chat-itertools-3",
+    "kind": "chat",
+    "task_id": "more-itertools--more-itertools-03",
+    "split": "validation",
+    "snapshot_id": "34bbe4aa95c559925b195310",
+    "repository": "more-itertools/more-itertools",
+    "commit_sha": "b5e3886a37209bb880f17d82fbf4ba00ece0e41e",
+    "question": "换到 tail：它的 n 为负数时会怎样？",
+    "group": "itertools",
+    "turn": 3,
+    "reference": {
+      "gold": {
+        "required_facts": [
+          "抛 ValueError，要求 n 至少为 0。"
+        ],
+        "evidence": [
+          {
+            "path": "more_itertools/recipes.py",
+            "start_line": 147,
+            "end_line": 163,
+            "content_sha256": "55dd03c1e1527ac5acc9fc88ea82aa45a16551fbd1ff5a0aefe73d9bd969428c"
+          }
+        ]
+      },
+      "human_approved": false
+    },
+    "answer": {
+      "answer": "会抛出 ValueError 异常。",
+      "citations": [
+        {
+          "path": "more_itertools/recipes.py",
+          "start_line": 155,
+          "end_line": 156
+        }
+      ],
+      "insufficient_evidence": false
+    },
+    "source_context": {
+      "qa": [
+        {
+          "path": "more_itertools/recipes.py",
+          "start_line": 147,
+          "end_line": 150,
+          "content": "def tail(n, iterable):\n    \"\"\"Return an iterator over the last *n* items of *iterable*.\n\n    >>> t = tail(3, 'ABCDEFG')",
+          "content_sha256": "3b7d540a18cb86d91de1607f5293bec7a88cc707102ffb9e6fa84a20d1a8ae1d"
+        },
+        {
+          "path": "tests/test_recipes.py",
+          "start_line": 72,
+          "end_line": 75,
+          "content": "class TailTests(TestCase):\n    \"\"\"Tests for ``tail()``\"\"\"\n\n    def test_iterator_greater(self):",
+          "content_sha256": "6fc2e0f9bfc408689f11c9a192609243cdada13009dc1aa9f8d22be979785f6d"
+        },
+        {
+          "path": "more_itertools/more.py",
+          "start_line": 824,
+          "end_line": 827,
+          "content": "    def _partial(A, r):\n        # Split A into the first r items and the last r items\n        head, tail = A[:r], A[r:]\n        right_head_indexes = range(r - 1, -1, -1)",
+          "content_sha256": "04ac977da16c2ca9516f773c3976cbbdc8556a5142798debbf7024500d0be3e6"
+        },
+        {
+          "path": "more_itertools/recipes.py",
+          "start_line": 147,
+          "end_line": 163,
+          "content": "def tail(n, iterable):\n    \"\"\"Return an iterator over the last *n* items of *iterable*.\n\n    >>> t = tail(3, 'ABCDEFG')\n    >>> list(t)\n    ['E', 'F', 'G']\n\n    \"\"\"\n    if n < 0:\n        raise ValueError('n must be at least 0')\n\n    try:\n        size = len(iterable)\n    except TypeError:\n        return iter(deque(iterable, maxlen=n))\n    else:\n        return islice(iterable, max(0, size - n), None)",
+          "content_sha256": "55dd03c1e1527ac5acc9fc88ea82aa45a16551fbd1ff5a0aefe73d9bd969428c"
+        }
+      ]
+    },
+    "workflow_status": "success",
+    "human_approved": false,
+    "task_success": null
+  },
+  {
+    "case_id": "report-mitt",
+    "kind": "report",
+    "task_id": "developit--mitt-p4-cross_case",
+    "split": "validation",
+    "snapshot_id": "dfdc0816797bf578d0363591",
+    "repository": "developit/mitt",
+    "commit_sha": "6b41670516ed8e8b738612f60491995470aa63b3",
+    "question": "mitt 的 on 会把事件名统一转成小写吗？结合实现与 should NOT normalize case 测试说明。",
+    "reference": {
+      "human_approved": false,
+      "rubric": [
+        "Each role grounds repository claims in its own observed sources.",
+        "Project purpose, entry points, architecture and reading path are usable.",
+        "Setup/test commands need observed support; suggestions are not real issues."
+      ]
+    },
+    "answer": {
+      "explorer": {
+        "evidenceClaims": [
+          {
+            "claim": "用途：轻量级功能型事件发射器/发布订阅系统，支持通配符事件监听，无依赖，兼容 IE9+。",
+            "confidence": "high",
+            "evidence": [
+              {
+                "path": "README.md",
+                "supports": "L11-L19"
+              }
+            ]
+          },
+          {
+            "claim": "技术栈：TypeScript 类型定义，基于 Map 实现事件映射，支持 ES6 和 CommonJS 模块。",
+            "confidence": "high",
+            "evidence": [
+              {
+                "path": "src/index.ts",
+                "supports": "L1-L21"
+              }
+            ]
+          },
+          {
+            "claim": "入口文件：src/index.ts 导出默认 mitt 函数及类型定义。",
+            "confidence": "high",
+            "evidence": [
+              {
+                "path": "src/index.ts",
+                "supports": "L46-L49"
+              }
+            ]
+          }
+        ],
+        "evidenceCoverage": {
+          "examinedFiles": [
+            "README.md",
+            "src/index.ts"
+          ],
+          "gaps": []
+        },
+        "projectType": {
+          "primary": "EventEmitter",
+          "secondary": [
+            "PubSub",
+            "Functional API"
+          ]
+        },
+        "techStack": {
+          "language": "TypeScript",
+          "framework": "None",
+          "buildTool": "None"
+        },
+        "fileCount": 13,
+        "entryPoints": [
+          {
+            "file": "src/index.ts",
+            "role": "Main entry point"
+          }
+        ],
+        "moduleMap": [
+          {
+            "path": "src/index.ts",
+            "responsibility": "导出 mitt 函数、类型定义及事件处理逻辑。",
+            "importance": "core",
+            "justification": "L46-L49 定义核心 mitt 函数，L1-L21 定义类型系统。"
+          }
+        ],
+        "directorySummary": "项目根目录包含 README.md 和 src/index.ts，无其他源码文件。",
+        "projectSummary": "Mitt 是一个微型事件发射器，旨在浏览器和任何 JavaScript 运行时中使用，无依赖且支持 IE9+。它提供类似 Node.js EventEmitter 的功能，但采用函数式 API（不依赖 this），支持通配符事件监听。代码由 TypeScript 定义，通过 src/index.ts 导出。"
+      },
+      "mentor": {
+        "evidenceClaims": [],
+        "evidenceCoverage": {
+          "examinedFiles": [],
+          "gaps": [
+            {
+              "kind": "missing_evidence",
+              "subject": "无法提供核心实现、静态依赖与架构的解释，因为 context 为空。",
+              "summary": "缺少源码上下文以验证路径和行号。",
+              "severity": "high"
+            }
+          ]
+        },
+        "architectureOverview": "无法提供，context 为空。",
+        "dependencyGraph": {
+          "staticDependencies": [],
+          "runtimeDependencies": []
+        },
+        "readingPath": [
+          {
+            "step": 1,
+            "file": "src/index.py",
+            "why": "作为入口点，通常包含主函数调用。"
+          },
+          {
+            "step": 2,
+            "file": "src/core/__init__.py",
+            "why": "核心模块的导出点，包含核心逻辑。"
+          },
+          {
+            "step": 3,
+            "file": "test/test_core.py",
+            "why": "验证核心功能的测试用例。"
+          }
+        ],
+        "keyPatterns": [],
+        "codeConventions": [
+          {
+            "rule": "未知",
+            "example": "未知"
+          }
+        ]
+      }
+    },
+    "source_context": {
+      "explorer": [
+        {
+          "path": "README.md",
+          "start_line": 1,
+          "end_line": 50,
+          "content": "<p align=\"center\">\n  <img src=\"https://i.imgur.com/BqsX9NT.png\" width=\"300\" height=\"300\" alt=\"mitt\">\n  <br>\n  <a href=\"https://www.npmjs.org/package/mitt\"><img src=\"https://img.shields.io/npm/v/mitt.svg\" alt=\"npm\"></a>\n  <img src=\"https://github.com/developit/mitt/workflows/CI/badge.svg\" alt=\"build status\">\n  <a href=\"https://unpkg.com/mitt/dist/mitt.js\"><img src=\"https://img.badgesize.io/https://unpkg.com/mitt/dist/mitt.js?compression=gzip\" alt=\"gzip size\"></a>\n</p>\n\n# Mitt\n\n> Tiny 200b functional event emitter / pubsub.\n\n-   **Microscopic:** weighs less than 200 bytes gzipped\n-   **Useful:** a wildcard `\"*\"` event type listens to all events\n-   **Familiar:** same names & ideas as [Node's EventEmitter](https://nodejs.org/api/events.html#events_class_eventemitter)\n-   **Functional:** methods don't rely on `this`\n-   **Great Name:** somehow [mitt](https://npm.im/mitt) wasn't taken\n\nMitt was made for the browser, but works in any JavaScript runtime. It has no dependencies and supports IE9+.\n\n## Table of Contents\n\n-   [Install](#install)\n-   [Usage](#usage)\n-   [Examples & Demos](#examples--demos)\n-   [API](#api)\n-   [Contribute](#contribute)\n-   [License](#license)\n\n## Install\n\nThis project uses [node](http://nodejs.org) and [npm](https://npmjs.com). Go check them out if you don't have them locally installed.\n\n```sh\n$ npm install --save mitt\n```\n\nThen with a module bundler like [rollup](http://rollupjs.org/) or [webpack](https://webpack.js.org/), use as you would anything else:\n\n```javascript\n// using ES6 modules\nimport mitt from 'mitt'\n\n// using CommonJS modules\nvar mitt = require('mitt')\n```\n\nThe [UMD](https://github.com/umdjs/umd) build is also available on [unpkg](https://unpkg.com):\n\n```html",
+          "content_sha256": "fb4e27a57ec36ec2af2c91ef248a1858ab4c51e8da0a7b9c70d52ef4f0f3852f"
+        },
+        {
+          "path": "src/index.ts",
+          "start_line": 1,
+          "end_line": 50,
+          "content": "export type EventType = string | symbol;\n\n// An event handler can take an optional event argument\n// and should not return a value\nexport type Handler<T = unknown> = (event: T) => void;\nexport type WildcardHandler<T = Record<string, unknown>> = (\n\ttype: keyof T,\n\tevent: T[keyof T]\n) => void;\n\n// An array of all currently registered event handlers for a type\nexport type EventHandlerList<T = unknown> = Array<Handler<T>>;\nexport type WildCardEventHandlerList<T = Record<string, unknown>> = Array<\n\tWildcardHandler<T>\n>;\n\n// A map of event types and their corresponding event handlers.\nexport type EventHandlerMap<Events extends Record<EventType, unknown>> = Map<\n\tkeyof Events | '*',\n\tEventHandlerList<Events[keyof Events]> | WildCardEventHandlerList<Events>\n>;\n\nexport interface Emitter<Events extends Record<EventType, unknown>> {\n\tall: EventHandlerMap<Events>;\n\n\ton<Key extends keyof Events>(type: Key, handler: Handler<Events[Key]>): void;\n\ton(type: '*', handler: WildcardHandler<Events>): void;\n\n\toff<Key extends keyof Events>(\n\t\ttype: Key,\n\t\thandler?: Handler<Events[Key]>\n\t): void;\n\toff(type: '*', handler: WildcardHandler<Events>): void;\n\n\temit<Key extends keyof Events>(type: Key, event: Events[Key]): void;\n\temit<Key extends keyof Events>(\n\t\ttype: undefined extends Events[Key] ? Key : never\n\t): void;\n}\n\n/**\n * Mitt: Tiny (~200b) functional event emitter / pubsub.\n * @name mitt\n * @returns {Mitt}\n */\nexport default function mitt<Events extends Record<EventType, unknown>>(\n\tall?: EventHandlerMap<Events>\n): Emitter<Events> {\n\ttype GenericEventHandler =\n\t\t| Handler<Events[keyof Events]>",
+          "content_sha256": "636378778afc10cf45932b8a4ec56799c684ad9b835ef7371bd9977836e98d9c"
+        }
+      ],
+      "mentor": [],
+      "contributor": [
+        {
+          "path": "README.md",
+          "start_line": 1,
+          "end_line": 50,
+          "content": "<p align=\"center\">\n  <img src=\"https://i.imgur.com/BqsX9NT.png\" width=\"300\" height=\"300\" alt=\"mitt\">\n  <br>\n  <a href=\"https://www.npmjs.org/package/mitt\"><img src=\"https://img.shields.io/npm/v/mitt.svg\" alt=\"npm\"></a>\n  <img src=\"https://github.com/developit/mitt/workflows/CI/badge.svg\" alt=\"build status\">\n  <a href=\"https://unpkg.com/mitt/dist/mitt.js\"><img src=\"https://img.badgesize.io/https://unpkg.com/mitt/dist/mitt.js?compression=gzip\" alt=\"gzip size\"></a>\n</p>\n\n# Mitt\n\n> Tiny 200b functional event emitter / pubsub.\n\n-   **Microscopic:** weighs less than 200 bytes gzipped\n-   **Useful:** a wildcard `\"*\"` event type listens to all events\n-   **Familiar:** same names & ideas as [Node's EventEmitter](https://nodejs.org/api/events.html#events_class_eventemitter)\n-   **Functional:** methods don't rely on `this`\n-   **Great Name:** somehow [mitt](https://npm.im/mitt) wasn't taken\n\nMitt was made for the browser, but works in any JavaScript runtime. It has no dependencies and supports IE9+.\n\n## Table of Contents\n\n-   [Install](#install)\n-   [Usage](#usage)\n-   [Examples & Demos](#examples--demos)\n-   [API](#api)\n-   [Contribute](#contribute)\n-   [License](#license)\n\n## Install\n\nThis project uses [node](http://nodejs.org) and [npm](https://npmjs.com). Go check them out if you don't have them locally installed.\n\n```sh\n$ npm install --save mitt\n```\n\nThen with a module bundler like [rollup](http://rollupjs.org/) or [webpack](https://webpack.js.org/), use as you would anything else:\n\n```javascript\n// using ES6 modules\nimport mitt from 'mitt'\n\n// using CommonJS modules\nvar mitt = require('mitt')\n```\n\nThe [UMD](https://github.com/umdjs/umd) build is also available on [unpkg](https://unpkg.com):\n\n```html",
+          "content_sha256": "fb4e27a57ec36ec2af2c91ef248a1858ab4c51e8da0a7b9c70d52ef4f0f3852f"
+        },
+        {
+          "path": "src/index.ts",
+          "start_line": 1,
+          "end_line": 50,
+          "content": "export type EventType = string | symbol;\n\n// An event handler can take an optional event argument\n// and should not return a value\nexport type Handler<T = unknown> = (event: T) => void;\nexport type WildcardHandler<T = Record<string, unknown>> = (\n\ttype: keyof T,\n\tevent: T[keyof T]\n) => void;\n\n// An array of all currently registered event handlers for a type\nexport type EventHandlerList<T = unknown> = Array<Handler<T>>;\nexport type WildCardEventHandlerList<T = Record<string, unknown>> = Array<\n\tWildcardHandler<T>\n>;\n\n// A map of event types and their corresponding event handlers.\nexport type EventHandlerMap<Events extends Record<EventType, unknown>> = Map<\n\tkeyof Events | '*',\n\tEventHandlerList<Events[keyof Events]> | WildCardEventHandlerList<Events>\n>;\n\nexport interface Emitter<Events extends Record<EventType, unknown>> {\n\tall: EventHandlerMap<Events>;\n\n\ton<Key extends keyof Events>(type: Key, handler: Handler<Events[Key]>): void;\n\ton(type: '*', handler: WildcardHandler<Events>): void;\n\n\toff<Key extends keyof Events>(\n\t\ttype: Key,\n\t\thandler?: Handler<Events[Key]>\n\t): void;\n\toff(type: '*', handler: WildcardHandler<Events>): void;\n\n\temit<Key extends keyof Events>(type: Key, event: Events[Key]): void;\n\temit<Key extends keyof Events>(\n\t\ttype: undefined extends Events[Key] ? Key : never\n\t): void;\n}\n\n/**\n * Mitt: Tiny (~200b) functional event emitter / pubsub.\n * @name mitt\n * @returns {Mitt}\n */\nexport default function mitt<Events extends Record<EventType, unknown>>(\n\tall?: EventHandlerMap<Events>\n): Emitter<Events> {\n\ttype GenericEventHandler =\n\t\t| Handler<Events[keyof Events]>",
+          "content_sha256": "636378778afc10cf45932b8a4ec56799c684ad9b835ef7371bd9977836e98d9c"
+        }
+      ]
+    },
+    "workflow_status": "failed",
+    "human_approved": false,
+    "task_success": null
+  },
+  {
+    "case_id": "report-schedule",
+    "kind": "report",
+    "task_id": "dbader--schedule-01",
+    "split": "validation",
+    "snapshot_id": "9999db891acf16c1a1fd96b5",
+    "repository": "dbader/schedule",
+    "commit_sha": "82a43db1b938d8fdf60103bd41f329e06c8d3651",
+    "question": "run_pending 是否补跑所有错过的调度次数？",
+    "reference": {
+      "human_approved": false,
+      "rubric": [
+        "Each role grounds repository claims in its own observed sources.",
+        "Project purpose, entry points, architecture and reading path are usable.",
+        "Setup/test commands need observed support; suggestions are not real issues."
+      ]
+    },
+    "answer": {
+      "explorer": {
+        "evidenceClaims": [
+          {
+            "claim": "用途：用于人类友好的周期性任务调度，支持在进程内运行 Python 函数或任何可调用对象。",
+            "confidence": "high",
+            "evidence": [
+              {
+                "path": "schedule/__init__.py",
+                "supports": "L2-L9"
+              }
+            ]
+          },
+          {
+            "claim": "类型：轻量级、无外部依赖的进程内调度器，采用构建器模式配置。",
+            "confidence": "high",
+            "evidence": [
+              {
+                "path": "schedule/__init__.py",
+                "supports": "L6-L7, L16-L17"
+              }
+            ]
+          },
+          {
+            "claim": "技术栈：Python 3.7+，核心无依赖，可选依赖 pytz（时区），构建工具为 setuptools。",
+            "confidence": "high",
+            "evidence": [
+              {
+                "path": "pyproject.toml",
+                "supports": "L12-L13, L20, L2"
+              },
+              {
+                "path": "schedule/__init__.py",
+                "supports": "L18"
+              }
+            ]
+          },
+          {
+            "claim": "入口文件：schedule/__init__.py，导出核心调度逻辑。",
+            "confidence": "high",
+            "evidence": [
+              {
+                "path": "schedule/__init__.py",
+                "supports": "L1-L50"
+              }
+            ]
+          },
+          {
+            "claim": "主要模块职责：__init__.py 提供文档、导入及核心调度功能；pyproject.toml 定义项目元数据与构建配置。",
+            "confidence": "high",
+            "evidence": [
+              {
+                "path": "schedule/__init__.py",
+                "supports": "L1-L50"
+              },
+              {
+                "path": "pyproject.toml",
+                "supports": "L1-L26"
+              }
+            ]
+          }
+        ],
+        "evidenceCoverage": {
+          "examinedFiles": [
+            "pyproject.toml",
+            "schedule/__init__.py"
+          ],
+          "gaps": []
+        },
+        "projectType": {
+          "primary": "Python 库",
+          "secondary": []
+        },
+        "techStack": {
+          "language": "Python",
+          "framework": "None",
+          "buildTool": "setuptools"
+        },
+        "fileCount": 32,
+        "entryPoints": [
+          {
+            "file": "schedule/__init__.py",
+            "role": "核心调度逻辑与 API 导出"
+          }
+        ],
+        "moduleMap": [
+          {
+            "path": "schedule/__init__.py",
+            "responsibility": "提供项目文档、核心调度功能及依赖导入",
+            "importance": "core",
+            "justification": "包含主要功能描述、使用示例及核心代码逻辑"
+          },
+          {
+            "path": "pyproject.toml",
+            "responsibility": "定义项目元数据、构建系统及依赖关系",
+            "importance": "core",
+            "justification": "指定构建后端、Python 版本要求及可选依赖"
+          },
+          {
+            "path": "README.rst",
+            "responsibility": "项目文档（引用自 pyproject.toml）",
+            "importance": "core",
+            "justification": "被 pyproject.toml 指向，但内容未在 context 中"
+          }
+        ],
+        "directorySummary": "仓库包含核心调度逻辑（schedule/__init__.py）和构建配置（pyproject.toml），旨在提供轻量级、无外部依赖的进程内任务调度器。",
+        "projectSummary": "这是一个名为 'schedule' 的 Python 库，用于在进程内以人类友好的方式调度周期性任务。它采用构建器模式，无外部依赖，支持 Python 3.7+，并提供了丰富的时间调度语法。"
+      },
+      "mentor": {
+        "evidenceClaims": [],
+        "evidenceCoverage": {
+          "examinedFiles": [],
+          "gaps": [
+            {
+              "kind": "missing_evidence",
+              "subject": "无法提供核心实现、静态依赖与架构的解释，因为 context 为空。",
+              "summary": "缺少源码上下文以验证路径和行号。",
+              "severity": "high"
+            }
+          ]
+        },
+        "architectureOverview": "无法提供，context 为空。",
+        "dependencyGraph": {
+          "staticDependencies": [],
+          "runtimeDependencies": []
+        },
+        "readingPath": [
+          {
+            "step": 1,
+            "file": "src/index.py",
+            "why": "作为入口点，通常包含主函数调用。"
+          },
+          {
+            "step": 2,
+            "file": "src/core/__init__.py",
+            "why": "核心模块的导出点，包含核心逻辑。"
+          },
+          {
+            "step": 3,
+            "file": "test/test_core.py",
+            "why": "验证核心功能的测试用例。"
+          }
+        ],
+        "keyPatterns": [],
+        "codeConventions": [
+          {
+            "rule": "未知",
+            "example": "未知"
+          }
+        ]
+      }
+    },
+    "source_context": {
+      "explorer": [
+        {
+          "path": "pyproject.toml",
+          "start_line": 1,
+          "end_line": 26,
+          "content": "[build-system]\nrequires = [\"setuptools >= 61.0\"]\nbuild-backend = \"setuptools.build_meta\"\n\n[project]\nname = \"schedule\"\ndescription = \"Job scheduling for humans.\"\ndynamic = [\"version\", \"classifiers\", \"keywords\", \"authors\"]\nreadme = \"README.rst\"\nlicense = {text = \"MIT License\"}\n\nrequires-python = \">= 3.7\"\ndependencies = []\n\nmaintainers = [\n  {name = \"Sijmen Huizenga\"}\n]\n\n[project.optional-dependencies]\ntimezone = [\"pytz\"]\n\n[project.urls]\nDocumentation = \"https://schedule.readthedocs.io\"\nRepository = \"https://github.com/dbader/schedule.git\"\nIssues = \"https://github.com/dbader/schedule/issues\"\nChangelog = \"https://github.com/dbader/schedule/blob/master/HISTORY.rst\"",
+          "content_sha256": "b7be80fcfc72fc142f62f33728e65f905426de025a15c0d7ea692cf179f831da"
+        },
+        {
+          "path": "schedule/__init__.py",
+          "start_line": 1,
+          "end_line": 50,
+          "content": "\"\"\"\nPython job scheduling for humans.\n\ngithub.com/dbader/schedule\n\nAn in-process scheduler for periodic jobs that uses the builder pattern\nfor configuration. Schedule lets you run Python functions (or any other\ncallable) periodically at pre-determined intervals using a simple,\nhuman-friendly syntax.\n\nInspired by Addam Wiggins' article \"Rethinking Cron\" [1] and the\n\"clockwork\" Ruby module [2][3].\n\nFeatures:\n    - A simple to use API for scheduling jobs.\n    - Very lightweight and no external dependencies.\n    - Excellent test coverage.\n    - Tested on Python 3.7, 3.8, 3.9, 3.10, 3.11 and 3.12\n\nUsage:\n    >>> import schedule\n    >>> import time\n\n    >>> def job(message='stuff'):\n    >>>     print(\"I'm working on:\", message)\n\n    >>> schedule.every(10).minutes.do(job)\n    >>> schedule.every(5).to(10).days.do(job)\n    >>> schedule.every().hour.do(job, message='things')\n    >>> schedule.every().day.at(\"10:30\").do(job)\n\n    >>> while True:\n    >>>     schedule.run_pending()\n    >>>     time.sleep(1)\n\n[1] https://adam.herokuapp.com/past/2010/4/13/rethinking_cron/\n[2] https://github.com/Rykian/clockwork\n[3] https://adam.herokuapp.com/past/2010/6/30/replace_cron_with_clockwork/\n\"\"\"\n\nfrom collections.abc import Hashable\nimport datetime\nimport functools\nimport logging\nimport random\nimport re\nimport time\nfrom typing import Set, List, Optional, Callable, Union\n\nlogger = logging.getLogger(\"schedule\")",
+          "content_sha256": "96974112593b467c7d5c86b563ff46c981c198c4b69ac88e90eb85d00019f09c"
+        }
+      ],
+      "mentor": [],
+      "contributor": [
+        {
+          "path": "pyproject.toml",
+          "start_line": 1,
+          "end_line": 26,
+          "content": "[build-system]\nrequires = [\"setuptools >= 61.0\"]\nbuild-backend = \"setuptools.build_meta\"\n\n[project]\nname = \"schedule\"\ndescription = \"Job scheduling for humans.\"\ndynamic = [\"version\", \"classifiers\", \"keywords\", \"authors\"]\nreadme = \"README.rst\"\nlicense = {text = \"MIT License\"}\n\nrequires-python = \">= 3.7\"\ndependencies = []\n\nmaintainers = [\n  {name = \"Sijmen Huizenga\"}\n]\n\n[project.optional-dependencies]\ntimezone = [\"pytz\"]\n\n[project.urls]\nDocumentation = \"https://schedule.readthedocs.io\"\nRepository = \"https://github.com/dbader/schedule.git\"\nIssues = \"https://github.com/dbader/schedule/issues\"\nChangelog = \"https://github.com/dbader/schedule/blob/master/HISTORY.rst\"",
+          "content_sha256": "b7be80fcfc72fc142f62f33728e65f905426de025a15c0d7ea692cf179f831da"
+        },
+        {
+          "path": "schedule/__init__.py",
+          "start_line": 1,
+          "end_line": 50,
+          "content": "\"\"\"\nPython job scheduling for humans.\n\ngithub.com/dbader/schedule\n\nAn in-process scheduler for periodic jobs that uses the builder pattern\nfor configuration. Schedule lets you run Python functions (or any other\ncallable) periodically at pre-determined intervals using a simple,\nhuman-friendly syntax.\n\nInspired by Addam Wiggins' article \"Rethinking Cron\" [1] and the\n\"clockwork\" Ruby module [2][3].\n\nFeatures:\n    - A simple to use API for scheduling jobs.\n    - Very lightweight and no external dependencies.\n    - Excellent test coverage.\n    - Tested on Python 3.7, 3.8, 3.9, 3.10, 3.11 and 3.12\n\nUsage:\n    >>> import schedule\n    >>> import time\n\n    >>> def job(message='stuff'):\n    >>>     print(\"I'm working on:\", message)\n\n    >>> schedule.every(10).minutes.do(job)\n    >>> schedule.every(5).to(10).days.do(job)\n    >>> schedule.every().hour.do(job, message='things')\n    >>> schedule.every().day.at(\"10:30\").do(job)\n\n    >>> while True:\n    >>>     schedule.run_pending()\n    >>>     time.sleep(1)\n\n[1] https://adam.herokuapp.com/past/2010/4/13/rethinking_cron/\n[2] https://github.com/Rykian/clockwork\n[3] https://adam.herokuapp.com/past/2010/6/30/replace_cron_with_clockwork/\n\"\"\"\n\nfrom collections.abc import Hashable\nimport datetime\nimport functools\nimport logging\nimport random\nimport re\nimport time\nfrom typing import Set, List, Optional, Callable, Union\n\nlogger = logging.getLogger(\"schedule\")",
+          "content_sha256": "96974112593b467c7d5c86b563ff46c981c198c4b69ac88e90eb85d00019f09c"
+        },
+        {
+          "path": ".github/workflows/ci.yml",
+          "start_line": 1,
+          "end_line": 4,
+          "content": "name: Tests\n\non:\n  push:",
+          "content_sha256": "58cd080ccc60a455ae921805dd71ab183ac7c472f2dee404876829d638dfff45"
+        },
+        {
+          "path": "docs/faq.rst",
+          "start_line": 1,
+          "end_line": 4,
+          "content": "Frequently Asked Questions\n==========================\n\nFrequently asked questions on the usage of schedule.",
+          "content_sha256": "57d590e520d9c56db66213f99468a14335d20ebb8b04e42cdb493c34433bcccf"
+        },
+        {
+          "path": "setup.cfg",
+          "start_line": 1,
+          "end_line": 2,
+          "content": "[mypy]\nfiles=schedule",
+          "content_sha256": "043b8e33f7fb81dc2a9b07f72b57a8b2d567e5d760be9699fb08915940379722"
+        }
+      ]
+    },
+    "workflow_status": "failed",
+    "human_approved": false,
+    "task_success": null
+  }
+]

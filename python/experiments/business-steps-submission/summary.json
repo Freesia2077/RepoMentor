@@ -1,0 +1,2322 @@
+{
+  "questions": 12,
+  "planned_answers": 14,
+  "records": 14,
+  "reviews": {
+    "step-blinker-retain--agentic": {
+      "candidate_id": "step-blinker-retain--agentic",
+      "correctness": "correct",
+      "citation_support": "supported",
+      "completeness": "adequate",
+      "abstention": "not_applicable",
+      "entry_scope": "correct",
+      "consistency": "consistent",
+      "claims": [
+        {
+          "claim": "应设置weak=False。",
+          "status": "supported",
+          "rationale": "当前需求是连接持有局部回调的强引用，False分支满足。",
+          "evidence": [
+            {
+              "path": "src/blinker/base.py",
+              "start_line": 102,
+              "end_line": 115
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "src/blinker/base.py",
+              "start_line": 102,
+              "end_line": 115,
+              "content": "        :param weak: Track the receiver with a :mod:`weakref`. The receiver will\n            be automatically disconnected when it is garbage collected. When\n            connecting a receiver defined within a function, set to ``False``,\n            otherwise it will be disconnected when the function scope ends.\n        \"\"\"\n        receiver_id = make_id(receiver)\n        sender_id = ANY_ID if sender is ANY else make_id(sender)\n\n        if weak:\n            self.receivers[receiver_id] = make_ref(\n                receiver, self._make_cleanup_receiver(receiver_id)\n            )\n        else:\n            self.receivers[receiver_id] = receiver",
+              "content_sha256": "242a53f1d8d39f8cfeafb3617a4276a2e74e3724a19956878822265af4f27b85",
+              "visible_to_generator": true
+            }
+          ]
+        },
+        {
+          "claim": "False时receiver本身存入self.receivers。",
+          "status": "supported",
+          "rationale": "115行直接保存receiver，没有make_ref包装。",
+          "evidence": [
+            {
+              "path": "src/blinker/base.py",
+              "start_line": 110,
+              "end_line": 115
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "src/blinker/base.py",
+              "start_line": 110,
+              "end_line": 115,
+              "content": "        if weak:\n            self.receivers[receiver_id] = make_ref(\n                receiver, self._make_cleanup_receiver(receiver_id)\n            )\n        else:\n            self.receivers[receiver_id] = receiver",
+              "content_sha256": "9fc71690fcea6be81ef3707b11f4f58dbc90a10344a578d0a7c544b86c0ea8d1",
+              "visible_to_generator": true
+            }
+          ]
+        },
+        {
+          "claim": "这样避免本题无其他强引用时因局部作用域结束而回收回调。",
+          "status": "supported",
+          "rationale": "文档明确本地定义回调应设False，弱引用机制与直接保存分支支持该作用。",
+          "evidence": [
+            {
+              "path": "src/blinker/base.py",
+              "start_line": 102,
+              "end_line": 115
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "src/blinker/base.py",
+              "start_line": 102,
+              "end_line": 115,
+              "content": "        :param weak: Track the receiver with a :mod:`weakref`. The receiver will\n            be automatically disconnected when it is garbage collected. When\n            connecting a receiver defined within a function, set to ``False``,\n            otherwise it will be disconnected when the function scope ends.\n        \"\"\"\n        receiver_id = make_id(receiver)\n        sender_id = ANY_ID if sender is ANY else make_id(sender)\n\n        if weak:\n            self.receivers[receiver_id] = make_ref(\n                receiver, self._make_cleanup_receiver(receiver_id)\n            )\n        else:\n            self.receivers[receiver_id] = receiver",
+              "content_sha256": "242a53f1d8d39f8cfeafb3617a4276a2e74e3724a19956878822265af4f27b85",
+              "visible_to_generator": true
+            }
+          ]
+        }
+      ],
+      "notes": "参数、存储方式与题设生命周期解释正确。 本次是已用仓库关联改写开发复核，非完全盲审或真人批准；原复杂保护维持完整原题要求。",
+      "key_points": null,
+      "candidate_sha256": "b2db441a52332560ecf402deca7771b100da7ee692df2bbb5e114272cd66d58d",
+      "reviewer": "Codex (current session)",
+      "review_type": "model_assisted_nonblind_development_review",
+      "human_approved": false,
+      "training_eligible": false,
+      "result_sha256": "5e877e1404ca0057f42a6b1a4b27b12fe5c321d272539feb98a11398da5be602"
+    },
+    "probe-flask-stream-close--agentic_no_tools": {
+      "candidate_id": "probe-flask-stream-close--agentic_no_tools",
+      "correctness": "partially_correct",
+      "citation_support": "partial",
+      "completeness": "adequate",
+      "abstention": "not_applicable",
+      "entry_scope": "mixed",
+      "consistency": "consistent",
+      "claims": [
+        {
+          "claim": "正常结束后包装会调用题设exporter.close。",
+          "status": "supported",
+          "rationale": "exporter为迭代器，iter后仍为自身，finally确实对该gen关闭。",
+          "evidence": [
+            {
+              "path": "src/flask/helpers.py",
+              "start_line": 98,
+              "end_line": 104
+            },
+            {
+              "path": "src/flask/helpers.py",
+              "start_line": 124,
+              "end_line": 128
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "src/flask/helpers.py",
+              "start_line": 98,
+              "end_line": 104,
+              "content": "    try:\n        gen = iter(generator_or_function)  # type: ignore[arg-type]\n    except TypeError:\n\n        def decorator(*args: t.Any, **kwargs: t.Any) -> t.Any:\n            gen = generator_or_function(*args, **kwargs)  # type: ignore[operator]\n            return stream_with_context(gen)",
+              "content_sha256": "28d402b440348f683d3c7d64635259e55e671e968751f39b75c189c6c9e3c3bf",
+              "visible_to_generator": true
+            },
+            {
+              "path": "src/flask/helpers.py",
+              "start_line": 124,
+              "end_line": 128,
+              "content": "            try:\n                yield from gen\n            finally:\n                if hasattr(gen, \"close\"):\n                    gen.close()",
+              "content_sha256": "e72cf0b8f571879593efdd1a7ffa591662ae457d2c30a69273c43a86f31f630c",
+              "visible_to_generator": true
+            }
+          ]
+        },
+        {
+          "claim": "finally中的gen是generator()新创建的内部包装生成器。",
+          "status": "contradicted",
+          "rationale": "gen来自99行iter(generator_or_function)；generator()生成的包装对象叫wrapped_g，二者是不同层级，finally关的是底层传入迭代器。",
+          "evidence": [
+            {
+              "path": "src/flask/helpers.py",
+              "start_line": 98,
+              "end_line": 104
+            },
+            {
+              "path": "src/flask/helpers.py",
+              "start_line": 124,
+              "end_line": 136
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "src/flask/helpers.py",
+              "start_line": 98,
+              "end_line": 104,
+              "content": "    try:\n        gen = iter(generator_or_function)  # type: ignore[arg-type]\n    except TypeError:\n\n        def decorator(*args: t.Any, **kwargs: t.Any) -> t.Any:\n            gen = generator_or_function(*args, **kwargs)  # type: ignore[operator]\n            return stream_with_context(gen)",
+              "content_sha256": "28d402b440348f683d3c7d64635259e55e671e968751f39b75c189c6c9e3c3bf",
+              "visible_to_generator": true
+            },
+            {
+              "path": "src/flask/helpers.py",
+              "start_line": 124,
+              "end_line": 136,
+              "content": "            try:\n                yield from gen\n            finally:\n                if hasattr(gen, \"close\"):\n                    gen.close()\n\n    # The trick is to start the generator.  Then the code execution runs until\n    # the first dummy None is yielded at which point the context was already\n    # pushed.  This item is discarded.  Then when the iteration continues the\n    # real generator is executed.\n    wrapped_g = generator()\n    next(wrapped_g)\n    return wrapped_g  # type: ignore[return-value]",
+              "content_sha256": "344f57e28e00ec1a2b1c370096331a878faf9fa943512cb02c8889d909803027",
+              "visible_to_generator": true
+            }
+          ]
+        },
+        {
+          "claim": "finally检查gen是否有close，存在时调用。",
+          "status": "supported",
+          "rationale": "127–128行精确支持。",
+          "evidence": [
+            {
+              "path": "src/flask/helpers.py",
+              "start_line": 126,
+              "end_line": 128
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "src/flask/helpers.py",
+              "start_line": 126,
+              "end_line": 128,
+              "content": "            finally:\n                if hasattr(gen, \"close\"):\n                    gen.close()",
+              "content_sha256": "566adfae6b6c7653adae3017595f435e6494cb4d1e32b00d4c510b273b69e5cd",
+              "visible_to_generator": true
+            }
+          ]
+        },
+        {
+          "claim": "tests/test_helpers.py:267–280验证包装实际调用了exporter.close。",
+          "status": "unsupported",
+          "rationale": "该范围只定义Wrapper及close方法，没有stream_with_context调用、响应消费或结果断言；真正验证在289–293，既未实际见也未引用，不能按测试文件和方法定义充当已验证执行。",
+          "evidence": [
+            {
+              "path": "tests/test_helpers.py",
+              "start_line": 267,
+              "end_line": 280
+            },
+            {
+              "path": "tests/test_helpers.py",
+              "start_line": 282,
+              "end_line": 293
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "tests/test_helpers.py",
+              "start_line": 267,
+              "end_line": 280,
+              "content": "        class Wrapper:\n            def __init__(self, gen):\n                self._gen = gen\n\n            def __iter__(self):\n                return self\n\n            def close(self):\n                called.append(42)\n\n            def __next__(self):\n                return next(self._gen)\n\n            next = __next__",
+              "content_sha256": "9a9fa3c73686fa97e446e43ad2dee2b7bf23277fa07097d91d544c4153ecc93e",
+              "visible_to_generator": true
+            },
+            {
+              "path": "tests/test_helpers.py",
+              "start_line": 282,
+              "end_line": 293,
+              "content": "        @app.route(\"/\")\n        def index():\n            def generate():\n                yield \"Hello \"\n                yield flask.request.args[\"name\"]\n                yield \"!\"\n\n            return flask.Response(flask.stream_with_context(Wrapper(generate())))\n\n        rv = client.get(\"/?name=World\")\n        assert rv.data == b\"Hello World!\"\n        assert called == [42]",
+              "content_sha256": "3caa5909a4f7f2ed446c3798f1949e59f896f71b31d0a641cdc38f1bf8dc5855",
+              "visible_to_generator": false
+            }
+          ]
+        }
+      ],
+      "notes": "正常close结论对，business=true，但对关闭对象的层级解释错误，并把测试类定义当成行为验证。所给finally代码有效不等于支持这些附加断言；正式引用也缺98–99身份映射。 本次为关联改写开发复核，不是完全盲审、真人批准或总体准确率估计；workflow成功不替代语义。",
+      "key_points": null,
+      "candidate_sha256": "9c453d8d2394d3bb6bca8ff3ad0a0dad075461f54d9e3025401de8c5b5fa87ad",
+      "reviewer": "Codex (current session)",
+      "review_type": "model_assisted_nonblind_development_review",
+      "human_approved": false,
+      "training_eligible": false,
+      "result_sha256": "1e96ff9d3234771fa245b33cb3ad93f864b8ab0ed1c659c70284b798d6e394fe"
+    },
+    "business-dotenv-symlink-02--protection-sdk": {
+      "candidate_id": "business-dotenv-symlink-02--protection-sdk",
+      "correctness": "correct",
+      "citation_support": "partial",
+      "completeness": "partial",
+      "abstention": "not_applicable",
+      "entry_scope": "correct",
+      "consistency": "consistent",
+      "claims": [
+        {
+          "claim": "默认调用不满足业务目标。",
+          "status": "supported",
+          "rationale": "False时不realpath，最终替换链接目录项。",
+          "evidence": [
+            {
+              "path": "src/dotenv/main.py",
+              "start_line": 161,
+              "end_line": 171
+            },
+            {
+              "path": "src/dotenv/main.py",
+              "start_line": 210,
+              "end_line": 215
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "src/dotenv/main.py",
+              "start_line": 161,
+              "end_line": 171,
+              "content": "@contextmanager\ndef rewrite(\n    path: StrPath,\n    encoding: Optional[str],\n    follow_symlinks: bool = False,\n) -> Iterator[Tuple[IO[str], IO[str]]]:\n    if follow_symlinks:\n        path = os.path.realpath(path)\n\n    try:\n        source: IO[str] = open(path, encoding=encoding)",
+              "content_sha256": "3d0e87663d741079626c6cd948f0e400ec2097ef8391b8f06c43d0a842ae0531",
+              "visible_to_generator": true
+            },
+            {
+              "path": "src/dotenv/main.py",
+              "start_line": 210,
+              "end_line": 215,
+              "content": "    if error is None:\n        try:\n            if original_mode is not None:\n                os.chmod(dest_path, original_mode)\n\n            os.replace(dest_path, path)",
+              "content_sha256": "8d19ea679c1b92f8614c69183c6d475979cb22813304ea332e2e8cae3464a78a",
+              "visible_to_generator": true
+            }
+          ]
+        },
+        {
+          "claim": "默认follow_symlinks=False使部署链接被替换，共享目标未修改。",
+          "status": "supported",
+          "rationale": "open读取时仍按系统解析链接，但写回os.replace使用未realpath的原path；答案“直接打开并替换”按路径计算含义理解，不误读为open不跟随链接。",
+          "evidence": [
+            {
+              "path": "src/dotenv/main.py",
+              "start_line": 161,
+              "end_line": 171
+            },
+            {
+              "path": "src/dotenv/main.py",
+              "start_line": 210,
+              "end_line": 215
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "src/dotenv/main.py",
+              "start_line": 161,
+              "end_line": 171,
+              "content": "@contextmanager\ndef rewrite(\n    path: StrPath,\n    encoding: Optional[str],\n    follow_symlinks: bool = False,\n) -> Iterator[Tuple[IO[str], IO[str]]]:\n    if follow_symlinks:\n        path = os.path.realpath(path)\n\n    try:\n        source: IO[str] = open(path, encoding=encoding)",
+              "content_sha256": "3d0e87663d741079626c6cd948f0e400ec2097ef8391b8f06c43d0a842ae0531",
+              "visible_to_generator": true
+            },
+            {
+              "path": "src/dotenv/main.py",
+              "start_line": 210,
+              "end_line": 215,
+              "content": "    if error is None:\n        try:\n            if original_mode is not None:\n                os.chmod(dest_path, original_mode)\n\n            os.replace(dest_path, path)",
+              "content_sha256": "8d19ea679c1b92f8614c69183c6d475979cb22813304ea332e2e8cae3464a78a",
+              "visible_to_generator": true
+            }
+          ]
+        },
+        {
+          "claim": "最小修改为follow_symlinks=True。",
+          "status": "supported",
+          "rationale": "set_key传给rewrite后realpath目标再写，保持原quote_mode=never。",
+          "evidence": [
+            {
+              "path": "src/dotenv/main.py",
+              "start_line": 224,
+              "end_line": 240
+            },
+            {
+              "path": "src/dotenv/main.py",
+              "start_line": 267,
+              "end_line": 270
+            },
+            {
+              "path": "src/dotenv/main.py",
+              "start_line": 167,
+              "end_line": 168
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "src/dotenv/main.py",
+              "start_line": 224,
+              "end_line": 240,
+              "content": "def set_key(\n    dotenv_path: StrPath,\n    key_to_set: str,\n    value_to_set: str,\n    quote_mode: str = \"always\",\n    export: bool = False,\n    encoding: Optional[str] = \"utf-8\",\n    follow_symlinks: bool = False,\n) -> Tuple[Optional[bool], str, str]:\n    \"\"\"\n    Adds or Updates a key/value to the given .env\n\n    The target .env file is created if it doesn't exist.\n\n    This function doesn't follow symlinks by default, to avoid accidentally\n    modifying a file at a potentially untrusted path. If you don't need this\n    protection and need symlinks to be followed, use `follow_symlinks`.",
+              "content_sha256": "4121fb116f3531c64949e6bc6187cddb9315247f4f7910b87e5f9faa3e1e77d3",
+              "visible_to_generator": true
+            },
+            {
+              "path": "src/dotenv/main.py",
+              "start_line": 267,
+              "end_line": 270,
+              "content": "    with rewrite(dotenv_path, encoding=encoding, follow_symlinks=follow_symlinks) as (\n        source,\n        dest,\n    ):",
+              "content_sha256": "75d28ffc69b605cd0be7499182f10c6b6d90bbcc07c2658fd578f652ba781916",
+              "visible_to_generator": true
+            },
+            {
+              "path": "src/dotenv/main.py",
+              "start_line": 167,
+              "end_line": 168,
+              "content": "    if follow_symlinks:\n        path = os.path.realpath(path)",
+              "content_sha256": "ea13503fc050b4f2183312002f3846d21c6807437a7ba66a01d40a7bf7cbc959",
+              "visible_to_generator": true
+            }
+          ]
+        },
+        {
+          "claim": "修订后部署路径仍是指向共享目标的符号链接。",
+          "status": "supported",
+          "rationale": "只替换已解析目标目录项，原链接不变。",
+          "evidence": [
+            {
+              "path": "src/dotenv/main.py",
+              "start_line": 167,
+              "end_line": 168
+            },
+            {
+              "path": "src/dotenv/main.py",
+              "start_line": 210,
+              "end_line": 215
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "src/dotenv/main.py",
+              "start_line": 167,
+              "end_line": 168,
+              "content": "    if follow_symlinks:\n        path = os.path.realpath(path)",
+              "content_sha256": "ea13503fc050b4f2183312002f3846d21c6807437a7ba66a01d40a7bf7cbc959",
+              "visible_to_generator": true
+            },
+            {
+              "path": "src/dotenv/main.py",
+              "start_line": 210,
+              "end_line": 215,
+              "content": "    if error is None:\n        try:\n            if original_mode is not None:\n                os.chmod(dest_path, original_mode)\n\n            os.replace(dest_path, path)",
+              "content_sha256": "8d19ea679c1b92f8614c69183c6d475979cb22813304ea332e2e8cae3464a78a",
+              "visible_to_generator": true
+            }
+          ]
+        },
+        {
+          "claim": "修订后共享目标为APP_MODE=new且KEEP=1。",
+          "status": "supported",
+          "rationale": "never不加引号，更新匹配行，其他原文行保留。相关写回循环实际已见但未正式引用。",
+          "evidence": [
+            {
+              "path": "src/dotenv/main.py",
+              "start_line": 246,
+              "end_line": 278
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "src/dotenv/main.py",
+              "start_line": 246,
+              "end_line": 278,
+              "content": "    if quote_mode not in (\"always\", \"auto\", \"never\"):\n        raise ValueError(f\"Unknown quote_mode: {quote_mode}\")\n\n    quote = quote_mode == \"always\" or (\n        quote_mode == \"auto\" and not value_to_set.isalnum()\n    )\n\n    if quote:\n        # The single-quoted-value parser decodes `\\\\` and `\\'`, so both have to\n        # be escaped here for the value to survive a write/read round-trip.\n        # Backslashes first, otherwise the backslash added by the quote\n        # escaping would be escaped in turn.\n        escaped = value_to_set.replace(\"\\\\\", \"\\\\\\\\\").replace(\"'\", \"\\\\'\")\n        value_out = f\"'{escaped}'\"\n    else:\n        value_out = value_to_set\n    if export:\n        line_out = f\"export {key_to_set}={value_out}\\n\"\n    else:\n        line_out = f\"{key_to_set}={value_out}\\n\"\n\n    with rewrite(dotenv_path, encoding=encoding, follow_symlinks=follow_symlinks) as (\n        source,\n        dest,\n    ):\n        replaced = False\n        missing_newline = False\n        for mapping in with_warn_for_invalid_lines(parse_stream(source)):\n            if mapping.key == key_to_set:\n                dest.write(line_out)\n                replaced = True\n            else:\n                dest.write(mapping.original.string)",
+              "content_sha256": "79e461c58aff206d9c18026e207dbb4e4ae853c6519315d60f1d7c3f5a805b74",
+              "visible_to_generator": true
+            }
+          ]
+        }
+      ],
+      "notes": "原复杂保护的核心风险、目标未变和正确接入/验收均正确，业务可用。完整原gold还要求说明默认部署路径是含APP_MODE=new的普通副本，本答只说链接被破坏，未给默认副本内容，故完整性partial；不能按简单参数题升为完整解答。 本次是已用仓库关联改写开发复核，非完全盲审或真人批准；原复杂保护维持完整原题要求。",
+      "key_points": null,
+      "candidate_sha256": "2997074125e2b12b749abf38380850afff092f9680fc6213a1ce187a9b935c17",
+      "reviewer": "Codex (current session)",
+      "review_type": "model_assisted_nonblind_development_review",
+      "human_approved": false,
+      "training_eligible": false,
+      "result_sha256": "f3440f4edca532c72617bd9010da79f1402a2d0b35497ec2f161ea0a3cdfb6fa"
+    },
+    "business-dotenv-discovery-01--protection-sdk": {
+      "candidate_id": "business-dotenv-discovery-01--protection-sdk",
+      "correctness": "correct",
+      "citation_support": "supported",
+      "completeness": "partial",
+      "abstention": "not_applicable",
+      "entry_scope": "correct",
+      "consistency": "consistent",
+      "claims": [
+        {
+          "claim": "普通脚本默认find_dotenv选中/srv/app/.env。",
+          "status": "supported",
+          "rationale": "从worker调用帧目录起向上查找，先遇到app配置。",
+          "evidence": [
+            {
+              "path": "src/dotenv/main.py",
+              "start_line": 404,
+              "end_line": 423
+            },
+            {
+              "path": "src/dotenv/main.py",
+              "start_line": 358,
+              "end_line": 373
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "src/dotenv/main.py",
+              "start_line": 404,
+              "end_line": 423,
+              "content": "    if usecwd or _is_interactive() or _is_debugger() or getattr(sys, \"frozen\", False):\n        # Should work without __file__, e.g. in REPL or IPython notebook.\n        path = os.getcwd()\n    else:\n        # will work for .py files\n        frame = sys._getframe()\n        current_file = __file__\n\n        while frame.f_code.co_filename == current_file or not os.path.exists(\n            frame.f_code.co_filename\n        ):\n            assert frame.f_back is not None\n            frame = frame.f_back\n        frame_filename = frame.f_code.co_filename\n        path = os.path.dirname(os.path.abspath(frame_filename))\n\n    for dirname in _walk_to_root(path):\n        check_path = os.path.join(dirname, filename)\n        if _is_file_or_fifo(check_path):\n            return check_path",
+              "content_sha256": "a5dbc89f3d576591b01b645a0790fcf5f1129c90825dd501e499d40a439399dd",
+              "visible_to_generator": true
+            },
+            {
+              "path": "src/dotenv/main.py",
+              "start_line": 358,
+              "end_line": 373,
+              "content": "def _walk_to_root(path: str) -> Iterator[str]:\n    \"\"\"\n    Yield directories starting from the given directory up to the root\n    \"\"\"\n    if not os.path.exists(path):\n        raise IOError(\"Starting path not found\")\n\n    if os.path.isfile(path):\n        path = os.path.dirname(path)\n\n    last_dir = None\n    current_dir = os.path.abspath(path)\n    while last_dir != current_dir:\n        yield current_dir\n        parent_dir = os.path.abspath(os.path.join(current_dir, os.path.pardir))\n        last_dir, current_dir = current_dir, parent_dir",
+              "content_sha256": "96f6d3830335ac22a10e707e4e012b4317bff0cd9232fe9206c7040985cf9255",
+              "visible_to_generator": true
+            }
+          ]
+        },
+        {
+          "claim": "usecwd=True选中/srv/runner/.env。",
+          "status": "supported",
+          "rationale": "起点os.getcwd，当前runner配置即命中。",
+          "evidence": [
+            {
+              "path": "src/dotenv/main.py",
+              "start_line": 404,
+              "end_line": 406
+            },
+            {
+              "path": "src/dotenv/main.py",
+              "start_line": 420,
+              "end_line": 423
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "src/dotenv/main.py",
+              "start_line": 404,
+              "end_line": 406,
+              "content": "    if usecwd or _is_interactive() or _is_debugger() or getattr(sys, \"frozen\", False):\n        # Should work without __file__, e.g. in REPL or IPython notebook.\n        path = os.getcwd()",
+              "content_sha256": "38144251c148731a48d80712dab90f15a50785fd5a1296bbd79262977f1f28e7",
+              "visible_to_generator": true
+            },
+            {
+              "path": "src/dotenv/main.py",
+              "start_line": 420,
+              "end_line": 423,
+              "content": "    for dirname in _walk_to_root(path):\n        check_path = os.path.join(dirname, filename)\n        if _is_file_or_fifo(check_path):\n            return check_path",
+              "content_sha256": "4f30e8d169a8c1d4d61e19d01a587c93a1774c5d4a5e5b5ae161a47f0375fcee",
+              "visible_to_generator": true
+            }
+          ]
+        },
+        {
+          "claim": "应用侧配置且缺失失败可使用filename=.env、usecwd=False、raise_error_if_not_found=True。",
+          "status": "supported",
+          "rationale": "保留脚本起点；按题设没有其他祖先配置，应用.env缺失就到425抛错，不会回退同级runner。",
+          "evidence": [
+            {
+              "path": "src/dotenv/main.py",
+              "start_line": 404,
+              "end_line": 428
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "src/dotenv/main.py",
+              "start_line": 404,
+              "end_line": 428,
+              "content": "    if usecwd or _is_interactive() or _is_debugger() or getattr(sys, \"frozen\", False):\n        # Should work without __file__, e.g. in REPL or IPython notebook.\n        path = os.getcwd()\n    else:\n        # will work for .py files\n        frame = sys._getframe()\n        current_file = __file__\n\n        while frame.f_code.co_filename == current_file or not os.path.exists(\n            frame.f_code.co_filename\n        ):\n            assert frame.f_back is not None\n            frame = frame.f_back\n        frame_filename = frame.f_code.co_filename\n        path = os.path.dirname(os.path.abspath(frame_filename))\n\n    for dirname in _walk_to_root(path):\n        check_path = os.path.join(dirname, filename)\n        if _is_file_or_fifo(check_path):\n            return check_path\n\n    if raise_error_if_not_found:\n        raise IOError(\"File not found\")\n\n    return \"\"",
+              "content_sha256": "b9d815c7d402fe94014e8871a40004b4dccd6c93c1fcc56ef11868dd706025f6",
+              "visible_to_generator": true
+            }
+          ]
+        },
+        {
+          "claim": "该查找未找到时抛IOError(File not found)。",
+          "status": "supported",
+          "rationale": "425–426明确。",
+          "evidence": [
+            {
+              "path": "src/dotenv/main.py",
+              "start_line": 425,
+              "end_line": 426
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "src/dotenv/main.py",
+              "start_line": 425,
+              "end_line": 426,
+              "content": "    if raise_error_if_not_found:\n        raise IOError(\"File not found\")",
+              "content_sha256": "bba003bae91970abb8eea4059b17e13f98c257baeff03baa6efea1be0d0d3fa4",
+              "visible_to_generator": true
+            }
+          ]
+        },
+        {
+          "claim": "显式校验/srv/app/.env为文件且不存在就抛IOError也是有效方案。",
+          "status": "supported",
+          "rationale": "应用路径固定并手动执行失败策略，_is_file_or_fifo同样使用isfile检查。",
+          "evidence": [
+            {
+              "path": "src/dotenv/main.py",
+              "start_line": 420,
+              "end_line": 426
+            },
+            {
+              "path": "src/dotenv/main.py",
+              "start_line": 520,
+              "end_line": 532
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "src/dotenv/main.py",
+              "start_line": 420,
+              "end_line": 426,
+              "content": "    for dirname in _walk_to_root(path):\n        check_path = os.path.join(dirname, filename)\n        if _is_file_or_fifo(check_path):\n            return check_path\n\n    if raise_error_if_not_found:\n        raise IOError(\"File not found\")",
+              "content_sha256": "906d12831a02b9a088534b7e6d1669055d9f81465192f0abf04247f01250ca6c",
+              "visible_to_generator": true
+            },
+            {
+              "path": "src/dotenv/main.py",
+              "start_line": 520,
+              "end_line": 532,
+              "content": "def _is_file_or_fifo(path: StrPath) -> bool:\n    \"\"\"\n    Return True if `path` exists and is either a regular file or a FIFO.\n    \"\"\"\n    if os.path.isfile(path):\n        return True\n\n    try:\n        st = os.stat(path)\n    except (FileNotFoundError, OSError):\n        return False\n\n    return stat.S_ISFIFO(st.st_mode)",
+              "content_sha256": "4fb8ed8d45012ea1621fb5ed32a7929650cad1182afc586febf09be4208c12a5",
+              "visible_to_generator": true
+            }
+          ]
+        }
+      ],
+      "notes": "按原复杂保护，两个命中路径、应用侧配置推荐及缺失失败均正确，业务方案可用。未明确描述原gold中的默认未找到返回空字符串，记完整性partial；不把这一省略转成事实错误或严重错误。 本次是已用仓库关联改写开发复核，非完全盲审或真人批准；原复杂保护维持完整原题要求。",
+      "key_points": null,
+      "candidate_sha256": "aa06c6d54939c50656b6049973852cc97b6ff9b94ca956a3633b6fc39db7a911",
+      "reviewer": "Codex (current session)",
+      "review_type": "model_assisted_nonblind_development_review",
+      "human_approved": false,
+      "training_eligible": false,
+      "result_sha256": "1ab4a80a37ae9d1561939e9d82b4a8d548a31a569ff4ea8ccfbb867c9ee1ceed"
+    },
+    "probe-requests-json-files--agentic": {
+      "candidate_id": "probe-requests-json-files--agentic",
+      "correctness": "correct",
+      "citation_support": "supported",
+      "completeness": "adequate",
+      "abstention": "not_applicable",
+      "entry_scope": "correct",
+      "consistency": "consistent",
+      "claims": [
+        {
+          "claim": "data=None且json非空，先生成独立JSON字节body。",
+          "status": "supported",
+          "rationale": "504条件成立，510序列化，515保证bytes。",
+          "evidence": [
+            {
+              "path": "src/requests/models.py",
+              "start_line": 504,
+              "end_line": 516
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "src/requests/models.py",
+              "start_line": 504,
+              "end_line": 516,
+              "content": "        if not data and json is not None:\n            # urllib3 requires a bytes-like body. Python 2's json.dumps\n            # provides this natively, but Python 3 gives a Unicode string.\n            content_type = \"application/json\"\n\n            try:\n                body = complexjson.dumps(json, allow_nan=False)\n            except ValueError as ve:\n                raise InvalidJSONError(ve, request=self)\n\n            if not isinstance(body, bytes):\n                body = body.encode(\"utf-8\")\n",
+              "content_sha256": "e447c89f6665e214e52e9d04e1f0f3d9d6f019cf1082566935569253c1ce86d9",
+              "visible_to_generator": true
+            }
+          ]
+        },
+        {
+          "claim": "data=None使is_stream=False，进入非流分支。",
+          "status": "supported",
+          "rationale": "None无__iter__，517–522判定为False。",
+          "evidence": [
+            {
+              "path": "src/requests/models.py",
+              "start_line": 517,
+              "end_line": 522
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "src/requests/models.py",
+              "start_line": 517,
+              "end_line": 522,
+              "content": "        is_stream = all(\n            [\n                hasattr(data, \"__iter__\"),\n                not isinstance(data, (basestring, list, tuple, Mapping)),\n            ]\n        )",
+              "content_sha256": "4863b832480027e7b5c30cc970eadd1f955a6d0472351f3eba2442640f94b5ba",
+              "visible_to_generator": true
+            }
+          ]
+        },
+        {
+          "claim": "非空files在554–555调用_encode_files(files,data)，覆盖先前body。",
+          "status": "supported",
+          "rationale": "候选实际context这次包含整个494–570，且准确正式引用关键覆盖赋值。",
+          "evidence": [
+            {
+              "path": "src/requests/models.py",
+              "start_line": 554,
+              "end_line": 555
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "src/requests/models.py",
+              "start_line": 554,
+              "end_line": 555,
+              "content": "            if files:\n                (body, content_type) = self._encode_files(files, data)",
+              "content_sha256": "1a27fcb5e580efe2d1879305357934917df3bf6b18fa60556b4bf15b10c22f3f",
+              "visible_to_generator": true
+            }
+          ]
+        },
+        {
+          "claim": "最终570赋值的是multipart结果，不保留独立JSON字节。",
+          "status": "supported",
+          "rationale": "覆盖赋值后最终写self.body；554–555所在源码注释和方法说明表明这是multipart编码。",
+          "evidence": [
+            {
+              "path": "src/requests/models.py",
+              "start_line": 552,
+              "end_line": 555
+            },
+            {
+              "path": "src/requests/models.py",
+              "start_line": 570,
+              "end_line": 570
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "src/requests/models.py",
+              "start_line": 552,
+              "end_line": 555,
+              "content": "        else:\n            # Multi-part file uploads.\n            if files:\n                (body, content_type) = self._encode_files(files, data)",
+              "content_sha256": "9ebd7ba6634633b0e3228a9a1d62b6ef4efe3bdf9df4317f398cada26832afd3",
+              "visible_to_generator": true
+            },
+            {
+              "path": "src/requests/models.py",
+              "start_line": 570,
+              "end_line": 570,
+              "content": "        self.body = body",
+              "content_sha256": "81a73900fa184d0d24288d80e3c6f193a1763416c04eb5769d7599c21c509a28",
+              "visible_to_generator": true
+            }
+          ]
+        }
+      ],
+      "notes": "最终分支、覆盖顺序和赋值依据均准确，真实关键行实际可见且正式引用；没有把json字典误说成表单字段。 本次是已用仓库关联改写开发复核，非完全盲审或真人批准；原复杂保护维持完整原题要求。",
+      "key_points": null,
+      "candidate_sha256": "3b543e3067201f3e4155a9f092cf9814547e3dd7c16c7fdf6e18db6922079df6",
+      "reviewer": "Codex (current session)",
+      "review_type": "model_assisted_nonblind_development_review",
+      "human_approved": false,
+      "training_eligible": false,
+      "result_sha256": "a3bb8b2f4c3d12c5aef5e4b9d4a1197ac766d3a58ca1971a259765fa09696f82"
+    },
+    "step-blinker-muted--agentic": {
+      "candidate_id": "step-blinker-muted--agentic",
+      "correctness": "correct",
+      "citation_support": "supported",
+      "completeness": "adequate",
+      "abstention": "not_applicable",
+      "entry_scope": "correct",
+      "consistency": "consistent",
+      "claims": [
+        {
+          "claim": "muted进入时设置is_muted=True。",
+          "status": "supported",
+          "rationale": "197行准确。",
+          "evidence": [
+            {
+              "path": "src/blinker/base.py",
+              "start_line": 197,
+              "end_line": 197
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "src/blinker/base.py",
+              "start_line": 197,
+              "end_line": 197,
+              "content": "        self.is_muted = True",
+              "content_sha256": "59ae6f865247a2a3f5b16e0d95417b756ddb73cdd4b09cdd96670192c541b60e",
+              "visible_to_generator": true
+            }
+          ]
+        },
+        {
+          "claim": "块内ret=[]。",
+          "status": "supported",
+          "rationale": "237–238直接返回空列表。",
+          "evidence": [
+            {
+              "path": "src/blinker/base.py",
+              "start_line": 237,
+              "end_line": 238
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "src/blinker/base.py",
+              "start_line": 237,
+              "end_line": 238,
+              "content": "        if self.is_muted:\n            return []",
+              "content_sha256": "d47bbb109945846393ab9e4cda981257e1485591c3689684e59940a9e92792ba",
+              "visible_to_generator": true
+            }
+          ]
+        },
+        {
+          "claim": "audit和notify均不调用。",
+          "status": "supported",
+          "rationale": "静音返回先于接收器遍历，覆盖整个Signal。",
+          "evidence": [
+            {
+              "path": "src/blinker/base.py",
+              "start_line": 237,
+              "end_line": 249
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "src/blinker/base.py",
+              "start_line": 237,
+              "end_line": 249,
+              "content": "        if self.is_muted:\n            return []\n\n        results = []\n\n        for receiver in self.receivers_for(sender):\n            if iscoroutinefunction(receiver):\n                if _async_wrapper is None:\n                    raise RuntimeError(\"Cannot send to a coroutine function.\")\n\n                result = _async_wrapper(receiver)(sender, **kwargs)\n            else:\n                result = receiver(sender, **kwargs)",
+              "content_sha256": "376c7ffcc8c0486502bf22a4d64a09baba56649b99a190376e11484c70b40a94",
+              "visible_to_generator": true
+            }
+          ]
+        }
+      ],
+      "notes": "仅判断块内行为，结论正确，精确引用支持。 本次是已用仓库关联改写开发复核，非完全盲审或真人批准；原复杂保护维持完整原题要求。",
+      "key_points": null,
+      "candidate_sha256": "a6a5cbfab6da960ede54386dc841daa46d7e31e9f21bfdb1875c5fc8cbac631d",
+      "reviewer": "Codex (current session)",
+      "review_type": "model_assisted_nonblind_development_review",
+      "human_approved": false,
+      "training_eligible": false,
+      "result_sha256": "219cccdb9510f68122e2c6fed4dd54380f5dc31e2cbe1d095ab9a1b0fb461cb0"
+    },
+    "step-requests-tls--agentic": {
+      "candidate_id": "step-requests-tls--agentic",
+      "correctness": "correct",
+      "citation_support": "supported",
+      "completeness": "adequate",
+      "abstention": "not_applicable",
+      "entry_scope": "correct",
+      "consistency": "consistent",
+      "claims": [
+        {
+          "claim": "最小配置verify=ca_bundle，负责服务端证书和私有CA信任。",
+          "status": "supported",
+          "rationale": "Session文档说明字符串CA包路径，适配器映射为ca_certs。",
+          "evidence": [
+            {
+              "path": "src/requests/sessions.py",
+              "start_line": 550,
+              "end_line": 557
+            },
+            {
+              "path": "src/requests/adapters.py",
+              "start_line": 91,
+              "end_line": 95
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "src/requests/sessions.py",
+              "start_line": 550,
+              "end_line": 557,
+              "content": "        :param verify: (optional) Either a boolean, in which case it controls whether we verify\n            the server's TLS certificate, or a string, in which case it must be a path\n            to a CA bundle to use. Defaults to ``True``. When set to\n            ``False``, requests will accept any TLS certificate presented by\n            the server, and will ignore hostname mismatches and/or expired\n            certificates, which will make your application vulnerable to\n            man-in-the-middle (MitM) attacks. Setting verify to ``False``\n            may be useful during local development or testing.",
+              "content_sha256": "4534fc6b50077a2b26b59813cf33b967bdcbcc351299b2c6b3ddb8230014df1c",
+              "visible_to_generator": true
+            },
+            {
+              "path": "src/requests/adapters.py",
+              "start_line": 91,
+              "end_line": 95,
+              "content": "    elif isinstance(verify, str):\n        if not os.path.isdir(verify):\n            pool_kwargs[\"ca_certs\"] = verify\n        else:\n            pool_kwargs[\"ca_cert_dir\"] = verify",
+              "content_sha256": "742370cb24005e20cfb9f8844386a1b3131c0ccfa99c90a7a7a38495c8e3a49f",
+              "visible_to_generator": true
+            }
+          ]
+        },
+        {
+          "claim": "最小配置cert=(client_cert,client_key)，提供客户端证书与私钥。",
+          "status": "supported",
+          "rationale": "文档及二元组映射顺序一致。",
+          "evidence": [
+            {
+              "path": "src/requests/sessions.py",
+              "start_line": 558,
+              "end_line": 559
+            },
+            {
+              "path": "src/requests/adapters.py",
+              "start_line": 97,
+              "end_line": 104
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "src/requests/sessions.py",
+              "start_line": 558,
+              "end_line": 559,
+              "content": "        :param cert: (optional) if String, path to ssl client cert file (.pem).\n            If Tuple, ('cert', 'key') pair.",
+              "content_sha256": "cc776c582a6f9c12d84b324a8d1ad5cc22c38d56eda8b8be82b406aaae1da4c0",
+              "visible_to_generator": true
+            },
+            {
+              "path": "src/requests/adapters.py",
+              "start_line": 97,
+              "end_line": 104,
+              "content": "    if client_cert is not None:\n        if isinstance(client_cert, tuple) and len(client_cert) == 2:\n            pool_kwargs[\"cert_file\"] = client_cert[0]\n            pool_kwargs[\"key_file\"] = client_cert[1]\n        else:\n            # According to our docs, we allow users to specify just the client\n            # cert path\n            pool_kwargs[\"cert_file\"] = client_cert",
+              "content_sha256": "e209776038624f7c9ed545807b21bc7ff2b87c9bae0b4e5a9fc3bb2ba6ecba32",
+              "visible_to_generator": true
+            }
+          ]
+        },
+        {
+          "claim": "两项联合表达服务端验证与客户端身份，适用于mTLS接入。",
+          "status": "supported",
+          "rationale": "未混用参数用途；“确保连接安全”按启用服务端验证的目的理解，不视作声称网络必然成功或排除所有安全风险。",
+          "evidence": [
+            {
+              "path": "src/requests/sessions.py",
+              "start_line": 550,
+              "end_line": 559
+            },
+            {
+              "path": "src/requests/adapters.py",
+              "start_line": 91,
+              "end_line": 104
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "src/requests/sessions.py",
+              "start_line": 550,
+              "end_line": 559,
+              "content": "        :param verify: (optional) Either a boolean, in which case it controls whether we verify\n            the server's TLS certificate, or a string, in which case it must be a path\n            to a CA bundle to use. Defaults to ``True``. When set to\n            ``False``, requests will accept any TLS certificate presented by\n            the server, and will ignore hostname mismatches and/or expired\n            certificates, which will make your application vulnerable to\n            man-in-the-middle (MitM) attacks. Setting verify to ``False``\n            may be useful during local development or testing.\n        :param cert: (optional) if String, path to ssl client cert file (.pem).\n            If Tuple, ('cert', 'key') pair.",
+              "content_sha256": "c59494fc3df01c26a5bf9a588a6b95bf011168b9b9831664abcbe4adc4010022",
+              "visible_to_generator": true
+            },
+            {
+              "path": "src/requests/adapters.py",
+              "start_line": 91,
+              "end_line": 104,
+              "content": "    elif isinstance(verify, str):\n        if not os.path.isdir(verify):\n            pool_kwargs[\"ca_certs\"] = verify\n        else:\n            pool_kwargs[\"ca_cert_dir\"] = verify\n    pool_kwargs[\"cert_reqs\"] = cert_reqs\n    if client_cert is not None:\n        if isinstance(client_cert, tuple) and len(client_cert) == 2:\n            pool_kwargs[\"cert_file\"] = client_cert[0]\n            pool_kwargs[\"key_file\"] = client_cert[1]\n        else:\n            # According to our docs, we allow users to specify just the client\n            # cert path\n            pool_kwargs[\"cert_file\"] = client_cert",
+              "content_sha256": "91fb6c5ba240e2c509f8e2e3c87717fb5bb42ae6e2382557d8cdf952fd477e4c",
+              "visible_to_generator": true
+            }
+          ]
+        }
+      ],
+      "notes": "所需配置和职责完整。展示完整调用没有引入额外请求参数或网络结果。 本次是已用仓库关联改写开发复核，非完全盲审或真人批准；原复杂保护维持完整原题要求。",
+      "key_points": null,
+      "candidate_sha256": "2a15518265bcce4252f9200b04fd6b30e395c4d7e3dcce825fe189ad47cd0d7e",
+      "reviewer": "Codex (current session)",
+      "review_type": "model_assisted_nonblind_development_review",
+      "human_approved": false,
+      "training_eligible": false,
+      "result_sha256": "173bbb5f223348960264c1c5dc686f22d5317824dea3badddc972a5eed1c100f"
+    },
+    "step-flask-stream--agentic": {
+      "candidate_id": "step-flask-stream--agentic",
+      "correctness": "partially_correct",
+      "citation_support": "partial",
+      "completeness": "partial",
+      "abstention": "not_applicable",
+      "entry_scope": "mixed",
+      "consistency": "consistent",
+      "claims": [
+        {
+          "claim": "题设已有exporter时，最小返回语句是Response(stream_with_context(generate()))。",
+          "status": "partial",
+          "rationale": "这是已有generate函数时的有效模式，却没有将题设迭代器exporter接入；答案既未定义generate也未将它关联exporter，不能当等效参数名称替换。",
+          "evidence": [
+            {
+              "path": "src/flask/helpers.py",
+              "start_line": 84,
+              "end_line": 94
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "src/flask/helpers.py",
+              "start_line": 84,
+              "end_line": 94,
+              "content": "    Alternatively it can also be used around a specific generator::\n\n        from flask import stream_with_context, request, Response\n\n        @app.route('/stream')\n        def streamed_response():\n            def generate():\n                yield 'Hello '\n                yield request.args['name']\n                yield '!'\n            return Response(stream_with_context(generate()))",
+              "content_sha256": "2f85b44a447f09f1abb5e8b941227dab9975880344c5fa9d12ddc9b16cc8e9e6",
+              "visible_to_generator": true
+            }
+          ]
+        },
+        {
+          "claim": "stream_with_context在首次实际产出前捕获当前请求上下文并启动包装器。",
+          "status": "supported",
+          "rationale": "109取ctx，134–135启动的是内部wrapped_g至sentinel；不是先遍历原exporter。引用和上下文能支持这一正确解释。",
+          "evidence": [
+            {
+              "path": "src/flask/helpers.py",
+              "start_line": 108,
+              "end_line": 118
+            },
+            {
+              "path": "src/flask/helpers.py",
+              "start_line": 130,
+              "end_line": 136
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "src/flask/helpers.py",
+              "start_line": 108,
+              "end_line": 118,
+              "content": "    def generator() -> t.Iterator[t.AnyStr | None]:\n        ctx = _cv_request.get(None)\n        if ctx is None:\n            raise RuntimeError(\n                \"'stream_with_context' can only be used when a request\"\n                \" context is active, such as in a view function.\"\n            )\n        with ctx:\n            # Dummy sentinel.  Has to be inside the context block or we're\n            # not actually keeping the context around.\n            yield None",
+              "content_sha256": "71007f77aba12b097eece9a4608fe815089573cd582f90c7c5bb151c711d00d4",
+              "visible_to_generator": false
+            },
+            {
+              "path": "src/flask/helpers.py",
+              "start_line": 130,
+              "end_line": 136,
+              "content": "    # The trick is to start the generator.  Then the code execution runs until\n    # the first dummy None is yielded at which point the context was already\n    # pushed.  This item is discarded.  Then when the iteration continues the\n    # real generator is executed.\n    wrapped_g = generator()\n    next(wrapped_g)\n    return wrapped_g  # type: ignore[return-value]",
+              "content_sha256": "700c35827b5e6320a6405116d1944592ca04420036aa35868b36cfeb60c47c15",
+              "visible_to_generator": true
+            }
+          ]
+        },
+        {
+          "claim": "包装后可把延迟读取request.args的迭代器交给Response。",
+          "status": "supported",
+          "rationale": "文档示例准确展示保留延迟访问的通用模式。",
+          "evidence": [
+            {
+              "path": "src/flask/helpers.py",
+              "start_line": 88,
+              "end_line": 94
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "src/flask/helpers.py",
+              "start_line": 88,
+              "end_line": 94,
+              "content": "        @app.route('/stream')\n        def streamed_response():\n            def generate():\n                yield 'Hello '\n                yield request.args['name']\n                yield '!'\n            return Response(stream_with_context(generate()))",
+              "content_sha256": "3bb4fbbcceae54099160301fd59b84a0fd31d2d1ce171a329031e5bef909f7f4",
+              "visible_to_generator": true
+            }
+          ]
+        }
+      ],
+      "notes": "正确helper模式不能替代使用题设exporter。本题没有提供generate函数，调用它不是完成所需最小接入；不因少写装饰器或mimetype扣分，而是实际数据对象未被包装。 本次为关联改写开发复核，不是完全盲审、真人批准或总体准确率估计；workflow成功不替代语义。",
+      "key_points": null,
+      "candidate_sha256": "424c76ee9de41389c1b4c241dfd453f990fd2de773e534769731cf9fb410898e",
+      "reviewer": "Codex (current session)",
+      "review_type": "model_assisted_nonblind_development_review",
+      "human_approved": false,
+      "training_eligible": false,
+      "result_sha256": "955bdf4d4871e199913de721c498097597a34c719618d6452837dbacfa9bc49b"
+    },
+    "step-requests-file--agentic": {
+      "candidate_id": "step-requests-file--agentic",
+      "correctness": "partially_correct",
+      "citation_support": "partial",
+      "completeness": "partial",
+      "abstention": "not_applicable",
+      "entry_scope": "correct",
+      "consistency": "consistent",
+      "claims": [
+        {
+          "claim": "files={report:(report.csv,f)}满足本题要求的最小配置。",
+          "status": "contradicted",
+          "rationale": "该合法二元组仅配置文件名和文件内容，ft仍为None，没有题设必需的text/csv部分类型。",
+          "evidence": [
+            {
+              "path": "src/requests/models.py",
+              "start_line": 173,
+              "end_line": 198
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "src/requests/models.py",
+              "start_line": 173,
+              "end_line": 198,
+              "content": "        for k, v in files:\n            # support for explicit filename\n            ft = None\n            fh = None\n            if isinstance(v, (tuple, list)):\n                if len(v) == 2:\n                    fn, fp = v\n                elif len(v) == 3:\n                    fn, fp, ft = v\n                else:\n                    fn, fp, ft, fh = v\n            else:\n                fn = guess_filename(v) or k\n                fp = v\n\n            if isinstance(fp, (str, bytes, bytearray)):\n                fdata = fp\n            elif hasattr(fp, \"read\"):\n                fdata = fp.read()\n            elif fp is None:\n                continue\n            else:\n                fdata = fp\n\n            rf = RequestField(name=k, data=fdata, filename=fn, headers=fh)\n            rf.make_multipart(content_type=ft)",
+              "content_sha256": "4598274bc90f2bde1a294bc1a196c9f19cfb4e65f311e7619e316d5b425bf528",
+              "visible_to_generator": false
+            }
+          ]
+        },
+        {
+          "claim": "二元组第一位置是文件名，第二位置是文件对象。",
+          "status": "supported",
+          "rationale": "实现解包及文档例子都支持该位置说明。",
+          "evidence": [
+            {
+              "path": "src/requests/models.py",
+              "start_line": 177,
+              "end_line": 181
+            },
+            {
+              "path": "docs/user/quickstart.rst",
+              "start_line": 339,
+              "end_line": 342
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "src/requests/models.py",
+              "start_line": 177,
+              "end_line": 181,
+              "content": "            if isinstance(v, (tuple, list)):\n                if len(v) == 2:\n                    fn, fp = v\n                elif len(v) == 3:\n                    fn, fp, ft = v",
+              "content_sha256": "d03835c51e04293f670cf6757a71b7f3a934c782ea410852a8142d2befe8cf4d",
+              "visible_to_generator": false
+            },
+            {
+              "path": "docs/user/quickstart.rst",
+              "start_line": 339,
+              "end_line": 342,
+              "content": "    >>> files = {'file': ('report.csv', 'some,data,to,send\\nanother,row,to,send\\n')}\n\n    >>> r = requests.post(url, files=files)\n    >>> r.text",
+              "content_sha256": "0a9c095ba491fab4591ea0ea7abc8a36c3b819cf60c5040e885a34241446ce35",
+              "visible_to_generator": true
+            }
+          ]
+        },
+        {
+          "claim": "该二元组是Requests支持的通用文件上传形式。",
+          "status": "supported",
+          "rationale": "通用形式合法，但不能据此称它满足本题全部文件部分契约。",
+          "evidence": [
+            {
+              "path": "src/requests/models.py",
+              "start_line": 137,
+              "end_line": 144
+            },
+            {
+              "path": "src/requests/models.py",
+              "start_line": 177,
+              "end_line": 198
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "src/requests/models.py",
+              "start_line": 137,
+              "end_line": 144,
+              "content": "    def _encode_files(files, data):\n        \"\"\"Build the body for a multipart/form-data request.\n\n        Will successfully encode files when passed as a dict or a list of\n        tuples. Order is retained if data is a list of tuples but arbitrary\n        if parameters are supplied as a dict.\n        The tuples may be 2-tuples (filename, fileobj), 3-tuples (filename, fileobj, contentype)\n        or 4-tuples (filename, fileobj, contentype, custom_headers).",
+              "content_sha256": "608c7c0c900473ba2b456e18f68392ab6b5f47f499deb1dd865cbb279460fa4f",
+              "visible_to_generator": false
+            },
+            {
+              "path": "src/requests/models.py",
+              "start_line": 177,
+              "end_line": 198,
+              "content": "            if isinstance(v, (tuple, list)):\n                if len(v) == 2:\n                    fn, fp = v\n                elif len(v) == 3:\n                    fn, fp, ft = v\n                else:\n                    fn, fp, ft, fh = v\n            else:\n                fn = guess_filename(v) or k\n                fp = v\n\n            if isinstance(fp, (str, bytes, bytearray)):\n                fdata = fp\n            elif hasattr(fp, \"read\"):\n                fdata = fp.read()\n            elif fp is None:\n                continue\n            else:\n                fdata = fp\n\n            rf = RequestField(name=k, data=fdata, filename=fn, headers=fh)\n            rf.make_multipart(content_type=ft)",
+              "content_sha256": "588bd52d811234e10b0dd7affe666137b74263c43796858d345793442fc51491",
+              "visible_to_generator": false
+            }
+          ]
+        }
+      ],
+      "notes": "本题保留了文件部分text/csv要求，不能因元组合法就忽略；没有必要补回原复杂题tenant字段或总Content-Type要求。 本次为关联改写开发复核，不是完全盲审、真人批准或总体准确率估计；workflow成功不替代语义。",
+      "key_points": null,
+      "candidate_sha256": "28246aff58c63763cebf301fb47604ac1d9e723909bdf999ab6089ebdd2def1e",
+      "reviewer": "Codex (current session)",
+      "review_type": "model_assisted_nonblind_development_review",
+      "human_approved": false,
+      "training_eligible": false,
+      "result_sha256": "562235ade5e990975e64bb286cc401595675fb82229666ba61fba44a010333d8"
+    },
+    "step-flask-json404--agentic": {
+      "candidate_id": "step-flask-json404--agentic",
+      "correctness": "partially_correct",
+      "citation_support": "partial",
+      "completeness": "adequate",
+      "abstention": "not_applicable",
+      "entry_scope": "correct",
+      "consistency": "consistent",
+      "claims": [
+        {
+          "claim": "所给@app.errorhandler(404)函数接受error并返回指定JSON正文和显式404。",
+          "status": "supported",
+          "rationale": "函数实现可用：注册和参数示例正确，dict会转JSON，tuple状态被单独应用。后两项真实依据不在实际context或正式引用内。",
+          "evidence": [
+            {
+              "path": "src/flask/sansio/scaffold.py",
+              "start_line": 598,
+              "end_line": 609
+            },
+            {
+              "path": "src/flask/app.py",
+              "start_line": 1145,
+              "end_line": 1162
+            },
+            {
+              "path": "src/flask/app.py",
+              "start_line": 1190,
+              "end_line": 1201
+            },
+            {
+              "path": "src/flask/app.py",
+              "start_line": 1230,
+              "end_line": 1231
+            },
+            {
+              "path": "src/flask/app.py",
+              "start_line": 1257,
+              "end_line": 1263
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "src/flask/sansio/scaffold.py",
+              "start_line": 598,
+              "end_line": 609,
+              "content": "    def errorhandler(\n        self, code_or_exception: type[Exception] | int\n    ) -> t.Callable[[T_error_handler], T_error_handler]:\n        \"\"\"Register a function to handle errors by code or exception class.\n\n        A decorator that is used to register a function given an\n        error code.  Example::\n\n            @app.errorhandler(404)\n            def page_not_found(error):\n                return 'This page does not exist', 404\n",
+              "content_sha256": "828156e529c93d01d41cdab880b3f8cfff682abbfa44ff70e6e44cd5b913745e",
+              "visible_to_generator": true
+            },
+            {
+              "path": "src/flask/app.py",
+              "start_line": 1145,
+              "end_line": 1162,
+              "content": "            ``dict``\n                A dictionary that will be jsonify'd before being returned.\n\n            ``list``\n                A list that will be jsonify'd before being returned.\n\n            ``generator`` or ``iterator``\n                A generator that returns ``str`` or ``bytes`` to be\n                streamed as the response.\n\n            ``tuple``\n                Either ``(body, status, headers)``, ``(body, status)``, or\n                ``(body, headers)``, where ``body`` is any of the other types\n                allowed here, ``status`` is a string or an integer, and\n                ``headers`` is a dictionary or a list of ``(key, value)``\n                tuples. If ``body`` is a :attr:`response_class` instance,\n                ``status`` overwrites the exiting value and ``headers`` are\n                extended.",
+              "content_sha256": "da7a04fd494ffcd5c59c986925f428fb1d7d00ce3261f27a427064b1ba8d61bc",
+              "visible_to_generator": false
+            },
+            {
+              "path": "src/flask/app.py",
+              "start_line": 1190,
+              "end_line": 1201,
+              "content": "        if isinstance(rv, tuple):\n            len_rv = len(rv)\n\n            # a 3-tuple is unpacked directly\n            if len_rv == 3:\n                rv, status, headers = rv  # type: ignore[misc]\n            # decide if a 2-tuple has status or headers\n            elif len_rv == 2:\n                if isinstance(rv[1], (Headers, dict, tuple, list)):\n                    rv, headers = rv  # pyright: ignore\n                else:\n                    rv, status = rv  # type: ignore[assignment,misc]",
+              "content_sha256": "db0e86c92a19d8871c11f07344b1a62dcec417f6732fd5f331dd72fdeabb9e2d",
+              "visible_to_generator": false
+            },
+            {
+              "path": "src/flask/app.py",
+              "start_line": 1230,
+              "end_line": 1231,
+              "content": "            elif isinstance(rv, (dict, list)):\n                rv = self.json.response(rv)",
+              "content_sha256": "c43c3e6f66d9c611f30452a000ad692453ff04a5582c82fd8f3eb8db0a608b90",
+              "visible_to_generator": false
+            },
+            {
+              "path": "src/flask/app.py",
+              "start_line": 1257,
+              "end_line": 1263,
+              "content": "        rv = t.cast(Response, rv)\n        # prefer the status if it was provided\n        if status is not None:\n            if isinstance(status, (str, bytes, bytearray)):\n                rv.status = status\n            else:\n                rv.status_code = status",
+              "content_sha256": "660047ef9354d452f66d025179a4b8abd72207cbbab44aace234aa25100da73e",
+              "visible_to_generator": false
+            }
+          ]
+        },
+        {
+          "claim": "errorhandler可按状态码或异常类注册。",
+          "status": "supported",
+          "rationale": "598签名与601–609说明支持。",
+          "evidence": [
+            {
+              "path": "src/flask/sansio/scaffold.py",
+              "start_line": 598,
+              "end_line": 609
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "src/flask/sansio/scaffold.py",
+              "start_line": 598,
+              "end_line": 609,
+              "content": "    def errorhandler(\n        self, code_or_exception: type[Exception] | int\n    ) -> t.Callable[[T_error_handler], T_error_handler]:\n        \"\"\"Register a function to handle errors by code or exception class.\n\n        A decorator that is used to register a function given an\n        error code.  Example::\n\n            @app.errorhandler(404)\n            def page_not_found(error):\n                return 'This page does not exist', 404\n",
+              "content_sha256": "828156e529c93d01d41cdab880b3f8cfff682abbfa44ff70e6e44cd5b913745e",
+              "visible_to_generator": true
+            }
+          ]
+        },
+        {
+          "claim": "处理函数必须使用(body,status)元组形式才能显式返回404。",
+          "status": "contradicted",
+          "rationale": "元组是正确的一个方案，现成Response对象也可自带404，不要求所有处理函数都以元组返回；题干自身接受等价Response。",
+          "evidence": [
+            {
+              "path": "src/flask/app.py",
+              "start_line": 1155,
+              "end_line": 1165
+            },
+            {
+              "path": "src/flask/app.py",
+              "start_line": 1219,
+              "end_line": 1232
+            },
+            {
+              "path": "src/flask/app.py",
+              "start_line": 1257,
+              "end_line": 1263
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "src/flask/app.py",
+              "start_line": 1155,
+              "end_line": 1165,
+              "content": "            ``tuple``\n                Either ``(body, status, headers)``, ``(body, status)``, or\n                ``(body, headers)``, where ``body`` is any of the other types\n                allowed here, ``status`` is a string or an integer, and\n                ``headers`` is a dictionary or a list of ``(key, value)``\n                tuples. If ``body`` is a :attr:`response_class` instance,\n                ``status`` overwrites the exiting value and ``headers`` are\n                extended.\n\n            :attr:`response_class`\n                The object is returned unchanged.",
+              "content_sha256": "545d78fba21dda255ba7f6c0c9bf76aed9b5f028b44b7deb57dfb1bec8ae412a",
+              "visible_to_generator": false
+            },
+            {
+              "path": "src/flask/app.py",
+              "start_line": 1219,
+              "end_line": 1232,
+              "content": "        if not isinstance(rv, self.response_class):\n            if isinstance(rv, (str, bytes, bytearray)) or isinstance(rv, cabc.Iterator):\n                # let the response class set the status and headers instead of\n                # waiting to do it manually, so that the class can handle any\n                # special logic\n                rv = self.response_class(\n                    rv,  # pyright: ignore\n                    status=status,\n                    headers=headers,  # type: ignore[arg-type]\n                )\n                status = headers = None\n            elif isinstance(rv, (dict, list)):\n                rv = self.json.response(rv)\n            elif isinstance(rv, BaseResponse) or callable(rv):",
+              "content_sha256": "5a92658b7abb34808eb797be5917c1b9711056bab33904db57aeb700bd3d1365",
+              "visible_to_generator": false
+            },
+            {
+              "path": "src/flask/app.py",
+              "start_line": 1257,
+              "end_line": 1263,
+              "content": "        rv = t.cast(Response, rv)\n        # prefer the status if it was provided\n        if status is not None:\n            if isinstance(status, (str, bytes, bytearray)):\n                rv.status = status\n            else:\n                rv.status_code = status",
+              "content_sha256": "660047ef9354d452f66d025179a4b8abd72207cbbab44aace234aa25100da73e",
+              "visible_to_generator": false
+            }
+          ]
+        },
+        {
+          "claim": "应用register_error_handler把函数放入error_handler_spec[None][code][exc_class]。",
+          "status": "supported",
+          "rationale": "654行精确支持应用级注册位置。",
+          "evidence": [
+            {
+              "path": "src/flask/sansio/scaffold.py",
+              "start_line": 641,
+              "end_line": 654
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "src/flask/sansio/scaffold.py",
+              "start_line": 641,
+              "end_line": 654,
+              "content": "    @setupmethod\n    def register_error_handler(\n        self,\n        code_or_exception: type[Exception] | int,\n        f: ft.ErrorHandlerCallable,\n    ) -> None:\n        \"\"\"Alternative error attach function to the :meth:`errorhandler`\n        decorator that is more straightforward to use for non decorator\n        usage.\n\n        .. versionadded:: 0.7\n        \"\"\"\n        exc_class, code = self._get_exc_class_and_code(code_or_exception)\n        self.error_handler_spec[None][code][exc_class] = f",
+              "content_sha256": "cd187fa00d94ad13ca6be8dd01a5c87a47587b6c5e80696277fa9189c9bf3fdc",
+              "visible_to_generator": true
+            }
+          ]
+        },
+        {
+          "claim": "_get_exc_class_and_code将404映射到对应HTTP异常类。",
+          "status": "supported",
+          "rationale": "整数使用default_exceptions查表，再返回异常类与code。",
+          "evidence": [
+            {
+              "path": "src/flask/sansio/scaffold.py",
+              "start_line": 657,
+              "end_line": 698
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "src/flask/sansio/scaffold.py",
+              "start_line": 657,
+              "end_line": 698,
+              "content": "    def _get_exc_class_and_code(\n        exc_class_or_code: type[Exception] | int,\n    ) -> tuple[type[Exception], int | None]:\n        \"\"\"Get the exception class being handled. For HTTP status codes\n        or ``HTTPException`` subclasses, return both the exception and\n        status code.\n\n        :param exc_class_or_code: Any exception class, or an HTTP status\n            code as an integer.\n        \"\"\"\n        exc_class: type[Exception]\n\n        if isinstance(exc_class_or_code, int):\n            try:\n                exc_class = default_exceptions[exc_class_or_code]\n            except KeyError:\n                raise ValueError(\n                    f\"'{exc_class_or_code}' is not a recognized HTTP\"\n                    \" error code. Use a subclass of HTTPException with\"\n                    \" that code instead.\"\n                ) from None\n        else:\n            exc_class = exc_class_or_code\n\n        if isinstance(exc_class, Exception):\n            raise TypeError(\n                f\"{exc_class!r} is an instance, not a class. Handlers\"\n                \" can only be registered for Exception classes or HTTP\"\n                \" error codes.\"\n            )\n\n        if not issubclass(exc_class, Exception):\n            raise ValueError(\n                f\"'{exc_class.__name__}' is not a subclass of Exception.\"\n                \" Handlers can only be registered for Exception classes\"\n                \" or HTTP error codes.\"\n            )\n\n        if issubclass(exc_class, HTTPException):\n            return exc_class, exc_class.code\n        else:\n            return exc_class, None",
+              "content_sha256": "221738153b9a02ceb5afb2d40db8e5f03542d571766f704782d04b22eecb5215",
+              "visible_to_generator": true
+            }
+          ]
+        },
+        {
+          "claim": "正常未匹配路由交给404处理器时error是NotFound异常对象。",
+          "status": "supported",
+          "rationale": "404查表对应NotFound，处理器调用时传入e；这一额外说明语义正确，不是字典JSON转换的证据。",
+          "evidence": [
+            {
+              "path": "src/flask/sansio/scaffold.py",
+              "start_line": 669,
+              "end_line": 696
+            },
+            {
+              "path": "src/flask/app.py",
+              "start_line": 774,
+              "end_line": 777
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "src/flask/sansio/scaffold.py",
+              "start_line": 669,
+              "end_line": 696,
+              "content": "        if isinstance(exc_class_or_code, int):\n            try:\n                exc_class = default_exceptions[exc_class_or_code]\n            except KeyError:\n                raise ValueError(\n                    f\"'{exc_class_or_code}' is not a recognized HTTP\"\n                    \" error code. Use a subclass of HTTPException with\"\n                    \" that code instead.\"\n                ) from None\n        else:\n            exc_class = exc_class_or_code\n\n        if isinstance(exc_class, Exception):\n            raise TypeError(\n                f\"{exc_class!r} is an instance, not a class. Handlers\"\n                \" can only be registered for Exception classes or HTTP\"\n                \" error codes.\"\n            )\n\n        if not issubclass(exc_class, Exception):\n            raise ValueError(\n                f\"'{exc_class.__name__}' is not a subclass of Exception.\"\n                \" Handlers can only be registered for Exception classes\"\n                \" or HTTP error codes.\"\n            )\n\n        if issubclass(exc_class, HTTPException):\n            return exc_class, exc_class.code",
+              "content_sha256": "51c3ef3b94d58865fb34df9a3bba1e3bea9c880ecc693c80e9c4a7d9f68d254a",
+              "visible_to_generator": true
+            },
+            {
+              "path": "src/flask/app.py",
+              "start_line": 774,
+              "end_line": 777,
+              "content": "        handler = self._find_error_handler(e, request.blueprints)\n        if handler is None:\n            return e\n        return self.ensure_sync(handler)(e)  # type: ignore[no-any-return]",
+              "content_sha256": "2d3983bb7f19cf20a36784e74f6c19c070ed8b32ecf924bdb451481def98e29e",
+              "visible_to_generator": false
+            }
+          ]
+        }
+      ],
+      "notes": "最小注册/JSON/404动作完整且正确，business=true。但正式引用和实际context均无dict转JSON及状态返回契约，不能仅凭行号有效视为证据完整；额外“必须返回元组”的普遍化也错误，故整答partial。 本次为关联改写开发复核，不是完全盲审、真人批准或总体准确率估计；workflow成功不替代语义。",
+      "key_points": null,
+      "candidate_sha256": "c118454a76b2ddfe9a0a81fc3f7100b3e22584bbf8effaca7fbdd8872b2e31d2",
+      "reviewer": "Codex (current session)",
+      "review_type": "model_assisted_nonblind_development_review",
+      "human_approved": false,
+      "training_eligible": false,
+      "result_sha256": "f98779227adb3e1174b2284aa29457f76c989b992732111b90a6f86007bf3e85"
+    },
+    "step-dotenv-cwd--agentic": {
+      "candidate_id": "step-dotenv-cwd--agentic",
+      "correctness": "correct",
+      "citation_support": "supported",
+      "completeness": "adequate",
+      "abstention": "not_applicable",
+      "entry_scope": "correct",
+      "consistency": "consistent",
+      "claims": [
+        {
+          "claim": "find_dotenv应设置usecwd=True。",
+          "status": "supported",
+          "rationale": "True进入os.getcwd分支，符合当前明确cwd需求。",
+          "evidence": [
+            {
+              "path": "src/dotenv/main.py",
+              "start_line": 404,
+              "end_line": 408
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "src/dotenv/main.py",
+              "start_line": 404,
+              "end_line": 408,
+              "content": "    if usecwd or _is_interactive() or _is_debugger() or getattr(sys, \"frozen\", False):\n        # Should work without __file__, e.g. in REPL or IPython notebook.\n        path = os.getcwd()\n    else:\n        # will work for .py files",
+              "content_sha256": "1adb1d876d285a4870751fbe930cb3fb53aa034e9fcb0cab0e44f602cf934dbd",
+              "visible_to_generator": true
+            }
+          ]
+        },
+        {
+          "claim": "本次返回/srv/runner/.env。",
+          "status": "supported",
+          "rationale": "起点cwd即runner，该目录文件已存在，首轮检查返回。",
+          "evidence": [
+            {
+              "path": "src/dotenv/main.py",
+              "start_line": 404,
+              "end_line": 406
+            },
+            {
+              "path": "src/dotenv/main.py",
+              "start_line": 420,
+              "end_line": 423
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "src/dotenv/main.py",
+              "start_line": 404,
+              "end_line": 406,
+              "content": "    if usecwd or _is_interactive() or _is_debugger() or getattr(sys, \"frozen\", False):\n        # Should work without __file__, e.g. in REPL or IPython notebook.\n        path = os.getcwd()",
+              "content_sha256": "38144251c148731a48d80712dab90f15a50785fd5a1296bbd79262977f1f28e7",
+              "visible_to_generator": true
+            },
+            {
+              "path": "src/dotenv/main.py",
+              "start_line": 420,
+              "end_line": 423,
+              "content": "    for dirname in _walk_to_root(path):\n        check_path = os.path.join(dirname, filename)\n        if _is_file_or_fifo(check_path):\n            return check_path",
+              "content_sha256": "4f30e8d169a8c1d4d61e19d01a587c93a1774c5d4a5e5b5ae161a47f0375fcee",
+              "visible_to_generator": true
+            }
+          ]
+        },
+        {
+          "claim": "usecwd默认值为False，而True明确改变起点为进程工作目录。",
+          "status": "supported",
+          "rationale": "参数定义与分支都被实际引用。",
+          "evidence": [
+            {
+              "path": "src/dotenv/main.py",
+              "start_line": 376,
+              "end_line": 380
+            },
+            {
+              "path": "src/dotenv/main.py",
+              "start_line": 404,
+              "end_line": 408
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "src/dotenv/main.py",
+              "start_line": 376,
+              "end_line": 380,
+              "content": "def find_dotenv(\n    filename: str = \".env\",\n    raise_error_if_not_found: bool = False,\n    usecwd: bool = False,\n) -> str:",
+              "content_sha256": "6c563e288e726c178c9d600b77c7b8ff68828ffb38e71fbf4861f26f6fa9c48c",
+              "visible_to_generator": true
+            },
+            {
+              "path": "src/dotenv/main.py",
+              "start_line": 404,
+              "end_line": 408,
+              "content": "    if usecwd or _is_interactive() or _is_debugger() or getattr(sys, \"frozen\", False):\n        # Should work without __file__, e.g. in REPL or IPython notebook.\n        path = os.getcwd()\n    else:\n        # will work for .py files",
+              "content_sha256": "1adb1d876d285a4870751fbe930cb3fb53aa034e9fcb0cab0e44f602cf934dbd",
+              "visible_to_generator": true
+            }
+          ]
+        }
+      ],
+      "notes": "当前简单题的参数与命中文件准确；没有把原应用侧配置策略强加回来。 本次是已用仓库关联改写开发复核，非完全盲审或真人批准；原复杂保护维持完整原题要求。",
+      "key_points": null,
+      "candidate_sha256": "d6f79ac02524267ba87592bf10d5b1c04b35485c556171b1c5e0bf6ed104a590",
+      "reviewer": "Codex (current session)",
+      "review_type": "model_assisted_nonblind_development_review",
+      "human_approved": false,
+      "training_eligible": false,
+      "result_sha256": "9291cc7cd52ac7f09dff98c7d08a3b2daab368595ae118f20e2d105e896d92b9"
+    },
+    "probe-requests-json-files--agentic_no_tools": {
+      "candidate_id": "probe-requests-json-files--agentic_no_tools",
+      "correctness": "incorrect",
+      "citation_support": "partial",
+      "completeness": "insufficient",
+      "abstention": "not_applicable",
+      "entry_scope": "mixed",
+      "consistency": "contradictory",
+      "claims": [
+        {
+          "claim": "data=None且json非空会先生成独立JSON字节body。",
+          "status": "supported",
+          "rationale": "504–515确实执行。",
+          "evidence": [
+            {
+              "path": "src/requests/models.py",
+              "start_line": 504,
+              "end_line": 515
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "src/requests/models.py",
+              "start_line": 504,
+              "end_line": 515,
+              "content": "        if not data and json is not None:\n            # urllib3 requires a bytes-like body. Python 2's json.dumps\n            # provides this natively, but Python 3 gives a Unicode string.\n            content_type = \"application/json\"\n\n            try:\n                body = complexjson.dumps(json, allow_nan=False)\n            except ValueError as ve:\n                raise InvalidJSONError(ve, request=self)\n\n            if not isinstance(body, bytes):\n                body = body.encode(\"utf-8\")",
+              "content_sha256": "b5c7d044aa796c88f5c0eeba8f8f836bb0796da843d86380e372caafe43f44f0",
+              "visible_to_generator": true
+            }
+          ]
+        },
+        {
+          "claim": "None不具备__iter__，所以is_stream=False。",
+          "status": "supported",
+          "rationale": "517–522的判断正确，候选还明确写对这一点。",
+          "evidence": [
+            {
+              "path": "src/requests/models.py",
+              "start_line": 517,
+              "end_line": 522
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "src/requests/models.py",
+              "start_line": 517,
+              "end_line": 522,
+              "content": "        is_stream = all(\n            [\n                hasattr(data, \"__iter__\"),\n                not isinstance(data, (basestring, list, tuple, Mapping)),\n            ]\n        )",
+              "content_sha256": "4863b832480027e7b5c30cc970eadd1f955a6d0472351f3eba2442640f94b5ba",
+              "visible_to_generator": true
+            }
+          ]
+        },
+        {
+          "claim": "虽然is_stream=False，仍执行543–546因非空files抛NotImplementedError。",
+          "status": "contradicted",
+          "rationale": "543的raise位于524的if is_stream块内，False必定跳过；不能在同一解释中先否定流分支又执行其内部语句。",
+          "evidence": [
+            {
+              "path": "src/requests/models.py",
+              "start_line": 517,
+              "end_line": 546
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "src/requests/models.py",
+              "start_line": 517,
+              "end_line": 546,
+              "content": "        is_stream = all(\n            [\n                hasattr(data, \"__iter__\"),\n                not isinstance(data, (basestring, list, tuple, Mapping)),\n            ]\n        )\n\n        if is_stream:\n            try:\n                length = super_len(data)\n            except (TypeError, AttributeError, UnsupportedOperation):\n                length = None\n\n            body = data\n\n            if getattr(body, \"tell\", None) is not None:\n                # Record the current file position before reading.\n                # This will allow us to rewind a file in the event\n                # of a redirect.\n                try:\n                    self._body_position = body.tell()\n                except OSError:\n                    # This differentiates from None, allowing us to catch\n                    # a failed `tell()` later when trying to rewind the body\n                    self._body_position = object()\n\n            if files:\n                raise NotImplementedError(\n                    \"Streamed bodies and files are mutually exclusive.\"\n                )",
+              "content_sha256": "cd760f0af11e7b9c4cf551a1f196b0cdfcc631e9d80496081240df5d00024ac2",
+              "visible_to_generator": true
+            }
+          ]
+        },
+        {
+          "claim": "因此570的self.body赋值不会执行。",
+          "status": "contradicted",
+          "rationale": "实际进入552之后else，554–555覆盖body，正常执行570。",
+          "evidence": [
+            {
+              "path": "src/requests/models.py",
+              "start_line": 552,
+              "end_line": 570
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "src/requests/models.py",
+              "start_line": 552,
+              "end_line": 570,
+              "content": "        else:\n            # Multi-part file uploads.\n            if files:\n                (body, content_type) = self._encode_files(files, data)\n            else:\n                if data:\n                    body = self._encode_params(data)\n                    if isinstance(data, basestring) or hasattr(data, \"read\"):\n                        content_type = None\n                    else:\n                        content_type = \"application/x-www-form-urlencoded\"\n\n            self.prepare_content_length(body)\n\n            # Add content-type if it wasn't explicitly provided.\n            if content_type and (\"content-type\" not in self.headers):\n                self.headers[\"Content-Type\"] = content_type\n\n        self.body = body",
+              "content_sha256": "278239fb4d300c02b5e1394a1c8b262dda6a3e0233ea4683cc2c5bdde285e950",
+              "visible_to_generator": false
+            }
+          ]
+        },
+        {
+          "claim": "该调用最终不会保留独立JSON字节。",
+          "status": "supported",
+          "rationale": "二元结论与真实结果相同，但原因是multipart覆盖，不是异常导致无结果。",
+          "evidence": [
+            {
+              "path": "src/requests/models.py",
+              "start_line": 552,
+              "end_line": 570
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "src/requests/models.py",
+              "start_line": 552,
+              "end_line": 570,
+              "content": "        else:\n            # Multi-part file uploads.\n            if files:\n                (body, content_type) = self._encode_files(files, data)\n            else:\n                if data:\n                    body = self._encode_params(data)\n                    if isinstance(data, basestring) or hasattr(data, \"read\"):\n                        content_type = None\n                    else:\n                        content_type = \"application/x-www-form-urlencoded\"\n\n            self.prepare_content_length(body)\n\n            # Add content-type if it wasn't explicitly provided.\n            if content_type and (\"content-type\" not in self.headers):\n                self.headers[\"Content-Type\"] = content_type\n\n        self.body = body",
+              "content_sha256": "278239fb4d300c02b5e1394a1c8b262dda6a3e0233ea4683cc2c5bdde285e950",
+              "visible_to_generator": false
+            }
+          ]
+        }
+      ],
+      "notes": "本题要求实际最终编码分支；偶然正确的“不保留”不抵消错误的异常路径。完整窗口仍缺552–555，但已见is_stream条件足以驳斥其解释。 本次为关联改写开发复核，不是完全盲审、真人批准或总体准确率估计；workflow成功不替代语义。",
+      "key_points": null,
+      "candidate_sha256": "0403877b18827e53256816a1c27ca6ba37874b0a4adfe0687f78fb5b591fa2b6",
+      "reviewer": "Codex (current session)",
+      "review_type": "model_assisted_nonblind_development_review",
+      "human_approved": false,
+      "training_eligible": false,
+      "result_sha256": "3295130e0a4c44b1bce36ab46f0cf4920511bfebf711dc1c1bee3d723c5c31e3"
+    },
+    "step-dotenv-link--agentic": {
+      "candidate_id": "step-dotenv-link--agentic",
+      "correctness": "correct",
+      "citation_support": "supported",
+      "completeness": "adequate",
+      "abstention": "not_applicable",
+      "entry_scope": "correct",
+      "consistency": "consistent",
+      "claims": [
+        {
+          "claim": "既有调用应增加follow_symlinks=True。",
+          "status": "supported",
+          "rationale": "set_key签名支持并在267把同名参数传给rewrite；题设其他参数不变。",
+          "evidence": [
+            {
+              "path": "src/dotenv/main.py",
+              "start_line": 231,
+              "end_line": 231
+            },
+            {
+              "path": "src/dotenv/main.py",
+              "start_line": 267,
+              "end_line": 267
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "src/dotenv/main.py",
+              "start_line": 231,
+              "end_line": 231,
+              "content": "    follow_symlinks: bool = False,",
+              "content_sha256": "460ec79b5fab6461c9608cc018d73b7e786370067e3956dcab98b0ff827612ff",
+              "visible_to_generator": true
+            },
+            {
+              "path": "src/dotenv/main.py",
+              "start_line": 267,
+              "end_line": 267,
+              "content": "    with rewrite(dotenv_path, encoding=encoding, follow_symlinks=follow_symlinks) as (",
+              "content_sha256": "cab13c4baf4eea82381b7b457ddaab257897c90141f89e0f6926276d94040d36",
+              "visible_to_generator": true
+            }
+          ]
+        },
+        {
+          "claim": "写入路径选择/shared/service.env。",
+          "status": "supported",
+          "rationale": "True使rewrite先realpath解析可信链接，得到题设共享目标路径。",
+          "evidence": [
+            {
+              "path": "src/dotenv/main.py",
+              "start_line": 167,
+              "end_line": 168
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "src/dotenv/main.py",
+              "start_line": 167,
+              "end_line": 168,
+              "content": "    if follow_symlinks:\n        path = os.path.realpath(path)",
+              "content_sha256": "ea13503fc050b4f2183312002f3846d21c6807437a7ba66a01d40a7bf7cbc959",
+              "visible_to_generator": true
+            }
+          ]
+        }
+      ],
+      "notes": "最小参数及目标准确，未附加错误默认过程。只答新增参数不要求重抄quote_mode或原复杂题完整验收清单。 本次是已用仓库关联改写开发复核，非完全盲审或真人批准；原复杂保护维持完整原题要求。",
+      "key_points": null,
+      "candidate_sha256": "5935b32923030de654e4295880a6e229d7f7387fd7cd2da6a6822ac929e84b51",
+      "reviewer": "Codex (current session)",
+      "review_type": "model_assisted_nonblind_development_review",
+      "human_approved": false,
+      "training_eligible": false,
+      "result_sha256": "226ca5cd9130794640c46e49d7335acb5b74ba458461aecc36c424524ebc55ef"
+    },
+    "probe-flask-stream-close--agentic": {
+      "candidate_id": "probe-flask-stream-close--agentic",
+      "correctness": "correct",
+      "citation_support": "partial",
+      "completeness": "adequate",
+      "abstention": "not_applicable",
+      "entry_scope": "correct",
+      "consistency": "consistent",
+      "claims": [
+        {
+          "claim": "题设迭代器正常耗尽后调用exporter.close。",
+          "status": "supported",
+          "rationale": "gen=iter(exporter)保持迭代器身份，finally关闭该gen。",
+          "evidence": [
+            {
+              "path": "src/flask/helpers.py",
+              "start_line": 98,
+              "end_line": 104
+            },
+            {
+              "path": "src/flask/helpers.py",
+              "start_line": 124,
+              "end_line": 128
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "src/flask/helpers.py",
+              "start_line": 98,
+              "end_line": 104,
+              "content": "    try:\n        gen = iter(generator_or_function)  # type: ignore[arg-type]\n    except TypeError:\n\n        def decorator(*args: t.Any, **kwargs: t.Any) -> t.Any:\n            gen = generator_or_function(*args, **kwargs)  # type: ignore[operator]\n            return stream_with_context(gen)",
+              "content_sha256": "28d402b440348f683d3c7d64635259e55e671e968751f39b75c189c6c9e3c3bf",
+              "visible_to_generator": true
+            },
+            {
+              "path": "src/flask/helpers.py",
+              "start_line": 124,
+              "end_line": 128,
+              "content": "            try:\n                yield from gen\n            finally:\n                if hasattr(gen, \"close\"):\n                    gen.close()",
+              "content_sha256": "e72cf0b8f571879593efdd1a7ffa591662ae457d2c30a69273c43a86f31f630c",
+              "visible_to_generator": true
+            }
+          ]
+        },
+        {
+          "claim": "try/finally包围yield from gen，正常结束或该try中异常退出都进入清理。",
+          "status": "supported",
+          "rationale": "实际控制流如此；没有扩大为任意网络断开立即清理保证。",
+          "evidence": [
+            {
+              "path": "src/flask/helpers.py",
+              "start_line": 124,
+              "end_line": 128
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "src/flask/helpers.py",
+              "start_line": 124,
+              "end_line": 128,
+              "content": "            try:\n                yield from gen\n            finally:\n                if hasattr(gen, \"close\"):\n                    gen.close()",
+              "content_sha256": "e72cf0b8f571879593efdd1a7ffa591662ae457d2c30a69273c43a86f31f630c",
+              "visible_to_generator": true
+            }
+          ]
+        },
+        {
+          "claim": "finally检查close属性并调用gen.close。",
+          "status": "supported",
+          "rationale": "127–128准确。",
+          "evidence": [
+            {
+              "path": "src/flask/helpers.py",
+              "start_line": 126,
+              "end_line": 128
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "src/flask/helpers.py",
+              "start_line": 126,
+              "end_line": 128,
+              "content": "            finally:\n                if hasattr(gen, \"close\"):\n                    gen.close()",
+              "content_sha256": "566adfae6b6c7653adae3017595f435e6494cb4d1e32b00d4c510b273b69e5cd",
+              "visible_to_generator": true
+            }
+          ]
+        }
+      ],
+      "notes": "正常结束机制正确。按冻结标准仍需正式引用iter(exporter)身份传递，候选只引120–128；98–99实际已见，故citation partial。 本次是已用仓库关联改写开发复核，非完全盲审或真人批准；原复杂保护维持完整原题要求。",
+      "key_points": null,
+      "candidate_sha256": "239cb5db4f1e7063e37dea27db2f42b100422b97c4003bc5bd97a69e75020f7b",
+      "reviewer": "Codex (current session)",
+      "review_type": "model_assisted_nonblind_development_review",
+      "human_approved": false,
+      "training_eligible": false,
+      "result_sha256": "8efd6612c5a3d3826ac90b3c5483216435749244453d51acb050ff8dd7937094"
+    }
+  },
+  "groups": {
+    "all/agentic": {
+      "records": 12,
+      "success": 12,
+      "model_requests": 28,
+      "tool_calls": 10,
+      "episodes_using_tools": 3,
+      "citation_ranges_valid": 12,
+      "initial_reference_complete": 6,
+      "final_reference_complete": 6,
+      "initial_nonblank_reference_complete": 7,
+      "final_nonblank_reference_complete": 7,
+      "requests_without_usage": 0,
+      "requests_without_elapsed": 0,
+      "prompt_tokens": 197719,
+      "completion_tokens": 8706,
+      "generator_seconds": 429.423,
+      "reviewed": 12,
+      "factually_correct": 9,
+      "core_supported": 9,
+      "fully_resolved": 6
+    },
+    "business-steps-foundation/agentic": {
+      "records": 8,
+      "success": 8,
+      "model_requests": 18,
+      "tool_calls": 7,
+      "episodes_using_tools": 2,
+      "citation_ranges_valid": 8,
+      "initial_reference_complete": 4,
+      "final_reference_complete": 4,
+      "initial_nonblank_reference_complete": 4,
+      "final_nonblank_reference_complete": 4,
+      "requests_without_usage": 0,
+      "requests_without_elapsed": 0,
+      "prompt_tokens": 128643,
+      "completion_tokens": 4776,
+      "generator_seconds": 248.56300000000002,
+      "reviewed": 8,
+      "factually_correct": 5,
+      "core_supported": 5,
+      "fully_resolved": 5
+    },
+    "foundation/agentic": {
+      "records": 8,
+      "success": 8,
+      "model_requests": 18,
+      "tool_calls": 7,
+      "episodes_using_tools": 2,
+      "citation_ranges_valid": 8,
+      "initial_reference_complete": 4,
+      "final_reference_complete": 4,
+      "initial_nonblank_reference_complete": 4,
+      "final_nonblank_reference_complete": 4,
+      "requests_without_usage": 0,
+      "requests_without_elapsed": 0,
+      "prompt_tokens": 128643,
+      "completion_tokens": 4776,
+      "generator_seconds": 248.56300000000002,
+      "reviewed": 8,
+      "factually_correct": 5,
+      "core_supported": 5,
+      "fully_resolved": 5
+    },
+    "answerable/agentic": {
+      "records": 12,
+      "success": 12,
+      "model_requests": 28,
+      "tool_calls": 10,
+      "episodes_using_tools": 3,
+      "citation_ranges_valid": 12,
+      "initial_reference_complete": 6,
+      "final_reference_complete": 6,
+      "initial_nonblank_reference_complete": 7,
+      "final_nonblank_reference_complete": 7,
+      "requests_without_usage": 0,
+      "requests_without_elapsed": 0,
+      "prompt_tokens": 197719,
+      "completion_tokens": 8706,
+      "generator_seconds": 429.423,
+      "reviewed": 12,
+      "factually_correct": 9,
+      "core_supported": 9,
+      "fully_resolved": 6
+    },
+    "all/agentic_no_tools": {
+      "records": 2,
+      "success": 2,
+      "model_requests": 2,
+      "tool_calls": 0,
+      "episodes_using_tools": 0,
+      "citation_ranges_valid": 2,
+      "initial_reference_complete": 1,
+      "final_reference_complete": 1,
+      "initial_nonblank_reference_complete": 1,
+      "final_nonblank_reference_complete": 1,
+      "requests_without_usage": 0,
+      "requests_without_elapsed": 0,
+      "prompt_tokens": 10308,
+      "completion_tokens": 739,
+      "generator_seconds": 33.797,
+      "reviewed": 2,
+      "factually_correct": 0,
+      "core_supported": 0,
+      "fully_resolved": 0
+    },
+    "business-steps-drilldown/agentic_no_tools": {
+      "records": 2,
+      "success": 2,
+      "model_requests": 2,
+      "tool_calls": 0,
+      "episodes_using_tools": 0,
+      "citation_ranges_valid": 2,
+      "initial_reference_complete": 1,
+      "final_reference_complete": 1,
+      "initial_nonblank_reference_complete": 1,
+      "final_nonblank_reference_complete": 1,
+      "requests_without_usage": 0,
+      "requests_without_elapsed": 0,
+      "prompt_tokens": 10308,
+      "completion_tokens": 739,
+      "generator_seconds": 33.797,
+      "reviewed": 2,
+      "factually_correct": 0,
+      "core_supported": 0,
+      "fully_resolved": 0
+    },
+    "drilldown/agentic_no_tools": {
+      "records": 2,
+      "success": 2,
+      "model_requests": 2,
+      "tool_calls": 0,
+      "episodes_using_tools": 0,
+      "citation_ranges_valid": 2,
+      "initial_reference_complete": 1,
+      "final_reference_complete": 1,
+      "initial_nonblank_reference_complete": 1,
+      "final_nonblank_reference_complete": 1,
+      "requests_without_usage": 0,
+      "requests_without_elapsed": 0,
+      "prompt_tokens": 10308,
+      "completion_tokens": 739,
+      "generator_seconds": 33.797,
+      "reviewed": 2,
+      "factually_correct": 0,
+      "core_supported": 0,
+      "fully_resolved": 0
+    },
+    "answerable/agentic_no_tools": {
+      "records": 2,
+      "success": 2,
+      "model_requests": 2,
+      "tool_calls": 0,
+      "episodes_using_tools": 0,
+      "citation_ranges_valid": 2,
+      "initial_reference_complete": 1,
+      "final_reference_complete": 1,
+      "initial_nonblank_reference_complete": 1,
+      "final_nonblank_reference_complete": 1,
+      "requests_without_usage": 0,
+      "requests_without_elapsed": 0,
+      "prompt_tokens": 10308,
+      "completion_tokens": 739,
+      "generator_seconds": 33.797,
+      "reviewed": 2,
+      "factually_correct": 0,
+      "core_supported": 0,
+      "fully_resolved": 0
+    },
+    "business-value-first-confirmation/agentic": {
+      "records": 2,
+      "success": 2,
+      "model_requests": 4,
+      "tool_calls": 0,
+      "episodes_using_tools": 0,
+      "citation_ranges_valid": 2,
+      "initial_reference_complete": 1,
+      "final_reference_complete": 1,
+      "initial_nonblank_reference_complete": 2,
+      "final_nonblank_reference_complete": 2,
+      "requests_without_usage": 0,
+      "requests_without_elapsed": 0,
+      "prompt_tokens": 24638,
+      "completion_tokens": 1744,
+      "generator_seconds": 81.40599999999999,
+      "reviewed": 2,
+      "factually_correct": 2,
+      "core_supported": 2,
+      "fully_resolved": 0
+    },
+    "original-complex-protection/agentic": {
+      "records": 2,
+      "success": 2,
+      "model_requests": 4,
+      "tool_calls": 0,
+      "episodes_using_tools": 0,
+      "citation_ranges_valid": 2,
+      "initial_reference_complete": 1,
+      "final_reference_complete": 1,
+      "initial_nonblank_reference_complete": 2,
+      "final_nonblank_reference_complete": 2,
+      "requests_without_usage": 0,
+      "requests_without_elapsed": 0,
+      "prompt_tokens": 24638,
+      "completion_tokens": 1744,
+      "generator_seconds": 81.40599999999999,
+      "reviewed": 2,
+      "factually_correct": 2,
+      "core_supported": 2,
+      "fully_resolved": 0
+    },
+    "business-steps-drilldown/agentic": {
+      "records": 2,
+      "success": 2,
+      "model_requests": 6,
+      "tool_calls": 3,
+      "episodes_using_tools": 1,
+      "citation_ranges_valid": 2,
+      "initial_reference_complete": 1,
+      "final_reference_complete": 1,
+      "initial_nonblank_reference_complete": 1,
+      "final_nonblank_reference_complete": 1,
+      "requests_without_usage": 0,
+      "requests_without_elapsed": 0,
+      "prompt_tokens": 44438,
+      "completion_tokens": 2186,
+      "generator_seconds": 99.454,
+      "reviewed": 2,
+      "factually_correct": 2,
+      "core_supported": 2,
+      "fully_resolved": 1
+    },
+    "drilldown/agentic": {
+      "records": 2,
+      "success": 2,
+      "model_requests": 6,
+      "tool_calls": 3,
+      "episodes_using_tools": 1,
+      "citation_ranges_valid": 2,
+      "initial_reference_complete": 1,
+      "final_reference_complete": 1,
+      "initial_nonblank_reference_complete": 1,
+      "final_nonblank_reference_complete": 1,
+      "requests_without_usage": 0,
+      "requests_without_elapsed": 0,
+      "prompt_tokens": 44438,
+      "completion_tokens": 2186,
+      "generator_seconds": 99.454,
+      "reviewed": 2,
+      "factually_correct": 2,
+      "core_supported": 2,
+      "fully_resolved": 1
+    }
+  },
+  "retrieval": {
+    "shared_initial": {
+      "answerable": 12,
+      "reference_complete": 6,
+      "nonblank_reference_complete": 7
+    }
+  },
+  "new_requests": 30,
+  "combined_requests": 1555,
+  "paid_requests": 0,
+  "human_approved": false,
+  "training_eligible": false,
+  "reporting_implementation": "b4704f8bca6df1b172be685f1d6d197bc584e21f6b6d627de743be092a5c6a7c",
+  "usage_observation_note": "Token/time sums include observed values only. Missing usage and elapsed time remain unknown in raw records; reservations still count every sent or ambiguous request.",
+  "checks": {
+    "difficulty_scope": "Frozen foundation/drilldown reformulations are development, not unseen confirmation; old complex protections retain original standards.",
+    "business_by_case": {
+      "step-blinker-retain--agentic": {
+        "business_decision_correct": true,
+        "severe_wrong_advice": false,
+        "missing_requirements": [],
+        "failure_cause": {
+          "primary": "none",
+          "detail": "引用覆盖本地回调文档及强弱引用分支。",
+          "missing_source": [],
+          "sufficient_source_misread": [],
+          "tool_use": "not_observable_from_anonymous_packets; source_visibility_does_not_prove_tool_use_or_nonuse"
+        }
+      },
+      "probe-flask-stream-close--agentic_no_tools": {
+        "business_decision_correct": true,
+        "severe_wrong_advice": false,
+        "missing_requirements": [],
+        "failure_cause": {
+          "primary": "visible_iterator_identity_misread_and_test_fragment_overclaim",
+          "detail": "完整helper已实际可见，足够区分gen和wrapped_g；测试context却仅有Wrapper定义，缺调用及断言。没有据此推断任何工具是否使用。",
+          "missing_source": [
+            {
+              "path": "tests/test_helpers.py",
+              "start_line": 282,
+              "end_line": 293
+            }
+          ],
+          "sufficient_source_misread": [
+            {
+              "path": "src/flask/helpers.py",
+              "start_line": 98,
+              "end_line": 104
+            },
+            {
+              "path": "src/flask/helpers.py",
+              "start_line": 124,
+              "end_line": 136
+            }
+          ],
+          "tool_use": "not_observable_from_anonymous_packets; source_visibility_does_not_prove_tool_use_or_nonuse"
+        }
+      },
+      "business-dotenv-symlink-02--protection-sdk": {
+        "business_decision_correct": true,
+        "severe_wrong_advice": false,
+        "missing_requirements": [
+          "明确默认部署路径成为含APP_MODE=new（且保留KEEP=1）的普通文件，而共享目标仍为旧值。"
+        ],
+        "failure_cause": {
+          "primary": "incomplete_original_protection_counterfactual_and_citation_omission",
+          "detail": "动作与目标判断可用；原复杂题的默认副本状态说明不足。正式引用未覆盖set_key值生成和非目标行保留循环，实际源码已见。",
+          "missing_source": [],
+          "sufficient_source_misread": [],
+          "tool_use": "not_observable_from_anonymous_packets; source_visibility_does_not_prove_tool_use_or_nonuse"
+        }
+      },
+      "business-dotenv-discovery-01--protection-sdk": {
+        "business_decision_correct": true,
+        "severe_wrong_advice": false,
+        "missing_requirements": [
+          "补充默认raise_error_if_not_found=False时未找到返回空字符串。"
+        ],
+        "failure_cause": {
+          "primary": "minor_coverage_omission_in_original_protection",
+          "detail": "完整原题的缺失策略比较少了默认返回值，必要业务推荐正确；该分支原文实际已见并包含在正式长引用中。",
+          "missing_source": [],
+          "sufficient_source_misread": [],
+          "tool_use": "not_observable_from_anonymous_packets; source_visibility_does_not_prove_tool_use_or_nonuse"
+        }
+      },
+      "probe-requests-json-files--agentic": {
+        "business_decision_correct": true,
+        "severe_wrong_advice": false,
+        "missing_requirements": [],
+        "failure_cause": {
+          "primary": "none",
+          "detail": "与只引用543的raise片段不同，此候选准确引用并读到554–555。",
+          "missing_source": [],
+          "sufficient_source_misread": [],
+          "tool_use": "not_observable_from_anonymous_packets; source_visibility_does_not_prove_tool_use_or_nonuse"
+        }
+      },
+      "step-blinker-muted--agentic": {
+        "business_decision_correct": true,
+        "severe_wrong_advice": false,
+        "missing_requirements": [],
+        "failure_cause": {
+          "primary": "none",
+          "detail": "实际已见静音设置及提前返回，无选择性静音或退出后附加要求。",
+          "missing_source": [],
+          "sufficient_source_misread": [],
+          "tool_use": "not_observable_from_anonymous_packets; source_visibility_does_not_prove_tool_use_or_nonuse"
+        }
+      },
+      "step-requests-tls--agentic": {
+        "business_decision_correct": true,
+        "severe_wrong_advice": false,
+        "missing_requirements": [],
+        "failure_cause": {
+          "primary": "none",
+          "detail": "实际仓库文档与参数映射正式引用充分。",
+          "missing_source": [],
+          "sufficient_source_misread": [],
+          "tool_use": "not_observable_from_anonymous_packets; source_visibility_does_not_prove_tool_use_or_nonuse"
+        }
+      },
+      "step-flask-stream--agentic": {
+        "business_decision_correct": false,
+        "severe_wrong_advice": true,
+        "missing_requirements": [
+          "直接包装exporter，或给出明确迭代原exporter的等价方案。"
+        ],
+        "failure_cause": {
+          "primary": "documentation_example_name_used_instead_of_given_iterator",
+          "detail": "已读到正确文档和包装器启动片段，仍使用教程generate()名称；实际context是源文本，不会在业务视图自动定义该函数。",
+          "missing_source": [],
+          "sufficient_source_misread": [],
+          "tool_use": "not_observable_from_anonymous_packets; source_visibility_does_not_prove_tool_use_or_nonuse"
+        }
+      },
+      "step-requests-file--agentic": {
+        "business_decision_correct": false,
+        "severe_wrong_advice": true,
+        "missing_requirements": [
+          "增加text/csv第三位置或完全等价的显式文件部分类型，并说明该位置含义。"
+        ],
+        "failure_cause": {
+          "primary": "incomplete_application_of_visible_upload_documentation",
+          "detail": "实际文档包含显式内容类型位置，仍仅给二元组。",
+          "missing_source": [],
+          "sufficient_source_misread": [
+            {
+              "path": "docs/user/quickstart.rst",
+              "start_line": 321,
+              "end_line": 325
+            }
+          ],
+          "tool_use": "not_observable_from_anonymous_packets; source_visibility_does_not_prove_tool_use_or_nonuse"
+        }
+      },
+      "step-flask-json404--agentic": {
+        "business_decision_correct": true,
+        "severe_wrong_advice": false,
+        "missing_requirements": [],
+        "failure_cause": {
+          "primary": "missing_dict_response_evidence_and_unnecessary_return_shape_overgeneralization",
+          "detail": "应用注册源码已实际见并精确引用；dict/status转换关键代码完全未进入context。正确代码可按真值确认，但源码支持仍不足，且不能排除合法Response返回方案。",
+          "missing_source": [
+            {
+              "path": "src/flask/app.py",
+              "start_line": 1145,
+              "end_line": 1165
+            },
+            {
+              "path": "src/flask/app.py",
+              "start_line": 1190,
+              "end_line": 1201
+            },
+            {
+              "path": "src/flask/app.py",
+              "start_line": 1230,
+              "end_line": 1231
+            },
+            {
+              "path": "src/flask/app.py",
+              "start_line": 1257,
+              "end_line": 1263
+            }
+          ],
+          "sufficient_source_misread": [],
+          "tool_use": "not_observable_from_anonymous_packets; source_visibility_does_not_prove_tool_use_or_nonuse"
+        }
+      },
+      "step-dotenv-cwd--agentic": {
+        "business_decision_correct": true,
+        "severe_wrong_advice": false,
+        "missing_requirements": [],
+        "failure_cause": {
+          "primary": "none",
+          "detail": "引用完整支撑cwd选择与命中路径。",
+          "missing_source": [],
+          "sufficient_source_misread": [],
+          "tool_use": "not_observable_from_anonymous_packets; source_visibility_does_not_prove_tool_use_or_nonuse"
+        }
+      },
+      "probe-requests-json-files--agentic_no_tools": {
+        "business_decision_correct": false,
+        "severe_wrong_advice": true,
+        "missing_requirements": [
+          "正确解释非流files覆盖与self.body最终为multipart结果。"
+        ],
+        "failure_cause": {
+          "primary": "visible_branch_guard_contradiction_and_missing_overwrite_window",
+          "detail": "明确判断is_stream=False，却随即执行其True块内的raise；并漏读实际覆盖窗口。",
+          "missing_source": [
+            {
+              "path": "src/requests/models.py",
+              "start_line": 552,
+              "end_line": 555
+            }
+          ],
+          "sufficient_source_misread": [
+            {
+              "path": "src/requests/models.py",
+              "start_line": 517,
+              "end_line": 546
+            }
+          ],
+          "tool_use": "not_observable_from_anonymous_packets; source_visibility_does_not_prove_tool_use_or_nonuse"
+        }
+      },
+      "step-dotenv-link--agentic": {
+        "business_decision_correct": true,
+        "severe_wrong_advice": false,
+        "missing_requirements": [],
+        "failure_cause": {
+          "primary": "none",
+          "detail": "参数传递及路径解析均有实际可见的正式引用。",
+          "missing_source": [],
+          "sufficient_source_misread": [],
+          "tool_use": "not_observable_from_anonymous_packets; source_visibility_does_not_prove_tool_use_or_nonuse"
+        }
+      },
+      "probe-flask-stream-close--agentic": {
+        "business_decision_correct": true,
+        "severe_wrong_advice": false,
+        "missing_requirements": [],
+        "failure_cause": {
+          "primary": "citation_omission_with_sufficient_visible_source",
+          "detail": "缺gen身份绑定的正式引用，不是缺原文或业务判断错误。",
+          "missing_source": [],
+          "sufficient_source_misread": [],
+          "tool_use": "not_observable_from_anonymous_packets; source_visibility_does_not_prove_tool_use_or_nonuse"
+        }
+      }
+    },
+    "review_file_sha256": {
+      "candidate-1a45d25fde1f": "d3304900027b123be7596814eacaf17c8e35992709350f79dd8e0393586e4ede",
+      "candidate-f6a05a902902": "d9d69070f942a57d4e3a87edda80a92b2492ace715a13a198dfd41905f550f34",
+      "candidate-3e54a954dbc6": "27c287d131a0e77efadd2d346bed25dc95172cf695ab6faabca91df2c423bba7",
+      "candidate-c6981c71394e": "bb870d5db1cf0ef085f579cc146a4c5a844972293a3176021684de7350653ba5",
+      "candidate-840d3de20b32": "d735fed7f83539e55dd7d1cdf1e8600103d54b52d5bf83a2ba1072535d873c43",
+      "candidate-558480863859": "0ef7bbd9984d515854317b00bb49cc19f14ad04d771e78578841be75411bcbe5",
+      "candidate-3379519f6697": "aab2d9b02eb527c04e21e782122a405d6dff9d422c3f83c6d5a5497bd1083b70",
+      "candidate-0307c21a32c8": "261eb89ce9961dd0e57b3bcb0e8d0d028d5d3cba51b03edeeebc21f3908f231a",
+      "candidate-1266ac602cea": "ebe4957ff57a0b2af8717ba32c77103f870bbea937d8431a5e35ab3c7df9fc9c",
+      "candidate-05815c8a5eba": "30390ea0c5660b07661919c6274fba9afbd6c2bef651ac2f8abb7f9f20a9005c",
+      "candidate-754d333eb6ed": "36e4887b09c380410bf606df80c7a6269cdb3119f71f563a7f01140ca2c865e6",
+      "candidate-2250b93d3ebc": "ef4c62857d6d152427da0c45f2104f5e2ba688ea85fcac846dd69d7955b2748d",
+      "candidate-048fb809eeaf": "7e237d1b56e161dc761ef9fe60a2f0e806ea320a90f747daef552153ee1f0198",
+      "candidate-54d46b86a688": "03e23f921311239844d5495ea16946a09966ed848d1a911d64bbc83615ca1e1a"
+    },
+    "source_archive_sha256": "af88a634034c3241f616e341197b8db5f0ce9fe0e39fad9168bb3cc5a437a1d3",
+    "output_control": "Both tool-enabled and tool-disabled share submit_answer; no_tools prohibits all repository tools. Native submission validates only schema/observed ranges, not semantics.",
+    "decision": "Local improvements retained as candidate; frozen whole-foundation reliability gate still unmet. No claim of autonomous reliability.",
+    "human_approved": false
+  },
+  "scope": "Development-only frozen foundation/drilldown tasks plus original complex protections. Candidate2 reuses SDK native function output for answer submission, recoverable observed-range validation and generic task-goal instructions; same Qwen 16K and sampling. No per-question special rules. Repository-tool-disabled controls retain the same output submission tool. Require foundation >=7/8 fact/core, >=6/8 full and zero severe; retain original complex protection correctness, and show useful retrieval/cost gain. Existing hard8 and all failures stay separate."
+}

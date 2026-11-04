@@ -1,0 +1,1136 @@
+{
+  "questions": 8,
+  "planned_answers": 8,
+  "records": 8,
+  "reviews": {
+    "q-bbad3968026fefab--question-last": {
+      "candidate_id": "q-bbad3968026fefab--question-last",
+      "correctness": "partially_correct",
+      "citation_support": "partial",
+      "completeness": "partial",
+      "abstention": "not_applicable",
+      "entry_scope": "correct",
+      "consistency": "contradictory",
+      "claims": [
+        {
+          "claim": "override=False且环境已有同名键时不覆盖该键。",
+          "status": "supported",
+          "rationale": "109–110首先continue，与值类型无关。",
+          "evidence": [
+            {
+              "path": "src/dotenv/main.py",
+              "start_line": 108,
+              "end_line": 112
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "src/dotenv/main.py",
+              "start_line": 108,
+              "end_line": 112,
+              "content": "        for k, v in self.dict().items():\n            if k in os.environ and not self.override:\n                continue\n            if v is not None:\n                os.environ[k] = v",
+              "content_sha256": "1e53be670935fd058f396d9dfe3a22b28e049a4b3934cecfe891eb397b5119c8",
+              "visible_to_generator": true
+            }
+          ]
+        },
+        {
+          "claim": "None与空字符串都不会跳过；空字符串会覆盖原环境变量为该空串。",
+          "status": "contradicted",
+          "rationale": "111只允许v非None写入；空串可写入的前提是未被109–110已有键保护跳过。不能在题设override=False已有键时覆盖。",
+          "evidence": [
+            {
+              "path": "src/dotenv/main.py",
+              "start_line": 108,
+              "end_line": 112
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "src/dotenv/main.py",
+              "start_line": 108,
+              "end_line": 112,
+              "content": "        for k, v in self.dict().items():\n            if k in os.environ and not self.override:\n                continue\n            if v is not None:\n                os.environ[k] = v",
+              "content_sha256": "1e53be670935fd058f396d9dfe3a22b28e049a4b3934cecfe891eb397b5119c8",
+              "visible_to_generator": true
+            }
+          ]
+        },
+        {
+          "claim": "返回True需要至少设置了一个变量。",
+          "status": "contradicted",
+          "rationale": "105–106仅检查解析字典是否为空；只要字典非空，即使循环全部continue或v全部None，仍在114返回True。",
+          "evidence": [
+            {
+              "path": "src/dotenv/main.py",
+              "start_line": 101,
+              "end_line": 114
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "src/dotenv/main.py",
+              "start_line": 101,
+              "end_line": 114,
+              "content": "    def set_as_environment_variables(self) -> bool:\n        \"\"\"\n        Load the current dotenv as system environment variable.\n        \"\"\"\n        if not self.dict():\n            return False\n\n        for k, v in self.dict().items():\n            if k in os.environ and not self.override:\n                continue\n            if v is not None:\n                os.environ[k] = v\n\n        return True",
+              "content_sha256": "4c36cbf81021fa31ea7bc0670bdb9c4d13d5ea1c54b716d614d5c5c7f0bc0e74",
+              "visible_to_generator": true
+            }
+          ]
+        }
+      ],
+      "notes": "原正确保护题退步。回答先说override=False已有键跳过，又说空串会覆盖已有值；并称None与空串均不跳过、添加return True至少设置一个变量的错误前提。源码完整交付且正式引用101–114足以反驳。",
+      "key_points": null,
+      "candidate_sha256": "dae8c1c214feceae9ccd27269a6c52ce31482605f60fdbe4d9b2a02f76e8baf7",
+      "reviewer": "Codex (current session)",
+      "review_type": "model_assisted_nonblind_development_review",
+      "human_approved": false,
+      "training_eligible": false,
+      "result_sha256": "8fb9aaacf464a164e163feb1bb947ce092febba427ae4ee17838e8ed4dd58ca5"
+    },
+    "improvement-confirm-blinker-05--question-last": {
+      "candidate_id": "improvement-confirm-blinker-05--question-last",
+      "correctness": "correct",
+      "citation_support": "not_applicable",
+      "completeness": "adequate",
+      "abstention": "appropriate",
+      "entry_scope": "correct",
+      "consistency": "consistent",
+      "claims": [
+        {
+          "claim": "仅凭所给公开源码和无日志/进程访问的条件，无法确认公司24小时订单信号次数及最慢回调耗时。",
+          "status": "supported",
+          "rationale": "问题明确未提供运行数据；实际可见注册/断连和文档能力介绍不含该公司部署遥测。引用只能说明代码范围，不能推出私有计数。",
+          "evidence": [
+            {
+              "path": "src/blinker/base.py",
+              "start_line": 141,
+              "end_line": 165
+            },
+            {
+              "path": "src/blinker/base.py",
+              "start_line": 364,
+              "end_line": 386
+            },
+            {
+              "path": "docs/index.rst",
+              "start_line": 1,
+              "end_line": 28
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "src/blinker/base.py",
+              "start_line": 141,
+              "end_line": 165,
+              "content": "    def connect_via(self, sender: t.Any, weak: bool = False) -> c.Callable[[F], F]:\n        \"\"\"Connect the decorated function to be called when the signal is sent\n        by ``sender``.\n\n        The decorated function will be called when :meth:`send` is called with\n        the given ``sender``, passing ``sender`` as a positional argument along\n        with any extra keyword arguments.\n\n        :param sender: Any object or :data:`ANY`. ``receiver`` will only be\n            called when :meth:`send` is called with this sender. If ``ANY``, the\n            receiver will be called for any sender. A receiver may be connected\n            to multiple senders by calling :meth:`connect` multiple times.\n        :param weak: Track the receiver with a :mod:`weakref`. The receiver will\n            be automatically disconnected when it is garbage collected. When\n            connecting a receiver defined within a function, set to ``False``,\n            otherwise it will be disconnected when the function scope ends.=\n\n        .. versionadded:: 1.1\n        \"\"\"\n\n        def decorator(fn: F) -> F:\n            self.connect(fn, sender, weak)\n            return fn\n\n        return decorator",
+              "content_sha256": "7edaf3aeb71153e329a351347b6f66af92eee072b89ca1922fae6bc242242f08",
+              "visible_to_generator": true
+            },
+            {
+              "path": "src/blinker/base.py",
+              "start_line": 364,
+              "end_line": 386,
+              "content": "    def disconnect(self, receiver: c.Callable[..., t.Any], sender: t.Any = ANY) -> None:\n        \"\"\"Disconnect ``receiver`` from being called when the signal is sent by\n        ``sender``.\n\n        :param receiver: A connected receiver callable.\n        :param sender: Disconnect from only this sender. By default, disconnect\n            from all senders.\n        \"\"\"\n        sender_id: c.Hashable\n\n        if sender is ANY:\n            sender_id = ANY_ID\n        else:\n            sender_id = make_id(sender)\n\n        receiver_id = make_id(receiver)\n        self._disconnect(receiver_id, sender_id)\n\n        if (\n            \"receiver_disconnected\" in self.__dict__\n            and self.receiver_disconnected.receivers\n        ):\n            self.receiver_disconnected.send(self, receiver=receiver, sender=sender)",
+              "content_sha256": "49eb3c41376c40674351aea367e079c3026858e5577eb0b128432dc313564728",
+              "visible_to_generator": true
+            },
+            {
+              "path": "docs/index.rst",
+              "start_line": 1,
+              "end_line": 28,
+              "content": ".. rst-class:: hide-header\n\nBlinker Documentation\n=====================\n\n.. image:: _static/blinker-named.png\n    :align: center\n\n.. currentmodule:: blinker\n\nBlinker provides fast & simple object-to-object and broadcast\nsignaling for Python objects.\n\nThe core of Blinker is quite small but provides powerful features:\n\n - a global registry of named signals\n - anonymous signals\n - custom name registries\n - permanently or temporarily connected receivers\n - automatically disconnected receivers via weak referencing\n - sending arbitrary data payloads\n - collecting return values from signal receivers\n - thread safety\n\nBlinker was written by Jason Kirtand and is provided under the MIT\nLicense. The library supports Python 3.9 or later.\n\n",
+              "content_sha256": "5b4af8a9183145aebc45dfd9806ce8402a2c07deeb4dd3f4bf9eeb5c2524aa58",
+              "visible_to_generator": true
+            }
+          ]
+        }
+      ],
+      "notes": "没有编造生产次数或耗时；明确说明缺私有日志/遥测且insufficient_evidence=True，与正文一致。公开源码范围只用来说明不足，不扩展成全仓库绝对否定或必要采集方案。",
+      "key_points": null,
+      "candidate_sha256": "d638398920922827a09c99a73f0f9746d602dfc9445039fcb32e89e04cec057a",
+      "reviewer": "Codex (current session)",
+      "review_type": "model_assisted_nonblind_development_review",
+      "human_approved": false,
+      "training_eligible": false,
+      "result_sha256": "c34df6eb2ea2fc1ff6ad21c6c75a8cddefb73f585f8b6f3544be02ae34a19a6a"
+    },
+    "improvement-confirm-blinker-01--question-last": {
+      "candidate_id": "improvement-confirm-blinker-01--question-last",
+      "correctness": "correct",
+      "citation_support": "partial",
+      "completeness": "partial",
+      "abstention": "not_applicable",
+      "entry_scope": "correct",
+      "consistency": "consistent",
+      "claims": [
+        {
+          "claim": "connect默认weak=True，以make_ref保存接收器；回收后cleanup断开。",
+          "status": "supported",
+          "rationale": "91签名默认True；110–113建立弱引用并绑定清理；406–410实际断开。正式引用后两段但未引签名，均已交付。",
+          "evidence": [
+            {
+              "path": "src/blinker/base.py",
+              "start_line": 91,
+              "end_line": 113
+            },
+            {
+              "path": "src/blinker/base.py",
+              "start_line": 406,
+              "end_line": 410
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "src/blinker/base.py",
+              "start_line": 91,
+              "end_line": 113,
+              "content": "    def connect(self, receiver: F, sender: t.Any = ANY, weak: bool = True) -> F:\n        \"\"\"Connect ``receiver`` to be called when the signal is sent by\n        ``sender``.\n\n        :param receiver: The callable to call when :meth:`send` is called with\n            the given ``sender``, passing ``sender`` as a positional argument\n            along with any extra keyword arguments.\n        :param sender: Any object or :data:`ANY`. ``receiver`` will only be\n            called when :meth:`send` is called with this sender. If ``ANY``, the\n            receiver will be called for any sender. A receiver may be connected\n            to multiple senders by calling :meth:`connect` multiple times.\n        :param weak: Track the receiver with a :mod:`weakref`. The receiver will\n            be automatically disconnected when it is garbage collected. When\n            connecting a receiver defined within a function, set to ``False``,\n            otherwise it will be disconnected when the function scope ends.\n        \"\"\"\n        receiver_id = make_id(receiver)\n        sender_id = ANY_ID if sender is ANY else make_id(sender)\n\n        if weak:\n            self.receivers[receiver_id] = make_ref(\n                receiver, self._make_cleanup_receiver(receiver_id)\n            )",
+              "content_sha256": "22abae0b4e1b9dbacd7213b204dab9cb45ca6b14c354f07d4591c792c7cdf1b8",
+              "visible_to_generator": true
+            },
+            {
+              "path": "src/blinker/base.py",
+              "start_line": 406,
+              "end_line": 410,
+              "content": "        def cleanup(ref: weakref.ref[c.Callable[..., t.Any]]) -> None:\n            # If the interpreter is shutting down, disconnecting can result in a\n            # weird ignored exception. Don't call it in that case.\n            if not sys.is_finalizing():\n                self._disconnect(receiver_id, ANY_ID)",
+              "content_sha256": "4da8062ba88420681f135f76b04eb1bec663a9309a5fb844c9b3290c3cfe8c00",
+              "visible_to_generator": true
+            }
+          ]
+        },
+        {
+          "claim": "weak=False让Blinker保存强引用，可用于保留局部回调；disconnect可显式解除。",
+          "status": "supported",
+          "rationale": "114–115直接保存receiver；364–386实现disconnect。都在实际输入中，但强引用行和disconnect未被正式引文覆盖。",
+          "evidence": [
+            {
+              "path": "src/blinker/base.py",
+              "start_line": 114,
+              "end_line": 115
+            },
+            {
+              "path": "src/blinker/base.py",
+              "start_line": 364,
+              "end_line": 386
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "src/blinker/base.py",
+              "start_line": 114,
+              "end_line": 115,
+              "content": "        else:\n            self.receivers[receiver_id] = receiver",
+              "content_sha256": "a0e4d30598fe859f6c17ad6dc020889fd1f073cd8b72d0b6ca2aceb2f2a9c0ec",
+              "visible_to_generator": true
+            },
+            {
+              "path": "src/blinker/base.py",
+              "start_line": 364,
+              "end_line": 386,
+              "content": "    def disconnect(self, receiver: c.Callable[..., t.Any], sender: t.Any = ANY) -> None:\n        \"\"\"Disconnect ``receiver`` from being called when the signal is sent by\n        ``sender``.\n\n        :param receiver: A connected receiver callable.\n        :param sender: Disconnect from only this sender. By default, disconnect\n            from all senders.\n        \"\"\"\n        sender_id: c.Hashable\n\n        if sender is ANY:\n            sender_id = ANY_ID\n        else:\n            sender_id = make_id(sender)\n\n        receiver_id = make_id(receiver)\n        self._disconnect(receiver_id, sender_id)\n\n        if (\n            \"receiver_disconnected\" in self.__dict__\n            and self.receiver_disconnected.receivers\n        ):\n            self.receiver_disconnected.send(self, receiver=receiver, sender=sender)",
+              "content_sha256": "49eb3c41376c40674351aea367e079c3026858e5577eb0b128432dc313564728",
+              "visible_to_generator": true
+            }
+          ]
+        },
+        {
+          "claim": "给出了能验证弱/强引用生命周期差异的仓库测试位置。",
+          "status": "partial",
+          "rationale": "所列129–133和406–410是注册通知/清理实现，不是仓库测试或关键断言；没有现有test_weak_receiver/test_strong_receiver位置。不能把实现位置冒充完成测试定位。",
+          "evidence": [
+            {
+              "path": "src/blinker/base.py",
+              "start_line": 129,
+              "end_line": 133
+            },
+            {
+              "path": "src/blinker/base.py",
+              "start_line": 399,
+              "end_line": 412
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "src/blinker/base.py",
+              "start_line": 129,
+              "end_line": 133,
+              "content": "        if \"receiver_connected\" in self.__dict__ and self.receiver_connected.receivers:\n            try:\n                self.receiver_connected.send(\n                    self, receiver=receiver, sender=sender, weak=weak\n                )",
+              "content_sha256": "9a063e71a0cf395f22fb26a875756db273578fd53f439eee453e03cd07150859",
+              "visible_to_generator": true
+            },
+            {
+              "path": "src/blinker/base.py",
+              "start_line": 399,
+              "end_line": 412,
+              "content": "    def _make_cleanup_receiver(\n        self, receiver_id: c.Hashable\n    ) -> c.Callable[[weakref.ref[c.Callable[..., t.Any]]], None]:\n        \"\"\"Create a callback function to disconnect a weakly referenced\n        receiver when it is garbage collected.\n        \"\"\"\n\n        def cleanup(ref: weakref.ref[c.Callable[..., t.Any]]) -> None:\n            # If the interpreter is shutting down, disconnecting can result in a\n            # weird ignored exception. Don't call it in that case.\n            if not sys.is_finalizing():\n                self._disconnect(receiver_id, ANY_ID)\n\n        return cleanup",
+              "content_sha256": "a04e60cc2749bcb67507d82dcabd7bdf45bcae419cf21c4950fd3e6d4f12058c",
+              "visible_to_generator": true
+            }
+          ]
+        }
+      ],
+      "notes": "默认弱引用和weak=False改法已正确，消除旧答案声称强引用仍需外部保存的错误。用户还要求仓库验证差异的测试位置；回答改指receiver_connected与cleanup实现，没有测试路径、断言或承认测试未交付；手动disconnect也只是生命周期控制而非修复漏事件的注册方案，故题目未完整解决。",
+      "key_points": null,
+      "candidate_sha256": "13c0c3591e86caba0381a2a10f27371638f726a2fddc0c71af0529673162a4e9",
+      "reviewer": "Codex (current session)",
+      "review_type": "model_assisted_nonblind_development_review",
+      "human_approved": false,
+      "training_eligible": false,
+      "result_sha256": "3bbe62cf002c66923708f14d4261d537dae78231c62e80715031d64f14ca655d"
+    },
+    "q-7e67a58f5f3ce89d--question-last": {
+      "candidate_id": "q-7e67a58f5f3ce89d--question-last",
+      "correctness": "partially_correct",
+      "citation_support": "partial",
+      "completeness": "partial",
+      "abstention": "not_applicable",
+      "entry_scope": "correct",
+      "consistency": "contradictory",
+      "claims": [
+        {
+          "claim": "first_true([0, False, 2], default=missing)返回missing。",
+          "status": "contradicted",
+          "rationale": "pred默认None，filter跳过0/False后保留2，next取得2；default仅在过滤迭代器为空时使用。",
+          "evidence": [
+            {
+              "path": "more_itertools/recipes.py",
+              "start_line": 571,
+              "end_line": 588
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "more_itertools/recipes.py",
+              "start_line": 571,
+              "end_line": 588,
+              "content": "def first_true(iterable, default=None, pred=None):\n    \"\"\"\n    Returns the first true value in the iterable.\n\n    If no true value is found, returns *default*\n\n    If *pred* is not None, returns the first item for which\n    ``pred(item) == True`` .\n\n        >>> first_true(range(10))\n        1\n        >>> first_true(range(10), pred=lambda x: x > 5)\n        6\n        >>> first_true(range(10), default='missing', pred=lambda x: x > 9)\n        'missing'\n\n    \"\"\"\n    return next(filter(pred, iterable), default)",
+              "content_sha256": "406048ff2d04fb0542a59badd30d7ceb1a5a97ca62f890dbe743e5d69a8d23e8",
+              "visible_to_generator": true
+            }
+          ]
+        },
+        {
+          "claim": "该默认调用实际返回2，default不是对非空结果的替换。",
+          "status": "supported",
+          "rationale": "函数签名和next(filter(pred, iterable), default)直接支持；与开头missing断言矛盾。",
+          "evidence": [
+            {
+              "path": "more_itertools/recipes.py",
+              "start_line": 571,
+              "end_line": 588
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "more_itertools/recipes.py",
+              "start_line": 571,
+              "end_line": 588,
+              "content": "def first_true(iterable, default=None, pred=None):\n    \"\"\"\n    Returns the first true value in the iterable.\n\n    If no true value is found, returns *default*\n\n    If *pred* is not None, returns the first item for which\n    ``pred(item) == True`` .\n\n        >>> first_true(range(10))\n        1\n        >>> first_true(range(10), pred=lambda x: x > 5)\n        6\n        >>> first_true(range(10), default='missing', pred=lambda x: x > 9)\n        'missing'\n\n    \"\"\"\n    return next(filter(pred, iterable), default)",
+              "content_sha256": "406048ff2d04fb0542a59badd30d7ceb1a5a97ca62f890dbe743e5d69a8d23e8",
+              "visible_to_generator": true
+            }
+          ]
+        },
+        {
+          "claim": "pred=lambda x:x==0时返回0，不再以元素自身真值剔除它。",
+          "status": "supported",
+          "rationale": "577–578说明按pred(item)判定，588的filter(pred,iterable)保留首个通过谓词的原元素。",
+          "evidence": [
+            {
+              "path": "more_itertools/recipes.py",
+              "start_line": 577,
+              "end_line": 588
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "more_itertools/recipes.py",
+              "start_line": 577,
+              "end_line": 588,
+              "content": "    If *pred* is not None, returns the first item for which\n    ``pred(item) == True`` .\n\n        >>> first_true(range(10))\n        1\n        >>> first_true(range(10), pred=lambda x: x > 5)\n        6\n        >>> first_true(range(10), default='missing', pred=lambda x: x > 9)\n        'missing'\n\n    \"\"\"\n    return next(filter(pred, iterable), default)",
+              "content_sha256": "64f200eaa1da330938e091d34cdc8b61ad6892b33cdb5fe0e389baaac5c61c64",
+              "visible_to_generator": true
+            }
+          ]
+        }
+      ],
+      "notes": "第二个显式pred子问已答出返回0且不会丢弃；首句却把第一个调用答为missing，后文又说实际返回2。后文自我修正没有删掉错误主结论，用户仍需自行选择，不能记核心可用。",
+      "key_points": null,
+      "candidate_sha256": "ce25218a84c44eebaed04d0f986987f68d85e162908685571c507e6c348b117c",
+      "reviewer": "Codex (current session)",
+      "review_type": "model_assisted_nonblind_development_review",
+      "human_approved": false,
+      "training_eligible": false,
+      "result_sha256": "fc56074be9c094ee0b8cb7d8f2f5607469659f8ed8312bc9c633083be6be3add"
+    },
+    "q-342b7c23442b0be4--question-last": {
+      "candidate_id": "q-342b7c23442b0be4--question-last",
+      "correctness": "correct",
+      "citation_support": "supported",
+      "completeness": "adequate",
+      "abstention": "not_applicable",
+      "entry_scope": "correct",
+      "consistency": "consistent",
+      "claims": [
+        {
+          "claim": "命中查询缓存时返回cached_results[:]的新浅拷贝列表。",
+          "status": "supported",
+          "rationale": "正式引用267就是切片返回；不是内部缓存列表本体。",
+          "evidence": [
+            {
+              "path": "tinydb/table.py",
+              "start_line": 265,
+              "end_line": 267
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "tinydb/table.py",
+              "start_line": 265,
+              "end_line": 267,
+              "content": "        cached_results = self._query_cache.get(cond)\n        if cached_results is not None:\n            return cached_results[:]",
+              "content_sha256": "751ab16d9b30b41fb44c39f04265c2b6745e48720bd67b26add4ecb52ae4013d",
+              "visible_to_generator": true
+            }
+          ]
+        },
+        {
+          "claim": "对返回列表append等改变长度不改缓存列表结构。",
+          "status": "supported",
+          "rationale": "267的切片产生独立列表，与255–257对象共享说明共同确定结构/元素两层区别。",
+          "evidence": [
+            {
+              "path": "tinydb/table.py",
+              "start_line": 255,
+              "end_line": 257
+            },
+            {
+              "path": "tinydb/table.py",
+              "start_line": 267,
+              "end_line": 267
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "tinydb/table.py",
+              "start_line": 255,
+              "end_line": 257,
+              "content": "        documents are the same objects held by the cache -- treat them as\n        read-only, since mutating one (a key or a nested value) corrupts\n        what a later identical search returns.",
+              "content_sha256": "50d605a778d29922cd99a24b70314e6bfb5fb9484882c1f443df341976983bb1",
+              "visible_to_generator": true
+            },
+            {
+              "path": "tinydb/table.py",
+              "start_line": 267,
+              "end_line": 267,
+              "content": "            return cached_results[:]",
+              "content_sha256": "e0844d90be2b9cba619e26d8792a19af09498362b9c31c08d47db1db2efb0cc5",
+              "visible_to_generator": true
+            }
+          ]
+        },
+        {
+          "claim": "修改返回列表中的Document字段会污染同一缓存对象，后续相同查询看到该修改。",
+          "status": "supported",
+          "rationale": "255–257明说缓存持有相同文档对象，字段或嵌套值修改会破坏后续同查询返回。",
+          "evidence": [
+            {
+              "path": "tinydb/table.py",
+              "start_line": 255,
+              "end_line": 257
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "tinydb/table.py",
+              "start_line": 255,
+              "end_line": 257,
+              "content": "        documents are the same objects held by the cache -- treat them as\n        read-only, since mutating one (a key or a nested value) corrupts\n        what a later identical search returns.",
+              "content_sha256": "50d605a778d29922cd99a24b70314e6bfb5fb9484882c1f443df341976983bb1",
+              "visible_to_generator": true
+            }
+          ]
+        }
+      ],
+      "notes": "浅拷贝列表结构与共享Document对象的区别完整正确，正式引文267及255–257分别精准支持机制和对象共享。没有新增错误扩展或省略题目条件。",
+      "key_points": null,
+      "candidate_sha256": "4313108b63feea0227fffddfccdc2c6e2a7d1069f08a5c8c6cce28d3fd26b164",
+      "reviewer": "Codex (current session)",
+      "review_type": "model_assisted_nonblind_development_review",
+      "human_approved": false,
+      "training_eligible": false,
+      "result_sha256": "f74aaddfef654dd8c7bac4b1a9e1ec5f94cbe119572717c43d8e3bc8076e17ff"
+    },
+    "q-8263d0c13fbc03c6--question-last": {
+      "candidate_id": "q-8263d0c13fbc03c6--question-last",
+      "correctness": "partially_correct",
+      "citation_support": "partial",
+      "completeness": "partial",
+      "abstention": "not_applicable",
+      "entry_scope": "correct",
+      "consistency": "consistent",
+      "claims": [
+        {
+          "claim": "override=True时os.environ高于先前new_values；override=False时new_values高于os.environ。",
+          "status": "contradicted",
+          "rationale": "346–347先加入os.environ再用new_values覆盖；349–350相反。实际True由new_values优先，False由os.environ优先。",
+          "evidence": [
+            {
+              "path": "src/dotenv/main.py",
+              "start_line": 345,
+              "end_line": 350
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "src/dotenv/main.py",
+              "start_line": 345,
+              "end_line": 350,
+              "content": "            if override:\n                env.update(os.environ)  # type: ignore\n                env.update(new_values)\n            else:\n                env.update(new_values)\n                env.update(os.environ)  # type: ignore",
+              "content_sha256": "30bd10c175c6280b8a4fecec2fddb24162c4fda046b6770fcbbe95047210f7c7",
+              "visible_to_generator": true
+            }
+          ]
+        },
+        {
+          "claim": "override=True依次update(os.environ)、update(new_values)；False顺序相反。",
+          "status": "supported",
+          "rationale": "正式引用345–350准确给出两个分支的调用顺序。",
+          "evidence": [
+            {
+              "path": "src/dotenv/main.py",
+              "start_line": 345,
+              "end_line": 350
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "src/dotenv/main.py",
+              "start_line": 345,
+              "end_line": 350,
+              "content": "            if override:\n                env.update(os.environ)  # type: ignore\n                env.update(new_values)\n            else:\n                env.update(new_values)\n                env.update(os.environ)  # type: ignore",
+              "content_sha256": "30bd10c175c6280b8a4fecec2fddb24162c4fda046b6770fcbbe95047210f7c7",
+              "visible_to_generator": true
+            }
+          ]
+        }
+      ],
+      "notes": "两个env.update的顺序抄写正确，但两种override下的实际优先关系都反了。应以后一次update覆盖前一次；本次没有旧答案的显式前后互相改口，仍不能回答优先级业务问题。",
+      "key_points": null,
+      "candidate_sha256": "5ab1ca02f0d9216d1152828515071903bfc5dac1eeccc051b1326764f8df20f0",
+      "reviewer": "Codex (current session)",
+      "review_type": "model_assisted_nonblind_development_review",
+      "human_approved": false,
+      "training_eligible": false,
+      "result_sha256": "14aedc8e5f3be7dc1cc3de1e112d8193933a8b885caa6ba595a6a797d5b942b4"
+    },
+    "improvement-confirm-tenacity-02--question-last": {
+      "candidate_id": "improvement-confirm-tenacity-02--question-last",
+      "correctness": "incorrect",
+      "citation_support": "unsupported",
+      "completeness": "partial",
+      "abstention": "not_applicable",
+      "entry_scope": "correct",
+      "consistency": "consistent",
+      "claims": [
+        {
+          "claim": "默认异常策略下首次成功以及两次失败后第三次成功都会执行after，记录第三次。",
+          "status": "contradicted",
+          "rationale": "成功使默认异常重试策略False，460–463直接安排outcome.result并return，跳过465–466；真实行为测试最后记录2。其中默认策略和行为测试是评审补读。",
+          "evidence": [
+            {
+              "path": "tenacity/__init__.py",
+              "start_line": 259,
+              "end_line": 279
+            },
+            {
+              "path": "tenacity/__init__.py",
+              "start_line": 426,
+              "end_line": 427
+            },
+            {
+              "path": "tenacity/__init__.py",
+              "start_line": 460,
+              "end_line": 470
+            },
+            {
+              "path": "tenacity/retry.py",
+              "start_line": 88,
+              "end_line": 105
+            },
+            {
+              "path": "tests/test_tenacity.py",
+              "start_line": 1853,
+              "end_line": 1870
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "tenacity/__init__.py",
+              "start_line": 259,
+              "end_line": 279,
+              "content": "    def __init__(\n        self,\n        sleep: t.Callable[[int | float], None] = sleep,\n        stop: \"StopBaseT\" = stop_never,\n        wait: \"WaitBaseT\" = wait_none(),\n        retry: \"RetryBaseT\" = retry_if_exception_type(),\n        before: t.Callable[[\"RetryCallState\"], None] = before_nothing,\n        after: t.Callable[[\"RetryCallState\"], None] = after_nothing,\n        before_sleep: t.Callable[[\"RetryCallState\"], None] | None = None,\n        reraise: bool = False,\n        retry_error_cls: type[RetryError] = RetryError,\n        retry_error_callback: t.Callable[[\"RetryCallState\"], t.Any] | None = None,\n        name: str | None = None,\n        enabled: bool = True,\n    ) -> None:\n        self.sleep = sleep\n        self.stop = stop\n        self.wait = wait_none() if _is_no_wait(wait) else wait\n        self.retry = retry\n        self.before = before\n        self.after = after",
+              "content_sha256": "56abf1828c8bf364769cf8f923a4f321d583f1b2d58c65bda92607b1c503cff1",
+              "visible_to_generator": false
+            },
+            {
+              "path": "tenacity/__init__.py",
+              "start_line": 426,
+              "end_line": 427,
+              "content": "    def _run_retry(self, retry_state: \"RetryCallState\") -> None:\n        self.iter_state.retry_run_result = self.retry(retry_state)",
+              "content_sha256": "5029d4bbb79b461612793aec6b7e089e04bf77ecbd49f60289fbada9d3522ea2",
+              "visible_to_generator": false
+            },
+            {
+              "path": "tenacity/__init__.py",
+              "start_line": 460,
+              "end_line": 470,
+              "content": "    def _post_retry_check_actions(self, retry_state: \"RetryCallState\") -> None:\n        if not (self.iter_state.is_explicit_retry or self.iter_state.retry_run_result):\n            self._add_action_func(lambda rs: rs.outcome.result())\n            return\n\n        if self.after is not None:\n            self._add_action_func(self.after)\n\n        self._add_action_func(self._run_wait)\n        self._add_action_func(self._run_stop)\n        self._add_action_func(self._post_stop_check_actions)",
+              "content_sha256": "e431525731d106471ecd4b806e17218680d05c377451e62e0b7c9d9fadccd425",
+              "visible_to_generator": true
+            },
+            {
+              "path": "tenacity/retry.py",
+              "start_line": 88,
+              "end_line": 105,
+              "content": "class retry_if_exception(retry_base):\n    \"\"\"Retry strategy that retries if an exception verifies a predicate.\"\"\"\n\n    def __init__(self, predicate: typing.Callable[[BaseException], bool]) -> None:\n        self.predicate = predicate\n\n    @override\n    def __call__(self, retry_state: \"RetryCallState\") -> bool:\n        if retry_state.outcome is None:\n            raise RuntimeError(\"__call__() called before outcome was set\")\n\n        if retry_state.outcome.failed:\n            exception = retry_state.outcome.exception()\n            if exception is None:\n                raise RuntimeError(\"outcome failed but the exception is None\")\n            return self.predicate(exception)\n        return False\n",
+              "content_sha256": "4c94d91fd1a0c41ce1b9f7e7f171741e9068d576e65b56360a20c3f9032b95bf",
+              "visible_to_generator": false
+            },
+            {
+              "path": "tests/test_tenacity.py",
+              "start_line": 1853,
+              "end_line": 1870,
+              "content": "    def test_after_attempts(self) -> None:\n        TestBeforeAfterAttempts._attempt_number = 0\n\n        def _after(retry_state: RetryCallState) -> None:\n            TestBeforeAfterAttempts._attempt_number = retry_state.attempt_number\n\n        @retry(\n            wait=tenacity.wait_fixed(0.1),\n            stop=tenacity.stop_after_attempt(3),\n            after=_after,\n        )\n        def _test_after() -> None:\n            if TestBeforeAfterAttempts._attempt_number < 2:\n                raise Exception(\"testing after_attempts handler\")\n\n        _test_after()\n\n        self.assertTrue(TestBeforeAfterAttempts._attempt_number == 2)",
+              "content_sha256": "a1325d17a55b7019d349cfaf8c5c45a3b194635dac22914f8632662e8d599a2b",
+              "visible_to_generator": false
+            }
+          ]
+        },
+        {
+          "claim": "is_explicit_retry与retry_run_result都False时添加outcome.result；否则才可能添加after等后续动作。",
+          "status": "supported",
+          "rationale": "461–470的分支与调用位置已交付，模型描述此部分大体准确却误推最终成功也经过after。",
+          "evidence": [
+            {
+              "path": "tenacity/__init__.py",
+              "start_line": 460,
+              "end_line": 470
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "tenacity/__init__.py",
+              "start_line": 460,
+              "end_line": 470,
+              "content": "    def _post_retry_check_actions(self, retry_state: \"RetryCallState\") -> None:\n        if not (self.iter_state.is_explicit_retry or self.iter_state.retry_run_result):\n            self._add_action_func(lambda rs: rs.outcome.result())\n            return\n\n        if self.after is not None:\n            self._add_action_func(self.after)\n\n        self._add_action_func(self._run_wait)\n        self._add_action_func(self._run_stop)\n        self._add_action_func(self._post_stop_check_actions)",
+              "content_sha256": "e431525731d106471ecd4b806e17218680d05c377451e62e0b7c9d9fadccd425",
+              "visible_to_generator": true
+            }
+          ]
+        },
+        {
+          "claim": "test_after.py的格式测试未直接区分首次成功与重试后成功时的调度次数。",
+          "status": "supported",
+          "rationale": "这些测试手动构造retry_state并直接调用日志回调检查format，不运行被retry装饰的成功/失败调用。",
+          "evidence": [
+            {
+              "path": "tests/test_after.py",
+              "start_line": 28,
+              "end_line": 48
+            },
+            {
+              "path": "tests/test_after.py",
+              "start_line": 50,
+              "end_line": 66
+            },
+            {
+              "path": "tests/test_after.py",
+              "start_line": 68,
+              "end_line": 86
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "tests/test_after.py",
+              "start_line": 28,
+              "end_line": 48,
+              "content": "    def test_01_default(self) -> None:\n        \"\"\"Test log formatting.\"\"\"\n        log = unittest.mock.MagicMock(spec=\"logging.Logger.log\")\n        logger = unittest.mock.MagicMock(spec=\"logging.Logger\", log=log)\n\n        sec_format = \"%.3g\"\n        delay_since_first_attempt = 0.1\n\n        retry_state = test_tenacity.make_retry_state(\n            self.previous_attempt_number, delay_since_first_attempt\n        )\n        fun = after_log(\n            logger=logger, log_level=self.log_level\n        )  # use default sec_format\n        fun(retry_state)\n        log.assert_called_once_with(\n            self.log_level,\n            f\"Finished call to '{retry_state.get_fn_name()}' \"\n            f\"after {sec_format % retry_state.seconds_since_start}(s), \"\n            f\"this was the {_utils.to_ordinal(retry_state.attempt_number)} time calling it.\",\n        )",
+              "content_sha256": "eaed1c5e4a27609adcb9f7e294dc3837f1a2aaf88cd031cdda6f5b89696600bf",
+              "visible_to_generator": true
+            },
+            {
+              "path": "tests/test_after.py",
+              "start_line": 50,
+              "end_line": 66,
+              "content": "    def test_02_none_seconds_since_start(self) -> None:\n        \"\"\"Test log formatting when seconds_since_start is None.\"\"\"\n        log = unittest.mock.MagicMock(spec=\"logging.Logger.log\")\n        logger = unittest.mock.MagicMock(spec=\"logging.Logger\", log=log)\n\n        retry_state = test_tenacity.make_retry_state(self.previous_attempt_number, 0.1)\n        retry_state.outcome_timestamp = None\n        assert retry_state.seconds_since_start is None\n\n        fun = after_log(logger=logger, log_level=self.log_level)\n        fun(retry_state)\n        log.assert_called_once_with(\n            self.log_level,\n            f\"Finished call to '{retry_state.get_fn_name()}' \"\n            f\"after ?(s), \"\n            f\"this was the {_utils.to_ordinal(retry_state.attempt_number)} time calling it.\",\n        )",
+              "content_sha256": "581ff0047be6c0b39f9bb4e44231d2107b3653a6801c5a62b7eb4a98c0ccc1f1",
+              "visible_to_generator": true
+            },
+            {
+              "path": "tests/test_after.py",
+              "start_line": 68,
+              "end_line": 86,
+              "content": "    def test_02_custom_sec_format(self) -> None:\n        \"\"\"Test log formatting with custom int format..\"\"\"\n        log = unittest.mock.MagicMock(spec=\"logging.Logger.log\")\n        logger = unittest.mock.MagicMock(spec=\"logging.Logger\", log=log)\n\n        sec_format = \"%.1f\"\n        delay_since_first_attempt = 0.1\n\n        retry_state = test_tenacity.make_retry_state(\n            self.previous_attempt_number, delay_since_first_attempt\n        )\n        fun = after_log(logger=logger, log_level=self.log_level, sec_format=sec_format)\n        fun(retry_state)\n        log.assert_called_once_with(\n            self.log_level,\n            f\"Finished call to '{retry_state.get_fn_name()}' \"\n            f\"after {sec_format % retry_state.seconds_since_start}(s), \"\n            f\"this was the {_utils.to_ordinal(retry_state.attempt_number)} time calling it.\",\n        )",
+              "content_sha256": "0ea83d55482077bca16ced5184fd908d7f501d007d5139c747d4756a930c761d",
+              "visible_to_generator": true
+            }
+          ]
+        }
+      ],
+      "notes": "新的可见460–470包含after之前的提前return，模型仍把成功调用答成会执行after。当前423–424仅是_add_action_func，不是retry策略赋值；426–427、默认策略和1853–1870行为测试未交付，故不得把本次输入称为全部充分。评审补读只验证事实，未送模型。模型对日志格式测试边界的说明恰当，但未解决核心问题。",
+      "key_points": null,
+      "candidate_sha256": "e8af430612e11ae9375cfcafa5e3e3369afc0f5ba560c0f262033aaf71d8ed88",
+      "reviewer": "Codex (current session)",
+      "review_type": "model_assisted_nonblind_development_review",
+      "human_approved": false,
+      "training_eligible": false,
+      "result_sha256": "bda85082321e788e04c1ef123a218fc77b0bc8490a3c61cf476a128ed0ef4b34"
+    },
+    "improvement-confirm-tenacity-03--question-last": {
+      "candidate_id": "improvement-confirm-tenacity-03--question-last",
+      "correctness": "partially_correct",
+      "citation_support": "partial",
+      "completeness": "adequate",
+      "abstention": "not_applicable",
+      "entry_scope": "correct",
+      "consistency": "contradictory",
+      "claims": [
+        {
+          "claim": "题设会先执行retry_error_callback返回fallback，然后重新抛出ValueError。",
+          "status": "contradicted",
+          "rationale": "callback分支474–476排入回调后立即return，跳过478–485的exc_check/reraise路径，不会两者先后都执行。",
+          "evidence": [
+            {
+              "path": "tenacity/__init__.py",
+              "start_line": 472,
+              "end_line": 486
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "tenacity/__init__.py",
+              "start_line": 472,
+              "end_line": 486,
+              "content": "    def _post_stop_check_actions(self, retry_state: \"RetryCallState\") -> None:\n        if self.iter_state.stop_run_result:\n            if self.retry_error_callback:\n                self._add_action_func(self.retry_error_callback)\n                return\n\n            def exc_check(rs: \"RetryCallState\") -> None:\n                fut = t.cast(\"Future\", rs.outcome)\n                retry_exc = self.retry_error_cls(fut)\n                if self.reraise:\n                    retry_exc.reraise()\n                raise retry_exc from fut.exception()\n\n            self._add_action_func(exc_check)\n            return",
+              "content_sha256": "27f56f54b49fe5b9ece029c0e019a73c8bd869a2f30fdd2abdadb0fc604e0f5c",
+              "visible_to_generator": true
+            }
+          ]
+        },
+        {
+          "claim": "存在callback时添加该动作并直接return；只有无callback时才检查reraise，因此callback路径优先。",
+          "status": "supported",
+          "rationale": "同一正式引文472–486支持这段后文，恰好与首句抛ValueError断言矛盾。",
+          "evidence": [
+            {
+              "path": "tenacity/__init__.py",
+              "start_line": 472,
+              "end_line": 486
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "tenacity/__init__.py",
+              "start_line": 472,
+              "end_line": 486,
+              "content": "    def _post_stop_check_actions(self, retry_state: \"RetryCallState\") -> None:\n        if self.iter_state.stop_run_result:\n            if self.retry_error_callback:\n                self._add_action_func(self.retry_error_callback)\n                return\n\n            def exc_check(rs: \"RetryCallState\") -> None:\n                fut = t.cast(\"Future\", rs.outcome)\n                retry_exc = self.retry_error_cls(fut)\n                if self.reraise:\n                    retry_exc.reraise()\n                raise retry_exc from fut.exception()\n\n            self._add_action_func(exc_check)\n            return",
+              "content_sha256": "27f56f54b49fe5b9ece029c0e019a73c8bd869a2f30fdd2abdadb0fc604e0f5c",
+              "visible_to_generator": true
+            }
+          ]
+        }
+      ],
+      "notes": "首句明确说执行callback返回fallback后又抛ValueError，是题设核心结论错误；后文又准确说callback分支直接return且不再reraise。两种互斥结果均保留，不能以后文正确抵消首句，也不同于原控制仅优先级概述略松但明确不会抛出的情况。保护题实质退化。",
+      "key_points": null,
+      "candidate_sha256": "3adeaaf41fcc24cf704523a9f34b7f7a493fac06a0051da20b2a76cf5781f18e",
+      "reviewer": "Codex (current session)",
+      "review_type": "model_assisted_nonblind_development_review",
+      "human_approved": false,
+      "training_eligible": false,
+      "result_sha256": "001de3b19257381686d6d674c7cb0f369e6bc0b0129478836f4db152674ccff5"
+    }
+  },
+  "groups": {
+    "all/bm25_code": {
+      "records": 8,
+      "success": 8,
+      "model_requests": 8,
+      "tool_calls": 0,
+      "episodes_using_tools": 0,
+      "citation_ranges_valid": 8,
+      "initial_reference_complete": 4,
+      "final_reference_complete": 4,
+      "initial_nonblank_reference_complete": 4,
+      "final_nonblank_reference_complete": 4,
+      "requests_without_usage": 0,
+      "requests_without_elapsed": 0,
+      "prompt_tokens": 19831,
+      "completion_tokens": 2051,
+      "generator_seconds": 97.43599999999999,
+      "reviewed": 8,
+      "factually_correct": 3,
+      "core_supported": 2,
+      "fully_resolved": 2,
+      "insufficiency_flag_true": 1,
+      "insufficiency_flag_false": 0
+    },
+    "added-confirmation/bm25_code": {
+      "records": 3,
+      "success": 3,
+      "model_requests": 3,
+      "tool_calls": 0,
+      "episodes_using_tools": 0,
+      "citation_ranges_valid": 3,
+      "initial_reference_complete": 3,
+      "final_reference_complete": 3,
+      "initial_nonblank_reference_complete": 3,
+      "final_nonblank_reference_complete": 3,
+      "requests_without_usage": 0,
+      "requests_without_elapsed": 0,
+      "prompt_tokens": 8826,
+      "completion_tokens": 548,
+      "generator_seconds": 36.233999999999995,
+      "reviewed": 3,
+      "factually_correct": 1,
+      "core_supported": 1,
+      "fully_resolved": 1
+    },
+    "question-last-development-diagnostic/bm25_code": {
+      "records": 8,
+      "success": 8,
+      "model_requests": 8,
+      "tool_calls": 0,
+      "episodes_using_tools": 0,
+      "citation_ranges_valid": 8,
+      "initial_reference_complete": 4,
+      "final_reference_complete": 4,
+      "initial_nonblank_reference_complete": 4,
+      "final_nonblank_reference_complete": 4,
+      "requests_without_usage": 0,
+      "requests_without_elapsed": 0,
+      "prompt_tokens": 19831,
+      "completion_tokens": 2051,
+      "generator_seconds": 97.43599999999999,
+      "reviewed": 8,
+      "factually_correct": 3,
+      "core_supported": 2,
+      "fully_resolved": 2,
+      "insufficiency_flag_true": 1,
+      "insufficiency_flag_false": 0
+    },
+    "answerable/bm25_code": {
+      "records": 7,
+      "success": 7,
+      "model_requests": 7,
+      "tool_calls": 0,
+      "episodes_using_tools": 0,
+      "citation_ranges_valid": 7,
+      "initial_reference_complete": 4,
+      "final_reference_complete": 4,
+      "initial_nonblank_reference_complete": 4,
+      "final_nonblank_reference_complete": 4,
+      "requests_without_usage": 0,
+      "requests_without_elapsed": 0,
+      "prompt_tokens": 17880,
+      "completion_tokens": 1896,
+      "generator_seconds": 90.545,
+      "reviewed": 7,
+      "factually_correct": 2,
+      "core_supported": 1,
+      "fully_resolved": 1
+    },
+    "revealed-confirmation-development/bm25_code": {
+      "records": 4,
+      "success": 4,
+      "model_requests": 4,
+      "tool_calls": 0,
+      "episodes_using_tools": 0,
+      "citation_ranges_valid": 4,
+      "insufficiency_flag_true": 1,
+      "insufficiency_flag_false": 0,
+      "requests_without_usage": 0,
+      "requests_without_elapsed": 0,
+      "prompt_tokens": 8169,
+      "completion_tokens": 1095,
+      "generator_seconds": 44.717999999999996,
+      "reviewed": 4,
+      "factually_correct": 2,
+      "core_supported": 1,
+      "fully_resolved": 1,
+      "initial_reference_complete": 0,
+      "final_reference_complete": 0,
+      "initial_nonblank_reference_complete": 0,
+      "final_nonblank_reference_complete": 0
+    },
+    "unanswerable/bm25_code": {
+      "records": 1,
+      "success": 1,
+      "model_requests": 1,
+      "tool_calls": 0,
+      "episodes_using_tools": 0,
+      "citation_ranges_valid": 1,
+      "insufficiency_flag_true": 1,
+      "insufficiency_flag_false": 0,
+      "requests_without_usage": 0,
+      "requests_without_elapsed": 0,
+      "prompt_tokens": 1951,
+      "completion_tokens": 155,
+      "generator_seconds": 6.891,
+      "reviewed": 1,
+      "factually_correct": 1,
+      "core_supported": 1,
+      "fully_resolved": 1
+    },
+    "older-development/bm25_code": {
+      "records": 1,
+      "success": 1,
+      "model_requests": 1,
+      "tool_calls": 0,
+      "episodes_using_tools": 0,
+      "citation_ranges_valid": 1,
+      "initial_reference_complete": 1,
+      "final_reference_complete": 1,
+      "initial_nonblank_reference_complete": 1,
+      "final_nonblank_reference_complete": 1,
+      "requests_without_usage": 0,
+      "requests_without_elapsed": 0,
+      "prompt_tokens": 2836,
+      "completion_tokens": 408,
+      "generator_seconds": 16.484,
+      "reviewed": 1,
+      "factually_correct": 0,
+      "core_supported": 0,
+      "fully_resolved": 0
+    }
+  },
+  "retrieval": {
+    "shared_initial": {
+      "answerable": 7,
+      "reference_complete": 4,
+      "nonblank_reference_complete": 4
+    }
+  },
+  "new_requests": 8,
+  "combined_requests": 1339,
+  "paid_requests": 0,
+  "human_approved": false,
+  "training_eligible": false,
+  "reporting_implementation": "4432a399824bc989792b734caf26caf8da5ada5fef0941d184fd5a00d4ae2e6b",
+  "usage_observation_note": "Token/time sums include observed values only. Missing usage and elapsed time remain unknown in raw records; reservations still count every sent or ambiguous request.",
+  "checks": {
+    "decision": "reject_and_restore_question_position",
+    "independent_review": "artifacts/rag-iteration-2026-10-27/question-last-review.json",
+    "declared_gate": "At least two of the four designated conditional targets must become correct source-supported core answers; no fact/core/full regression on any known-correct protection, no lost asked conditions or spurious refusal. Net strict complete gain must be at least two. After is not a pure sufficient-source target. Reject whole candidate if gate fails; do not tune further wordings or add repetitions.",
+    "assessment": {
+      "pairs": [
+        {
+          "task_id": "q-7e67a58f5f3ce89d",
+          "role": "target",
+          "control_batch": "experiments/current-rag-refresh",
+          "control_case_id": "q-7e67a58f5f3ce89d--current-rag",
+          "candidate_case_id": "q-7e67a58f5f3ce89d--question-last",
+          "control": {
+            "factually_correct": false,
+            "core_supported": false,
+            "fully_resolved": false
+          },
+          "candidate": {
+            "factually_correct": false,
+            "core_supported": false,
+            "fully_resolved": false
+          }
+        },
+        {
+          "task_id": "q-342b7c23442b0be4",
+          "role": "target",
+          "control_batch": "experiments/current-rag-refresh",
+          "control_case_id": "q-342b7c23442b0be4--current-rag",
+          "candidate_case_id": "q-342b7c23442b0be4--question-last",
+          "control": {
+            "factually_correct": false,
+            "core_supported": false,
+            "fully_resolved": false
+          },
+          "candidate": {
+            "factually_correct": true,
+            "core_supported": true,
+            "fully_resolved": true
+          }
+        },
+        {
+          "task_id": "q-8263d0c13fbc03c6",
+          "role": "target",
+          "control_batch": "experiments/current-rag-refresh",
+          "control_case_id": "q-8263d0c13fbc03c6--current-rag",
+          "candidate_case_id": "q-8263d0c13fbc03c6--question-last",
+          "control": {
+            "factually_correct": false,
+            "core_supported": false,
+            "fully_resolved": false
+          },
+          "candidate": {
+            "factually_correct": false,
+            "core_supported": false,
+            "fully_resolved": false
+          }
+        },
+        {
+          "task_id": "improvement-confirm-blinker-01",
+          "role": "target",
+          "control_batch": "experiments/current-rag-refresh",
+          "control_case_id": "improvement-confirm-blinker-01--current-rag",
+          "candidate_case_id": "improvement-confirm-blinker-01--question-last",
+          "control": {
+            "factually_correct": false,
+            "core_supported": false,
+            "fully_resolved": false
+          },
+          "candidate": {
+            "factually_correct": true,
+            "core_supported": false,
+            "fully_resolved": false
+          }
+        },
+        {
+          "task_id": "improvement-confirm-tenacity-02",
+          "role": "partial_source_negative",
+          "control_batch": "experiments/guard-source-candidate",
+          "control_case_id": "improvement-confirm-tenacity-02--guard-source",
+          "candidate_case_id": "improvement-confirm-tenacity-02--question-last",
+          "control": {
+            "factually_correct": false,
+            "core_supported": false,
+            "fully_resolved": false
+          },
+          "candidate": {
+            "factually_correct": false,
+            "core_supported": false,
+            "fully_resolved": false
+          }
+        },
+        {
+          "task_id": "improvement-confirm-tenacity-03",
+          "role": "protection",
+          "control_batch": "experiments/guard-source-candidate",
+          "control_case_id": "improvement-confirm-tenacity-03--guard-source",
+          "candidate_case_id": "improvement-confirm-tenacity-03--question-last",
+          "control": {
+            "factually_correct": true,
+            "core_supported": true,
+            "fully_resolved": true
+          },
+          "candidate": {
+            "factually_correct": false,
+            "core_supported": false,
+            "fully_resolved": false
+          }
+        },
+        {
+          "task_id": "q-bbad3968026fefab",
+          "role": "protection",
+          "control_batch": "experiments/current-rag-refresh",
+          "control_case_id": "q-bbad3968026fefab--current-rag",
+          "candidate_case_id": "q-bbad3968026fefab--question-last",
+          "control": {
+            "factually_correct": true,
+            "core_supported": true,
+            "fully_resolved": true
+          },
+          "candidate": {
+            "factually_correct": false,
+            "core_supported": false,
+            "fully_resolved": false
+          }
+        },
+        {
+          "task_id": "improvement-confirm-blinker-05",
+          "role": "protection",
+          "control_batch": "experiments/current-rag-refresh",
+          "control_case_id": "improvement-confirm-blinker-05--current-rag",
+          "candidate_case_id": "improvement-confirm-blinker-05--question-last",
+          "control": {
+            "factually_correct": true,
+            "core_supported": true,
+            "fully_resolved": true
+          },
+          "candidate": {
+            "factually_correct": true,
+            "core_supported": true,
+            "fully_resolved": true
+          }
+        }
+      ],
+      "gate": {
+        "declared_before_generation": "At least two of the four designated conditional targets must become correct source-supported core answers; no fact/core/full regression on any known-correct protection, no lost asked conditions or spurious refusal. Net strict complete gain must be at least two. After is not a pure sufficient-source target. Reject whole candidate if gate fails; do not tune further wordings or add repetitions.",
+        "decision": "reject",
+        "target_core_gains": [
+          "q-342b7c23442b0be4"
+        ],
+        "target_core_gain_count": 1,
+        "required_target_core_gains": 2,
+        "protection_regressions": [
+          "improvement-confirm-tenacity-03",
+          "q-bbad3968026fefab"
+        ],
+        "strict_complete_net_gain": -1,
+        "required_strict_complete_net_gain": 2,
+        "control_totals": {
+          "factually_correct": 3,
+          "core_supported": 3,
+          "fully_resolved": 3
+        },
+        "candidate_totals": {
+          "factually_correct": 3,
+          "core_supported": 2,
+          "fully_resolved": 2
+        },
+        "reason": "TinyDB now resolves correctly, but callback and dotenv-set protection regress; first_true remains contradictory, merge priorities remain reversed, weak-reference tests remain unlocated. Declared gate fails independently of how weak-reference factual improvement is summarized. Do not expand or tune a question-position variant."
+      },
+      "developer_trial": {
+        "reviewer": "Codex subagent developer proxy",
+        "human_approved": false,
+        "model_requests": 0,
+        "target_repository_execution": false,
+        "commands": [
+          {
+            "case_id": "q-342b7c23442b0be4--question-last",
+            "command": "D:\\anaconda\\envs\\repomentor\\python.exe -s -X utf8 -m repomentor.cli inspect-run experiments\\question-last-candidate\\results.jsonl --case-id q-342b7c23442b0be4--question-last",
+            "exit_code": 0,
+            "workflow_rendered": true,
+            "business_usable": true,
+            "assessment": "实际CLI展示问题、答案及已交付源码；267切片与255–257共享对象说明一致，可据此决定只改变返回列表结构不会污染缓存，修改文档字段会。"
+          },
+          {
+            "case_id": "q-bbad3968026fefab--question-last",
+            "command": "D:\\anaconda\\envs\\repomentor\\python.exe -s -X utf8 -m repomentor.cli inspect-run experiments\\question-last-candidate\\results.jsonl --case-id q-bbad3968026fefab--question-last",
+            "exit_code": 0,
+            "workflow_rendered": true,
+            "business_usable": false,
+            "assessment": "实际CLI成功展示但答案业务不可用；同屏109–112直接反驳空串覆盖已有键及None不跳过，114也不要求实际写入至少一项。渲染成功不替代语义正确。"
+          }
+        ]
+      },
+      "adjudication_notes": [
+        "Original guard-source-candidate after review is preserved. Its rationale mislabeled visible423–424 as retry predicate assignment; actual assignment426–427/default policy/behavior test are absent from current input. New assessment explicitly distinguishes reviewer-only source.",
+        "All eight candidate outputs and their real formal citations were inspected; protection regressions are not excused by correct later sentences. Candidate input values/source order were frozen by parent; this independent review did not modify code, settings or raw results."
+      ],
+      "training_eligible": false
+    },
+    "input_check": "artifacts/rag-iteration-2026-10-27/question-last-inputs.json",
+    "local_requests": 8,
+    "targeted_existing_tests_passed": 42,
+    "old_review_correction": {
+      "source": "experiments/guard-source-candidate/summary.json",
+      "case_id": "improvement-confirm-tenacity-02--guard-source",
+      "error": "Prior rationale incorrectly described lines423–424 as retry result assignment. They are _add_action_func/actions.append. _run_retry is426–427 and was not delivered; default predicate and real behavior test1853–1870 were also absent.",
+      "effect": "After answer is still incorrect; preserve original raw answer, grade and sealed review. Current input is not fully source-sufficient; historical complete-source oracle separately still failed."
+    },
+    "new_modules": 0,
+    "new_scripts": 0,
+    "paid_requests": 0,
+    "final_test_repositories_remain_sealed": true
+  },
+  "scope": "Question-last serialization only in existing messages_for: retain identical system, JSON payload field values, question/history, source ranges/content/order, schema, Qwen daily model settings and budget. Known development: four sufficient-source conditional interpretation targets (first_true, TinyDB shallow copy, dotenv merge priority, weak references), after as partial-source unsolved negative, three protections (callback from guard-source-candidate, DotEnv setter, private Blinker state). Eight new local requests, no retries, modules, settings, answer reminder or retrieval change. Not unseen confirmation or agent tool benefit."
+}

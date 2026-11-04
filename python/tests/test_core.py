@@ -189,6 +189,17 @@ async def test_illegal_citations_downgraded(reader):
     assert verified.evidenceCoverage.gaps[0].subject == "unsupported_claims"
 
 
+async def test_local_report_verifies_only_context_actually_sent(reader):
+    h = ready(reader)
+    h.execute_plan("explorer", plan("src/index.ts"))
+    output = await StubRuntime().synthesize("explorer", ExplorerOutput, {}, h)
+    output.evidenceClaims[0].evidence[0].path = "src/index.ts"
+    verified = h.verify_output("explorer", output, provided_paths=["README.md"])
+    assert verified.evidenceCoverage.examinedFiles == ["README.md"]
+    assert verified.evidenceClaims[0].evidence == []
+    assert verified.evidenceClaims[0].confidence == "low"
+
+
 async def test_total_timeout_persists_partial_result(reader):
     class Slow(StubRuntime):
         async def synthesize(self, *args, **kwargs):
@@ -329,3 +340,18 @@ def test_bundled_asset_provenance_survives_platform_line_endings():
         path = source if source.startswith("agents/") else "plugin/" + source
         content = root.joinpath(path).read_bytes().replace(b"\r\n", b"\n")
         assert hashlib.sha256(content).hexdigest() == expected, source
+
+
+@pytest.mark.parametrize("status,error,reason,hint", [
+    ("truncated", "output_limit", "length", "不要补齐 JSON"),
+    ("context_limit", "context_window", None, "缩小相关源码范围"),
+])
+def test_failed_run_export_displays_failure_without_publishing_partial_draft(status, error, reason, hint):
+    from repomentor.presentation import render_run
+
+    record = {"result": {"question": "Question?", "answer": None, "completion": {
+        "status": status, "error_code": error, "finish_reason": reason, "content": '{"answer":"unfinished'}}}
+    original = json.dumps(record)
+    rendered = render_run(record)
+    assert error in rendered and hint in rendered and "未发布有效答案" in rendered
+    assert "unfinished" not in rendered and json.dumps(record) == original

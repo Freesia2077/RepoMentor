@@ -1,0 +1,72 @@
+{
+  "timing": "Flagged after sample freeze and before any new30 generator dispatch. Original questions and reference answers unchanged.",
+  "preflagged_major_new30": [
+    "sweqa-flask-020",
+    "sweqa-flask-030",
+    "sweqa-requests-035"
+  ],
+  "previous_major_old20": [
+    "sweqa-pytest-023"
+  ],
+  "findings": [
+    {
+      "task_id": "sweqa-flask-020",
+      "severity": "major",
+      "finding": "Per-request modified/accessed tracking does not guarantee consistency or synchronized saves across concurrent requests; nested mutable changes are not tracked automatically.",
+      "evidence": [
+        {
+          "path": "src/flask/sessions.py",
+          "start_line": 61,
+          "end_line": 64
+        },
+        {
+          "path": "src/flask/sessions.py",
+          "start_line": 141,
+          "end_line": 146
+        }
+      ]
+    },
+    {
+      "task_id": "sweqa-flask-030",
+      "severity": "major",
+      "finding": "accessed adds Vary: Cookie, but is not part of should_set_cookie. Permanent refresh can trigger serialization independently of reads; the reference invents an accessed-to-serialization causal link.",
+      "evidence": [
+        {
+          "path": "src/flask/sessions.py",
+          "start_line": 247,
+          "end_line": 261
+        },
+        {
+          "path": "src/flask/sessions.py",
+          "start_line": 362,
+          "end_line": 387
+        }
+      ]
+    },
+    {
+      "task_id": "sweqa-requests-035",
+      "severity": "major",
+      "finding": "When chardet is absent, fallback returns utf-8 without reading self.content. Detection exceptions are not caught by this property; the reference incorrectly asserts identical content path for both branches.",
+      "evidence": [
+        {
+          "path": "src/requests/models.py",
+          "start_line": 789,
+          "end_line": 797
+        }
+      ]
+    },
+    {
+      "task_id": "sweqa-flask-010",
+      "severity": "minor",
+      "finding": "Ordinary tuples cannot directly contain themselves; cycles may pass through mutable containers. Finite acyclic nesting is not infinite recursion; preserve the question and judge the recursive tagging chain carefully."
+    },
+    {
+      "task_id": "sweqa-streamlink-020",
+      "severity": "minor",
+      "finding": "Client timestamp/token/crypto flow alone does not establish server replay prevention or statelessness guarantees. Treat security intent as inference, not an executed or proven property."
+    }
+  ],
+  "scoring": "Use the frozen five dimensions and inspect source for factual conflicts. Main result includes every selected question; report separate sensitivity excluding the four preflagged major-reference questions, without replacing samples or model failures.",
+  "new_generator_requests": 0,
+  "human_approved": false
+}

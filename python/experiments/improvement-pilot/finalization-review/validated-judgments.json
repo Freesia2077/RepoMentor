@@ -1,0 +1,1342 @@
+[
+  {
+    "candidate_id": "candidate-cb4356c6191882f8",
+    "correctness": "correct",
+    "citation_support": "supported",
+    "completeness": "adequate",
+    "abstention": "not_applicable",
+    "entry_scope": "correct",
+    "consistency": "consistent",
+    "claims": [
+      {
+        "claim": "已有键getitem成功读取且键仍存在时调用__touch",
+        "status": "supported",
+        "rationale": "294-298先取值后以key in self保护touch；与题目已有键前提一致。",
+        "evidence": [
+          {
+            "path": "src/cachetools/__init__.py",
+            "start_line": 294,
+            "end_line": 298
+          }
+        ],
+        "verified_evidence": [
+          {
+            "path": "src/cachetools/__init__.py",
+            "start_line": 294,
+            "end_line": 298,
+            "content": "    def __getitem__(self, key, cache_getitem=Cache.__getitem__):\n        value = cache_getitem(self, key)\n        if key in self:  # __missing__ may not store item\n            self.__touch(key)\n        return value",
+            "content_sha256": "5ad59483f065104c2f24c4743c8ec6f05fdf6b357a01e453b1d0a77d0ae03935",
+            "visible_to_generator": true
+          }
+        ]
+      },
+      {
+        "claim": "__touch把已有键移到OrderedDict末尾",
+        "status": "supported",
+        "rationale": "321-326调用move_to_end，缺键时才补入；答案没有把缺键分支误作本题必要分支。",
+        "evidence": [
+          {
+            "path": "src/cachetools/__init__.py",
+            "start_line": 321,
+            "end_line": 326
+          }
+        ],
+        "verified_evidence": [
+          {
+            "path": "src/cachetools/__init__.py",
+            "start_line": 321,
+            "end_line": 326,
+            "content": "    def __touch(self, key):\n        \"\"\"Mark as recently used\"\"\"\n        try:\n            self.__order.move_to_end(key)\n        except KeyError:\n            self.__order[key] = None",
+            "content_sha256": "a2691d1e2bec417d646f645ce9460bb9d8f12675f5f77c3572816b910526a6ff",
+            "visible_to_generator": true
+          }
+        ]
+      },
+      {
+        "claim": "继承的__contains__仅查询底层数据，不更新顺序",
+        "status": "supported",
+        "rationale": "103-104只有return key in self.__data，无touch操作。",
+        "evidence": [
+          {
+            "path": "src/cachetools/__init__.py",
+            "start_line": 103,
+            "end_line": 104
+          }
+        ],
+        "verified_evidence": [
+          {
+            "path": "src/cachetools/__init__.py",
+            "start_line": 103,
+            "end_line": 104,
+            "content": "    def __contains__(self, key):\n        return key in self.__data",
+            "content_sha256": "4adc1029719bce8bf16121691ed41452e495257a8e3f28a654e8c4cee690795b",
+            "visible_to_generator": true
+          }
+        ]
+      }
+    ],
+    "notes": "完整给出行为差别、读取条件、touch作用及contains实现；正式引用均覆盖对应命题。",
+    "key_points": {
+      "getitem_touch_condition": true,
+      "contains_dictionary_only": true,
+      "touch_moves_to_end": true
+    },
+    "candidate_sha256": "366c8ba7e19ac9aa2313d30478101e90736f72a3e642e6b11cb4f86372751be5",
+    "reviewer": "Codex (current session)",
+    "review_type": "model_assisted_nonblind_development_review",
+    "human_approved": false,
+    "training_eligible": false,
+    "tiers": {
+      "core_supported": true,
+      "fully_resolved": true
+    }
+  },
+  {
+    "candidate_id": "candidate-8c0961bb39331c9b",
+    "correctness": "correct",
+    "citation_support": "supported",
+    "completeness": "partial",
+    "abstention": "not_applicable",
+    "entry_scope": "correct",
+    "consistency": "consistent",
+    "claims": [
+      {
+        "claim": "write不会每次写底层，达到阈值调用flush",
+        "status": "supported",
+        "rationale": "112-118更新缓存和计数，在达到阈值后调用flush；回答有主要结论但没展开计数。",
+        "evidence": [
+          {
+            "path": "tinydb/middlewares.py",
+            "start_line": 112,
+            "end_line": 118
+          }
+        ],
+        "verified_evidence": [
+          {
+            "path": "tinydb/middlewares.py",
+            "start_line": 112,
+            "end_line": 118,
+            "content": "        # Store data in cache\n        self.cache = data\n        self._cache_modified_count += 1\n\n        # Check if we need to flush the cache\n        if self._cache_modified_count >= self.WRITE_CACHE_SIZE:\n            self.flush()",
+            "content_sha256": "70e177bafdbae0a204d8c63e9f7e72cf783ab3c2c6883381f74fa4d4d47c264d",
+            "visible_to_generator": true
+          }
+        ]
+      },
+      {
+        "claim": "close会调用flush，重复close直接返回",
+        "status": "supported",
+        "rationale": "132-142首次close调用flush后关闭；已关闭分支直接return。",
+        "evidence": [
+          {
+            "path": "tinydb/middlewares.py",
+            "start_line": 132,
+            "end_line": 142
+          }
+        ],
+        "verified_evidence": [
+          {
+            "path": "tinydb/middlewares.py",
+            "start_line": 132,
+            "end_line": 142,
+            "content": "    def close(self):\n        if self._closed:\n            return\n\n        # Flush potentially unwritten data\n        self.flush()\n\n        # Let the storage clean up too\n        self.storage.close()\n        self._closed = True\n        self.cache = None",
+            "content_sha256": "5cb0e556a8140a9acfae759731e888671c6bacf10aad1b2a74a6aab1537a3062",
+            "visible_to_generator": true
+          }
+        ]
+      },
+      {
+        "claim": "具体刷新条件和清零机制未解释",
+        "status": "unverifiable",
+        "rationale": "正文没有说明_cache_modified_count>0才写底层及写后清零，也没有交代write先更新cache并增加计数。",
+        "evidence": [
+          {
+            "path": "tinydb/middlewares.py",
+            "start_line": 112,
+            "end_line": 130
+          }
+        ],
+        "verified_evidence": [
+          {
+            "path": "tinydb/middlewares.py",
+            "start_line": 112,
+            "end_line": 130,
+            "content": "        # Store data in cache\n        self.cache = data\n        self._cache_modified_count += 1\n\n        # Check if we need to flush the cache\n        if self._cache_modified_count >= self.WRITE_CACHE_SIZE:\n            self.flush()\n\n    def flush(self):\n        \"\"\"\n        Flush all unwritten data to disk.\n        \"\"\"\n        if self._closed:\n            raise ValueError('I/O operation on closed storage')\n\n        if self._cache_modified_count > 0:\n            # Force-flush the cache by writing the data to the storage\n            self.storage.write(self.cache)\n            self._cache_modified_count = 0",
+            "content_sha256": "6c0b930578ad0ec21d4c531269ffa48185065c51d0eb2e649434be70112b7df7",
+            "visible_to_generator": false
+          }
+        ]
+      }
+    ],
+    "notes": "主要事实按write/close问题范围理解正确；仅在阈值或close刷新不作为对公共flush方法不存在的主张。必要刷新机制缺失，完整性不足。",
+    "key_points": {
+      "write_cache_and_count": false,
+      "threshold_flush": true,
+      "flush_dirty_only_and_reset": false,
+      "close_order_and_repeat": true
+    },
+    "candidate_sha256": "b36a113255e91ee1a4a19909d584fe16d63bc78908d4b0909e374379c7cf5efa",
+    "reviewer": "Codex (current session)",
+    "review_type": "model_assisted_nonblind_development_review",
+    "human_approved": false,
+    "training_eligible": false,
+    "tiers": {
+      "core_supported": true,
+      "fully_resolved": false
+    }
+  },
+  {
+    "candidate_id": "candidate-03db688255885409",
+    "correctness": "correct",
+    "citation_support": "supported",
+    "completeness": "partial",
+    "abstention": "not_applicable",
+    "entry_scope": "correct",
+    "consistency": "consistent",
+    "claims": [
+      {
+        "claim": "已有键getitem更新顺序，in不更新",
+        "status": "supported",
+        "rationale": "294-298和103-104支持这一行为差别。",
+        "evidence": [
+          {
+            "path": "src/cachetools/__init__.py",
+            "start_line": 294,
+            "end_line": 298
+          },
+          {
+            "path": "src/cachetools/__init__.py",
+            "start_line": 103,
+            "end_line": 104
+          }
+        ],
+        "verified_evidence": [
+          {
+            "path": "src/cachetools/__init__.py",
+            "start_line": 294,
+            "end_line": 298,
+            "content": "    def __getitem__(self, key, cache_getitem=Cache.__getitem__):\n        value = cache_getitem(self, key)\n        if key in self:  # __missing__ may not store item\n            self.__touch(key)\n        return value",
+            "content_sha256": "5ad59483f065104c2f24c4743c8ec6f05fdf6b357a01e453b1d0a77d0ae03935",
+            "visible_to_generator": true
+          },
+          {
+            "path": "src/cachetools/__init__.py",
+            "start_line": 103,
+            "end_line": 104,
+            "content": "    def __contains__(self, key):\n        return key in self.__data",
+            "content_sha256": "4adc1029719bce8bf16121691ed41452e495257a8e3f28a654e8c4cee690795b",
+            "visible_to_generator": true
+          }
+        ]
+      },
+      {
+        "claim": "未展开__touch及底层字典机制",
+        "status": "unverifiable",
+        "rationale": "答案只给结论；题目要求结合__touch与继承contains说明，未交代touch移到末尾和contains只查字典。",
+        "evidence": [
+          {
+            "path": "src/cachetools/__init__.py",
+            "start_line": 321,
+            "end_line": 326
+          },
+          {
+            "path": "src/cachetools/__init__.py",
+            "start_line": 103,
+            "end_line": 104
+          }
+        ],
+        "verified_evidence": [
+          {
+            "path": "src/cachetools/__init__.py",
+            "start_line": 321,
+            "end_line": 326,
+            "content": "    def __touch(self, key):\n        \"\"\"Mark as recently used\"\"\"\n        try:\n            self.__order.move_to_end(key)\n        except KeyError:\n            self.__order[key] = None",
+            "content_sha256": "a2691d1e2bec417d646f645ce9460bb9d8f12675f5f77c3572816b910526a6ff",
+            "visible_to_generator": true
+          },
+          {
+            "path": "src/cachetools/__init__.py",
+            "start_line": 103,
+            "end_line": 104,
+            "content": "    def __contains__(self, key):\n        return key in self.__data",
+            "content_sha256": "4adc1029719bce8bf16121691ed41452e495257a8e3f28a654e8c4cee690795b",
+            "visible_to_generator": true
+          }
+        ]
+      }
+    ],
+    "notes": "引用有充分源码，正文没有解释必要机制；不能用已列引用替代文字说明。",
+    "key_points": {
+      "getitem_touch_condition": false,
+      "contains_dictionary_only": false,
+      "touch_moves_to_end": false
+    },
+    "candidate_sha256": "f306f976d1b860951fa0c417dd07e031242164c3023c3e0855e95bb7683be8f5",
+    "reviewer": "Codex (current session)",
+    "review_type": "model_assisted_nonblind_development_review",
+    "human_approved": false,
+    "training_eligible": false,
+    "tiers": {
+      "core_supported": true,
+      "fully_resolved": false
+    }
+  },
+  {
+    "candidate_id": "candidate-20f18e0b9a24109d",
+    "correctness": "correct",
+    "citation_support": "supported",
+    "completeness": "partial",
+    "abstention": "not_applicable",
+    "entry_scope": "correct",
+    "consistency": "consistent",
+    "claims": [
+      {
+        "claim": "write先缓存数据并累加修改计数",
+        "status": "supported",
+        "rationale": "112-114直接执行cache赋值和计数+1。",
+        "evidence": [
+          {
+            "path": "tinydb/middlewares.py",
+            "start_line": 112,
+            "end_line": 114
+          }
+        ],
+        "verified_evidence": [
+          {
+            "path": "tinydb/middlewares.py",
+            "start_line": 112,
+            "end_line": 114,
+            "content": "        # Store data in cache\n        self.cache = data\n        self._cache_modified_count += 1",
+            "content_sha256": "3b64c904c9d5640fe36d1e4a2e2da44a89319ecd1d12e5b3d42cf9bf49f3e9d7",
+            "visible_to_generator": true
+          }
+        ]
+      },
+      {
+        "claim": "达到阈值时flush写底层并重置计数",
+        "status": "supported",
+        "rationale": "117-118在阈值后调用flush，此时脏计数为正；127-130写入后清零。",
+        "evidence": [
+          {
+            "path": "tinydb/middlewares.py",
+            "start_line": 117,
+            "end_line": 130
+          }
+        ],
+        "verified_evidence": [
+          {
+            "path": "tinydb/middlewares.py",
+            "start_line": 117,
+            "end_line": 130,
+            "content": "        if self._cache_modified_count >= self.WRITE_CACHE_SIZE:\n            self.flush()\n\n    def flush(self):\n        \"\"\"\n        Flush all unwritten data to disk.\n        \"\"\"\n        if self._closed:\n            raise ValueError('I/O operation on closed storage')\n\n        if self._cache_modified_count > 0:\n            # Force-flush the cache by writing the data to the storage\n            self.storage.write(self.cache)\n            self._cache_modified_count = 0",
+            "content_sha256": "9f5a85ae9af96fb05277b3dcc18a3981115209e83ac6c6c899b23a696916982f",
+            "visible_to_generator": false
+          }
+        ]
+      },
+      {
+        "claim": "close先调用flush再关闭底层并设置关闭状态和清空缓存",
+        "status": "supported",
+        "rationale": "136-142顺序与答案一致。",
+        "evidence": [
+          {
+            "path": "tinydb/middlewares.py",
+            "start_line": 136,
+            "end_line": 142
+          }
+        ],
+        "verified_evidence": [
+          {
+            "path": "tinydb/middlewares.py",
+            "start_line": 136,
+            "end_line": 142,
+            "content": "        # Flush potentially unwritten data\n        self.flush()\n\n        # Let the storage clean up too\n        self.storage.close()\n        self._closed = True\n        self.cache = None",
+            "content_sha256": "c3388e9422218ecff5b66d65a2075bfac83e27db5fe8d65b613287f374a5afbd",
+            "visible_to_generator": true
+          }
+        ]
+      },
+      {
+        "claim": "重复close不会再flush或关闭",
+        "status": "supported",
+        "rationale": "133-134对_closed提前return。",
+        "evidence": [
+          {
+            "path": "tinydb/middlewares.py",
+            "start_line": 133,
+            "end_line": 134
+          }
+        ],
+        "verified_evidence": [
+          {
+            "path": "tinydb/middlewares.py",
+            "start_line": 133,
+            "end_line": 134,
+            "content": "        if self._closed:\n            return",
+            "content_sha256": "940cad71af80fad7b11b66e882db3965c16658a80051e2490998b981efc3ff4f",
+            "visible_to_generator": true
+          }
+        ]
+      },
+      {
+        "claim": "缺少flush仅在脏计数大于零时实际写入的条件",
+        "status": "unverifiable",
+        "rationale": "正文对阈值后flush的解释正确，但close前可能已无未写修改；未说明127的条件，不能认为任何close都会再次发生底层写。",
+        "evidence": [
+          {
+            "path": "tinydb/middlewares.py",
+            "start_line": 127,
+            "end_line": 130
+          }
+        ],
+        "verified_evidence": [
+          {
+            "path": "tinydb/middlewares.py",
+            "start_line": 127,
+            "end_line": 130,
+            "content": "        if self._cache_modified_count > 0:\n            # Force-flush the cache by writing the data to the storage\n            self.storage.write(self.cache)\n            self._cache_modified_count = 0",
+            "content_sha256": "7e852bf0318ad70f5b7d70a5b89531a94996e42c3cc6813f2555eba144a2783a",
+            "visible_to_generator": true
+          }
+        ]
+      }
+    ],
+    "notes": "较长答案补全计数、写入和清零及close顺序，但仍省略flush的dirty>0条件。把刷新理解为调用flush时事实尚可，不将其推成每次close都物理写入；按冻结必要命题完整性仍partial。",
+    "key_points": {
+      "write_cache_and_count": true,
+      "threshold_flush": true,
+      "flush_dirty_only_and_reset": false,
+      "close_order_and_repeat": true
+    },
+    "candidate_sha256": "52d7c7810542806660e6ecdd463ea10fabb1a760679944d6f810bf59e7c44450",
+    "reviewer": "Codex (current session)",
+    "review_type": "model_assisted_nonblind_development_review",
+    "human_approved": false,
+    "training_eligible": false,
+    "tiers": {
+      "core_supported": true,
+      "fully_resolved": false
+    }
+  },
+  {
+    "candidate_id": "candidate-025b2eddc58933e0",
+    "correctness": "incorrect",
+    "citation_support": "partial",
+    "completeness": "adequate",
+    "abstention": "not_applicable",
+    "entry_scope": "correct",
+    "consistency": "consistent",
+    "claims": [
+      {
+        "claim": "customAlphabet传2.9后无size长度为21",
+        "status": "contradicted",
+        "rationale": "初次调用将defaultSize绑定为2.9，返回闭包默认size取该值，|0得2而不是21。",
+        "evidence": [
+          {
+            "path": "non-secure/index.js",
+            "start_line": 5,
+            "end_line": 11
+          }
+        ],
+        "verified_evidence": [
+          {
+            "path": "non-secure/index.js",
+            "start_line": 5,
+            "end_line": 11,
+            "content": "export let customAlphabet = (alphabet, defaultSize = 21) => {\n  return (size = defaultSize) => {\n    let id = ''\n    // A compact alternative for `for (var i = 0; i < step; i++)`.\n    // `> 0` stops a negative size from looping forever.\n    let i = size | 0\n    while (i-- > 0) {",
+            "content_sha256": "3b5b0c00539056a0bdd2389807a37fa3665d7caa2e57fee39b0a552e2cfed1d2",
+            "visible_to_generator": true
+          }
+        ]
+      },
+      {
+        "claim": "size为0和-1时都返回空字符串",
+        "status": "supported",
+        "rationale": "i-- >0在首次检查即不成立，id保持空串。",
+        "evidence": [
+          {
+            "path": "non-secure/index.js",
+            "start_line": 7,
+            "end_line": 15
+          }
+        ],
+        "verified_evidence": [
+          {
+            "path": "non-secure/index.js",
+            "start_line": 7,
+            "end_line": 15,
+            "content": "    let id = ''\n    // A compact alternative for `for (var i = 0; i < step; i++)`.\n    // `> 0` stops a negative size from looping forever.\n    let i = size | 0\n    while (i-- > 0) {\n      // `| 0` is more compact and faster than `Math.floor()`.\n      id += alphabet[(Math.random() * alphabet.length) | 0]\n    }\n    return id",
+            "content_sha256": "514d5c69b3bae8e56170ecd5d88b9c734233d688e31cb8ef77eb0f34917b5d3a",
+            "visible_to_generator": true
+          }
+        ]
+      },
+      {
+        "claim": "|0将浮点size转成整数",
+        "status": "supported",
+        "rationale": "10行是size|0；对题目2.9结果为2。",
+        "evidence": [
+          {
+            "path": "non-secure/index.js",
+            "start_line": 10,
+            "end_line": 11
+          }
+        ],
+        "verified_evidence": [
+          {
+            "path": "non-secure/index.js",
+            "start_line": 10,
+            "end_line": 11,
+            "content": "    let i = size | 0\n    while (i-- > 0) {",
+            "content_sha256": "b38106fedfd7be1ca3b837b09d58fe79a8ef707fd022a4d9f8bef3e3a039ee4a",
+            "visible_to_generator": true
+          }
+        ]
+      },
+      {
+        "claim": "|0是为了防止浮点精度导致无限循环，L12说明此意",
+        "status": "unsupported",
+        "rationale": "12行只说比Math.floor更紧凑更快；9行将负数无限循环的避免归于>0条件，不能推出浮点精度无限循环说法。",
+        "evidence": [
+          {
+            "path": "non-secure/index.js",
+            "start_line": 8,
+            "end_line": 13
+          }
+        ],
+        "verified_evidence": [
+          {
+            "path": "non-secure/index.js",
+            "start_line": 8,
+            "end_line": 13,
+            "content": "    // A compact alternative for `for (var i = 0; i < step; i++)`.\n    // `> 0` stops a negative size from looping forever.\n    let i = size | 0\n    while (i-- > 0) {\n      // `| 0` is more compact and faster than `Math.floor()`.\n      id += alphabet[(Math.random() * alphabet.length) | 0]",
+            "content_sha256": "0ca7b0928baf817e3dcdcb4ab2913ceb885af8bd56a6500b484834f19ef58d75",
+            "visible_to_generator": true
+          }
+        ]
+      },
+      {
+        "claim": ">0条件阻止负数循环",
+        "status": "supported",
+        "rationale": "9-11行与该局部解释一致。",
+        "evidence": [
+          {
+            "path": "non-secure/index.js",
+            "start_line": 9,
+            "end_line": 11
+          }
+        ],
+        "verified_evidence": [
+          {
+            "path": "non-secure/index.js",
+            "start_line": 9,
+            "end_line": 11,
+            "content": "    // `> 0` stops a negative size from looping forever.\n    let i = size | 0\n    while (i-- > 0) {",
+            "content_sha256": "831d66c520ec8ed948ade9686d8797fa3b7ce5c04caa3b21401b6dd42fe71ea6",
+            "visible_to_generator": true
+          }
+        ]
+      }
+    ],
+    "notes": "核心数字2被错误改为21；解释变多未纠正显式实参，还添加无根据的浮点精度理由。",
+    "key_points": {
+      "lengths_2_0_0": false,
+      "integer_and_loop_reason": false,
+      "nonsecure_no_negative_exception": true
+    },
+    "candidate_sha256": "9d0cf4f5ccbb8fb4ce2f1150e9a3fae6a592700a115a1e8c0c4096788be2ee6d",
+    "reviewer": "Codex (current session)",
+    "review_type": "model_assisted_nonblind_development_review",
+    "human_approved": false,
+    "training_eligible": false,
+    "tiers": {
+      "core_supported": false,
+      "fully_resolved": false
+    }
+  },
+  {
+    "candidate_id": "candidate-b1723a46ec18f288",
+    "correctness": "incorrect",
+    "citation_support": "partial",
+    "completeness": "partial",
+    "abstention": "not_applicable",
+    "entry_scope": "correct",
+    "consistency": "consistent",
+    "claims": [
+      {
+        "claim": "无size时长度21",
+        "status": "contradicted",
+        "rationale": "形式默认值21只有未传defaultSize时才用；题目明确已传2.9，闭包默认经|0为2。",
+        "evidence": [
+          {
+            "path": "non-secure/index.js",
+            "start_line": 5,
+            "end_line": 11
+          }
+        ],
+        "verified_evidence": [
+          {
+            "path": "non-secure/index.js",
+            "start_line": 5,
+            "end_line": 11,
+            "content": "export let customAlphabet = (alphabet, defaultSize = 21) => {\n  return (size = defaultSize) => {\n    let id = ''\n    // A compact alternative for `for (var i = 0; i < step; i++)`.\n    // `> 0` stops a negative size from looping forever.\n    let i = size | 0\n    while (i-- > 0) {",
+            "content_sha256": "3b5b0c00539056a0bdd2389807a37fa3665d7caa2e57fee39b0a552e2cfed1d2",
+            "visible_to_generator": true
+          }
+        ]
+      },
+      {
+        "claim": "显式0与-1返回长度0",
+        "status": "supported",
+        "rationale": "主实现循环不进入，两个测试窗口也明确断言空串。",
+        "evidence": [
+          {
+            "path": "non-secure/index.js",
+            "start_line": 10,
+            "end_line": 15
+          },
+          {
+            "path": "test/non-secure.test.js",
+            "start_line": 72,
+            "end_line": 75
+          },
+          {
+            "path": "test/non-secure.test.js",
+            "start_line": 125,
+            "end_line": 128
+          }
+        ],
+        "verified_evidence": [
+          {
+            "path": "non-secure/index.js",
+            "start_line": 10,
+            "end_line": 15,
+            "content": "    let i = size | 0\n    while (i-- > 0) {\n      // `| 0` is more compact and faster than `Math.floor()`.\n      id += alphabet[(Math.random() * alphabet.length) | 0]\n    }\n    return id",
+            "content_sha256": "ab6b4be05121ada5993d8440ceca9ebdb2948442b031ba1270c4e3a14dcc5b31",
+            "visible_to_generator": true
+          },
+          {
+            "path": "test/non-secure.test.js",
+            "start_line": 72,
+            "end_line": 75,
+            "content": "    test('is ready for 0 size', () => {\n      equal(customAlphabet('abc')(0), '')\n      equal(customAlphabet('abc', 0)(0), '')\n    })",
+            "content_sha256": "936eec9df30831981f19c04edb768f578fabca563fd28e4272413c99cb6ec936",
+            "visible_to_generator": true
+          },
+          {
+            "path": "test/non-secure.test.js",
+            "start_line": 125,
+            "end_line": 128,
+            "content": "test('does not hang on negative size (customAlphabet)', () => {\n  equal(customAlphabet('abcdef')(-1), '')\n  equal(customAlphabet('abcdef', -5)(), '')\n})",
+            "content_sha256": "73e6dba91bfef6103d4f180bedf4b0cc47c5f34c12e5314481a904c5b1bf36a4",
+            "visible_to_generator": true
+          }
+        ]
+      },
+      {
+        "claim": "没有解释位运算和循环条件",
+        "status": "unverifiable",
+        "rationale": "正文只列三个长度，缺题目要求的机制。",
+        "evidence": [
+          {
+            "path": "non-secure/index.js",
+            "start_line": 10,
+            "end_line": 14
+          }
+        ],
+        "verified_evidence": [
+          {
+            "path": "non-secure/index.js",
+            "start_line": 10,
+            "end_line": 14,
+            "content": "    let i = size | 0\n    while (i-- > 0) {\n      // `| 0` is more compact and faster than `Math.floor()`.\n      id += alphabet[(Math.random() * alphabet.length) | 0]\n    }",
+            "content_sha256": "d4ff88b3c67b06efcac0aed991fd08d04c8f05eff989f589f6fee9a6fab36fb1",
+            "visible_to_generator": true
+          }
+        ]
+      }
+    ],
+    "notes": "一个必要数值错误，且机制解释缺失；测试只支持0和负数分支，不能支持错用默认21。",
+    "key_points": {
+      "lengths_2_0_0": false,
+      "integer_and_loop_reason": false,
+      "nonsecure_no_negative_exception": true
+    },
+    "candidate_sha256": "955f513ea3d0bbad12f432762221c456017caea5d87aad895db21d2cec0c3097",
+    "reviewer": "Codex (current session)",
+    "review_type": "model_assisted_nonblind_development_review",
+    "human_approved": false,
+    "training_eligible": false,
+    "tiers": {
+      "core_supported": false,
+      "fully_resolved": false
+    }
+  },
+  {
+    "candidate_id": "candidate-6edbcc5670c8859f",
+    "correctness": "incorrect",
+    "citation_support": "unsupported",
+    "completeness": "adequate",
+    "abstention": "appropriate",
+    "entry_scope": "not_applicable",
+    "consistency": "contradictory",
+    "claims": [
+      {
+        "claim": "仅凭库源码不能知道公司的当前DATABASE_URL",
+        "status": "unverifiable",
+        "rationale": "缺少实际生产环境是逻辑边界，不通过引用普通库函数伪造公司私有事实。",
+        "evidence": [],
+        "verified_evidence": []
+      },
+      {
+        "claim": "库不存储记录或暴露变量且没有返回值的机制",
+        "status": "contradicted",
+        "rationale": "DotEnv.dict会缓存并返回self._dict，get也会返回指定键；这不等于知道公司的进程值，但否定这些机制是错误。",
+        "evidence": [
+          {
+            "path": "src/dotenv/main.py",
+            "start_line": 58,
+            "end_line": 58
+          },
+          {
+            "path": "src/dotenv/main.py",
+            "start_line": 79,
+            "end_line": 93
+          },
+          {
+            "path": "src/dotenv/main.py",
+            "start_line": 116,
+            "end_line": 121
+          }
+        ],
+        "verified_evidence": [
+          {
+            "path": "src/dotenv/main.py",
+            "start_line": 58,
+            "end_line": 58,
+            "content": "        self._dict: Optional[Dict[str, Optional[str]]] = None",
+            "content_sha256": "e2c5b677655a86ca2b6a51e6ba841052134fd08e493649413ca3574e7ff5fe37",
+            "visible_to_generator": true
+          },
+          {
+            "path": "src/dotenv/main.py",
+            "start_line": 79,
+            "end_line": 93,
+            "content": "    def dict(self) -> Dict[str, Optional[str]]:\n        \"\"\"Return dotenv as dict\"\"\"\n        if self._dict is not None:\n            return self._dict\n\n        raw_values = self.parse()\n\n        if self.interpolate:\n            self._dict = OrderedDict(\n                resolve_variables(raw_values, override=self.override)\n            )\n        else:\n            self._dict = OrderedDict(raw_values)\n\n        return self._dict",
+            "content_sha256": "6f1b8c117e000aca12297dad3484058d2e0fea593b4309b8d13416bc8319ccf5",
+            "visible_to_generator": true
+          },
+          {
+            "path": "src/dotenv/main.py",
+            "start_line": 116,
+            "end_line": 121,
+            "content": "    def get(self, key: str) -> Optional[str]:\n        \"\"\" \"\"\"\n        data = self.dict()\n\n        if key in data:\n            return data[key]",
+            "content_sha256": "c8cfad48f171fc74bc0b4a79b11c32706d6df6cc5c36d1e36d2548832e7efc96",
+            "visible_to_generator": false
+          }
+        ]
+      },
+      {
+        "claim": "load_dotenv返回当前进程环境字典",
+        "status": "contradicted",
+        "rationale": "签名与Returns明确为bool；479调用set_as_environment_variables，后者返回True/False。",
+        "evidence": [
+          {
+            "path": "src/dotenv/main.py",
+            "start_line": 431,
+            "end_line": 452
+          },
+          {
+            "path": "src/dotenv/main.py",
+            "start_line": 101,
+            "end_line": 114
+          }
+        ],
+        "verified_evidence": [
+          {
+            "path": "src/dotenv/main.py",
+            "start_line": 431,
+            "end_line": 452,
+            "content": "def load_dotenv(\n    dotenv_path: Optional[StrPath] = None,\n    stream: Optional[IO[str]] = None,\n    verbose: bool = False,\n    override: bool = False,\n    interpolate: bool = True,\n    encoding: Optional[str] = \"utf-8\",\n) -> bool:\n    \"\"\"Parse a .env file and then load all the variables found as environment variables.\n\n    Parameters:\n        dotenv_path: Absolute or relative path to .env file. A leading `~` is\n            expanded to the user's home directory.\n        stream: Text stream (such as `io.StringIO`) with .env content, used if\n            `dotenv_path` is `None`.\n        verbose: Whether to output a warning the .env file is missing.\n        override: Whether to override the system environment variables with the variables\n            from the `.env` file.\n        interpolate: Whether to interpolate variables using POSIX variable expansion.\n        encoding: Encoding to be used to read the file.\n    Returns:\n        Bool: True if at least one environment variable is set else False",
+            "content_sha256": "bf8b2e7837e2aebcb68bf175b74a8e0a74584802c2a6dadb657dd33119de4ec8",
+            "visible_to_generator": true
+          },
+          {
+            "path": "src/dotenv/main.py",
+            "start_line": 101,
+            "end_line": 114,
+            "content": "    def set_as_environment_variables(self) -> bool:\n        \"\"\"\n        Load the current dotenv as system environment variable.\n        \"\"\"\n        if not self.dict():\n            return False\n\n        for k, v in self.dict().items():\n            if k in os.environ and not self.override:\n                continue\n            if v is not None:\n                os.environ[k] = v\n\n        return True",
+            "content_sha256": "4c36cbf81021fa31ea7bc0670bdb9c4d13d5ea1c54b716d614d5c5c7f0bc0e74",
+            "visible_to_generator": false
+          }
+        ]
+      },
+      {
+        "claim": "DotEnv.dict返回当前进程环境变量字典",
+        "status": "contradicted",
+        "rationale": "79-93由parse构造并缓存dotenv映射，不是os.environ整体字典。",
+        "evidence": [
+          {
+            "path": "src/dotenv/main.py",
+            "start_line": 79,
+            "end_line": 99
+          }
+        ],
+        "verified_evidence": [
+          {
+            "path": "src/dotenv/main.py",
+            "start_line": 79,
+            "end_line": 99,
+            "content": "    def dict(self) -> Dict[str, Optional[str]]:\n        \"\"\"Return dotenv as dict\"\"\"\n        if self._dict is not None:\n            return self._dict\n\n        raw_values = self.parse()\n\n        if self.interpolate:\n            self._dict = OrderedDict(\n                resolve_variables(raw_values, override=self.override)\n            )\n        else:\n            self._dict = OrderedDict(raw_values)\n\n        return self._dict\n\n    def parse(self) -> Iterator[Tuple[str, Optional[str]]]:\n        with self._get_stream() as stream:\n            for mapping in with_warn_for_invalid_lines(parse_stream(stream)):\n                if mapping.key is not None:\n                    yield mapping.key, mapping.value",
+            "content_sha256": "bcbcb9029a8911681cd2c475f756841c10ea7b7ad77b66adf16685715cfcc62e",
+            "visible_to_generator": false
+          }
+        ]
+      },
+      {
+        "claim": "生产进程实际变量值只由运行时.env内容决定",
+        "status": "contradicted",
+        "rationale": "已有os.environ键且不override时跳过覆盖，实际值还受外部已有环境等影响。",
+        "evidence": [
+          {
+            "path": "src/dotenv/main.py",
+            "start_line": 108,
+            "end_line": 112
+          }
+        ],
+        "verified_evidence": [
+          {
+            "path": "src/dotenv/main.py",
+            "start_line": 108,
+            "end_line": 112,
+            "content": "        for k, v in self.dict().items():\n            if k in os.environ and not self.override:\n                continue\n            if v is not None:\n                os.environ[k] = v",
+            "content_sha256": "1e53be670935fd058f396d9dfe3a22b28e049a4b3934cecfe891eb397b5119c8",
+            "visible_to_generator": false
+          }
+        ]
+      },
+      {
+        "claim": "insufficient_evidence=false与拒答正文矛盾",
+        "status": "unverifiable",
+        "rationale": "该确定性问题直接来自候选JSON字段与正文，无可引用的目标源码行。",
+        "evidence": [],
+        "verified_evidence": []
+      }
+    ],
+    "notes": "拒答方向正确，但反复添加错误库事实；引用的dict/load_dotenv源码实际反驳这些说法。bool/缓存/返回映射核验明确。未读来源101-121仅为评审反证，不当模型可见来源。flag=False也未修复。",
+    "key_points": {
+      "refuses_private_value": true,
+      "does_not_invent_library_facts": false,
+      "insufficient_flag_consistent": false
+    },
+    "candidate_sha256": "3689e561c4fe9bb15c5ddc3c964388f8745dfde839db6889255fec0557e35b5c",
+    "reviewer": "Codex (current session)",
+    "review_type": "model_assisted_nonblind_development_review",
+    "human_approved": false,
+    "training_eligible": false,
+    "tiers": {
+      "core_supported": false,
+      "fully_resolved": false
+    }
+  },
+  {
+    "candidate_id": "candidate-66c4d6fe8e27bc17",
+    "correctness": "incorrect",
+    "citation_support": "partial",
+    "completeness": "adequate",
+    "abstention": "not_applicable",
+    "entry_scope": "correct",
+    "consistency": "consistent",
+    "claims": [
+      {
+        "claim": "单参数null转换为空串",
+        "status": "contradicted",
+        "rationale": "177是空串拼接null，JavaScript结果为字符串null；不是??空串分支。",
+        "evidence": [
+          {
+            "path": "source/index.js",
+            "start_line": 175,
+            "end_line": 177
+          }
+        ],
+        "verified_evidence": [
+          {
+            "path": "source/index.js",
+            "start_line": 175,
+            "end_line": 177,
+            "content": "\t\tif (arguments_.length === 1) {\n\t\t\t// eslint-disable-next-line no-implicit-coercion\n\t\t\treturn applyStyle(builder, '' + arguments_[0]);",
+            "content_sha256": "788ae374f13c1bf8afb7520d9664a3ad6989513f9500a2f3c121c4ecd0d539ef",
+            "visible_to_generator": true
+          }
+        ]
+      },
+      {
+        "claim": "双参数null和undefined经nullish替换后中间有一个空格",
+        "status": "supported",
+        "rationale": "180-182是两个??空串表达式与中间固定空格，得一个空格字符串。",
+        "evidence": [
+          {
+            "path": "source/index.js",
+            "start_line": 180,
+            "end_line": 182
+          }
+        ],
+        "verified_evidence": [
+          {
+            "path": "source/index.js",
+            "start_line": 180,
+            "end_line": 182,
+            "content": "\t\tif (arguments_.length === 2) {\n\t\t\t// The template literal matches `Array#join` coercion (`null` and `undefined` become empty, objects use `toString`) while being faster.\n\t\t\treturn applyStyle(builder, `${arguments_[0] ?? ''} ${arguments_[1] ?? ''}`);",
+            "content_sha256": "c9b069b91a293ab687132211e0bcbc4159a56ecf7ff1c0fa6efeffea61fb200f",
+            "visible_to_generator": true
+          }
+        ]
+      }
+    ],
+    "notes": "正确区分结果不相同并答对双参，但单参的具体结果错误，故任务不解决。",
+    "key_points": {
+      "single_null_is_null_text": false,
+      "two_nullish_is_space": true
+    },
+    "candidate_sha256": "8c78118da33f3a47c5c4b533a9d518c21611ecbf97f5a4ae7b1ab586148c7248",
+    "reviewer": "Codex (current session)",
+    "review_type": "model_assisted_nonblind_development_review",
+    "human_approved": false,
+    "training_eligible": false,
+    "tiers": {
+      "core_supported": false,
+      "fully_resolved": false
+    }
+  },
+  {
+    "candidate_id": "candidate-e0a93fe555bd7093",
+    "correctness": "correct",
+    "citation_support": "not_applicable",
+    "completeness": "adequate",
+    "abstention": "appropriate",
+    "entry_scope": "not_applicable",
+    "consistency": "contradictory",
+    "claims": [
+      {
+        "claim": "仅凭库源码无法知道公司当前DATABASE_URL",
+        "status": "unverifiable",
+        "rationale": "对缺少运行环境的边界拒答正确，逻辑上无需用库源码证明不存在公司私有值。",
+        "evidence": [],
+        "verified_evidence": []
+      },
+      {
+        "claim": "insufficient_evidence=false与拒答正文不一致",
+        "status": "unverifiable",
+        "rationale": "确定性协议矛盾来自答案JSON自身，不是目标仓库语义。",
+        "evidence": [],
+        "verified_evidence": []
+      }
+    ],
+    "notes": "正文适当、简洁且无额外库事实；不因附了通用库来源推断获取了私有值。False标志与缺信息结论相冲突，拒答协议仍不通过。",
+    "key_points": {
+      "refuses_private_value": true,
+      "does_not_invent_library_facts": true,
+      "insufficient_flag_consistent": false
+    },
+    "candidate_sha256": "b6ad7ecc1715dd8fdb05b234fa7e674398137593274ad60a8c7efa7bfe331870",
+    "reviewer": "Codex (current session)",
+    "review_type": "model_assisted_nonblind_development_review",
+    "human_approved": false,
+    "training_eligible": false,
+    "tiers": {
+      "core_supported": false,
+      "fully_resolved": false
+    }
+  },
+  {
+    "candidate_id": "candidate-e225639fbc423e9f",
+    "correctness": "incorrect",
+    "citation_support": "partial",
+    "completeness": "adequate",
+    "abstention": "not_applicable",
+    "entry_scope": "correct",
+    "consistency": "consistent",
+    "claims": [
+      {
+        "claim": "单参数null经空串拼接成为空串",
+        "status": "contradicted",
+        "rationale": "177的空串+null产生文本null；把拼接和??空串混淆。",
+        "evidence": [
+          {
+            "path": "source/index.js",
+            "start_line": 175,
+            "end_line": 177
+          }
+        ],
+        "verified_evidence": [
+          {
+            "path": "source/index.js",
+            "start_line": 175,
+            "end_line": 177,
+            "content": "\t\tif (arguments_.length === 1) {\n\t\t\t// eslint-disable-next-line no-implicit-coercion\n\t\t\treturn applyStyle(builder, '' + arguments_[0]);",
+            "content_sha256": "788ae374f13c1bf8afb7520d9664a3ad6989513f9500a2f3c121c4ecd0d539ef",
+            "visible_to_generator": true
+          }
+        ]
+      },
+      {
+        "claim": "双参数nullish经??变空串并由空格连接",
+        "status": "supported",
+        "rationale": "182有两个独立nullish处理及字面空格。",
+        "evidence": [
+          {
+            "path": "source/index.js",
+            "start_line": 180,
+            "end_line": 182
+          }
+        ],
+        "verified_evidence": [
+          {
+            "path": "source/index.js",
+            "start_line": 180,
+            "end_line": 182,
+            "content": "\t\tif (arguments_.length === 2) {\n\t\t\t// The template literal matches `Array#join` coercion (`null` and `undefined` become empty, objects use `toString`) while being faster.\n\t\t\treturn applyStyle(builder, `${arguments_[0] ?? ''} ${arguments_[1] ?? ''}`);",
+            "content_sha256": "c9b069b91a293ab687132211e0bcbc4159a56ecf7ff1c0fa6efeffea61fb200f",
+            "visible_to_generator": true
+          }
+        ]
+      },
+      {
+        "claim": "两分支转换不同",
+        "status": "supported",
+        "rationale": "175-182走不同表达式，单参文本null而双参一空格。",
+        "evidence": [
+          {
+            "path": "source/index.js",
+            "start_line": 175,
+            "end_line": 182
+          }
+        ],
+        "verified_evidence": [
+          {
+            "path": "source/index.js",
+            "start_line": 175,
+            "end_line": 182,
+            "content": "\t\tif (arguments_.length === 1) {\n\t\t\t// eslint-disable-next-line no-implicit-coercion\n\t\t\treturn applyStyle(builder, '' + arguments_[0]);\n\t\t}\n\n\t\tif (arguments_.length === 2) {\n\t\t\t// The template literal matches `Array#join` coercion (`null` and `undefined` become empty, objects use `toString`) while being faster.\n\t\t\treturn applyStyle(builder, `${arguments_[0] ?? ''} ${arguments_[1] ?? ''}`);",
+            "content_sha256": "132c9d230683368d915cad2e68fe662d8f911983a328a40f5a5e5be3ab8e4961",
+            "visible_to_generator": true
+          }
+        ]
+      },
+      {
+        "claim": "测试说明null/foo前空格及foo/undefined尾空格",
+        "status": "partial",
+        "rationale": "87-88确实验证可见空格，但完整返回值还带ANSI样式码；答案省略转义码可作为内容示意，不能称测试精确原值。",
+        "evidence": [
+          {
+            "path": "test/chalk.js",
+            "start_line": 87,
+            "end_line": 88
+          }
+        ],
+        "verified_evidence": [
+          {
+            "path": "test/chalk.js",
+            "start_line": 87,
+            "end_line": 88,
+            "content": "\tt.is(chalk.red(null, 'foo'), '\\u{1B}[31m foo\\u{1B}[39m');\n\tt.is(chalk.red('foo', undefined), '\\u{1B}[31mfoo \\u{1B}[39m');",
+            "content_sha256": "0bc0338064dc31c26e5356749f14d6e4fd96f32df720834017bc93f1fda7571d",
+            "visible_to_generator": true
+          }
+        ]
+      }
+    ],
+    "notes": "增加解释仍未修复核心单参误读；引用源行自身与空串结论矛盾。测试可佐证双参空格，不能佐证单参null为空。",
+    "key_points": {
+      "single_null_is_null_text": false,
+      "two_nullish_is_space": true
+    },
+    "candidate_sha256": "d61e86c97f05a0a1f8fb40002b10622c746141cf6b1da1656f3aef3c65b1d754",
+    "reviewer": "Codex (current session)",
+    "review_type": "model_assisted_nonblind_development_review",
+    "human_approved": false,
+    "training_eligible": false,
+    "tiers": {
+      "core_supported": false,
+      "fully_resolved": false
+    }
+  },
+  {
+    "candidate_id": "candidate-145fac18bc3b6bbd",
+    "correctness": "correct",
+    "citation_support": "supported",
+    "completeness": "partial",
+    "abstention": "not_applicable",
+    "entry_scope": "correct",
+    "consistency": "consistent",
+    "claims": [
+      {
+        "claim": "on不把事件名转小写",
+        "status": "supported",
+        "rationale": "66-73直接使用原type查取与设置Map。",
+        "evidence": [
+          {
+            "path": "src/index.ts",
+            "start_line": 66,
+            "end_line": 73
+          }
+        ],
+        "verified_evidence": [
+          {
+            "path": "src/index.ts",
+            "start_line": 66,
+            "end_line": 73,
+            "content": "\t\ton<Key extends keyof Events>(type: Key, handler: GenericEventHandler) {\n\t\t\tconst handlers: Array<GenericEventHandler> | undefined = all!.get(type);\n\t\t\tif (handlers) {\n\t\t\t\thandlers.push(handler);\n\t\t\t} else {\n\t\t\t\tall!.set(type, [handler] as EventHandlerList<Events[keyof Events]>);\n\t\t\t}\n\t\t},",
+            "content_sha256": "0a5bf296ae849cd916f0b4eedbc3b3dbd431acb523f64fede2782b79ff119004",
+            "visible_to_generator": true
+          }
+        ]
+      },
+      {
+        "claim": "没有解释实现与大小写测试断言",
+        "status": "unverifiable",
+        "rationale": "问题要求结合实现和should NOT normalize case，正文仅给否定结论，没有key机制与具体测试对照。",
+        "evidence": [
+          {
+            "path": "src/index.ts",
+            "start_line": 66,
+            "end_line": 73
+          },
+          {
+            "path": "test/index_test.ts",
+            "start_line": 79,
+            "end_line": 90
+          }
+        ],
+        "verified_evidence": [
+          {
+            "path": "src/index.ts",
+            "start_line": 66,
+            "end_line": 73,
+            "content": "\t\ton<Key extends keyof Events>(type: Key, handler: GenericEventHandler) {\n\t\t\tconst handlers: Array<GenericEventHandler> | undefined = all!.get(type);\n\t\t\tif (handlers) {\n\t\t\t\thandlers.push(handler);\n\t\t\t} else {\n\t\t\t\tall!.set(type, [handler] as EventHandlerList<Events[keyof Events]>);\n\t\t\t}\n\t\t},",
+            "content_sha256": "0a5bf296ae849cd916f0b4eedbc3b3dbd431acb523f64fede2782b79ff119004",
+            "visible_to_generator": true
+          },
+          {
+            "path": "test/index_test.ts",
+            "start_line": 79,
+            "end_line": 90,
+            "content": "\t\tit('should NOT normalize case', () => {\n\t\t\tconst foo = () => {};\n\t\t\tinst.on('FOO', foo);\n\t\t\tinst.on('Bar', foo);\n\t\t\tinst.on('baz:baT!', foo);\n\n\t\t\texpect(events.get('FOO')).to.deep.equal([foo]);\n\t\t\texpect(events.has('foo')).to.equal(false);\n\t\t\texpect(events.get('Bar')).to.deep.equal([foo]);\n\t\t\texpect(events.has('bar')).to.equal(false);\n\t\t\texpect(events.get('baz:baT!')).to.deep.equal([foo]);\n\t\t});",
+            "content_sha256": "7c7ae10f82f38319cf3cf181161ee7bfb29bde7819610b697836ace1ba119048",
+            "visible_to_generator": true
+          }
+        ]
+      }
+    ],
+    "notes": "事实和现有引用正确，必要机制与测试说明缺失；可用核心结论，不是完整解决。",
+    "key_points": {
+      "raw_key_case_sensitive": true,
+      "concrete_case_test": false
+    },
+    "candidate_sha256": "89e1e3823a10778ee891310617d8c1ed8d46f7e2b0768ebbaab5e099cdbb98a9",
+    "reviewer": "Codex (current session)",
+    "review_type": "model_assisted_nonblind_development_review",
+    "human_approved": false,
+    "training_eligible": false,
+    "tiers": {
+      "core_supported": true,
+      "fully_resolved": false
+    }
+  },
+  {
+    "candidate_id": "candidate-2ef3826e175437c3",
+    "correctness": "partially_correct",
+    "citation_support": "partial",
+    "completeness": "adequate",
+    "abstention": "not_applicable",
+    "entry_scope": "correct",
+    "consistency": "consistent",
+    "claims": [
+      {
+        "claim": "on直接get/set原type、不做大小写转换",
+        "status": "supported",
+        "rationale": "66-73按type操作原始键。",
+        "evidence": [
+          {
+            "path": "src/index.ts",
+            "start_line": 66,
+            "end_line": 73
+          }
+        ],
+        "verified_evidence": [
+          {
+            "path": "src/index.ts",
+            "start_line": 66,
+            "end_line": 73,
+            "content": "\t\ton<Key extends keyof Events>(type: Key, handler: GenericEventHandler) {\n\t\t\tconst handlers: Array<GenericEventHandler> | undefined = all!.get(type);\n\t\t\tif (handlers) {\n\t\t\t\thandlers.push(handler);\n\t\t\t} else {\n\t\t\t\tall!.set(type, [handler] as EventHandlerList<Events[keyof Events]>);\n\t\t\t}\n\t\t},",
+            "content_sha256": "0a5bf296ae849cd916f0b4eedbc3b3dbd431acb523f64fede2782b79ff119004",
+            "visible_to_generator": true
+          }
+        ]
+      },
+      {
+        "claim": "on测试注册FOO/Bar/baz:baT!并验证FOO存在而foo不存在",
+        "status": "supported",
+        "rationale": "79-90输入及断言与这段描述相符。",
+        "evidence": [
+          {
+            "path": "test/index_test.ts",
+            "start_line": 79,
+            "end_line": 90
+          }
+        ],
+        "verified_evidence": [
+          {
+            "path": "test/index_test.ts",
+            "start_line": 79,
+            "end_line": 90,
+            "content": "\t\tit('should NOT normalize case', () => {\n\t\t\tconst foo = () => {};\n\t\t\tinst.on('FOO', foo);\n\t\t\tinst.on('Bar', foo);\n\t\t\tinst.on('baz:baT!', foo);\n\n\t\t\texpect(events.get('FOO')).to.deep.equal([foo]);\n\t\t\texpect(events.has('foo')).to.equal(false);\n\t\t\texpect(events.get('Bar')).to.deep.equal([foo]);\n\t\t\texpect(events.has('bar')).to.equal(false);\n\t\t\texpect(events.get('baz:baT!')).to.deep.equal([foo]);\n\t\t});",
+            "content_sha256": "7c7ae10f82f38319cf3cf181161ee7bfb29bde7819610b697836ace1ba119048",
+            "visible_to_generator": true
+          }
+        ]
+      },
+      {
+        "claim": "off测试先注册FOO/Bar/baz:baT!再用相同字符串移除",
+        "status": "contradicted",
+        "rationale": "125实际注册baz:bat!，129用baz:baT!移除；135断言小写t的原处理器仍在。这项故意不匹配的负例被答案改成完全匹配。",
+        "evidence": [
+          {
+            "path": "test/index_test.ts",
+            "start_line": 121,
+            "end_line": 136
+          }
+        ],
+        "verified_evidence": [
+          {
+            "path": "test/index_test.ts",
+            "start_line": 121,
+            "end_line": 136,
+            "content": "\t\tit('should NOT normalize case', () => {\n\t\t\tconst foo = () => {};\n\t\t\tinst.on('FOO', foo);\n\t\t\tinst.on('Bar', foo);\n\t\t\tinst.on('baz:bat!', foo);\n\n\t\t\tinst.off('FOO', foo);\n\t\t\tinst.off('Bar', foo);\n\t\t\tinst.off('baz:baT!', foo);\n\n\t\t\texpect(events.get('FOO')).to.be.empty;\n\t\t\texpect(events.has('foo')).to.equal(false);\n\t\t\texpect(events.get('Bar')).to.be.empty;\n\t\t\texpect(events.has('bar')).to.equal(false);\n\t\t\texpect(events.get('baz:bat!')).to.have.lengthOf(1);\n\t\t});",
+            "content_sha256": "0c8e4952c1c08847cd1045d3c53f4057129dd7591fb106c9fdb86a402f70d6a3",
+            "visible_to_generator": true
+          }
+        ]
+      },
+      {
+        "claim": "off不规范化键，FOO/Bar同名处理器会被移除",
+        "status": "supported",
+        "rationale": "对应完整测试确实验证大写key与小写key分离，源码off也直接get(type)。",
+        "evidence": [
+          {
+            "path": "src/index.ts",
+            "start_line": 82,
+            "end_line": 91
+          },
+          {
+            "path": "test/index_test.ts",
+            "start_line": 121,
+            "end_line": 136
+          }
+        ],
+        "verified_evidence": [
+          {
+            "path": "src/index.ts",
+            "start_line": 82,
+            "end_line": 91,
+            "content": "\t\toff<Key extends keyof Events>(type: Key, handler?: GenericEventHandler) {\n\t\t\tconst handlers: Array<GenericEventHandler> | undefined = all!.get(type);\n\t\t\tif (handlers) {\n\t\t\t\tif (handler) {\n\t\t\t\t\thandlers.splice(handlers.indexOf(handler) >>> 0, 1);\n\t\t\t\t} else {\n\t\t\t\t\tall!.set(type, []);\n\t\t\t\t}\n\t\t\t}\n\t\t},",
+            "content_sha256": "3999fdef36669b69849c862d08047c5ed32691b99d7e2ba932a515e43d3324e0",
+            "visible_to_generator": true
+          },
+          {
+            "path": "test/index_test.ts",
+            "start_line": 121,
+            "end_line": 136,
+            "content": "\t\tit('should NOT normalize case', () => {\n\t\t\tconst foo = () => {};\n\t\t\tinst.on('FOO', foo);\n\t\t\tinst.on('Bar', foo);\n\t\t\tinst.on('baz:bat!', foo);\n\n\t\t\tinst.off('FOO', foo);\n\t\t\tinst.off('Bar', foo);\n\t\t\tinst.off('baz:baT!', foo);\n\n\t\t\texpect(events.get('FOO')).to.be.empty;\n\t\t\texpect(events.has('foo')).to.equal(false);\n\t\t\texpect(events.get('Bar')).to.be.empty;\n\t\t\texpect(events.has('bar')).to.equal(false);\n\t\t\texpect(events.get('baz:bat!')).to.have.lengthOf(1);\n\t\t});",
+            "content_sha256": "0c8e4952c1c08847cd1045d3c53f4057129dd7591fb106c9fdb86a402f70d6a3",
+            "visible_to_generator": true
+          }
+        ]
+      },
+      {
+        "claim": "emit测试给Foo和FOO分配不同spy并各自按大小写触发",
+        "status": "supported",
+        "rationale": "176-187直接在Map保存两个spy，各自emit一次并断言调用次数和参数。",
+        "evidence": [
+          {
+            "path": "test/index_test.ts",
+            "start_line": 176,
+            "end_line": 187
+          }
+        ],
+        "verified_evidence": [
+          {
+            "path": "test/index_test.ts",
+            "start_line": 176,
+            "end_line": 187,
+            "content": "\t\tit('should NOT ignore case', () => {\n\t\t\tconst onFoo = spy(),\n\t\t\t\tonFOO = spy();\n\t\t\tevents.set('Foo', [onFoo]);\n\t\t\tevents.set('FOO', [onFOO]);\n\n\t\t\tinst.emit('Foo', 'Foo arg');\n\t\t\tinst.emit('FOO', 'FOO arg');\n\n\t\t\texpect(onFoo).to.have.been.calledOnce.and.calledWith('Foo arg');\n\t\t\texpect(onFOO).to.have.been.calledOnce.and.calledWith('FOO arg');\n\t\t});",
+            "content_sha256": "a46a29e60735e70e1f3edbbcce03aceb8d10418981e3f70eb98d22faee9791e4",
+            "visible_to_generator": true
+          }
+        ]
+      },
+      {
+        "claim": "这些入口按原始事件名作为Map键，不统一转换",
+        "status": "supported",
+        "rationale": "on/off/emit均使用传入type查Map；该说法在题目范围成立。",
+        "evidence": [
+          {
+            "path": "src/index.ts",
+            "start_line": 66,
+            "end_line": 73
+          },
+          {
+            "path": "src/index.ts",
+            "start_line": 82,
+            "end_line": 91
+          },
+          {
+            "path": "src/index.ts",
+            "start_line": 103,
+            "end_line": 121
+          }
+        ],
+        "verified_evidence": [
+          {
+            "path": "src/index.ts",
+            "start_line": 66,
+            "end_line": 73,
+            "content": "\t\ton<Key extends keyof Events>(type: Key, handler: GenericEventHandler) {\n\t\t\tconst handlers: Array<GenericEventHandler> | undefined = all!.get(type);\n\t\t\tif (handlers) {\n\t\t\t\thandlers.push(handler);\n\t\t\t} else {\n\t\t\t\tall!.set(type, [handler] as EventHandlerList<Events[keyof Events]>);\n\t\t\t}\n\t\t},",
+            "content_sha256": "0a5bf296ae849cd916f0b4eedbc3b3dbd431acb523f64fede2782b79ff119004",
+            "visible_to_generator": true
+          },
+          {
+            "path": "src/index.ts",
+            "start_line": 82,
+            "end_line": 91,
+            "content": "\t\toff<Key extends keyof Events>(type: Key, handler?: GenericEventHandler) {\n\t\t\tconst handlers: Array<GenericEventHandler> | undefined = all!.get(type);\n\t\t\tif (handlers) {\n\t\t\t\tif (handler) {\n\t\t\t\t\thandlers.splice(handlers.indexOf(handler) >>> 0, 1);\n\t\t\t\t} else {\n\t\t\t\t\tall!.set(type, []);\n\t\t\t\t}\n\t\t\t}\n\t\t},",
+            "content_sha256": "3999fdef36669b69849c862d08047c5ed32691b99d7e2ba932a515e43d3324e0",
+            "visible_to_generator": true
+          },
+          {
+            "path": "src/index.ts",
+            "start_line": 103,
+            "end_line": 121,
+            "content": "\t\temit<Key extends keyof Events>(type: Key, evt?: Events[Key]) {\n\t\t\tlet handlers = all!.get(type);\n\t\t\tif (handlers) {\n\t\t\t\t(handlers as EventHandlerList<Events[keyof Events]>)\n\t\t\t\t\t.slice()\n\t\t\t\t\t.map((handler) => {\n\t\t\t\t\t\thandler(evt!);\n\t\t\t\t\t});\n\t\t\t}\n\n\t\t\thandlers = all!.get('*');\n\t\t\tif (handlers) {\n\t\t\t\t(handlers as WildCardEventHandlerList<Events>)\n\t\t\t\t\t.slice()\n\t\t\t\t\t.map((handler) => {\n\t\t\t\t\t\thandler(type, evt!);\n\t\t\t\t\t});\n\t\t\t}\n\t\t}",
+            "content_sha256": "de218dd03ced6346cf85a3718f6de30c6e5ee74ee6cf557d28c5b9587dc9ceee",
+            "visible_to_generator": true
+          }
+        ]
+      }
+    ],
+    "notes": "主问题必要内容已回答，但额外off测试叙述错改了baz:bat!/baz:baT!有意不匹配的细节，属于新增事实错误，不能只按核心段更长即判整体正确。核心与完整档按既有标准都不放过额外material错误。",
+    "key_points": {
+      "raw_key_case_sensitive": true,
+      "concrete_case_test": true,
+      "extra_source_claims_correct": false
+    },
+    "candidate_sha256": "3e4d91f6dcb26176588946fdadd970103fb9c488c1238919cf19b1561df17d5a",
+    "reviewer": "Codex (current session)",
+    "review_type": "model_assisted_nonblind_development_review",
+    "human_approved": false,
+    "training_eligible": false,
+    "tiers": {
+      "core_supported": false,
+      "fully_resolved": false
+    }
+  }
+]

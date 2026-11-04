@@ -1,0 +1,182 @@
+{
+  "task_id": "dbader--schedule-04",
+  "mode": "hybrid-rerank",
+  "index_id": "dae18c9d5b71c35f21911a14",
+  "observation": {
+    "action": {
+      "call_id": "diagnostic",
+      "tool": "search_code",
+      "arguments": {
+        "query": "get_jobs() 不传 tag 返回内部列表本身吗？"
+      }
+    },
+    "action_hash": "b5a344db56e00b068d77a35caef9dadad20b0c4c3360be5bdfffeec1437bf573",
+    "observation": {
+      "status": "ok",
+      "error_code": null,
+      "hits": [
+        {
+          "path": "schedule/__init__.py",
+          "start_line": 122,
+          "end_line": 133,
+          "score": 0.9996287822723389,
+          "chunk_id": "30f7cfd303dfdba80c3fe7b7",
+          "unit": {
+            "start_line": 122,
+            "end_line": 133,
+            "symbol": "Scheduler.get_jobs",
+            "kind": "function_definition",
+            "parser": "tree_sitter"
+          },
+          "truncated": false,
+          "next_line": null
+        },
+        {
+          "path": "schedule/__init__.py",
+          "start_line": 864,
+          "end_line": 868,
+          "score": 0.9993384480476379,
+          "chunk_id": "37e11e2f55e8c47484bb348e",
+          "unit": {
+            "start_line": 864,
+            "end_line": 868,
+            "symbol": "get_jobs",
+            "kind": "function_definition",
+            "parser": "tree_sitter"
+          },
+          "truncated": false,
+          "next_line": null
+        },
+        {
+          "path": "test_schedule.py",
+          "start_line": 1544,
+          "end_line": 1570,
+          "score": 0.9889278411865234,
+          "chunk_id": "33b8e04d7e0c665502e45438",
+          "unit": {
+            "start_line": 1544,
+            "end_line": 1570,
+            "symbol": "SchedulerTests.test_get_by_tag",
+            "kind": "function_definition",
+            "parser": "tree_sitter"
+          },
+          "truncated": false,
+          "next_line": null
+        }
+      ],
+      "spans": [
+        {
+          "path": "schedule/__init__.py",
+          "start_line": 122,
+          "end_line": 133,
+          "content_sha256": "3b203d4e5005e3c3be275304e9fce13d28bb27a7128ad849faa7f33725e6e1be",
+          "lines": [
+            "L122:     def get_jobs(self, tag: Optional[Hashable] = None) -> List[\"Job\"]:",
+            "L123:         \"\"\"",
+            "L124:         Gets scheduled jobs marked with the given tag, or all jobs",
+            "L125:         if tag is omitted.",
+            "L126: ",
+            "L127:         :param tag: An identifier used to identify a subset of",
+            "L128:                     jobs to retrieve",
+            "L129:         \"\"\"",
+            "L130:         if tag is None:",
+            "L131:             return self.jobs[:]",
+            "L132:         else:",
+            "L133:             return [job for job in self.jobs if tag in job.tags]"
+          ]
+        },
+        {
+          "path": "schedule/__init__.py",
+          "start_line": 864,
+          "end_line": 868,
+          "content_sha256": "7b80054b113eb8b5edb3654e8efdecae4f7040e4188b558d04c5560aa9d7b07f",
+          "lines": [
+            "L864: def get_jobs(tag: Optional[Hashable] = None) -> List[Job]:",
+            "L865:     \"\"\"Calls :meth:`get_jobs <Scheduler.get_jobs>` on the",
+            "L866:     :data:`default scheduler instance <default_scheduler>`.",
+            "L867:     \"\"\"",
+            "L868:     return default_scheduler.get_jobs(tag)"
+          ]
+        },
+        {
+          "path": "test_schedule.py",
+          "start_line": 1544,
+          "end_line": 1570,
+          "content_sha256": "5b3ded2e7f33ed444038a2fb5b3a669a41493fa8cb68042e6b5f805b2582ef33",
+          "lines": [
+            "L1544:     def test_get_by_tag(self):",
+            "L1545:         every().second.do(make_mock_job()).tag(\"job1\", \"tag1\")",
+            "L1546:         every().second.do(make_mock_job()).tag(\"job2\", \"tag2\", \"tag4\")",
+            "L1547:         every().second.do(make_mock_job()).tag(\"job3\", \"tag3\", \"tag4\")",
+            "L1548: ",
+            "L1549:         # Test None input yields all 3",
+            "L1550:         jobs = schedule.get_jobs()",
+            "L1551:         assert len(jobs) == 3",
+            "L1552:         assert {\"job1\", \"job2\", \"job3\"}.issubset(",
+            "L1553:             {*jobs[0].tags, *jobs[1].tags, *jobs[2].tags}",
+            "L1554:         )",
+            "L1555: ",
+            "L1556:         # Test each 1:1 tag:job",
+            "L1557:         jobs = schedule.get_jobs(\"tag1\")",
+            "L1558:         assert len(jobs) == 1",
+            "L1559:         assert \"job1\" in jobs[0].tags",
+            "L1560: ",
+            "L1561:         # Test multiple jobs found.",
+            "L1562:         jobs = schedule.get_jobs(\"tag4\")",
+            "L1563:         assert len(jobs) == 2",
+            "L1564:         assert \"job1\" not in {*jobs[0].tags, *jobs[1].tags}",
+            "L1565: ",
+            "L1566:         # Test no tag.",
+            "L1567:         jobs = schedule.get_jobs(\"tag5\")",
+            "L1568:         assert len(jobs) == 0",
+            "L1569:         schedule.clear()",
+            "L1570:         assert len(schedule.jobs) == 0"
+          ]
+        }
+      ],
+      "candidate_limit": 20,
+      "scope": "indexed candidates only; no match does not establish absence",
+      "search_scope": {
+        "kind": "code",
+        "path": null,
+        "path_prefix": null
+      }
+    },
+    "visible_json": "{\"status\":\"ok\",\"error_code\":null,\"hits\":[{\"path\":\"schedule/__init__.py\",\"start_line\":122,\"end_line\":133,\"score\":0.9996287822723389,\"chunk_id\":\"30f7cfd303dfdba80c3fe7b7\",\"unit\":{\"start_line\":122,\"end_line\":133,\"symbol\":\"Scheduler.get_jobs\",\"kind\":\"function_definition\",\"parser\":\"tree_sitter\"},\"truncated\":false,\"next_line\":null},{\"path\":\"schedule/__init__.py\",\"start_line\":864,\"end_line\":868,\"score\":0.9993384480476379,\"chunk_id\":\"37e11e2f55e8c47484bb348e\",\"unit\":{\"start_line\":864,\"end_line\":868,\"symbol\":\"get_jobs\",\"kind\":\"function_definition\",\"parser\":\"tree_sitter\"},\"truncated\":false,\"next_line\":null},{\"path\":\"test_schedule.py\",\"start_line\":1544,\"end_line\":1570,\"score\":0.9889278411865234,\"chunk_id\":\"33b8e04d7e0c665502e45438\",\"unit\":{\"start_line\":1544,\"end_line\":1570,\"symbol\":\"SchedulerTests.test_get_by_tag\",\"kind\":\"function_definition\",\"parser\":\"tree_sitter\"},\"truncated\":false,\"next_line\":null}],\"spans\":[{\"path\":\"schedule/__init__.py\",\"start_line\":122,\"end_line\":133,\"content_sha256\":\"3b203d4e5005e3c3be275304e9fce13d28bb27a7128ad849faa7f33725e6e1be\",\"lines\":[\"L122:     def get_jobs(self, tag: Optional[Hashable] = None) -> List[\\\"Job\\\"]:\",\"L123:         \\\"\\\"\\\"\",\"L124:         Gets scheduled jobs marked with the given tag, or all jobs\",\"L125:         if tag is omitted.\",\"L126: \",\"L127:         :param tag: An identifier used to identify a subset of\",\"L128:                     jobs to retrieve\",\"L129:         \\\"\\\"\\\"\",\"L130:         if tag is None:\",\"L131:             return self.jobs[:]\",\"L132:         else:\",\"L133:             return [job for job in self.jobs if tag in job.tags]\"]},{\"path\":\"schedule/__init__.py\",\"start_line\":864,\"end_line\":868,\"content_sha256\":\"7b80054b113eb8b5edb3654e8efdecae4f7040e4188b558d04c5560aa9d7b07f\",\"lines\":[\"L864: def get_jobs(tag: Optional[Hashable] = None) -> List[Job]:\",\"L865:     \\\"\\\"\\\"Calls :meth:`get_jobs <Scheduler.get_jobs>` on the\",\"L866:     :data:`default scheduler instance <default_scheduler>`.\",\"L867:     \\\"\\\"\\\"\",\"L868:     return default_scheduler.get_jobs(tag)\"]},{\"path\":\"test_schedule.py\",\"start_line\":1544,\"end_line\":1570,\"content_sha256\":\"5b3ded2e7f33ed444038a2fb5b3a669a41493fa8cb68042e6b5f805b2582ef33\",\"lines\":[\"L1544:     def test_get_by_tag(self):\",\"L1545:         every().second.do(make_mock_job()).tag(\\\"job1\\\", \\\"tag1\\\")\",\"L1546:         every().second.do(make_mock_job()).tag(\\\"job2\\\", \\\"tag2\\\", \\\"tag4\\\")\",\"L1547:         every().second.do(make_mock_job()).tag(\\\"job3\\\", \\\"tag3\\\", \\\"tag4\\\")\",\"L1548: \",\"L1549:         # Test None input yields all 3\",\"L1550:         jobs = schedule.get_jobs()\",\"L1551:         assert len(jobs) == 3\",\"L1552:         assert {\\\"job1\\\", \\\"job2\\\", \\\"job3\\\"}.issubset(\",\"L1553:             {*jobs[0].tags, *jobs[1].tags, *jobs[2].tags}\",\"L1554:         )\",\"L1555: \",\"L1556:         # Test each 1:1 tag:job\",\"L1557:         jobs = schedule.get_jobs(\\\"tag1\\\")\",\"L1558:         assert len(jobs) == 1\",\"L1559:         assert \\\"job1\\\" in jobs[0].tags\",\"L1560: \",\"L1561:         # Test multiple jobs found.\",\"L1562:         jobs = schedule.get_jobs(\\\"tag4\\\")\",\"L1563:         assert len(jobs) == 2\",\"L1564:         assert \\\"job1\\\" not in {*jobs[0].tags, *jobs[1].tags}\",\"L1565: \",\"L1566:         # Test no tag.\",\"L1567:         jobs = schedule.get_jobs(\\\"tag5\\\")\",\"L1568:         assert len(jobs) == 0\",\"L1569:         schedule.clear()\",\"L1570:         assert len(schedule.jobs) == 0\"]}],\"candidate_limit\":20,\"scope\":\"indexed candidates only; no match does not establish absence\",\"search_scope\":{\"kind\":\"code\",\"path\":null,\"path_prefix\":null}}",
+    "source_spans": [
+      {
+        "path": "schedule/__init__.py",
+        "start_line": 122,
+        "end_line": 133,
+        "content": "    def get_jobs(self, tag: Optional[Hashable] = None) -> List[\"Job\"]:\n        \"\"\"\n        Gets scheduled jobs marked with the given tag, or all jobs\n        if tag is omitted.\n\n        :param tag: An identifier used to identify a subset of\n                    jobs to retrieve\n        \"\"\"\n        if tag is None:\n            return self.jobs[:]\n        else:\n            return [job for job in self.jobs if tag in job.tags]",
+        "content_sha256": "3b203d4e5005e3c3be275304e9fce13d28bb27a7128ad849faa7f33725e6e1be"
+      },
+      {
+        "path": "schedule/__init__.py",
+        "start_line": 864,
+        "end_line": 868,
+        "content": "def get_jobs(tag: Optional[Hashable] = None) -> List[Job]:\n    \"\"\"Calls :meth:`get_jobs <Scheduler.get_jobs>` on the\n    :data:`default scheduler instance <default_scheduler>`.\n    \"\"\"\n    return default_scheduler.get_jobs(tag)",
+        "content_sha256": "7b80054b113eb8b5edb3654e8efdecae4f7040e4188b558d04c5560aa9d7b07f"
+      },
+      {
+        "path": "test_schedule.py",
+        "start_line": 1544,
+        "end_line": 1570,
+        "content": "    def test_get_by_tag(self):\n        every().second.do(make_mock_job()).tag(\"job1\", \"tag1\")\n        every().second.do(make_mock_job()).tag(\"job2\", \"tag2\", \"tag4\")\n        every().second.do(make_mock_job()).tag(\"job3\", \"tag3\", \"tag4\")\n\n        # Test None input yields all 3\n        jobs = schedule.get_jobs()\n        assert len(jobs) == 3\n        assert {\"job1\", \"job2\", \"job3\"}.issubset(\n            {*jobs[0].tags, *jobs[1].tags, *jobs[2].tags}\n        )\n\n        # Test each 1:1 tag:job\n        jobs = schedule.get_jobs(\"tag1\")\n        assert len(jobs) == 1\n        assert \"job1\" in jobs[0].tags\n\n        # Test multiple jobs found.\n        jobs = schedule.get_jobs(\"tag4\")\n        assert len(jobs) == 2\n        assert \"job1\" not in {*jobs[0].tags, *jobs[1].tags}\n\n        # Test no tag.\n        jobs = schedule.get_jobs(\"tag5\")\n        assert len(jobs) == 0\n        schedule.clear()\n        assert len(schedule.jobs) == 0",
+        "content_sha256": "5b3ded2e7f33ed444038a2fb5b3a669a41493fa8cb68042e6b5f805b2582ef33"
+      }
+    ],
+    "elapsed_seconds": 3.188,
+    "tool_calls_used": 1,
+    "source_bytes": 1578,
+    "replayed": false
+  },
+  "gold_observed_coverage": 1.0,
+  "neural_work": {
+    "embedding_hits": 1,
+    "embedding_new": 0,
+    "rerank_hits": 16,
+    "rerank_new": 4
+  },
+  "new_generation_requests": 0
+}

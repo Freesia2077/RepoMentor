@@ -1,4 +1,4 @@
-"""Model-independent boundaries, budgets, phase transitions and evidence ledger."""
+"""Compatibility report stages, budgets and evidence ledger."""
 
 from __future__ import annotations
 
@@ -21,30 +21,9 @@ from .contracts import (
     StageState,
     ToolObservation,
 )
+from .execution import CancellationToken, HarnessError
 from .repository import RepositoryError, SnapshotReader, build_profile, normalize_path, utf8_prefix
 from .tools import find_tests, search_symbols, trace_dependencies
-
-
-class HarnessError(Exception):
-    def __init__(self, code: str, message: str):
-        self.code = code
-        super().__init__(message)
-
-
-class CancellationToken:
-    def __init__(self):
-        self._event = threading.Event()
-
-    @property
-    def cancelled(self):
-        return self._event.is_set()
-
-    def cancel(self):
-        self._event.set()
-
-    def check(self):
-        if self.cancelled:
-            raise HarnessError("cancelled", "run cancelled")
 
 
 def deduplicate_requests(requests):
@@ -140,7 +119,7 @@ def build_evidence_bundle(reader, plan, phase, existing_paths=(), check=lambda: 
     )
 
 
-class RepositoryHarness:
+class ReportHarness:
     def __init__(self, reader: SnapshotReader, emit=lambda stage, kind, data: None, token=None):
         self.reader = reader
         self.emit = emit
@@ -531,12 +510,14 @@ class RepositoryHarness:
             files += self.profile[key]
         return {f["path"] for f in files}
 
-    def verify_output(self, stage, output):
+    def verify_output(self, stage, output, provided_paths=None):
         value = output.model_dump()
         allowed = {f.path for f in self.evidence().files if stage != "explorer" or f.phase == "explorer"}
         allowed |= self.profile_paths()
         if stage != "explorer":
             allowed |= self.verified_paths
+        if provided_paths is not None:
+            allowed &= set(map(normalize_path, provided_paths))
         unsupported = removed = 0
         for claim in value["evidenceClaims"]:
             before = len(claim["evidence"])
@@ -575,7 +556,12 @@ class RepositoryHarness:
         ]
         for gap in value["evidenceCoverage"]["gaps"]:
             entry = self.ledger.get(normalize_path(gap["subject"]))
-            resolved = entry and entry["bestEvidence"] and not entry["bestEvidence"].truncated
+            resolved = (
+                provided_paths is None
+                and entry
+                and entry["bestEvidence"]
+                and not entry["bestEvidence"].truncated
+            )
             if (
                 gap["kind"] != "out_of_scope"
                 and gap["severity"] != "low"
@@ -633,3 +619,7 @@ class RepositoryHarness:
                 for p, e in self.ledger.items()
             },
         }
+
+
+# Historical public name; new report orchestration uses ReportHarness explicitly.
+RepositoryHarness = ReportHarness

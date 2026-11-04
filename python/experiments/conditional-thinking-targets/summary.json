@@ -1,0 +1,393 @@
+{
+  "questions": 3,
+  "planned_answers": 3,
+  "records": 3,
+  "reviews": {
+    "q-7e67a58f5f3ce89d--conditional-thinking": {
+      "candidate_id": "q-7e67a58f5f3ce89d--conditional-thinking",
+      "correctness": "partially_correct",
+      "citation_support": "partial",
+      "completeness": "adequate",
+      "abstention": "not_applicable",
+      "entry_scope": "correct",
+      "consistency": "consistent",
+      "claims": [
+        {
+          "claim": "默认pred=None时first_true([0,False,2],default=missing)返回2。",
+          "status": "supported",
+          "rationale": "588的next(filter(pred,iterable),default)在None谓词时按元素真值筛选；0和False被跳过，首个真值2被返回。",
+          "evidence": [
+            {
+              "path": "more_itertools/recipes.py",
+              "start_line": 571,
+              "end_line": 588
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "more_itertools/recipes.py",
+              "start_line": 571,
+              "end_line": 588,
+              "content": "def first_true(iterable, default=None, pred=None):\n    \"\"\"\n    Returns the first true value in the iterable.\n\n    If no true value is found, returns *default*\n\n    If *pred* is not None, returns the first item for which\n    ``pred(item) == True`` .\n\n        >>> first_true(range(10))\n        1\n        >>> first_true(range(10), pred=lambda x: x > 5)\n        6\n        >>> first_true(range(10), default='missing', pred=lambda x: x > 9)\n        'missing'\n\n    \"\"\"\n    return next(filter(pred, iterable), default)",
+              "content_sha256": "406048ff2d04fb0542a59badd30d7ceb1a5a97ca62f890dbe743e5d69a8d23e8",
+              "visible_to_generator": true
+            }
+          ]
+        },
+        {
+          "claim": "显式pred=lambda x:x==0时返回0，filter不会再次按元素自身真值删除0。",
+          "status": "supported",
+          "rationale": "577–578说明按pred(item)判断，588仍由next取首个被filter保留的原元素；本题0谓词为真，返回0。",
+          "evidence": [
+            {
+              "path": "more_itertools/recipes.py",
+              "start_line": 571,
+              "end_line": 588
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "more_itertools/recipes.py",
+              "start_line": 571,
+              "end_line": 588,
+              "content": "def first_true(iterable, default=None, pred=None):\n    \"\"\"\n    Returns the first true value in the iterable.\n\n    If no true value is found, returns *default*\n\n    If *pred* is not None, returns the first item for which\n    ``pred(item) == True`` .\n\n        >>> first_true(range(10))\n        1\n        >>> first_true(range(10), pred=lambda x: x > 5)\n        6\n        >>> first_true(range(10), default='missing', pred=lambda x: x > 9)\n        'missing'\n\n    \"\"\"\n    return next(filter(pred, iterable), default)",
+              "content_sha256": "406048ff2d04fb0542a59badd30d7ceb1a5a97ca62f890dbe743e5d69a8d23e8",
+              "visible_to_generator": true
+            }
+          ]
+        },
+        {
+          "claim": "test_pred:552–556验证自定义pred下0会保留并返回。",
+          "status": "contradicted",
+          "rationale": "实际测试调用mi.first_true([2,4,6],pred=lambda x:x%3==0)，期望6；没有输入0或返回0的断言。主要返回值虽然改对，仍不能忽略额外编造的测试事实。",
+          "evidence": [
+            {
+              "path": "tests/test_recipes.py",
+              "start_line": 552,
+              "end_line": 556
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "tests/test_recipes.py",
+              "start_line": 552,
+              "end_line": 556,
+              "content": "    def test_pred(self):\n        \"\"\"Test with a custom predicate\"\"\"\n        self.assertEqual(\n            mi.first_true([2, 4, 6], pred=lambda x: x % 3 == 0), 6\n        )",
+              "content_sha256": "d164aedc158c03d97130e0d78a9a223a7d995eeda4ebfecd92699a67cd7acb16",
+              "visible_to_generator": true
+            }
+          ]
+        }
+      ],
+      "notes": "题目两项直接结论和机制已正确，完整性adequate表示已覆盖所问，不覆盖整答正确性。自加不真实测试结论导致整答partially_correct，故core/full不通过。没有首尾自相矛盾，错误属于测试事实，不与Q8中断混为一谈。",
+      "key_points": null,
+      "candidate_sha256": "e9f8fb8ac3b0890e40854d898ba0baacf3e22f29af0cf89a453574816ebbd199",
+      "reviewer": "Codex (current session)",
+      "review_type": "model_assisted_nonblind_development_review",
+      "human_approved": false,
+      "training_eligible": false,
+      "result_sha256": "8570437255dc04e5f463f1434c32c26fb0e8b2769b59c6c5ca8bc56914c92ba4"
+    },
+    "q-342b7c23442b0be4--conditional-thinking": {
+      "candidate_id": "q-342b7c23442b0be4--conditional-thinking",
+      "correctness": "correct",
+      "citation_support": "supported",
+      "completeness": "adequate",
+      "abstention": "not_applicable",
+      "entry_scope": "correct",
+      "consistency": "consistent",
+      "claims": [
+        {
+          "claim": "search缓存命中返回cached_results[:]的浅拷贝新列表，修改返回列表长度不影响缓存列表结构。",
+          "status": "supported",
+          "rationale": "265–267命中即切片创建外层列表；题目长度修改与共享元素修改被准确区分。",
+          "evidence": [
+            {
+              "path": "tinydb/table.py",
+              "start_line": 249,
+              "end_line": 267
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "tinydb/table.py",
+              "start_line": 249,
+              "end_line": 267,
+              "content": "    def search(self, cond: QueryLike) -> list[Document]:\n        \"\"\"\n        Search for all documents matching a 'where' cond.\n\n        Note: a repeated search with the same ``cond`` is served from an\n        internal cache. The returned list is a fresh copy, but its\n        documents are the same objects held by the cache -- treat them as\n        read-only, since mutating one (a key or a nested value) corrupts\n        what a later identical search returns.\n\n        :param cond: the condition to check against\n        :returns: list of matching documents\n        \"\"\"\n\n        # First, we check the query cache to see if it has results for this\n        # query\n        cached_results = self._query_cache.get(cond)\n        if cached_results is not None:\n            return cached_results[:]",
+              "content_sha256": "25a85180f3a1c5e9ae35e8e938c3527caa4d1e15a52c408335a4e89491f20730",
+              "visible_to_generator": true
+            }
+          ]
+        },
+        {
+          "claim": "返回列表内Document与缓存共享；doc[field]=value会污染后续相同查询返回对象。",
+          "status": "supported",
+          "rationale": "254–257明确共享文档对象且修改污染后续查询，267切片是浅拷贝而非递归复制。",
+          "evidence": [
+            {
+              "path": "tinydb/table.py",
+              "start_line": 254,
+              "end_line": 267
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "tinydb/table.py",
+              "start_line": 254,
+              "end_line": 267,
+              "content": "        internal cache. The returned list is a fresh copy, but its\n        documents are the same objects held by the cache -- treat them as\n        read-only, since mutating one (a key or a nested value) corrupts\n        what a later identical search returns.\n\n        :param cond: the condition to check against\n        :returns: list of matching documents\n        \"\"\"\n\n        # First, we check the query cache to see if it has results for this\n        # query\n        cached_results = self._query_cache.get(cond)\n        if cached_results is not None:\n            return cached_results[:]",
+              "content_sha256": "e48ea584c638a1f06177ea20380762fbd3970dd51d47ef02cc832a7bf8307d2b",
+              "visible_to_generator": true
+            }
+          ]
+        },
+        {
+          "claim": "通过库写数据时查询缓存会丢弃，需要与直接修改返回Document区分。",
+          "status": "supported",
+          "rationale": "答案以写入操作为标题并另段明确直接doc字段修改影响后续缓存。已交付Table文档48–50说明写库时丢弃查询缓存。正式引文49–50承接上一行writing，支持这一库写入边界，未声称重查可以清缓存。",
+          "evidence": [
+            {
+              "path": "tinydb/table.py",
+              "start_line": 48,
+              "end_line": 50
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "tinydb/table.py",
+              "start_line": 48,
+              "end_line": 50,
+              "content": "        The query cache is updated on every search operation. When writing\n        data, the whole cache is discarded as the query results may have\n        changed.",
+              "content_sha256": "b1353ae954b15d42f2dab16cc28a4b9904a1cdfeafe24507084d23305ca12558",
+              "visible_to_generator": true
+            }
+          ]
+        }
+      ],
+      "notes": "核心区别、共享范围和写库边界解释一致，未提出Q8的错误重查刷新建议。额外写库说明依据已交付文档，没有把复核者额外读到的_update_table:853–854作为生成证据。主执行分支265–267已准确引用，可计新fact/core/full。",
+      "key_points": null,
+      "candidate_sha256": "4f544c07523c4a0952e5e6cff0a5a19853f3917004e65a02817e5bff0a7a38e2",
+      "reviewer": "Codex (current session)",
+      "review_type": "model_assisted_nonblind_development_review",
+      "human_approved": false,
+      "training_eligible": false,
+      "result_sha256": "576a6c458762f67c5e064abb0926f286cb0dd50cd555b2448a2bb449cc973d11"
+    },
+    "q-8263d0c13fbc03c6--conditional-thinking": {
+      "candidate_id": "q-8263d0c13fbc03c6--conditional-thinking",
+      "correctness": "correct",
+      "citation_support": "supported",
+      "completeness": "adequate",
+      "abstention": "not_applicable",
+      "entry_scope": "correct",
+      "consistency": "consistent",
+      "claims": [
+        {
+          "claim": "override=True时先env.update(os.environ)后env.update(new_values)，同名键new_values胜出。",
+          "status": "supported",
+          "rationale": "345–347的True分支明确该顺序；后update覆盖同名键，正文结论与解释一致。",
+          "evidence": [
+            {
+              "path": "src/dotenv/main.py",
+              "start_line": 345,
+              "end_line": 347
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "src/dotenv/main.py",
+              "start_line": 345,
+              "end_line": 347,
+              "content": "            if override:\n                env.update(os.environ)  # type: ignore\n                env.update(new_values)",
+              "content_sha256": "76b91959956cb6391b985d9a5bfb24328bb251da274ae88e6a2818789c4865a8",
+              "visible_to_generator": true
+            }
+          ]
+        },
+        {
+          "claim": "override=False时先env.update(new_values)后env.update(os.environ)，同名键os.environ胜出。",
+          "status": "supported",
+          "rationale": "348–350的False分支明确相反顺序，正文没有错误首句或相反结尾。",
+          "evidence": [
+            {
+              "path": "src/dotenv/main.py",
+              "start_line": 348,
+              "end_line": 350
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "src/dotenv/main.py",
+              "start_line": 348,
+              "end_line": 350,
+              "content": "            else:\n                env.update(new_values)\n                env.update(os.environ)  # type: ignore",
+              "content_sha256": "2f6663212281d8038d333752168db2dc48bfbf61944e447a61adb4ff5d1d524b",
+              "visible_to_generator": true
+            }
+          ]
+        },
+        {
+          "claim": "两分支按dict.update后更新覆盖先更新解释优先级。",
+          "status": "supported",
+          "rationale": "临时env在344新建，346–350按各自顺序接收源字典。正文“先更新os.environ”等短语是在解释所引env.update参数，并没有声称给进程环境赋值。",
+          "evidence": [
+            {
+              "path": "src/dotenv/main.py",
+              "start_line": 343,
+              "end_line": 351
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "src/dotenv/main.py",
+              "start_line": 343,
+              "end_line": 351,
+              "content": "            atoms = parse_variables(value)\n            env: Dict[str, Optional[str]] = {}\n            if override:\n                env.update(os.environ)  # type: ignore\n                env.update(new_values)\n            else:\n                env.update(new_values)\n                env.update(os.environ)  # type: ignore\n            result = \"\".join(atom.resolve(env) for atom in atoms)",
+              "content_sha256": "95d9f24f629605a3f36c0eb1fd63bb87cc9ca7fb4f36e6d3af16cee9a52598ed",
+              "visible_to_generator": true
+            }
+          ]
+        }
+      ],
+      "notes": "两项问题均明确覆盖，首句/分点/理由没有优先级矛盾；引文直接给实际更新语句，足以支持题目所问，可计新fact/core/full。",
+      "key_points": null,
+      "candidate_sha256": "20e0e394802dfeb81f3076fba2e57377ecf0acd2414208975e75c791496f0548",
+      "reviewer": "Codex (current session)",
+      "review_type": "model_assisted_nonblind_development_review",
+      "human_approved": false,
+      "training_eligible": false,
+      "result_sha256": "0ff283e1aaa8a585c23e61bc1ec672ec0ad78679960183f5ba28e626f0d84770"
+    }
+  },
+  "groups": {
+    "all/oracle": {
+      "records": 3,
+      "success": 3,
+      "model_requests": 3,
+      "tool_calls": 0,
+      "episodes_using_tools": 0,
+      "citation_ranges_valid": 3,
+      "initial_reference_complete": 3,
+      "final_reference_complete": 3,
+      "initial_nonblank_reference_complete": 3,
+      "final_nonblank_reference_complete": 3,
+      "requests_without_usage": 0,
+      "requests_without_elapsed": 0,
+      "prompt_tokens": 8454,
+      "completion_tokens": 7662,
+      "generator_seconds": 479.36,
+      "reviewed": 3,
+      "factually_correct": 2,
+      "core_supported": 2,
+      "fully_resolved": 2
+    },
+    "older-development/oracle": {
+      "records": 1,
+      "success": 1,
+      "model_requests": 1,
+      "tool_calls": 0,
+      "episodes_using_tools": 0,
+      "citation_ranges_valid": 1,
+      "initial_reference_complete": 1,
+      "final_reference_complete": 1,
+      "initial_nonblank_reference_complete": 1,
+      "final_nonblank_reference_complete": 1,
+      "requests_without_usage": 0,
+      "requests_without_elapsed": 0,
+      "prompt_tokens": 2834,
+      "completion_tokens": 2101,
+      "generator_seconds": 138.906,
+      "reviewed": 1,
+      "factually_correct": 0,
+      "core_supported": 0,
+      "fully_resolved": 0
+    },
+    "known-complete-function-thinking-diagnostic/oracle": {
+      "records": 3,
+      "success": 3,
+      "model_requests": 3,
+      "tool_calls": 0,
+      "episodes_using_tools": 0,
+      "citation_ranges_valid": 3,
+      "initial_reference_complete": 3,
+      "final_reference_complete": 3,
+      "initial_nonblank_reference_complete": 3,
+      "final_nonblank_reference_complete": 3,
+      "requests_without_usage": 0,
+      "requests_without_elapsed": 0,
+      "prompt_tokens": 8454,
+      "completion_tokens": 7662,
+      "generator_seconds": 479.36,
+      "reviewed": 3,
+      "factually_correct": 2,
+      "core_supported": 2,
+      "fully_resolved": 2
+    },
+    "answerable/oracle": {
+      "records": 3,
+      "success": 3,
+      "model_requests": 3,
+      "tool_calls": 0,
+      "episodes_using_tools": 0,
+      "citation_ranges_valid": 3,
+      "initial_reference_complete": 3,
+      "final_reference_complete": 3,
+      "initial_nonblank_reference_complete": 3,
+      "final_nonblank_reference_complete": 3,
+      "requests_without_usage": 0,
+      "requests_without_elapsed": 0,
+      "prompt_tokens": 8454,
+      "completion_tokens": 7662,
+      "generator_seconds": 479.36,
+      "reviewed": 3,
+      "factually_correct": 2,
+      "core_supported": 2,
+      "fully_resolved": 2
+    },
+    "added-confirmation/oracle": {
+      "records": 2,
+      "success": 2,
+      "model_requests": 2,
+      "tool_calls": 0,
+      "episodes_using_tools": 0,
+      "citation_ranges_valid": 2,
+      "initial_reference_complete": 2,
+      "final_reference_complete": 2,
+      "initial_nonblank_reference_complete": 2,
+      "final_nonblank_reference_complete": 2,
+      "requests_without_usage": 0,
+      "requests_without_elapsed": 0,
+      "prompt_tokens": 5620,
+      "completion_tokens": 5561,
+      "generator_seconds": 340.454,
+      "reviewed": 2,
+      "factually_correct": 2,
+      "core_supported": 2,
+      "fully_resolved": 2
+    }
+  },
+  "retrieval": {
+    "shared_initial": {
+      "answerable": 3,
+      "reference_complete": 3,
+      "nonblank_reference_complete": 3
+    }
+  },
+  "new_requests": 3,
+  "combined_requests": 1377,
+  "paid_requests": 0,
+  "human_approved": false,
+  "training_eligible": false,
+  "reporting_implementation": "4432a399824bc989792b734caf26caf8da5ada5fef0941d184fd5a00d4ae2e6b",
+  "usage_observation_note": "Token/time sums include observed values only. Missing usage and elapsed time remain unknown in raw records; reservations still count every sent or ambiguous request.",
+  "checks": {
+    "stage_gate_passed": true,
+    "deployment_bundle_adopted": false,
+    "decision": "reject bundle after all three protections regressed; no independent new-question confirmation",
+    "independent_source_review": "artifacts\\rag-iteration-2026-10-27\\conditional-thinking-review.json",
+    "exact_original_Q4_messages": true,
+    "daily_configuration_modified": false,
+    "claim_limit": "Target facts/core/full0/3->2/3 does not override protection3/3->0/3. Thinking/sampling/output-budget bundle cannot isolate causal parameters."
+  },
+  "scope": "Three known nonthinking failures with their exact originally delivered context; full implementations of first_true, Table.search and resolve_variables are visible. Reuse already deployed official general-thinking Q4 configuration bundle (49K window,32K output,temperature1/top_p0.95/top_k20/min_p0/presence1.5/repeat1/thinking enabled), not another prompt, format, context or precision variant. Prior thinking diagnostic only covered after/callback; no claim it tested this failure family. Recorded-source oracle-bypass is not a retrieval/oracle coverage gain. Daily config unchanged."
+}

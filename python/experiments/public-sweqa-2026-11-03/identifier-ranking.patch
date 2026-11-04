@@ -1,0 +1,21 @@
+--- a/src/repomentor/code_navigation.py
++++ b/src/repomentor/code_navigation.py
+@@ -354,6 +354,7 @@
+             owner_match = any(p == definition["path"] and symbol.startswith(owner + ".") for p, owner in owners)
+             priority = (10 if any("." in t and t in names for t in terms) else
+                         8 if owner_match and leaf in terms else
++                        6 if leaf in terms and re.search(r"_|[a-z][A-Z]", leaf) else
+                         5 if symbol in terms and "class" not in definition["kind"] else
+                         4 if leaf in member_names and (definition["path"], symbol.rpartition(".")[0]) in classes else
+                         3 if symbol in terms else
+@@ -376,8 +377,8 @@
+                     matches = [m for m in matches if m["id"] != definition["id"]]
+                     matches.append({**definition, "match_priority": 4, "match_kind": "attribute_guard",
+                                     "explicit_path": definition["path"] in paths})
+-        matches.sort(key=lambda d: (not d["explicit_path"], d["role"] != "implementation",
+-                                    -d["match_priority"], d["path"], d["start_line"]))
++        matches.sort(key=lambda d: (not d["explicit_path"], -d["match_priority"],
++                                    d["role"] != "implementation", d["path"], d["start_line"]))
+         edges, targets = [], matches
+         if relation != "definitions":
+             ids = {d["id"] for d in matches}

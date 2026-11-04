@@ -1,0 +1,40 @@
+{
+  "checks": "Synthetic local Python examples only; downloaded repository code was not executed.",
+  "original_references_modified": false,
+  "primary_questions_removed": false,
+  "cases": [
+    {
+      "task_id": "sweqa-xarray-014",
+      "repository": "pydata/xarray",
+      "commit_sha": "40119bf35c53fc222934894d842cfc07b2e264bf",
+      "issue": "Published reference describes isinstance as exact-class equality; subclasses also satisfy it.",
+      "source": {
+        "path": "xarray/core/dtypes.py",
+        "start_line": 10,
+        "end_line": 36,
+        "content": "from xarray.compat.npcompat import HAS_STRING_DTYPE\nfrom xarray.core import utils\n\n# Use as a sentinel value to indicate a dtype appropriate NA value.\nNA = utils.ReprObject(\"<NA>\")\n\n\n@functools.total_ordering\nclass AlwaysGreaterThan:\n    def __gt__(self, other):\n        return True\n\n    def __eq__(self, other):\n        return isinstance(other, type(self))\n\n\n@functools.total_ordering\nclass AlwaysLessThan:\n    def __lt__(self, other):\n        return True\n\n    def __eq__(self, other):\n        return isinstance(other, type(self))\n\n\n# Equivalence to np.inf (-np.inf) for object-type\nINF = AlwaysGreaterThan()",
+        "sha256": "5d2858b0d8a7d47654926444be4cc618075ba1ef1de201417617ca6884ff92ad"
+      },
+      "python_language_check": {
+        "isinstance_subclass_of_type_parent": true
+      }
+    },
+    {
+      "task_id": "sweqa-requests-022",
+      "repository": "psf/requests",
+      "commit_sha": "46e939b5525d9c72b677340985582b04b128478a",
+      "issue": "Published reference describes list.remove as identity-only; it uses equality and can remove an equal distinct callable.",
+      "source": {
+        "path": "src/requests/models.py",
+        "start_line": 207,
+        "end_line": 227,
+        "content": "    def register_hook(self, event, hook):\n        \"\"\"Properly register a hook.\"\"\"\n\n        if event not in self.hooks:\n            raise ValueError(f'Unsupported event specified, with event name \"{event}\"')\n\n        if isinstance(hook, Callable):\n            self.hooks[event].append(hook)\n        elif hasattr(hook, \"__iter__\"):\n            self.hooks[event].extend(h for h in hook if isinstance(h, Callable))\n\n    def deregister_hook(self, event, hook):\n        \"\"\"Deregister a previously registered hook.\n        Returns True if the hook existed, False if not.\n        \"\"\"\n\n        try:\n            self.hooks[event].remove(hook)\n            return True\n        except ValueError:\n            return False",
+        "sha256": "678908549fc75814f156a6d1253cc6f33ee89696266fb9d9405ed18dc26cb71e"
+      },
+      "python_language_check": {
+        "equal_distinct_callable_removed": true
+      }
+    }
+  ],
+  "human_approved": false
+}

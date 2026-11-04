@@ -1,0 +1,395 @@
+{
+  "questions": 2,
+  "planned_answers": 2,
+  "records": 2,
+  "reviews": {
+    "step-requests-file--bm25_code": {
+      "candidate_id": "step-requests-file--bm25_code",
+      "correctness": "partially_correct",
+      "citation_support": "partial",
+      "completeness": "partial",
+      "abstention": "not_applicable",
+      "entry_scope": "correct",
+      "consistency": "consistent",
+      "claims": [
+        {
+          "claim": "本题的最小配置只需{report:(report.csv,f)}。",
+          "status": "contradicted",
+          "rationale": "两元组不会设置题干要求的text/csv文件部分类型，ft仍为None。合法通用文件上传形态不等于满足本题契约。",
+          "evidence": [
+            {
+              "path": "src/requests/models.py",
+              "start_line": 173,
+              "end_line": 198
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "src/requests/models.py",
+              "start_line": 173,
+              "end_line": 198,
+              "content": "        for k, v in files:\n            # support for explicit filename\n            ft = None\n            fh = None\n            if isinstance(v, (tuple, list)):\n                if len(v) == 2:\n                    fn, fp = v\n                elif len(v) == 3:\n                    fn, fp, ft = v\n                else:\n                    fn, fp, ft, fh = v\n            else:\n                fn = guess_filename(v) or k\n                fp = v\n\n            if isinstance(fp, (str, bytes, bytearray)):\n                fdata = fp\n            elif hasattr(fp, \"read\"):\n                fdata = fp.read()\n            elif fp is None:\n                continue\n            else:\n                fdata = fp\n\n            rf = RequestField(name=k, data=fdata, filename=fn, headers=fh)\n            rf.make_multipart(content_type=ft)",
+              "content_sha256": "4598274bc90f2bde1a294bc1a196c9f19cfb4e65f311e7619e316d5b425bf528",
+              "visible_to_generator": false
+            }
+          ]
+        },
+        {
+          "claim": "前两位置分别是文件名和文件对象。",
+          "status": "supported",
+          "rationale": "两个位置的解释本身正确。",
+          "evidence": [
+            {
+              "path": "src/requests/models.py",
+              "start_line": 177,
+              "end_line": 181
+            },
+            {
+              "path": "docs/user/quickstart.rst",
+              "start_line": 339,
+              "end_line": 339
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "src/requests/models.py",
+              "start_line": 177,
+              "end_line": 181,
+              "content": "            if isinstance(v, (tuple, list)):\n                if len(v) == 2:\n                    fn, fp = v\n                elif len(v) == 3:\n                    fn, fp, ft = v",
+              "content_sha256": "d03835c51e04293f670cf6757a71b7f3a934c782ea410852a8142d2befe8cf4d",
+              "visible_to_generator": false
+            },
+            {
+              "path": "docs/user/quickstart.rst",
+              "start_line": 339,
+              "end_line": 339,
+              "content": "    >>> files = {'file': ('report.csv', 'some,data,to,send\\nanother,row,to,send\\n')}",
+              "content_sha256": "edbe31655976b66b8f3459cb8b142b4275bee7158d282f9743c60740bb17ef2a",
+              "visible_to_generator": true
+            }
+          ]
+        },
+        {
+          "claim": "第三位置可显式给text/csv。",
+          "status": "supported",
+          "rationale": "三元组解包为fn,fp,ft，随后设置文件部分content_type。",
+          "evidence": [
+            {
+              "path": "src/requests/models.py",
+              "start_line": 177,
+              "end_line": 198
+            },
+            {
+              "path": "docs/user/quickstart.rst",
+              "start_line": 324,
+              "end_line": 324
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "src/requests/models.py",
+              "start_line": 177,
+              "end_line": 198,
+              "content": "            if isinstance(v, (tuple, list)):\n                if len(v) == 2:\n                    fn, fp = v\n                elif len(v) == 3:\n                    fn, fp, ft = v\n                else:\n                    fn, fp, ft, fh = v\n            else:\n                fn = guess_filename(v) or k\n                fp = v\n\n            if isinstance(fp, (str, bytes, bytearray)):\n                fdata = fp\n            elif hasattr(fp, \"read\"):\n                fdata = fp.read()\n            elif fp is None:\n                continue\n            else:\n                fdata = fp\n\n            rf = RequestField(name=k, data=fdata, filename=fn, headers=fh)\n            rf.make_multipart(content_type=ft)",
+              "content_sha256": "588bd52d811234e10b0dd7affe666137b74263c43796858d345793442fc51491",
+              "visible_to_generator": false
+            },
+            {
+              "path": "docs/user/quickstart.rst",
+              "start_line": 324,
+              "end_line": 324,
+              "content": "    >>> files = {'file': ('report.xls', open('report.xls', 'rb'), 'application/vnd.ms-excel', {'Expires': '0'})}",
+              "content_sha256": "7f70d4fee32c07d6743a2491fa9fbda9fdc2bbd0598784f96a4d13e946715ea2",
+              "visible_to_generator": true
+            }
+          ]
+        },
+        {
+          "claim": "因为只要求最小写法，题干给定的MIME类型可以省略。",
+          "status": "contradicted",
+          "rationale": "最小方案仍需满足明确的text/csv要求；候选把正确第三位置放在可选说明中，没有纳入推荐方案。",
+          "evidence": [
+            {
+              "path": "src/requests/models.py",
+              "start_line": 173,
+              "end_line": 198
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "src/requests/models.py",
+              "start_line": 173,
+              "end_line": 198,
+              "content": "        for k, v in files:\n            # support for explicit filename\n            ft = None\n            fh = None\n            if isinstance(v, (tuple, list)):\n                if len(v) == 2:\n                    fn, fp = v\n                elif len(v) == 3:\n                    fn, fp, ft = v\n                else:\n                    fn, fp, ft, fh = v\n            else:\n                fn = guess_filename(v) or k\n                fp = v\n\n            if isinstance(fp, (str, bytes, bytearray)):\n                fdata = fp\n            elif hasattr(fp, \"read\"):\n                fdata = fp.read()\n            elif fp is None:\n                continue\n            else:\n                fdata = fp\n\n            rf = RequestField(name=k, data=fdata, filename=fn, headers=fh)\n            rf.make_multipart(content_type=ft)",
+              "content_sha256": "4598274bc90f2bde1a294bc1a196c9f19cfb4e65f311e7619e316d5b425bf528",
+              "visible_to_generator": false
+            }
+          ]
+        }
+      ],
+      "notes": "必要类型被明确当作可选，不能从附带正确说明拼接成已给出正确方案。关联改写开发复核，非完全盲审或真人批准。",
+      "key_points": null,
+      "candidate_sha256": "63f7a359afc5ecc60549d5aaac3afb0b8a4517286bd0e1b013d2db5ce871fc68",
+      "reviewer": "Codex (current session)",
+      "review_type": "model_assisted_nonblind_development_review",
+      "human_approved": false,
+      "training_eligible": false,
+      "result_sha256": "4f79192b92aec279904f6aa6832c6962de94bfcc8f365cce11569458cf9bd218"
+    },
+    "step-flask-stream--bm25_code": {
+      "candidate_id": "step-flask-stream--bm25_code",
+      "correctness": "correct",
+      "citation_support": "supported",
+      "completeness": "adequate",
+      "abstention": "not_applicable",
+      "entry_scope": "correct",
+      "consistency": "consistent",
+      "claims": [
+        {
+          "claim": "在题设视图内返回Response(stream_with_context(exporter))。",
+          "status": "supported",
+          "rationale": "将已有迭代器直接按文档模式包装，没有换成教程新生成器。",
+          "evidence": [
+            {
+              "path": "src/flask/helpers.py",
+              "start_line": 84,
+              "end_line": 94
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "src/flask/helpers.py",
+              "start_line": 84,
+              "end_line": 94,
+              "content": "    Alternatively it can also be used around a specific generator::\n\n        from flask import stream_with_context, request, Response\n\n        @app.route('/stream')\n        def streamed_response():\n            def generate():\n                yield 'Hello '\n                yield request.args['name']\n                yield '!'\n            return Response(stream_with_context(generate()))",
+              "content_sha256": "2f85b44a447f09f1abb5e8b941227dab9975880344c5fa9d12ddc9b16cc8e9e6",
+              "visible_to_generator": true
+            }
+          ]
+        },
+        {
+          "claim": "当前请求中创建的包装保留后续迭代读取request.args所需上下文。",
+          "status": "supported",
+          "rationale": "视图示例及启动包装时ctx已推入的说明，支持在当前请求中捕获并用于后续延迟迭代。",
+          "evidence": [
+            {
+              "path": "src/flask/helpers.py",
+              "start_line": 84,
+              "end_line": 94
+            },
+            {
+              "path": "src/flask/helpers.py",
+              "start_line": 130,
+              "end_line": 136
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "src/flask/helpers.py",
+              "start_line": 84,
+              "end_line": 94,
+              "content": "    Alternatively it can also be used around a specific generator::\n\n        from flask import stream_with_context, request, Response\n\n        @app.route('/stream')\n        def streamed_response():\n            def generate():\n                yield 'Hello '\n                yield request.args['name']\n                yield '!'\n            return Response(stream_with_context(generate()))",
+              "content_sha256": "2f85b44a447f09f1abb5e8b941227dab9975880344c5fa9d12ddc9b16cc8e9e6",
+              "visible_to_generator": true
+            },
+            {
+              "path": "src/flask/helpers.py",
+              "start_line": 130,
+              "end_line": 136,
+              "content": "    # The trick is to start the generator.  Then the code execution runs until\n    # the first dummy None is yielded at which point the context was already\n    # pushed.  This item is discarded.  Then when the iteration continues the\n    # real generator is executed.\n    wrapped_g = generator()\n    next(wrapped_g)\n    return wrapped_g  # type: ignore[return-value]",
+              "content_sha256": "700c35827b5e6320a6405116d1944592ca04420036aa35868b36cfeb60c47c15",
+              "visible_to_generator": true
+            }
+          ]
+        },
+        {
+          "claim": "exporter作为stream_with_context的迭代器入参传入。",
+          "status": "supported",
+          "rationale": "helper接受迭代器并取得其iter；题设exporter符合。无需额外创建另一个业务迭代器。",
+          "evidence": [
+            {
+              "path": "src/flask/helpers.py",
+              "start_line": 62,
+              "end_line": 64
+            },
+            {
+              "path": "src/flask/helpers.py",
+              "start_line": 98,
+              "end_line": 104
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "src/flask/helpers.py",
+              "start_line": 62,
+              "end_line": 64,
+              "content": "def stream_with_context(\n    generator_or_function: t.Iterator[t.AnyStr] | t.Callable[..., t.Iterator[t.AnyStr]],\n) -> t.Iterator[t.AnyStr] | t.Callable[[t.Iterator[t.AnyStr]], t.Iterator[t.AnyStr]]:",
+              "content_sha256": "923c644266ba9045762fd789d5dbe942076c21525ff6867ac1a54564105415b4",
+              "visible_to_generator": true
+            },
+            {
+              "path": "src/flask/helpers.py",
+              "start_line": 98,
+              "end_line": 104,
+              "content": "    try:\n        gen = iter(generator_or_function)  # type: ignore[arg-type]\n    except TypeError:\n\n        def decorator(*args: t.Any, **kwargs: t.Any) -> t.Any:\n            gen = generator_or_function(*args, **kwargs)  # type: ignore[operator]\n            return stream_with_context(gen)",
+              "content_sha256": "28d402b440348f683d3c7d64635259e55e671e968751f39b75c189c6c9e3c3bf",
+              "visible_to_generator": true
+            }
+          ]
+        }
+      ],
+      "notes": "题设exporter被实际使用，最小语句和在视图当前请求中包装的说明充分；不添加资源关闭、MIME或网络要求。关联改写开发复核，非完全盲审或真人批准。",
+      "key_points": null,
+      "candidate_sha256": "1fc6e7ead8219ee416bf8b78abe04ce3c819eda82ab1e722efa6bbd03a3f6021",
+      "reviewer": "Codex (current session)",
+      "review_type": "model_assisted_nonblind_development_review",
+      "human_approved": false,
+      "training_eligible": false,
+      "result_sha256": "72fa228f1a20d034372b26de27af7935869abdc00f9ba60c45493ca7bf10e297"
+    }
+  },
+  "groups": {
+    "all/bm25_code": {
+      "records": 2,
+      "success": 2,
+      "model_requests": 2,
+      "tool_calls": 0,
+      "episodes_using_tools": 0,
+      "citation_ranges_valid": 2,
+      "initial_reference_complete": 0,
+      "final_reference_complete": 0,
+      "initial_nonblank_reference_complete": 0,
+      "final_nonblank_reference_complete": 0,
+      "requests_without_usage": 0,
+      "requests_without_elapsed": 0,
+      "prompt_tokens": 7551,
+      "completion_tokens": 304,
+      "generator_seconds": 25.625,
+      "reviewed": 2,
+      "factually_correct": 1,
+      "core_supported": 1,
+      "fully_resolved": 1
+    },
+    "business-steps-foundation/bm25_code": {
+      "records": 2,
+      "success": 2,
+      "model_requests": 2,
+      "tool_calls": 0,
+      "episodes_using_tools": 0,
+      "citation_ranges_valid": 2,
+      "initial_reference_complete": 0,
+      "final_reference_complete": 0,
+      "initial_nonblank_reference_complete": 0,
+      "final_nonblank_reference_complete": 0,
+      "requests_without_usage": 0,
+      "requests_without_elapsed": 0,
+      "prompt_tokens": 7551,
+      "completion_tokens": 304,
+      "generator_seconds": 25.625,
+      "reviewed": 2,
+      "factually_correct": 1,
+      "core_supported": 1,
+      "fully_resolved": 1
+    },
+    "foundation/bm25_code": {
+      "records": 2,
+      "success": 2,
+      "model_requests": 2,
+      "tool_calls": 0,
+      "episodes_using_tools": 0,
+      "citation_ranges_valid": 2,
+      "initial_reference_complete": 0,
+      "final_reference_complete": 0,
+      "initial_nonblank_reference_complete": 0,
+      "final_nonblank_reference_complete": 0,
+      "requests_without_usage": 0,
+      "requests_without_elapsed": 0,
+      "prompt_tokens": 7551,
+      "completion_tokens": 304,
+      "generator_seconds": 25.625,
+      "reviewed": 2,
+      "factually_correct": 1,
+      "core_supported": 1,
+      "fully_resolved": 1
+    },
+    "answerable/bm25_code": {
+      "records": 2,
+      "success": 2,
+      "model_requests": 2,
+      "tool_calls": 0,
+      "episodes_using_tools": 0,
+      "citation_ranges_valid": 2,
+      "initial_reference_complete": 0,
+      "final_reference_complete": 0,
+      "initial_nonblank_reference_complete": 0,
+      "final_nonblank_reference_complete": 0,
+      "requests_without_usage": 0,
+      "requests_without_elapsed": 0,
+      "prompt_tokens": 7551,
+      "completion_tokens": 304,
+      "generator_seconds": 25.625,
+      "reviewed": 2,
+      "factually_correct": 1,
+      "core_supported": 1,
+      "fully_resolved": 1
+    }
+  },
+  "retrieval": {
+    "shared_initial": {
+      "answerable": 2,
+      "reference_complete": 0,
+      "nonblank_reference_complete": 0
+    }
+  },
+  "new_requests": 2,
+  "combined_requests": 1567,
+  "paid_requests": 0,
+  "human_approved": false,
+  "training_eligible": false,
+  "reporting_implementation": "b4704f8bca6df1b172be685f1d6d197bc584e21f6b6d627de743be092a5c6a7c",
+  "usage_observation_note": "Token/time sums include observed values only. Missing usage and elapsed time remain unknown in raw records; reservations still count every sent or ambiguous request.",
+  "checks": {
+    "business_by_case": {
+      "step-requests-file--bm25_code": {
+        "business_decision_correct": false,
+        "severe_wrong_advice": true,
+        "missing_requirements": [
+          "最终files项实际提供text/csv第三位置或等价文件部分类型。"
+        ],
+        "failure_cause": {
+          "primary": "explicit_required_content_type_treated_as_optional",
+          "detail": "实际已见文档324行内容类型位置，答案也知道该位置，却以“最小”为由删掉业务必要条件。",
+          "missing_source": [],
+          "sufficient_source_misread": [
+            {
+              "path": "docs/user/quickstart.rst",
+              "start_line": 321,
+              "end_line": 325
+            }
+          ],
+          "tool_use": "not_observable_from_anonymous_packets; context_visibility_does_not_prove_tool_use_or_nonuse"
+        }
+      },
+      "step-flask-stream--bm25_code": {
+        "business_decision_correct": true,
+        "severe_wrong_advice": false,
+        "missing_requirements": [],
+        "failure_cause": {
+          "primary": "none",
+          "detail": "已有exporter被正确包装；引用文档示例和包装启动说明充分支持本题最小接入。",
+          "missing_source": [],
+          "sufficient_source_misread": [],
+          "tool_use": "not_observable_from_anonymous_packets; context_visibility_does_not_prove_tool_use_or_nonuse"
+        }
+      }
+    },
+    "review_file_sha256": {
+      "candidate-48d983d572c7": "d357c989d9ed004fdcd84c067d0fe0679308dbf41e36c67f68ba9fed37cce36b",
+      "candidate-8cc4e12d4666": "65d7973e97522c524b882350c4d0b275661da53f61c1d24282c841432c63fc0c"
+    },
+    "source_archive_sha256": "dfd27a312aa47c49ba6c6c3c0080cebfacf15d6756e46beccb8b0c41edaaa774",
+    "decision": "Rejected: both failure targets were required to become correct; file MIME constraint still omitted. Individual stream improvement is retained as a diagnostic, not current default or overall success. All prompt changes reverted.",
+    "difficulty_scope": "Same frozen development questions and gold; no held-out generalization or human approval."
+  },
+  "scope": "Two-request development gate on known failures, unchanged question/gold/source selection and same model. Replace repetitive ANSWER_STYLE with a shorter common contract clarifying that minimal solutions must satisfy all stated field requirements and use provided variables. No task-specific strings or source alterations. Expand to SDK and original complex protections only if both target decisions become correct and supported. This is not generalization or final adoption."
+}

@@ -1,0 +1,250 @@
+{
+  "task_id": "dbader--schedule-14",
+  "repository": "dbader/schedule",
+  "split": "validation",
+  "index_id": "2d7d94e73bbf987c8660f0a2",
+  "base_index_id": "f26de0d2a461bcbdd863767c",
+  "chunk_ids_sha256": "7d5cac1d40773160c08ef2c5e183972628798e505997a8ca03ce3fc0d5dd4951",
+  "retriever": "hybrid",
+  "metrics": {
+    "recall_at_6": 0.0,
+    "recall_at_20": 0.0,
+    "mrr": 1.0,
+    "target_overlap_recall_at_6": 1.0,
+    "target_overlap_recall_at_20": 1.0,
+    "line_coverage_at_6": 0.64
+  },
+  "first_query_seconds": 0.0032782000000679545,
+  "warm_query_seconds": 0.008417400000098496,
+  "index_open_build_seconds": 0.09462299999995594,
+  "chunks": 328,
+  "candidates": [
+    {
+      "snapshot_id": "9999db891acf16c1a1fd96b5",
+      "chunk_id": "87939df8ab16d15d2b127912",
+      "path": "schedule/__init__.py",
+      "start_line": 674,
+      "end_line": 689,
+      "content_hash": "72c2c72519f1267747df45864164bb0abfc77889fcd4f93df8287282c2097ff2",
+      "content": "    def run(self):\n        \"\"\"\n        Run the job and immediately reschedule it.\n        If the job's deadline is reached (configured using .until()), the job is not\n        run and CancelJob is returned immediately. If the next scheduled run exceeds\n        the job's deadline, CancelJob is returned after the execution. In this latter\n        case CancelJob takes priority over any other returned value.\n\n        :return: The return value returned by the `job_func`, or CancelJob if the job's\n                 deadline is reached.\n\n        \"\"\"\n        if self._is_overdue(datetime.datetime.now()):\n            logger.debug(\"Cancelling job %s\", self)\n            return CancelJob\n",
+      "symbol": "Job.run",
+      "truncated": false
+    },
+    {
+      "snapshot_id": "9999db891acf16c1a1fd96b5",
+      "chunk_id": "a79b10f7408dd21179b14bca",
+      "path": "schedule/__init__.py",
+      "start_line": 172,
+      "end_line": 175,
+      "content_hash": "076df0574b1623909368e3d10150328aa01e87591b1e57ec5cbd28c4fb132dc4",
+      "content": "    def _run_job(self, job: \"Job\") -> None:\n        ret = job.run()\n        if isinstance(ret, CancelJob) or ret is CancelJob:\n            self.cancel_job(job)",
+      "symbol": "Scheduler._run_job",
+      "truncated": false
+    },
+    {
+      "snapshot_id": "9999db891acf16c1a1fd96b5",
+      "chunk_id": "c0e16b36de5706ee256f8f1c",
+      "path": "schedule/__init__.py",
+      "start_line": 644,
+      "end_line": 664,
+      "content_hash": "29650fd7a5e028bcd3178da29d9b0b5c8f5e2896e67e38f88c1186d68c48ba18",
+      "content": "    def do(self, job_func: Callable, *args, **kwargs):\n        \"\"\"\n        Specifies the job_func that should be called every time the\n        job runs.\n\n        Any additional arguments are passed on to job_func when\n        the job runs.\n\n        :param job_func: The function to be scheduled\n        :return: The invoked job instance\n        \"\"\"\n        self.job_func = functools.partial(job_func, *args, **kwargs)\n        functools.update_wrapper(self.job_func, job_func)\n        self._schedule_next_run()\n        if self.scheduler is None:\n            raise ScheduleError(\n                \"Unable to a add job to schedule. \"\n                \"Job is not associated with an scheduler\"\n            )\n        self.scheduler.jobs.append(self)\n        return self",
+      "symbol": "Job.do",
+      "truncated": false
+    },
+    {
+      "snapshot_id": "9999db891acf16c1a1fd96b5",
+      "chunk_id": "ba5a33bc3e2d4c03700c4355",
+      "path": "test_schedule.py",
+      "start_line": 1319,
+      "end_line": 1323,
+      "content_hash": "235b64d643e1ca5ea5b70221eba596cac21a6841626c94da07e20c07f40acbf2",
+      "content": "    def test_job_func_args_are_passed_on(self):\n        mock_job = make_mock_job()\n        every().second.do(mock_job, 1, 2, \"three\", foo=23, bar={})\n        schedule.run_all()\n        mock_job.assert_called_once_with(1, 2, \"three\", foo=23, bar={})",
+      "symbol": "SchedulerTests.test_job_func_args_are_passed_on",
+      "truncated": false
+    },
+    {
+      "snapshot_id": "9999db891acf16c1a1fd96b5",
+      "chunk_id": "efa79583d959688354e0a6e6",
+      "path": "docs/faq.rst",
+      "start_line": 60,
+      "end_line": 75,
+      "content_hash": "8702941d1ea56683f3bcb288b967c554a9eefc74be784c4c1cd996b527399b9f",
+      "content": "How can I run a job only once?\n------------------------------\nSee :doc:`Examples <examples>`.\n\nHow can I cancel several jobs at once?\n--------------------------------------\nSee :doc:`Examples <examples>`.\n\nHow to execute jobs in parallel?\n--------------------------------\nSee :doc:`Parallel Execution <parallel-execution>`.\n\nHow to continuously run the scheduler without blocking the main thread?\n-----------------------------------------------------------------------\n:doc:`Background Execution<background-execution>`.\n",
+      "symbol": null,
+      "truncated": false
+    },
+    {
+      "snapshot_id": "9999db891acf16c1a1fd96b5",
+      "chunk_id": "7df5858d0f7238b0d06bda11",
+      "path": "docs/exception-handling.rst",
+      "start_line": 13,
+      "end_line": 32,
+      "content_hash": "313987289e8dd95610eaac445edd3ff4f786b67b305cff395046c1dcf53956a6",
+      "content": "    def catch_exceptions(cancel_on_failure=False):\n        def catch_exceptions_decorator(job_func):\n            @functools.wraps(job_func)\n            def wrapper(*args, **kwargs):\n                try:\n                    return job_func(*args, **kwargs)\n                except:\n                    import traceback\n                    print(traceback.format_exc())\n                    if cancel_on_failure:\n                        return schedule.CancelJob\n            return wrapper\n        return catch_exceptions_decorator\n\n    @catch_exceptions(cancel_on_failure=True)\n    def bad_task():\n        return 1 / 0\n\n    schedule.every(5).minutes.do(bad_task)\n",
+      "symbol": null,
+      "truncated": false
+    },
+    {
+      "snapshot_id": "9999db891acf16c1a1fd96b5",
+      "chunk_id": "6a82b0187bb7279d181322c6",
+      "path": "schedule/__init__.py",
+      "start_line": 227,
+      "end_line": 243,
+      "content_hash": "3192c86d65fbbec214d8cfb5096031d86b4b22e21b24631ba0d0b0397edfed24",
+      "content": "    def __init__(self, interval: int, scheduler: Optional[Scheduler] = None):\n        self.interval: int = interval  # pause interval * unit between runs\n        self.latest: Optional[int] = None  # upper limit to the interval\n        self.job_func: Optional[functools.partial] = None  # the job job_func to run\n\n        # time units, e.g. 'minutes', 'hours', ...\n        self.unit: Optional[str] = None\n\n        # optional time at which this job runs\n        self.at_time: Optional[datetime.time] = None\n\n        # optional time zone of the self.at_time field. Only relevant when at_time is not None\n        self.at_time_zone = None\n\n        # datetime of the last run\n        self.last_run: Optional[datetime.datetime] = None\n",
+      "symbol": "Job.__init__",
+      "truncated": false
+    },
+    {
+      "snapshot_id": "9999db891acf16c1a1fd96b5",
+      "chunk_id": "d3deb46c990701de984c4691",
+      "path": "docs/timezones.rst",
+      "start_line": 67,
+      "end_line": 78,
+      "content_hash": "7cf74610e7ee119ba4b255a0183471c6b59227fe18e4184f3cb0def27a2194e0",
+      "content": "    s = every().day.at(\"10:30\", \"America/New_York\").do(job)\n\nBecause of the 5 hour time difference between Berlin and New York the job should effectively run at ``15:30:00``.\nSo the next run in Berlin time is ``2022 march 20, 15:30:00``:\n\n.. code-block:: python\n\n    print(s.next_run)\n    # 2022-03-20 15:30:00\n\n    print(repr(s))\n    # Every 1 day at 10:30:00 do job() (last run: [never], next run: 2022-03-20 15:30:00)",
+      "symbol": null,
+      "truncated": false
+    },
+    {
+      "snapshot_id": "9999db891acf16c1a1fd96b5",
+      "chunk_id": "f956a21b0830d869cef148b4",
+      "path": "schedule/__init__.py",
+      "start_line": 89,
+      "end_line": 101,
+      "content_hash": "b3480559c764c818c9ccf72ec63f7199bbbd2c9586827bf53158e1adf8c72a30",
+      "content": "    def run_pending(self) -> None:\n        \"\"\"\n        Run all jobs that are scheduled to run.\n\n        Please note that it is *intended behavior that run_pending()\n        does not run missed jobs*. For example, if you've registered a job\n        that should run every minute and you only call run_pending()\n        in one hour increments then your job won't be run 60 times in\n        between but only once.\n        \"\"\"\n        runnable_jobs = (job for job in self.jobs if job.should_run)\n        for job in sorted(runnable_jobs):\n            self._run_job(job)",
+      "symbol": "Scheduler.run_pending",
+      "truncated": false
+    },
+    {
+      "snapshot_id": "9999db891acf16c1a1fd96b5",
+      "chunk_id": "a82c13e7eac232f6f78a010d",
+      "path": "docs/examples.rst",
+      "start_line": 29,
+      "end_line": 51,
+      "content_hash": "413413d4d81c7d7286fa7edea583b2f75c5efc63fded2eaba85f9662c8c6668d",
+      "content": "    # Run job every hour at the 42nd minute\n    schedule.every().hour.at(\":42\").do(job)\n\n    # Run jobs every 5th hour, 20 minutes and 30 seconds in.\n    # If current time is 02:00, first execution is at 06:20:30\n    schedule.every(5).hours.at(\"20:30\").do(job)\n\n    # Run job every day at specific HH:MM and next HH:MM:SS\n    schedule.every().day.at(\"10:30\").do(job)\n    schedule.every().day.at(\"10:30:42\").do(job)\n    schedule.every().day.at(\"12:42\", \"Europe/Amsterdam\").do(job)\n\n    # Run job on a specific day of the week\n    schedule.every().monday.do(job)\n    schedule.every().wednesday.at(\"13:15\").do(job)\n\n    while True:\n        schedule.run_pending()\n        time.sleep(1)\n\nUse a decorator to schedule a job\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n",
+      "symbol": null,
+      "truncated": false
+    },
+    {
+      "snapshot_id": "9999db891acf16c1a1fd96b5",
+      "chunk_id": "8a17c4433c946d8410c9b889",
+      "path": "schedule/__init__.py",
+      "start_line": 284,
+      "end_line": 301,
+      "content_hash": "a894cef4ccd5d685515a954960e873c4a82039796cf75e419f91c7eb65708fa8",
+      "content": "\n        timestats = \"(last run: %s, next run: %s)\" % (\n            format_time(self.last_run),\n            format_time(self.next_run),\n        )\n\n        if hasattr(self.job_func, \"__name__\"):\n            job_func_name = self.job_func.__name__\n        else:\n            job_func_name = repr(self.job_func)\n\n        if self.job_func is not None:\n            args = [repr(x) if is_repr(x) else str(x) for x in self.job_func.args]\n            kwargs = [\"%s=%s\" % (k, repr(v)) for k, v in self.job_func.keywords.items()]\n            call_repr = job_func_name + \"(\" + \", \".join(args + kwargs) + \")\"\n        else:\n            call_repr = \"[None]\"\n",
+      "symbol": "Job.__repr__",
+      "truncated": false
+    },
+    {
+      "snapshot_id": "9999db891acf16c1a1fd96b5",
+      "chunk_id": "1fc306492973b8b288e9cfdd",
+      "path": "docs/parallel-execution.rst",
+      "start_line": 23,
+      "end_line": 54,
+      "content_hash": "21eef287e8312a9e1951919886b65978b7c2a349a95bd44b7ea6f69533c7c8c3",
+      "content": "    schedule.every(10).seconds.do(run_threaded, job)\n    schedule.every(10).seconds.do(run_threaded, job)\n    schedule.every(10).seconds.do(run_threaded, job)\n    schedule.every(10).seconds.do(run_threaded, job)\n    schedule.every(10).seconds.do(run_threaded, job)\n\n\n    while 1:\n        schedule.run_pending()\n        time.sleep(1)\n\nIf you want tighter control on the number of threads use a shared jobqueue and one or more worker threads:\n\n.. code-block:: python\n\n    import time\n    import threading\n    import schedule\n    import queue\n\n    def job():\n        print(\"I'm working\")\n\n\n    def worker_main():\n        while 1:\n            job_func = jobqueue.get()\n            job_func()\n            jobqueue.task_done()\n\n    jobqueue = queue.Queue()\n",
+      "symbol": null,
+      "truncated": false
+    },
+    {
+      "snapshot_id": "9999db891acf16c1a1fd96b5",
+      "chunk_id": "cf2c115b3ebfe5dc23cb6f6c",
+      "path": "docs/faq.rst",
+      "start_line": 43,
+      "end_line": 59,
+      "content_hash": "f38edf3b1f898e90207fcfe5adddc8fc8d0c45cb20ef22f2b8d11bfe4b29e653",
+      "content": "Still having problems? Use Google and StackOverflow before submitting an issue.\n\nModuleNotFoundError: ModuleNotFoundError: No module named 'pytz'\n----------------------------------------------------------------\n\nThis error happens when you try to set a timezone in ``.at()`` without having the `pytz <https://pypi.org/project/pytz/>`_ package installed.\nPytz is a required dependency when working with timezones.\nTo resolve this issue, install the ``pytz`` module by running ``pip install pytz``.\n\nDoes schedule support time zones?\n---------------------------------\nYes! See :doc:`Timezones <timezones>`.\n\nWhat if my task throws an exception?\n------------------------------------\nSee :doc:`Exception Handling <exception-handling>`.\n",
+      "symbol": null,
+      "truncated": false
+    },
+    {
+      "snapshot_id": "9999db891acf16c1a1fd96b5",
+      "chunk_id": "84e90e2428e0f49130dcb34f",
+      "path": "schedule/__init__.py",
+      "start_line": 264,
+      "end_line": 276,
+      "content_hash": "9d4c87a6f5e601329af43b972deb64f555de37853eb771e1365918c58b44a90c",
+      "content": "    def __str__(self) -> str:\n        if hasattr(self.job_func, \"__name__\"):\n            job_func_name = self.job_func.__name__  # type: ignore\n        else:\n            job_func_name = repr(self.job_func)\n\n        return (\"Job(interval={}, unit={}, do={}, args={}, kwargs={})\").format(\n            self.interval,\n            self.unit,\n            job_func_name,\n            \"()\" if self.job_func is None else self.job_func.args,\n            \"{}\" if self.job_func is None else self.job_func.keywords,\n        )",
+      "symbol": "Job.__str__",
+      "truncated": false
+    },
+    {
+      "snapshot_id": "9999db891acf16c1a1fd96b5",
+      "chunk_id": "df92a94c844ad1619804c5db",
+      "path": "docs/parallel-execution.rst",
+      "start_line": 1,
+      "end_line": 22,
+      "content_hash": "38c786d4eaba1550b2a142980896ddfa0882b2a540d828f35d8300f32fab833f",
+      "content": "Parallel execution\n==========================\n\n*I am trying to execute 50 items every 10 seconds, but from the my logs it says it executes every item in 10 second schedule serially, is there a work around?*\n\nBy default, schedule executes all jobs serially. The reasoning behind this is that it would be difficult to find a model for parallel execution that makes everyone happy.\n\nYou can work around this limitation by running each of the jobs in its own thread:\n\n.. code-block:: python\n\n    import threading\n    import time\n    import schedule\n\n    def job():\n        print(\"I'm running on thread %s\" % threading.current_thread())\n\n    def run_threaded(job_func):\n        job_thread = threading.Thread(target=job_func)\n        job_thread.start()\n",
+      "symbol": null,
+      "truncated": false
+    },
+    {
+      "snapshot_id": "9999db891acf16c1a1fd96b5",
+      "chunk_id": "7f467a5ce391415432e553dc",
+      "path": "docs/exception-handling.rst",
+      "start_line": 33,
+      "end_line": 33,
+      "content_hash": "6333b72d5802ee92fbcc454b45780b1ce6b0aadf9039314852b54f532b117010",
+      "content": "Another option would be to subclass Schedule like @mplewis did in `this example <https://gist.github.com/mplewis/8483f1c24f2d6259aef6>`_.",
+      "symbol": null,
+      "truncated": false
+    },
+    {
+      "snapshot_id": "9999db891acf16c1a1fd96b5",
+      "chunk_id": "b1cf4233ce3676a7449a3dc7",
+      "path": "test_schedule.py",
+      "start_line": 647,
+      "end_line": 661,
+      "content_hash": "0ea1ff310497505d2a7b9060271b510bd9632dc4fed0d767796e01519e6850c3",
+      "content": "    def test_tz_daily_dst_skip_hour(self):\n        mock_job = self.make_tz_mock_job()\n        # Test the DST-case that is described in the documentation\n        with mock_datetime(2023, 3, 26, 1, 30):\n            # Current Berlin time: 01:30 (NOT during daylight saving)\n            # Expected to run: 02:30 - this time doesn't exist\n            #  because clock moves from 02:00 to 03:00\n            # Next run: 03:30\n            job = every().day.at(\"02:30\", \"Europe/Berlin\").do(mock_job)\n            assert job.next_run.day == 26\n            assert job.next_run.hour == 3\n            assert job.next_run.minute == 30\n        with mock_datetime(2023, 3, 27, 1, 30):\n            # the next day the job shall again run at 02:30\n            job.run()",
+      "symbol": "SchedulerTests.test_tz_daily_dst_skip_hour",
+      "truncated": false
+    },
+    {
+      "snapshot_id": "9999db891acf16c1a1fd96b5",
+      "chunk_id": "0ee9356d645120139b7160dd",
+      "path": "docs/logging.rst",
+      "start_line": 46,
+      "end_line": 71,
+      "content_hash": "c4599c84c39b21ed6b10858d24c5970b6bd0315beb7da3dba517305563538687",
+      "content": "    # This decorator can be applied to any job function to log the elapsed time of each job\n    def print_elapsed_time(func):\n        @functools.wraps(func)\n        def wrapper(*args, **kwargs):\n            start_timestamp = time.time()\n            print('LOG: Running job \"%s\"' % func.__name__)\n            result = func(*args, **kwargs)\n            print('LOG: Job \"%s\" completed in %d seconds' % (func.__name__, time.time() - start_timestamp))\n            return result\n\n        return wrapper\n\n\n    @print_elapsed_time\n    def job():\n        print('Hello, Logs')\n        time.sleep(5)\n\n    schedule.every().second.do(job)\n\n    schedule.run_all()\n\nThis outputs:\n\n.. code-block:: text\n",
+      "symbol": null,
+      "truncated": false
+    },
+    {
+      "snapshot_id": "9999db891acf16c1a1fd96b5",
+      "chunk_id": "cd3425991cb664b035b7adbf",
+      "path": "test_schedule.py",
+      "start_line": 216,
+      "end_line": 220,
+      "content_hash": "68dae4f7e2116b82d313c312d55ba36fe93ca567aa2fbdecca305f0f9362639f",
+      "content": "        # test self.latest >= self.interval\n        job_instance.latest = 1\n        self.assertRaises(ScheduleError, job_instance._schedule_next_run)\n        job_instance.latest = 3\n        self.assertRaises(ScheduleError, job_instance._schedule_next_run)",
+      "symbol": "SchedulerTests.test_time_units",
+      "truncated": false
+    },
+    {
+      "snapshot_id": "9999db891acf16c1a1fd96b5",
+      "chunk_id": "a02999602853d9edccf9581f",
+      "path": "docs/index.rst",
+      "start_line": 1,
+      "end_line": 15,
+      "content_hash": "7285c4260b8a67638bc8a99b6f154f6f7f682a1c513c96209dada5a6fb1b9474",
+      "content": "schedule\n========\n\n\n.. image:: https://github.com/dbader/schedule/workflows/Tests/badge.svg\n        :target: https://github.com/dbader/schedule/actions?query=workflow%3ATests+branch%3Amaster\n\n.. image:: https://coveralls.io/repos/dbader/schedule/badge.svg?branch=master\n        :target: https://coveralls.io/r/dbader/schedule\n\n.. image:: https://img.shields.io/pypi/v/schedule.svg\n        :target: https://pypi.python.org/pypi/schedule\n\nPython job scheduling for humans. Run Python functions (or any other callable) periodically using a friendly syntax.\n",
+      "symbol": null,
+      "truncated": false
+    }
+  ],
+  "neural_work": {
+    "embedding_hits": 14,
+    "embedding_new": 0,
+    "rerank_hits": 0,
+    "rerank_new": 0
+  },
+  "generation_requests": 0
+}

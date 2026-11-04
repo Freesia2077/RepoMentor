@@ -1,0 +1,533 @@
+{
+  "questions": 2,
+  "planned_answers": 4,
+  "records": 4,
+  "reviews": {
+    "improvement-confirm-blinker-03--before": {
+      "candidate_id": "improvement-confirm-blinker-03--before",
+      "correctness": "partially_correct",
+      "citation_support": "partial",
+      "completeness": "partial",
+      "abstention": "not_applicable",
+      "entry_scope": "correct",
+      "consistency": "consistent",
+      "claims": [
+        {
+          "claim": "自定义BaseException退出后接收器不再留在信号上。",
+          "status": "supported",
+          "rationale": "参数化异常测试在退出后断言not sig.receivers。",
+          "evidence": [
+            {
+              "path": "tests/test_context.py",
+              "start_line": 51,
+              "end_line": 68
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "tests/test_context.py",
+              "start_line": 51,
+              "end_line": 68,
+              "content": "@pytest.mark.parametrize(\"exc_type\", [Failure, BaseFailure])\ndef test_temp_connection_failure(exc_type: type[BaseException]) -> None:\n    sig = Signal()\n\n    canary = []\n\n    def receiver(sender: t.Any) -> None:\n        canary.append(sender)\n\n    with pytest.raises(exc_type):\n        sig.send(1)\n        with sig.connected_to(receiver):\n            sig.send(2)\n            raise exc_type\n        sig.send(3)\n\n    assert canary == [2]\n    assert not sig.receivers",
+              "content_sha256": "9aef9858a826e07d6fc5e32c2d2e11856f1694bef7ab66ee0a6ccca421d5b15e",
+              "visible_to_generator": true
+            }
+          ]
+        },
+        {
+          "claim": "测试在块内raise后再次执行sig.send(3)以证明不触发接收器。",
+          "status": "contradicted",
+          "rationale": "raise后同块的send(3)不可达，实际证据是块外not sig.receivers断言。",
+          "evidence": [
+            {
+              "path": "tests/test_context.py",
+              "start_line": 51,
+              "end_line": 68
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "tests/test_context.py",
+              "start_line": 51,
+              "end_line": 68,
+              "content": "@pytest.mark.parametrize(\"exc_type\", [Failure, BaseFailure])\ndef test_temp_connection_failure(exc_type: type[BaseException]) -> None:\n    sig = Signal()\n\n    canary = []\n\n    def receiver(sender: t.Any) -> None:\n        canary.append(sender)\n\n    with pytest.raises(exc_type):\n        sig.send(1)\n        with sig.connected_to(receiver):\n            sig.send(2)\n            raise exc_type\n        sig.send(3)\n\n    assert canary == [2]\n    assert not sig.receivers",
+              "content_sha256": "9aef9858a826e07d6fc5e32c2d2e11856f1694bef7ab66ee0a6ccca421d5b15e",
+              "visible_to_generator": true
+            }
+          ]
+        },
+        {
+          "claim": "上下文退出会清理连接。",
+          "status": "supported",
+          "rationale": "真实connected_to用finally断开，但该实现未在本控制输入，正文也未给实际实现引用。",
+          "evidence": [
+            {
+              "path": "src/blinker/base.py",
+              "start_line": 167,
+              "end_line": 189
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "src/blinker/base.py",
+              "start_line": 167,
+              "end_line": 189,
+              "content": "    @contextmanager\n    def connected_to(\n        self, receiver: c.Callable[..., t.Any], sender: t.Any = ANY\n    ) -> c.Generator[None, None, None]:\n        \"\"\"A context manager that temporarily connects ``receiver`` to the\n        signal while a ``with`` block executes. When the block exits, the\n        receiver is disconnected. Useful for tests.\n\n        :param receiver: The callable to call when :meth:`send` is called with\n            the given ``sender``, passing ``sender`` as a positional argument\n            along with any extra keyword arguments.\n        :param sender: Any object or :data:`ANY`. ``receiver`` will only be\n            called when :meth:`send` is called with this sender. If ``ANY``, the\n            receiver will be called for any sender.\n\n        .. versionadded:: 1.1\n        \"\"\"\n        self.connect(receiver, sender=sender, weak=False)\n\n        try:\n            yield None\n        finally:\n            self.disconnect(receiver)",
+              "content_sha256": "b2f37b095c222dfe4a710319ff0d423fd22ab9f5959e96139c8f7ecae3450e28",
+              "visible_to_generator": false
+            }
+          ]
+        }
+      ],
+      "notes": "核心清理结论正确；主动将不可达send当作执行过的测试，并缺所问清理实现。代理开发者独立复核不可直接采用，不把有用结论抹为全错。",
+      "key_points": null,
+      "candidate_sha256": "cab88f4092b3373545e55f94dd18ab2c5a35a83dd81416d4aaef2d47a5542187",
+      "reviewer": "Codex (current session)",
+      "review_type": "model_assisted_nonblind_development_review",
+      "human_approved": false,
+      "training_eligible": false,
+      "result_sha256": "19690d061dd311787108f633faa83f980e952e3e54a89d7cb2a6017b55f8abc4"
+    },
+    "improvement-confirm-blinker-03--after": {
+      "candidate_id": "improvement-confirm-blinker-03--after",
+      "correctness": "correct",
+      "citation_support": "supported",
+      "completeness": "adequate",
+      "abstention": "not_applicable",
+      "entry_scope": "correct",
+      "consistency": "consistent",
+      "claims": [
+        {
+          "claim": "BaseException离开临时订阅后仍通过finally执行disconnect。",
+          "status": "supported",
+          "rationale": "实际try/yield/finally与disconnect直接支持异常清理。",
+          "evidence": [
+            {
+              "path": "src/blinker/base.py",
+              "start_line": 186,
+              "end_line": 189
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "src/blinker/base.py",
+              "start_line": 186,
+              "end_line": 189,
+              "content": "        try:\n            yield None\n        finally:\n            self.disconnect(receiver)",
+              "content_sha256": "a8f7837b71042f607728319c06c9d33099b2b28aff388ad0747e4802e2b02cc3",
+              "visible_to_generator": true
+            }
+          ]
+        },
+        {
+          "claim": "参数化异常测试以块外not sig.receivers验证清理。",
+          "status": "supported",
+          "rationale": "引用实际异常测试，没有声称raise后send被执行。",
+          "evidence": [
+            {
+              "path": "tests/test_context.py",
+              "start_line": 51,
+              "end_line": 68
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "tests/test_context.py",
+              "start_line": 51,
+              "end_line": 68,
+              "content": "@pytest.mark.parametrize(\"exc_type\", [Failure, BaseFailure])\ndef test_temp_connection_failure(exc_type: type[BaseException]) -> None:\n    sig = Signal()\n\n    canary = []\n\n    def receiver(sender: t.Any) -> None:\n        canary.append(sender)\n\n    with pytest.raises(exc_type):\n        sig.send(1)\n        with sig.connected_to(receiver):\n            sig.send(2)\n            raise exc_type\n        sig.send(3)\n\n    assert canary == [2]\n    assert not sig.receivers",
+              "content_sha256": "9aef9858a826e07d6fc5e32c2d2e11856f1694bef7ab66ee0a6ccca421d5b15e",
+              "visible_to_generator": true
+            }
+          ]
+        }
+      ],
+      "notes": "按所问给出直接结论、try/finally实现和异常测试，代理开发者判完整可用。不强加题目未问的弱引用进入条件细节；单次已知题配对，不推断总体稳定增益。",
+      "key_points": null,
+      "candidate_sha256": "6942290ff59c3c09333938548185780bd80d84c6888ada5ae46b36eed306d1d2",
+      "reviewer": "Codex (current session)",
+      "review_type": "model_assisted_nonblind_development_review",
+      "human_approved": false,
+      "training_eligible": false,
+      "result_sha256": "ba6edbb1b3a34852c798b19623a3101594cdf9779c95671a6a81c90edcca1bd5"
+    },
+    "improvement-confirm-blinker-04--after": {
+      "candidate_id": "improvement-confirm-blinker-04--after",
+      "correctness": "partially_correct",
+      "citation_support": "partial",
+      "completeness": "partial",
+      "abstention": "not_applicable",
+      "entry_scope": "correct",
+      "consistency": "contradictory",
+      "claims": [
+        {
+          "claim": "send不自动await协程接收器，提供_async_wrapper才可适配。",
+          "status": "supported",
+          "rationale": "协程分支未提供wrapper时抛错，否则调用wrapper(receiver)。",
+          "evidence": [
+            {
+              "path": "src/blinker/base.py",
+              "start_line": 242,
+              "end_line": 249
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "src/blinker/base.py",
+              "start_line": 242,
+              "end_line": 249,
+              "content": "        for receiver in self.receivers_for(sender):\n            if iscoroutinefunction(receiver):\n                if _async_wrapper is None:\n                    raise RuntimeError(\"Cannot send to a coroutine function.\")\n\n                result = _async_wrapper(receiver)(sender, **kwargs)\n            else:\n                result = receiver(sender, **kwargs)",
+              "content_sha256": "f002a9e305297def4b3e9c82db0aa19b97b36f3504042234eae269fa8ff36056",
+              "visible_to_generator": true
+            }
+          ]
+        },
+        {
+          "claim": "send_async通过_sync_wrapper适配普通同步接收器并await。",
+          "status": "supported",
+          "rationale": "sync分支检查wrapper并await包装结果，async分支直接await。",
+          "evidence": [
+            {
+              "path": "src/blinker/base.py",
+              "start_line": 292,
+              "end_line": 299
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "src/blinker/base.py",
+              "start_line": 292,
+              "end_line": 299,
+              "content": "        for receiver in self.receivers_for(sender):\n            if not iscoroutinefunction(receiver):\n                if _sync_wrapper is None:\n                    raise RuntimeError(\"Cannot send to a non-coroutine function.\")\n\n                result = await _sync_wrapper(receiver)(sender, **kwargs)\n            else:\n                result = await receiver(sender, **kwargs)",
+              "content_sha256": "e093caca255e0bca8b3fe2082fb7ad9af9adf54e85b7ac174f5146774b054f5d",
+              "visible_to_generator": true
+            }
+          ]
+        },
+        {
+          "claim": "同步异步混用必须选send_async入口。",
+          "status": "contradicted",
+          "rationale": "send提供_async_wrapper同样支持混用，与该答案后文替代路径互相矛盾。",
+          "evidence": [
+            {
+              "path": "src/blinker/base.py",
+              "start_line": 242,
+              "end_line": 249
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "src/blinker/base.py",
+              "start_line": 242,
+              "end_line": 249,
+              "content": "        for receiver in self.receivers_for(sender):\n            if iscoroutinefunction(receiver):\n                if _async_wrapper is None:\n                    raise RuntimeError(\"Cannot send to a coroutine function.\")\n\n                result = _async_wrapper(receiver)(sender, **kwargs)\n            else:\n                result = receiver(sender, **kwargs)",
+              "content_sha256": "f002a9e305297def4b3e9c82db0aa19b97b36f3504042234eae269fa8ff36056",
+              "visible_to_generator": true
+            }
+          ]
+        }
+      ],
+      "notes": "两入口主要方向正确，但绝对必须send_async与后文send(_async_wrapper)替代路径矛盾。修复后新增正确实现条件、引用更直接；仍未解决该矛盾。代理开发者同意不可直接用于选路；不因未写出缺_sync_wrapper的错误类型单独判失败。",
+      "key_points": null,
+      "candidate_sha256": "941d24be07a91274bf9495bb8f867929ef86a3a015aa1cd03522d538f8612a66",
+      "reviewer": "Codex (current session)",
+      "review_type": "model_assisted_nonblind_development_review",
+      "human_approved": false,
+      "training_eligible": false,
+      "result_sha256": "4cdd6841c3d6c0764378d3df5f34fca797264e6cb335ab7f420e7412d1e347c4"
+    },
+    "improvement-confirm-blinker-04--before": {
+      "candidate_id": "improvement-confirm-blinker-04--before",
+      "correctness": "partially_correct",
+      "citation_support": "partial",
+      "completeness": "partial",
+      "abstention": "not_applicable",
+      "entry_scope": "correct",
+      "consistency": "contradictory",
+      "claims": [
+        {
+          "claim": "send不自动await协程接收器，提供_async_wrapper才可适配。",
+          "status": "supported",
+          "rationale": "协程分支未提供wrapper时抛错，否则调用wrapper(receiver)。",
+          "evidence": [
+            {
+              "path": "src/blinker/base.py",
+              "start_line": 242,
+              "end_line": 249
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "src/blinker/base.py",
+              "start_line": 242,
+              "end_line": 249,
+              "content": "        for receiver in self.receivers_for(sender):\n            if iscoroutinefunction(receiver):\n                if _async_wrapper is None:\n                    raise RuntimeError(\"Cannot send to a coroutine function.\")\n\n                result = _async_wrapper(receiver)(sender, **kwargs)\n            else:\n                result = receiver(sender, **kwargs)",
+              "content_sha256": "f002a9e305297def4b3e9c82db0aa19b97b36f3504042234eae269fa8ff36056",
+              "visible_to_generator": false
+            }
+          ]
+        },
+        {
+          "claim": "send_async通过_sync_wrapper适配普通同步接收器并await。",
+          "status": "supported",
+          "rationale": "sync分支检查wrapper并await包装结果，async分支直接await。",
+          "evidence": [
+            {
+              "path": "src/blinker/base.py",
+              "start_line": 292,
+              "end_line": 299
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "src/blinker/base.py",
+              "start_line": 292,
+              "end_line": 299,
+              "content": "        for receiver in self.receivers_for(sender):\n            if not iscoroutinefunction(receiver):\n                if _sync_wrapper is None:\n                    raise RuntimeError(\"Cannot send to a non-coroutine function.\")\n\n                result = await _sync_wrapper(receiver)(sender, **kwargs)\n            else:\n                result = await receiver(sender, **kwargs)",
+              "content_sha256": "e093caca255e0bca8b3fe2082fb7ad9af9adf54e85b7ac174f5146774b054f5d",
+              "visible_to_generator": false
+            }
+          ]
+        },
+        {
+          "claim": "同步异步混用必须选send_async入口。",
+          "status": "contradicted",
+          "rationale": "send提供_async_wrapper同样支持混用，与该答案后文替代路径互相矛盾。",
+          "evidence": [
+            {
+              "path": "src/blinker/base.py",
+              "start_line": 242,
+              "end_line": 249
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "src/blinker/base.py",
+              "start_line": 242,
+              "end_line": 249,
+              "content": "        for receiver in self.receivers_for(sender):\n            if iscoroutinefunction(receiver):\n                if _async_wrapper is None:\n                    raise RuntimeError(\"Cannot send to a coroutine function.\")\n\n                result = _async_wrapper(receiver)(sender, **kwargs)\n            else:\n                result = receiver(sender, **kwargs)",
+              "content_sha256": "f002a9e305297def4b3e9c82db0aa19b97b36f3504042234eae269fa8ff36056",
+              "visible_to_generator": false
+            }
+          ]
+        },
+        {
+          "claim": "send遇协程抛错是因为不在事件循环且未await。",
+          "status": "contradicted",
+          "rationale": "该条件只判断是否提供_async_wrapper，不检查运行循环存在性。",
+          "evidence": [
+            {
+              "path": "src/blinker/base.py",
+              "start_line": 242,
+              "end_line": 249
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "src/blinker/base.py",
+              "start_line": 242,
+              "end_line": 249,
+              "content": "        for receiver in self.receivers_for(sender):\n            if iscoroutinefunction(receiver):\n                if _async_wrapper is None:\n                    raise RuntimeError(\"Cannot send to a coroutine function.\")\n\n                result = _async_wrapper(receiver)(sender, **kwargs)\n            else:\n                result = receiver(sender, **kwargs)",
+              "content_sha256": "f002a9e305297def4b3e9c82db0aa19b97b36f3504042234eae269fa8ff36056",
+              "visible_to_generator": false
+            }
+          ]
+        }
+      ],
+      "notes": "两入口主要方向正确，但绝对必须send_async与后文send(_async_wrapper)替代路径矛盾。还将抛错归因事件循环，控制条件错误。代理开发者同意不可直接用于选路；不因未写出缺_sync_wrapper的错误类型单独判失败。",
+      "key_points": null,
+      "candidate_sha256": "379c9fd9b619d0749c780c3d677bb90aa5fee1f1a18c5adb11356e7e1c25da3b",
+      "reviewer": "Codex (current session)",
+      "review_type": "model_assisted_nonblind_development_review",
+      "human_approved": false,
+      "training_eligible": false,
+      "result_sha256": "8a780a12ac023e393e916015dee3b0744d8bb81f8404f5c03d71a9d9bef5742f"
+    }
+  },
+  "groups": {
+    "all/oracle": {
+      "records": 2,
+      "success": 2,
+      "model_requests": 2,
+      "tool_calls": 0,
+      "episodes_using_tools": 0,
+      "citation_ranges_valid": 2,
+      "initial_reference_complete": 0,
+      "final_reference_complete": 0,
+      "initial_nonblank_reference_complete": 0,
+      "final_nonblank_reference_complete": 0,
+      "requests_without_usage": 0,
+      "requests_without_elapsed": 0,
+      "prompt_tokens": 4601,
+      "completion_tokens": 537,
+      "generator_seconds": 33.452999999999996,
+      "reviewed": 2,
+      "factually_correct": 0,
+      "core_supported": 0,
+      "fully_resolved": 0
+    },
+    "member-recall-known-development/oracle": {
+      "records": 2,
+      "success": 2,
+      "model_requests": 2,
+      "tool_calls": 0,
+      "episodes_using_tools": 0,
+      "citation_ranges_valid": 2,
+      "initial_reference_complete": 0,
+      "final_reference_complete": 0,
+      "initial_nonblank_reference_complete": 0,
+      "final_nonblank_reference_complete": 0,
+      "requests_without_usage": 0,
+      "requests_without_elapsed": 0,
+      "prompt_tokens": 4601,
+      "completion_tokens": 537,
+      "generator_seconds": 33.452999999999996,
+      "reviewed": 2,
+      "factually_correct": 0,
+      "core_supported": 0,
+      "fully_resolved": 0
+    },
+    "member-recall-source-pair-development-diagnostic/oracle": {
+      "records": 2,
+      "success": 2,
+      "model_requests": 2,
+      "tool_calls": 0,
+      "episodes_using_tools": 0,
+      "citation_ranges_valid": 2,
+      "initial_reference_complete": 0,
+      "final_reference_complete": 0,
+      "initial_nonblank_reference_complete": 0,
+      "final_nonblank_reference_complete": 0,
+      "requests_without_usage": 0,
+      "requests_without_elapsed": 0,
+      "prompt_tokens": 4601,
+      "completion_tokens": 537,
+      "generator_seconds": 33.452999999999996,
+      "reviewed": 2,
+      "factually_correct": 0,
+      "core_supported": 0,
+      "fully_resolved": 0
+    },
+    "answerable/oracle": {
+      "records": 2,
+      "success": 2,
+      "model_requests": 2,
+      "tool_calls": 0,
+      "episodes_using_tools": 0,
+      "citation_ranges_valid": 2,
+      "initial_reference_complete": 0,
+      "final_reference_complete": 0,
+      "initial_nonblank_reference_complete": 0,
+      "final_nonblank_reference_complete": 0,
+      "requests_without_usage": 0,
+      "requests_without_elapsed": 0,
+      "prompt_tokens": 4601,
+      "completion_tokens": 537,
+      "generator_seconds": 33.452999999999996,
+      "reviewed": 2,
+      "factually_correct": 0,
+      "core_supported": 0,
+      "fully_resolved": 0
+    },
+    "all/bm25_code": {
+      "records": 2,
+      "success": 2,
+      "model_requests": 2,
+      "tool_calls": 0,
+      "episodes_using_tools": 0,
+      "citation_ranges_valid": 2,
+      "initial_reference_complete": 1,
+      "final_reference_complete": 1,
+      "initial_nonblank_reference_complete": 1,
+      "final_nonblank_reference_complete": 1,
+      "requests_without_usage": 0,
+      "requests_without_elapsed": 0,
+      "prompt_tokens": 6380,
+      "completion_tokens": 685,
+      "generator_seconds": 30.578,
+      "reviewed": 2,
+      "factually_correct": 1,
+      "core_supported": 1,
+      "fully_resolved": 1
+    },
+    "member-recall-known-development/bm25_code": {
+      "records": 2,
+      "success": 2,
+      "model_requests": 2,
+      "tool_calls": 0,
+      "episodes_using_tools": 0,
+      "citation_ranges_valid": 2,
+      "initial_reference_complete": 1,
+      "final_reference_complete": 1,
+      "initial_nonblank_reference_complete": 1,
+      "final_nonblank_reference_complete": 1,
+      "requests_without_usage": 0,
+      "requests_without_elapsed": 0,
+      "prompt_tokens": 6380,
+      "completion_tokens": 685,
+      "generator_seconds": 30.578,
+      "reviewed": 2,
+      "factually_correct": 1,
+      "core_supported": 1,
+      "fully_resolved": 1
+    },
+    "member-recall-source-pair-development-diagnostic/bm25_code": {
+      "records": 2,
+      "success": 2,
+      "model_requests": 2,
+      "tool_calls": 0,
+      "episodes_using_tools": 0,
+      "citation_ranges_valid": 2,
+      "initial_reference_complete": 1,
+      "final_reference_complete": 1,
+      "initial_nonblank_reference_complete": 1,
+      "final_nonblank_reference_complete": 1,
+      "requests_without_usage": 0,
+      "requests_without_elapsed": 0,
+      "prompt_tokens": 6380,
+      "completion_tokens": 685,
+      "generator_seconds": 30.578,
+      "reviewed": 2,
+      "factually_correct": 1,
+      "core_supported": 1,
+      "fully_resolved": 1
+    },
+    "answerable/bm25_code": {
+      "records": 2,
+      "success": 2,
+      "model_requests": 2,
+      "tool_calls": 0,
+      "episodes_using_tools": 0,
+      "citation_ranges_valid": 2,
+      "initial_reference_complete": 1,
+      "final_reference_complete": 1,
+      "initial_nonblank_reference_complete": 1,
+      "final_nonblank_reference_complete": 1,
+      "requests_without_usage": 0,
+      "requests_without_elapsed": 0,
+      "prompt_tokens": 6380,
+      "completion_tokens": 685,
+      "generator_seconds": 30.578,
+      "reviewed": 2,
+      "factually_correct": 1,
+      "core_supported": 1,
+      "fully_resolved": 1
+    }
+  },
+  "retrieval": {
+    "shared_initial": {
+      "answerable": 2,
+      "reference_complete": 1,
+      "nonblank_reference_complete": 1
+    }
+  },
+  "new_requests": 4,
+  "combined_requests": 1272,
+  "paid_requests": 0,
+  "human_approved": false,
+  "training_eligible": false,
+  "reporting_implementation": "4432a399824bc989792b734caf26caf8da5ada5fef0941d184fd5a00d4ae2e6b",
+  "usage_observation_note": "Token/time sums include observed values only. Missing usage and elapsed time remain unknown in raw records; reservations still count every sent or ambiguous request.",
+  "checks": {},
+  "scope": "Two known Blinker source-selection failures, four daily-profile answers. Reuse RagEngine.prepare(mode=oracle, oracle_context=recorded_control_sources) solely to replay the exact previous actual retrieval contexts as BEFORE; this label does not mean sufficient oracle input. AFTER uses unmodified current bm25_code retrieval. Same weights, sampling, current visible contract/system/history/output limits. Only source selection differs. Original full evaluation references remain scoring-only. No additional unseen questions, no population accuracy claim."
+}

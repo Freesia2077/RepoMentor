@@ -1,0 +1,250 @@
+{
+  "task_id": "sweqa-flask-002",
+  "repository": "pallets/flask",
+  "split": "external-development",
+  "index_id": "ed6feb2b73eb1430b46920ec",
+  "base_index_id": "32f14b68a90dd3e6664aebe2",
+  "chunk_ids_sha256": "97bd484628a8567081186937fd856cd15d0d7add17e05053f2a79178b33669c3",
+  "retriever": "hybrid-rerank",
+  "metrics": {
+    "recall_at_6": 0.3333333333333333,
+    "recall_at_20": 0.3333333333333333,
+    "mrr": 0.25,
+    "target_overlap_recall_at_6": 0.3333333333333333,
+    "target_overlap_recall_at_20": 0.6666666666666666,
+    "line_coverage_at_6": 0.2647058823529412
+  },
+  "first_query_seconds": 0.37454920000004677,
+  "warm_query_seconds": 0.011718700000074023,
+  "index_open_build_seconds": 0.5219203999999991,
+  "chunks": 2475,
+  "candidates": [
+    {
+      "snapshot_id": "b597a359a6ff4391d4f36ec2",
+      "chunk_id": "5481831a9a395cb31572f876",
+      "path": "src/flask/wrappers.py",
+      "start_line": 161,
+      "end_line": 178,
+      "content_hash": "762b7a9df5937a5e43f946722eecddda4725643dba306d2c04d50f03855c7114",
+      "content": "    @property\n    def blueprint(self) -> str | None:\n        \"\"\"The registered name of the current blueprint.\n\n        This will be ``None`` if the endpoint is not part of a\n        blueprint, or if URL matching failed or has not been performed\n        yet.\n\n        This does not necessarily match the name the blueprint was\n        created with. It may have been nested, or registered with a\n        different name.\n        \"\"\"\n        endpoint = self.endpoint\n\n        if endpoint is not None and \".\" in endpoint:\n            return endpoint.rpartition(\".\")[0]\n\n        return None",
+      "symbol": "Request.blueprint",
+      "truncated": false
+    },
+    {
+      "snapshot_id": "b597a359a6ff4391d4f36ec2",
+      "chunk_id": "79421edb64ca0535f9706dd7",
+      "path": "docs/conf.py",
+      "start_line": 100,
+      "end_line": 101,
+      "content_hash": "8c6867f5df7b7fa8bf67ea138071c197674e9f79e00738f8a9be5f6948c64b6e",
+      "content": "def setup(app):\n    app.add_role(\"gh\", github_link)",
+      "symbol": "setup",
+      "truncated": false
+    },
+    {
+      "snapshot_id": "b597a359a6ff4391d4f36ec2",
+      "chunk_id": "60842a28ae6cc1ab89f673f4",
+      "path": "tests/test_async.py",
+      "start_line": 114,
+      "end_line": 118,
+      "content_hash": "9e1c8e3e8a18eff195f350dbe3ba04dfd0de6d75a1e6ed37113ecbd52d4447e8",
+      "content": "    @app.after_request\n    async def after(response):\n        nonlocal app_after_called\n        app_after_called = True\n        return response",
+      "symbol": "test_async_before_after_request.after",
+      "truncated": false
+    },
+    {
+      "snapshot_id": "b597a359a6ff4391d4f36ec2",
+      "chunk_id": "77e1a152d61dac2542993497",
+      "path": "src/flask/sansio/blueprints.py",
+      "start_line": 213,
+      "end_line": 221,
+      "content_hash": "b4c75a22b022e443069d149a3fa2bbd7039fe362fe691335625fc8f904e534ed",
+      "content": "    def _check_setup_finished(self, f_name: str) -> None:\n        if self._got_registered_once:\n            raise AssertionError(\n                f\"The setup method '{f_name}' can no longer be called on the blueprint\"\n                f\" '{self.name}'. It has already been registered at least once, any\"\n                \" changes will not be applied consistently.\\n\"\n                \"Make sure all imports, decorators, functions, etc. needed to set up\"\n                \" the blueprint are done before registering it.\"\n            )",
+      "symbol": "Blueprint._check_setup_finished",
+      "truncated": false
+    },
+    {
+      "snapshot_id": "b597a359a6ff4391d4f36ec2",
+      "chunk_id": "77e6de680d0e7c3eda417353",
+      "path": "src/flask/sansio/blueprints.py",
+      "start_line": 232,
+      "end_line": 244,
+      "content_hash": "533190db1660ef5f3b6f544755292c367358780664281c118348e2cb1f73091c",
+      "content": "    @setupmethod\n    def record_once(self, func: DeferredSetupFunction) -> None:\n        \"\"\"Works like :meth:`record` but wraps the function in another\n        function that will ensure the function is only called once.  If the\n        blueprint is registered a second time on the application, the\n        function passed is not called.\n        \"\"\"\n\n        def wrapper(state: BlueprintSetupState) -> None:\n            if state.first_registration:\n                func(state)\n\n        self.record(update_wrapper(wrapper, func))",
+      "symbol": "Blueprint.record_once",
+      "truncated": false
+    },
+    {
+      "snapshot_id": "b597a359a6ff4391d4f36ec2",
+      "chunk_id": "1130d57378844abd5b5c3210",
+      "path": "src/flask/sansio/blueprints.py",
+      "start_line": 119,
+      "end_line": 134,
+      "content_hash": "aaa1221d686aa6b5bd457b14a725873b8af0a00e13aab864e83a442295fba231",
+      "content": "class Blueprint(Scaffold):\n    \"\"\"Represents a blueprint, a collection of routes and other\n    app-related functions that can be registered on a real application\n    later.\n\n    A blueprint is an object that allows defining application functions\n    without requiring an application object ahead of time. It uses the\n    same decorators as :class:`~flask.Flask`, but defers the need for an\n    application by recording them for later registration.\n\n    Decorating a function with a blueprint creates a deferred function\n    that is called with :class:`~flask.blueprints.BlueprintSetupState`\n    when the blueprint is registered on an application.\n\n    See :doc:`/blueprints` for more information.\n",
+      "symbol": "Blueprint",
+      "truncated": false
+    },
+    {
+      "snapshot_id": "b597a359a6ff4391d4f36ec2",
+      "chunk_id": "60ae15dd36d06f48afb0cad5",
+      "path": "src/flask/sansio/blueprints.py",
+      "start_line": 306,
+      "end_line": 322,
+      "content_hash": "2d215ca998ac4e234a76549b837cdb3ee4ce3d4c8c5ddc9c273eac964e798baf",
+      "content": "        if name in app.blueprints:\n            bp_desc = \"this\" if app.blueprints[name] is self else \"a different\"\n            existing_at = f\" '{name}'\" if self_name != name else \"\"\n\n            raise ValueError(\n                f\"The name '{self_name}' is already registered for\"\n                f\" {bp_desc} blueprint{existing_at}. Use 'name=' to\"\n                f\" provide a unique name.\"\n            )\n\n        first_bp_registration = not any(bp is self for bp in app.blueprints.values())\n        first_name_registration = name not in app.blueprints\n\n        app.blueprints[name] = self\n        self._got_registered_once = True\n        state = self.make_setup_state(app, options, first_bp_registration)\n",
+      "symbol": "Blueprint.register",
+      "truncated": false
+    },
+    {
+      "snapshot_id": "b597a359a6ff4391d4f36ec2",
+      "chunk_id": "0dc9b0ec03e0c4bef0bcee42",
+      "path": "src/flask/sansio/blueprints.py",
+      "start_line": 255,
+      "end_line": 271,
+      "content_hash": "20f18d1447a503a32e4b3a0b5747ac1b129f161f2836d7ab6312dafa2ff4f5ba",
+      "content": "    @setupmethod\n    def register_blueprint(self, blueprint: Blueprint, **options: t.Any) -> None:\n        \"\"\"Register a :class:`~flask.Blueprint` on this blueprint. Keyword\n        arguments passed to this method will override the defaults set\n        on the blueprint.\n\n        .. versionchanged:: 2.0.1\n            The ``name`` option can be used to change the (pre-dotted)\n            name the blueprint is registered with. This allows the same\n            blueprint to be registered multiple times with unique names\n            for ``url_for``.\n\n        .. versionadded:: 2.0\n        \"\"\"\n        if blueprint is self:\n            raise ValueError(\"Cannot register a blueprint on itself\")\n        self._blueprints.append((blueprint, options))",
+      "symbol": "Blueprint.register_blueprint",
+      "truncated": false
+    },
+    {
+      "snapshot_id": "b597a359a6ff4391d4f36ec2",
+      "chunk_id": "e6db2062e3250bdce8ab7338",
+      "path": "src/flask/sansio/blueprints.py",
+      "start_line": 34,
+      "end_line": 40,
+      "content_hash": "64c6717f0b318ecd8e8caa058844186c3675a233b77432b87c7b62da8ce267f1",
+      "content": "class BlueprintSetupState:\n    \"\"\"Temporary holder object for registering a blueprint with the\n    application.  An instance of this class is created by the\n    :meth:`~flask.Blueprint.make_setup_state` method and later passed\n    to all register callback functions.\n    \"\"\"\n",
+      "symbol": "BlueprintSetupState",
+      "truncated": false
+    },
+    {
+      "snapshot_id": "b597a359a6ff4391d4f36ec2",
+      "chunk_id": "8437b3ac1cade0411d9d457c",
+      "path": "src/flask/sansio/blueprints.py",
+      "start_line": 223,
+      "end_line": 230,
+      "content_hash": "f801bf4999c40119d95be111db91d45b88026ce3febf2cd2445aea89a2fad1a0",
+      "content": "    @setupmethod\n    def record(self, func: DeferredSetupFunction) -> None:\n        \"\"\"Registers a function that is called when the blueprint is\n        registered on the application.  This function is called with the\n        state as argument as returned by the :meth:`make_setup_state`\n        method.\n        \"\"\"\n        self.deferred_functions.append(func)",
+      "symbol": "Blueprint.record",
+      "truncated": false
+    },
+    {
+      "snapshot_id": "b597a359a6ff4391d4f36ec2",
+      "chunk_id": "2f9ea4fdd935c2f756d49dc7",
+      "path": "src/flask/sansio/blueprints.py",
+      "start_line": 1,
+      "end_line": 17,
+      "content_hash": "4fa04fb4387ecd477338aad330799b603a7827bb324703052f18bddc6ab77426",
+      "content": "from __future__ import annotations\n\nimport os\nimport typing as t\nfrom collections import defaultdict\nfrom functools import update_wrapper\n\nfrom .. import typing as ft\nfrom .scaffold import _endpoint_from_view_func\nfrom .scaffold import _sentinel\nfrom .scaffold import Scaffold\nfrom .scaffold import setupmethod\n\nif t.TYPE_CHECKING:  # pragma: no cover\n    from .app import App\n\nDeferredSetupFunction = t.Callable[[\"BlueprintSetupState\"], None]",
+      "symbol": null,
+      "truncated": false
+    },
+    {
+      "snapshot_id": "b597a359a6ff4391d4f36ec2",
+      "chunk_id": "54226a83d162b9ad5e3febdc",
+      "path": "src/flask/sansio/blueprints.py",
+      "start_line": 273,
+      "end_line": 290,
+      "content_hash": "4d628ef7b47eb750cd9321a7eaaad5c286e094fb5449217d74a337fddd1c47de",
+      "content": "    def register(self, app: App, options: dict[str, t.Any]) -> None:\n        \"\"\"Called by :meth:`Flask.register_blueprint` to register all\n        views and callbacks registered on the blueprint with the\n        application. Creates a :class:`.BlueprintSetupState` and calls\n        each :meth:`record` callback with it.\n\n        :param app: The application this blueprint is being registered\n            with.\n        :param options: Keyword arguments forwarded from\n            :meth:`~Flask.register_blueprint`.\n\n        .. versionchanged:: 2.3\n            Nested blueprints now correctly apply subdomains.\n\n        .. versionchanged:: 2.1\n            Registering the same blueprint with the same name multiple\n            times is an error.\n",
+      "symbol": "Blueprint.register",
+      "truncated": false
+    },
+    {
+      "snapshot_id": "b597a359a6ff4391d4f36ec2",
+      "chunk_id": "47366c351f098b8dd8a98ccf",
+      "path": "src/flask/sansio/blueprints.py",
+      "start_line": 246,
+      "end_line": 253,
+      "content_hash": "d6c37cfcdded4b23ab083039f99c00714a035c04c4bad10e4aabacb6ae47c3d2",
+      "content": "    def make_setup_state(\n        self, app: App, options: dict[str, t.Any], first_registration: bool = False\n    ) -> BlueprintSetupState:\n        \"\"\"Creates an instance of :meth:`~flask.blueprints.BlueprintSetupState`\n        object that is later passed to the register callback functions.\n        Subclasses can override this to return a subclass of the setup state.\n        \"\"\"\n        return BlueprintSetupState(self, app, options, first_registration)",
+      "symbol": "Blueprint.make_setup_state",
+      "truncated": false
+    },
+    {
+      "snapshot_id": "b597a359a6ff4391d4f36ec2",
+      "chunk_id": "c22934d79e92519c1db79167",
+      "path": "src/flask/blueprints.py",
+      "start_line": 18,
+      "end_line": 18,
+      "content_hash": "033ce5c539a7e91f4d2e6cd05cb654c725c77ffe6071aaf72b3631d0a29c2ab3",
+      "content": "class Blueprint(SansioBlueprint):",
+      "symbol": "Blueprint",
+      "truncated": false
+    },
+    {
+      "snapshot_id": "b597a359a6ff4391d4f36ec2",
+      "chunk_id": "58d9bad1ee754d6f35f9e8eb",
+      "path": "CHANGES.rst",
+      "start_line": 156,
+      "end_line": 162,
+      "content_hash": "ad7f394c01508a6aa55a37544b1cb268231f1495bb10eefed4cc7c3f0313ebb6",
+      "content": "        are removed.\n    -   ``json_encoder`` and ``json_decoder`` attributes on app and blueprint, and the\n        corresponding ``json.JSONEncoder`` and ``JSONDecoder`` classes, are removed.\n    -   The ``json.htmlsafe_dumps`` and ``htmlsafe_dump`` functions are removed.\n    -   Calling setup methods on blueprints after registration is an error instead of a\n        warning. :pr:`4997`\n",
+      "symbol": null,
+      "truncated": false
+    },
+    {
+      "snapshot_id": "b597a359a6ff4391d4f36ec2",
+      "chunk_id": "f3356b10d83b1909cb827911",
+      "path": "src/flask/blueprints.py",
+      "start_line": 43,
+      "end_line": 53,
+      "content_hash": "0c5e94afce35875a78b5170676d84551d21d063e1acd0b67c4e31a50b37b10b5",
+      "content": "        )\n\n        #: The Click command group for registering CLI commands for this\n        #: object. The commands are available from the ``flask`` command\n        #: once the application has been discovered and blueprints have\n        #: been registered.\n        self.cli = AppGroup()\n\n        # Set the name of the Click group in case someone wants to add\n        # the app's commands to another CLI tool.\n        self.cli.name = self.name",
+      "symbol": "Blueprint.__init__",
+      "truncated": false
+    },
+    {
+      "snapshot_id": "b597a359a6ff4391d4f36ec2",
+      "chunk_id": "0f51d94d3d13f0b4c9e52635",
+      "path": "src/flask/sansio/blueprints.py",
+      "start_line": 379,
+      "end_line": 379,
+      "content_hash": "5c2d8b07090db8a712be893431a9f0167431fa1ce3b0bb8dae08726b4b847ddb",
+      "content": "    def _merge_blueprint_funcs(self, app: App, name: str) -> None:",
+      "symbol": "Blueprint._merge_blueprint_funcs",
+      "truncated": false
+    },
+    {
+      "snapshot_id": "b597a359a6ff4391d4f36ec2",
+      "chunk_id": "d31666281a05adb9020a205e",
+      "path": "src/flask/sansio/blueprints.py",
+      "start_line": 367,
+      "end_line": 377,
+      "content_hash": "a68dd93a91a88eb2427cb533e0525273b9689fdd6b0f80f4f5574354e170e101",
+      "content": "            if state.url_prefix is not None and bp_url_prefix is not None:\n                bp_options[\"url_prefix\"] = (\n                    state.url_prefix.rstrip(\"/\") + \"/\" + bp_url_prefix.lstrip(\"/\")\n                )\n            elif bp_url_prefix is not None:\n                bp_options[\"url_prefix\"] = bp_url_prefix\n            elif state.url_prefix is not None:\n                bp_options[\"url_prefix\"] = state.url_prefix\n\n            bp_options[\"name_prefix\"] = name\n            blueprint.register(app, bp_options)",
+      "symbol": "Blueprint.register",
+      "truncated": false
+    },
+    {
+      "snapshot_id": "b597a359a6ff4391d4f36ec2",
+      "chunk_id": "ca7854eebf151d7ff725f7bf",
+      "path": "tests/test_blueprints.py",
+      "start_line": 1011,
+      "end_line": 1014,
+      "content_hash": "c54f259bbfc7f6fda51182ae97235ce2dc26ae344af556887874c87433d1d824",
+      "content": "def test_self_registration(app, client) -> None:\n    bp = flask.Blueprint(\"bp\", __name__)\n    with pytest.raises(ValueError):\n        bp.register_blueprint(bp)",
+      "symbol": "test_self_registration",
+      "truncated": false
+    },
+    {
+      "snapshot_id": "b597a359a6ff4391d4f36ec2",
+      "chunk_id": "148fa9953572cf07e60281d3",
+      "path": "src/flask/app.py",
+      "start_line": 1298,
+      "end_line": 1312,
+      "content_hash": "5bc618c057d2085d708d57358ca08a45cf9a544a8ebe40a660b1294fd6b63c6a",
+      "content": "    def process_response(self, response: Response) -> Response:\n        \"\"\"Can be overridden in order to modify the response object\n        before it's sent to the WSGI server.  By default this will\n        call all the :meth:`after_request` decorated functions.\n\n        .. versionchanged:: 0.5\n           As of Flask 0.5 the functions registered for after request\n           execution are called in reverse order of registration.\n\n        :param response: a :attr:`response_class` object.\n        :return: a new response object or the same, has to be an\n                 instance of :attr:`response_class`.\n        \"\"\"\n        ctx = request_ctx._get_current_object()  # type: ignore[attr-defined]\n",
+      "symbol": "Flask.process_response",
+      "truncated": false
+    }
+  ],
+  "neural_work": {
+    "embedding_hits": 2,
+    "embedding_new": 0,
+    "rerank_hits": 0,
+    "rerank_new": 40
+  },
+  "generation_requests": 0
+}

@@ -1,0 +1,52 @@
+{
+  "timing": "After sample freeze, before generator outputs; references are unmodified and all questions retained.",
+  "checks": [
+    {
+      "task_id": "sweqa-pytest-023",
+      "reference_claim": "Reference claims blocked plugins can bypass register and only test assertions enforce blocking.",
+      "source_correction": "Pytest register delegates to super().register. Its allowed dependency pluggy>=1.5,<2 already returns None for blocked names. The repository test confirms absence after direct registration. The proposed missing core enforcement is an erroneous premise.",
+      "severity": "major",
+      "source": {
+        "snapshot_id": "1e3c6ffb2b4c3bcdb242ecb7",
+        "path": "src/_pytest/config/__init__.py",
+        "start_line": 492,
+        "end_line": 515,
+        "content": "    def register(self, plugin: _PluggyPlugin, name: str | None = None) -> str | None:\n        if name in _pytest.deprecated.DEPRECATED_EXTERNAL_PLUGINS:\n            warnings.warn(\n                PytestConfigWarning(\n                    \"{} plugin has been merged into the core, \"\n                    \"please remove it from your requirements.\".format(\n                        name.replace(\"_\", \"-\")\n                    )\n                )\n            )\n            return None\n        plugin_name = super().register(plugin, name)\n        if plugin_name is not None:\n            self.hook.pytest_plugin_registered.call_historic(\n                kwargs=dict(\n                    plugin=plugin,\n                    plugin_name=plugin_name,\n                    manager=self,\n                )\n            )\n\n            if isinstance(plugin, types.ModuleType):\n                self.consider_module(plugin)\n        return plugin_name",
+        "content_sha256": "3a0e7f65f57a1c8b4f0d58b4161507ad2a42a471e2c7689b68ad8c25150b8493"
+      }
+    },
+    {
+      "task_id": "sweqa-pytest-015",
+      "reference_claim": "Reference describes sorted(globbed) as a deduplicated list.",
+      "source_correction": "sorted() orders entries; this implementation contains no explicit deduplication. Normal branch patterns are generally disjoint. Do not claim a generic deduplication step.",
+      "severity": "minor",
+      "source": {
+        "snapshot_id": "1e3c6ffb2b4c3bcdb242ecb7",
+        "path": "src/_pytest/_argcomplete.py",
+        "start_line": 80,
+        "end_line": 99,
+        "content": "    def __call__(self, prefix: str, **kwargs: Any) -> list[str]:\n        # Only called on non option completions.\n        if os.sep in prefix[1:]:\n            prefix_dir = len(os.path.dirname(prefix) + os.sep)\n        else:\n            prefix_dir = 0\n        completion = []\n        globbed = []\n        if \"*\" not in prefix and \"?\" not in prefix:\n            # We are on unix, otherwise no bash.\n            if not prefix or prefix[-1] == os.sep:\n                globbed.extend(glob(prefix + \".*\"))\n            prefix += \"*\"\n        globbed.extend(glob(prefix))\n        for x in sorted(globbed):\n            if os.path.isdir(x):\n                x += \"/\"\n            # Append stripping the prefix (like bash, not like compgen).\n            completion.append(x[prefix_dir:])\n        return completion",
+        "content_sha256": "cc31b39422163308188716f92b52e14aef34b2f2ee2e5c0eb6115abff20f84e2"
+      }
+    },
+    {
+      "task_id": "sweqa-pytest-048",
+      "reference_claim": "Reference says string > path falls back to the path __gt__ method.",
+      "source_correction": "For a > b reflected rich comparison uses b.__lt__(a). Both path operators use os.fspath; the main mixed-path/string mechanism remains valid.",
+      "severity": "minor",
+      "source": {
+        "snapshot_id": "1e3c6ffb2b4c3bcdb242ecb7",
+        "path": "src/_pytest/_py/path.py",
+        "start_line": 579,
+        "end_line": 583,
+        "content": "    def __lt__(self, other):\n        return os.fspath(self) < os.fspath(other)\n\n    def __gt__(self, other):\n        return os.fspath(self) > os.fspath(other)",
+        "content_sha256": "124aa9d5fbd4b487e2d8d3844925df8aeca8c973368266f9fd62954238e66e5e"
+      }
+    }
+  ],
+  "dependency_source": "https://raw.githubusercontent.com/pytest-dev/pluggy/1.5.0/src/pluggy/_manager.py",
+  "dependency_evidence": "PluginManager.register lines 124-128 checks _name2plugin[name] is None and returns None; set_blocked lines 211-214 stores None. Pinned pytest pyproject requires pluggy>=1.5,<2.",
+  "policy": "Keep official-reference primary scores and all 20 denominators; separately report major-reference-error sensitivity and source findings. No post-hoc question replacement.",
+  "target_code_executed": false,
+  "human_approved": false
+}

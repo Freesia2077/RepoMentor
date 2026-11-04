@@ -1,0 +1,3392 @@
+{
+  "questions": 36,
+  "planned_answers": 36,
+  "records": 36,
+  "reviews": {
+    "q-8263d0c13fbc03c6--current-rag": {
+      "candidate_id": "q-8263d0c13fbc03c6--current-rag",
+      "correctness": "partially_correct",
+      "citation_support": "partial",
+      "completeness": "partial",
+      "abstention": "not_applicable",
+      "entry_scope": "correct",
+      "consistency": "contradictory",
+      "claims": [
+        {
+          "claim": "首段称 override=True 时 os.environ 后更新且优先；False 时 new_values 后更新且优先。",
+          "status": "contradicted",
+          "rationale": "首段把两种优先级全部反转；实际 True 分支后更新 new_values，False 分支后更新 os.environ。",
+          "evidence": [
+            {
+              "path": "src/dotenv/main.py",
+              "start_line": 345,
+              "end_line": 350
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "src/dotenv/main.py",
+              "start_line": 345,
+              "end_line": 350,
+              "content": "            if override:\n                env.update(os.environ)  # type: ignore\n                env.update(new_values)\n            else:\n                env.update(new_values)\n                env.update(os.environ)  # type: ignore",
+              "content_sha256": "30bd10c175c6280b8a4fecec2fddb24162c4fda046b6770fcbbe95047210f7c7",
+              "visible_to_generator": true
+            }
+          ]
+        },
+        {
+          "claim": "后续分项称 True 时先 os.environ 后 new_values，所以 new_values 优先。",
+          "status": "supported",
+          "rationale": "与原引文两次 env.update 顺序一致；这和首段直接矛盾。",
+          "evidence": [
+            {
+              "path": "src/dotenv/main.py",
+              "start_line": 345,
+              "end_line": 347
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "src/dotenv/main.py",
+              "start_line": 345,
+              "end_line": 347,
+              "content": "            if override:\n                env.update(os.environ)  # type: ignore\n                env.update(new_values)",
+              "content_sha256": "76b91959956cb6391b985d9a5bfb24328bb251da274ae88e6a2818789c4865a8",
+              "visible_to_generator": true
+            }
+          ]
+        },
+        {
+          "claim": "后续分项称 False 时先 new_values 后 os.environ，所以 os.environ 优先。",
+          "status": "supported",
+          "rationale": "与原引文 else 分支顺序一致；不能用正确分项消除错误总述。",
+          "evidence": [
+            {
+              "path": "src/dotenv/main.py",
+              "start_line": 348,
+              "end_line": 350
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "src/dotenv/main.py",
+              "start_line": 348,
+              "end_line": 350,
+              "content": "            else:\n                env.update(new_values)\n                env.update(os.environ)  # type: ignore",
+              "content_sha256": "2f6663212281d8038d333752168db2dc48bfbf61944e447a61adb4ff5d1d524b",
+              "visible_to_generator": true
+            }
+          ]
+        },
+        {
+          "claim": "合并的是局部 env 字典，后更新者覆盖先更新者。",
+          "status": "supported",
+          "rationale": "env 在循环内新建，两个分支只更新 env。",
+          "evidence": [
+            {
+              "path": "src/dotenv/main.py",
+              "start_line": 344,
+              "end_line": 351
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "src/dotenv/main.py",
+              "start_line": 344,
+              "end_line": 351,
+              "content": "            env: Dict[str, Optional[str]] = {}\n            if override:\n                env.update(os.environ)  # type: ignore\n                env.update(new_values)\n            else:\n                env.update(new_values)\n                env.update(os.environ)  # type: ignore\n            result = \"\".join(atom.resolve(env) for atom in atoms)",
+              "content_sha256": "238341f4c4b0b2e97d53a09ece2e455c4cae82f967732203ebd813ea8da96bd8",
+              "visible_to_generator": true
+            }
+          ]
+        }
+      ],
+      "notes": "核心实现完整交付；首段与分项对同一条件得出相反结论，属证据充分下的解释错误。用户必须自行决定哪段可信，不能视为完整解决。",
+      "key_points": null,
+      "candidate_sha256": "33dca20965c6d7d55cb5b5ad2283a725e6f37c12d827945047570d15bdaab242",
+      "reviewer": "Codex (current session)",
+      "review_type": "model_assisted_nonblind_development_review",
+      "human_approved": false,
+      "training_eligible": false,
+      "result_sha256": "ac84d179ed9922ba4f20bd361c0b7381d7b6d104cc22927492b1b192f69277aa"
+    },
+    "q-7e67a58f5f3ce89d--current-rag": {
+      "candidate_id": "q-7e67a58f5f3ce89d--current-rag",
+      "correctness": "partially_correct",
+      "citation_support": "partial",
+      "completeness": "partial",
+      "abstention": "not_applicable",
+      "entry_scope": "correct",
+      "consistency": "contradictory",
+      "claims": [
+        {
+          "claim": "未传pred时结果为2；filter(None, iterable)跳过0和False，只有均不匹配时返回default。",
+          "status": "supported",
+          "rationale": "实现为next(filter(pred, iterable), default)，pred默认None。",
+          "evidence": [
+            {
+              "path": "more_itertools/recipes.py",
+              "start_line": 571,
+              "end_line": 588
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "more_itertools/recipes.py",
+              "start_line": 571,
+              "end_line": 588,
+              "content": "def first_true(iterable, default=None, pred=None):\n    \"\"\"\n    Returns the first true value in the iterable.\n\n    If no true value is found, returns *default*\n\n    If *pred* is not None, returns the first item for which\n    ``pred(item) == True`` .\n\n        >>> first_true(range(10))\n        1\n        >>> first_true(range(10), pred=lambda x: x > 5)\n        6\n        >>> first_true(range(10), default='missing', pred=lambda x: x > 9)\n        'missing'\n\n    \"\"\"\n    return next(filter(pred, iterable), default)",
+              "content_sha256": "406048ff2d04fb0542a59badd30d7ceb1a5a97ca62f890dbe743e5d69a8d23e8",
+              "visible_to_generator": true
+            }
+          ]
+        },
+        {
+          "claim": "0不会被丢弃因为它不是假值。",
+          "status": "contradicted",
+          "rationale": "原文随后也承认0在布尔上下文是假值；未传pred时会跳过0。",
+          "evidence": [
+            {
+              "path": "more_itertools/recipes.py",
+              "start_line": 571,
+              "end_line": 588
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "more_itertools/recipes.py",
+              "start_line": 571,
+              "end_line": 588,
+              "content": "def first_true(iterable, default=None, pred=None):\n    \"\"\"\n    Returns the first true value in the iterable.\n\n    If no true value is found, returns *default*\n\n    If *pred* is not None, returns the first item for which\n    ``pred(item) == True`` .\n\n        >>> first_true(range(10))\n        1\n        >>> first_true(range(10), pred=lambda x: x > 5)\n        6\n        >>> first_true(range(10), default='missing', pred=lambda x: x > 9)\n        'missing'\n\n    \"\"\"\n    return next(filter(pred, iterable), default)",
+              "content_sha256": "406048ff2d04fb0542a59badd30d7ceb1a5a97ca62f890dbe743e5d69a8d23e8",
+              "visible_to_generator": true
+            }
+          ]
+        },
+        {
+          "claim": "对于指定pred=lambda x:x==0的子问题，仍以没有pred时过滤掉0解释，未给出应返回0且不二次检测元素真值的答案。",
+          "status": "partial",
+          "rationale": "这是遗漏题目显式条件，不应按只答默认调用判完整；同一行filter(pred, iterable)及577–578说明按谓词判定。",
+          "evidence": [
+            {
+              "path": "more_itertools/recipes.py",
+              "start_line": 577,
+              "end_line": 588
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "more_itertools/recipes.py",
+              "start_line": 577,
+              "end_line": 588,
+              "content": "    If *pred* is not None, returns the first item for which\n    ``pred(item) == True`` .\n\n        >>> first_true(range(10))\n        1\n        >>> first_true(range(10), pred=lambda x: x > 5)\n        6\n        >>> first_true(range(10), default='missing', pred=lambda x: x > 9)\n        'missing'\n\n    \"\"\"\n    return next(filter(pred, iterable), default)",
+              "content_sha256": "64f200eaa1da330938e091d34cdc8b61ad6892b33cdb5fe0e389baaac5c61c64",
+              "visible_to_generator": true
+            }
+          ]
+        }
+      ],
+      "notes": "首个调用结果正确；第二个显式pred条件被替换为无pred情形，且“0不是假值”与后文矛盾。上下文已有完整实现，属于读题/条件适用失败，非缺失源码。",
+      "key_points": null,
+      "candidate_sha256": "ba84588e7199a218937d6c4a190bca2bfcb42ea1fbe0a2a9271e7054d4f74df1",
+      "reviewer": "Codex (current session)",
+      "review_type": "model_assisted_nonblind_development_review",
+      "human_approved": false,
+      "training_eligible": false,
+      "result_sha256": "2a62a7fe30e2299d5145fc945eb5d4577f6849093f69b1db48f1558d5a1d691b"
+    },
+    "q-f9892f3a2a15836e--current-rag": {
+      "candidate_id": "q-f9892f3a2a15836e--current-rag",
+      "correctness": "correct",
+      "citation_support": "supported",
+      "completeness": "adequate",
+      "abstention": "not_applicable",
+      "entry_scope": "correct",
+      "consistency": "consistent",
+      "claims": [
+        {
+          "claim": "有效 dotenv_path 优先读取文件，只有文件条件不成立才考虑提供的 stream。",
+          "status": "supported",
+          "rationale": "if 文件分支先于 elif self.stream。",
+          "evidence": [
+            {
+              "path": "src/dotenv/main.py",
+              "start_line": 64,
+              "end_line": 70
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "src/dotenv/main.py",
+              "start_line": 64,
+              "end_line": 70,
+              "content": "    @contextmanager\n    def _get_stream(self) -> Iterator[IO[str]]:\n        if self.dotenv_path and _is_file_or_fifo(self.dotenv_path):\n            with open(self.dotenv_path, encoding=self.encoding) as stream:\n                yield stream\n        elif self.stream is not None:\n            yield self.stream",
+              "content_sha256": "1c3fc2c979abaa52bf27e103e142cfdfc0ad1c4cb0426ef524ecb36a38bd5b73",
+              "visible_to_generator": true
+            }
+          ]
+        },
+        {
+          "claim": "没有可用路径及 stream 时提供空的 StringIO。",
+          "status": "supported",
+          "rationale": "else 分支 yield io.StringIO(空字符串)。",
+          "evidence": [
+            {
+              "path": "src/dotenv/main.py",
+              "start_line": 70,
+              "end_line": 77
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "src/dotenv/main.py",
+              "start_line": 70,
+              "end_line": 77,
+              "content": "            yield self.stream\n        else:\n            if self.verbose:\n                logger.info(\n                    \"python-dotenv could not find configuration file %s.\",\n                    self.dotenv_path or \".env\",\n                )\n            yield io.StringIO(\"\")",
+              "content_sha256": "a12bb7f5ef3c17ad95e7c2c7db42baabbad57f7ae1b28f7de7d5031612954fac",
+              "visible_to_generator": true
+            }
+          ]
+        }
+      ],
+      "notes": "两问均有直接引文支持。括号提及 find_dotenv 是调用方背景；本方法本身不调用它，实际交付的 load_dotenv/dotenv_values 调用方可见，未把该背景升级为本方法额外前提。",
+      "key_points": null,
+      "candidate_sha256": "3e381a84fbbe8537c8e5fb0f228532b7fc0dadd40c413c9d7fb8bcb2dd0c2089",
+      "reviewer": "Codex (current session)",
+      "review_type": "model_assisted_nonblind_development_review",
+      "human_approved": false,
+      "training_eligible": false,
+      "result_sha256": "e911451506c96430e1ab31b9f96c3b3afcbe9c8494a38c5b25a4ed30a426a426"
+    },
+    "improvement-confirm-tenacity-03--current-rag": {
+      "candidate_id": "improvement-confirm-tenacity-03--current-rag",
+      "correctness": "incorrect",
+      "citation_support": "unsupported",
+      "completeness": "partial",
+      "abstention": "not_applicable",
+      "entry_scope": "mixed",
+      "consistency": "consistent",
+      "claims": [
+        {
+          "claim": "达到停止条件后会先调用retry_error_callback再检查reraise=True，忽略fallback并抛ValueError。",
+          "status": "contradicted",
+          "rationale": "_post_stop_check_actions中有callback即加入回调并在476提前return，不添加478后的exc_check。",
+          "evidence": [
+            {
+              "path": "tenacity/__init__.py",
+              "start_line": 472,
+              "end_line": 486
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "tenacity/__init__.py",
+              "start_line": 472,
+              "end_line": 486,
+              "content": "    def _post_stop_check_actions(self, retry_state: \"RetryCallState\") -> None:\n        if self.iter_state.stop_run_result:\n            if self.retry_error_callback:\n                self._add_action_func(self.retry_error_callback)\n                return\n\n            def exc_check(rs: \"RetryCallState\") -> None:\n                fut = t.cast(\"Future\", rs.outcome)\n                retry_exc = self.retry_error_cls(fut)\n                if self.reraise:\n                    retry_exc.reraise()\n                raise retry_exc from fut.exception()\n\n            self._add_action_func(exc_check)\n            return",
+              "content_sha256": "27f56f54b49fe5b9ece029c0e019a73c8bd869a2f30fdd2abdadb0fc604e0f5c",
+              "visible_to_generator": false
+            }
+          ]
+        },
+        {
+          "claim": "reraise优先级高于retry_error_callback。",
+          "status": "contradicted",
+          "rationale": "实际callback分支优先；206–217只是已构造RetryError的reraise方法，不能证明此路径会到达。",
+          "evidence": [
+            {
+              "path": "tenacity/__init__.py",
+              "start_line": 472,
+              "end_line": 486
+            },
+            {
+              "path": "tenacity/__init__.py",
+              "start_line": 206,
+              "end_line": 217
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "tenacity/__init__.py",
+              "start_line": 472,
+              "end_line": 486,
+              "content": "    def _post_stop_check_actions(self, retry_state: \"RetryCallState\") -> None:\n        if self.iter_state.stop_run_result:\n            if self.retry_error_callback:\n                self._add_action_func(self.retry_error_callback)\n                return\n\n            def exc_check(rs: \"RetryCallState\") -> None:\n                fut = t.cast(\"Future\", rs.outcome)\n                retry_exc = self.retry_error_cls(fut)\n                if self.reraise:\n                    retry_exc.reraise()\n                raise retry_exc from fut.exception()\n\n            self._add_action_func(exc_check)\n            return",
+              "content_sha256": "27f56f54b49fe5b9ece029c0e019a73c8bd869a2f30fdd2abdadb0fc604e0f5c",
+              "visible_to_generator": false
+            },
+            {
+              "path": "tenacity/__init__.py",
+              "start_line": 206,
+              "end_line": 217,
+              "content": "    def reraise(self) -> t.NoReturn:\n        if self.last_attempt.failed:\n            exc = self.last_attempt.exception()\n            # When the user explicitly raises TryAgain (typically from within\n            # an \"except\" block), surface the underlying exception that caused\n            # the retry rather than the opaque TryAgain sentinel.\n            if isinstance(exc, TryAgain):\n                cause = exc.__cause__ or exc.__context__\n                if cause is not None:\n                    raise cause.with_traceback(cause.__traceback__) from None\n            raise self.last_attempt.result()\n        raise self",
+              "content_sha256": "490ddb0ed58820d13ecae7bd003e0e1b24447e55343f40ca30cba0490c917aba",
+              "visible_to_generator": true
+            }
+          ]
+        }
+      ],
+      "notes": "原模型可见六窗口没有472–486，正式引文206–217与文档示例也不支持优先关系。评审补读该分支仅用于验证错误，未发送生成。实际应返回fallback。",
+      "key_points": null,
+      "candidate_sha256": "1f81a9d14a5831696cec5a979801d93ba0e6510abd42f6467da94162a9951aeb",
+      "reviewer": "Codex (current session)",
+      "review_type": "model_assisted_nonblind_development_review",
+      "human_approved": false,
+      "training_eligible": false,
+      "result_sha256": "541e223b9ad9e23f4f7e3f5e54da1e88c076f55925fab160741d10631f14cdfb"
+    },
+    "q-ac86b122045bd5a1--current-rag": {
+      "candidate_id": "q-ac86b122045bd5a1--current-rag",
+      "correctness": "correct",
+      "citation_support": "supported",
+      "completeness": "adequate",
+      "abstention": "not_applicable",
+      "entry_scope": "correct",
+      "consistency": "consistent",
+      "claims": [
+        {
+          "claim": "size<0 抛 ValueError: value size must be non-negative。",
+          "status": "supported",
+          "rationale": "原引文80-81直接判负并抛出。",
+          "evidence": [
+            {
+              "path": "src/cachetools/__init__.py",
+              "start_line": 77,
+              "end_line": 81
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "src/cachetools/__init__.py",
+              "start_line": 77,
+              "end_line": 81,
+              "content": "    def __setitem__(self, key, value):\n        maxsize = self.__maxsize\n        size = self.getsizeof(value)\n        if size < 0:\n            raise ValueError(\"value size must be non-negative\")",
+              "content_sha256": "8489c766ea2a872717b04f21d73add2c942fed54509e2311dfdcb9c37fd6dc3a",
+              "visible_to_generator": true
+            }
+          ]
+        },
+        {
+          "claim": "size>maxsize 抛 ValueError: value too large。",
+          "status": "supported",
+          "rationale": "原引文82-83直接判超限并抛出。",
+          "evidence": [
+            {
+              "path": "src/cachetools/__init__.py",
+              "start_line": 82,
+              "end_line": 83
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "src/cachetools/__init__.py",
+              "start_line": 82,
+              "end_line": 83,
+              "content": "        if size > maxsize:\n            raise ValueError(\"value too large\")",
+              "content_sha256": "b20a8db170b3ab0c9d4a196f502516f85a9cc4f59d95c7ff43a623b83578b2a4",
+              "visible_to_generator": true
+            }
+          ]
+        }
+      ],
+      "notes": "准确覆盖题目两个条件，未遗漏分支；无额外未经支持的行为说明。",
+      "key_points": null,
+      "candidate_sha256": "527bf623a7cd6a0b5b7525afbca5225939000769306de62d136220a8aeaec556",
+      "reviewer": "Codex (current session)",
+      "review_type": "model_assisted_nonblind_development_review",
+      "human_approved": false,
+      "training_eligible": false,
+      "result_sha256": "a1c6fec98c9e08326456c295922def9311961762d2e94a4a95b94212c7cb5f67"
+    },
+    "q-9a4d99e402268ea3--current-rag": {
+      "candidate_id": "q-9a4d99e402268ea3--current-rag",
+      "correctness": "correct",
+      "citation_support": "supported",
+      "completeness": "adequate",
+      "abstention": "not_applicable",
+      "entry_scope": "correct",
+      "consistency": "consistent",
+      "claims": [
+        {
+          "claim": "methodkey 忽略 self，仅用 args 和 kwargs 调用 hashkey。",
+          "status": "supported",
+          "rationale": "methodkey 定义显式接收 self，return 仅转发 args/kwargs；原引文文档亦说明忽略首参。",
+          "evidence": [
+            {
+              "path": "src/cachetools/keys.py",
+              "start_line": 46,
+              "end_line": 48
+            },
+            {
+              "path": "docs/index.rst",
+              "start_line": 601,
+              "end_line": 606
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "src/cachetools/keys.py",
+              "start_line": 46,
+              "end_line": 48,
+              "content": "def methodkey(self, *args, **kwargs):\n    \"\"\"Return a cache key for use with cached methods.\"\"\"\n    return hashkey(*args, **kwargs)",
+              "content_sha256": "9be2925cc003dc66dea64947ed52e070c6efd1086049787bb0f854c20de97ecf",
+              "visible_to_generator": true
+            },
+            {
+              "path": "docs/index.rst",
+              "start_line": 601,
+              "end_line": 606,
+              "content": "   The `key` function will be called as `key(self, *args, **kwargs)`\n   to retrieve a suitable cache key.  Note that the default `key`\n   function, :func:`cachetools.keys.methodkey`, ignores its first\n   implicit argument, i.e. :const:`self`.  This has mostly historical\n   reasons, but also ensures that :const:`self` does not have to be\n   hashable.",
+              "content_sha256": "62b2e39c44efe351ebb085df8f2ce4b0fbd4cecabbe89f57102431383d7488b5",
+              "visible_to_generator": true
+            }
+          ]
+        },
+        {
+          "claim": "self 不同但后续参数相同时生成相同键。",
+          "status": "supported",
+          "rationale": "hashkey 只把 args 和排序后的 kwargs 组装成键，因此 self 差异不进入输出。",
+          "evidence": [
+            {
+              "path": "src/cachetools/keys.py",
+              "start_line": 37,
+              "end_line": 48
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "src/cachetools/keys.py",
+              "start_line": 37,
+              "end_line": 48,
+              "content": "def hashkey(*args, **kwargs):\n    \"\"\"Return a cache key for the specified hashable arguments.\"\"\"\n\n    if kwargs:\n        return _HashedTuple(args + _kwmark + tuple(sorted(kwargs.items())))\n    else:\n        return _HashedTuple(args)\n\n\ndef methodkey(self, *args, **kwargs):\n    \"\"\"Return a cache key for use with cached methods.\"\"\"\n    return hashkey(*args, **kwargs)",
+              "content_sha256": "5dcc63c85ddcfd107d0479d8bad2bc1fd005f1c172e3127bae26c0733e3cbcff",
+              "visible_to_generator": false
+            }
+          ]
+        }
+      ],
+      "notes": "委派路径和跨 self 的附加推论均由实际引文支持；没有声称方法签名参与生成键。",
+      "key_points": null,
+      "candidate_sha256": "0583caca942dd11a255a5da0a8afdaa32480924852ab45e1a9a7d3ba9a2d4901",
+      "reviewer": "Codex (current session)",
+      "review_type": "model_assisted_nonblind_development_review",
+      "human_approved": false,
+      "training_eligible": false,
+      "result_sha256": "9813b0a53177939f9a58baa113860434eef9705ce05094c812a791e19593fd18"
+    },
+    "q-b581e8c745f350ce--current-rag": {
+      "candidate_id": "q-b581e8c745f350ce--current-rag",
+      "correctness": "correct",
+      "citation_support": "supported",
+      "completeness": "adequate",
+      "abstention": "not_applicable",
+      "entry_scope": "correct",
+      "consistency": "consistent",
+      "claims": [
+        {
+          "claim": "变量不存在返回False；存在则casefold并在1/true/t/yes/y集合中检查。",
+          "status": "supported",
+          "rationale": "原引文22-29完整呈现存在性检查及真值集合。",
+          "evidence": [
+            {
+              "path": "src/dotenv/main.py",
+              "start_line": 22,
+              "end_line": 29
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "src/dotenv/main.py",
+              "start_line": 22,
+              "end_line": 29,
+              "content": "def _load_dotenv_disabled() -> bool:\n    \"\"\"\n    Determine if dotenv loading has been disabled.\n    \"\"\"\n    if \"PYTHON_DOTENV_DISABLED\" not in os.environ:\n        return False\n    value = os.environ[\"PYTHON_DOTENV_DISABLED\"].casefold()\n    return value in {\"1\", \"true\", \"t\", \"yes\", \"y\"}",
+              "content_sha256": "b713b2470383f86dd2c9c5a03172328f5cc3ed8c453a9b2a7a5db9ee1c6235ad",
+              "visible_to_generator": true
+            }
+          ]
+        },
+        {
+          "claim": "YeS 转成 yes 返回True；0 不在集合返回False。",
+          "status": "supported",
+          "rationale": "对给定ASCII值的直接代入准确，分别表示禁用与未禁用。",
+          "evidence": [
+            {
+              "path": "src/dotenv/main.py",
+              "start_line": 26,
+              "end_line": 29
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "src/dotenv/main.py",
+              "start_line": 26,
+              "end_line": 29,
+              "content": "    if \"PYTHON_DOTENV_DISABLED\" not in os.environ:\n        return False\n    value = os.environ[\"PYTHON_DOTENV_DISABLED\"].casefold()\n    return value in {\"1\", \"true\", \"t\", \"yes\", \"y\"}",
+              "content_sha256": "b90467b86da3bfcb161155b4e2e0cd2b9275482c83ccd4f50c0adf162e95253e",
+              "visible_to_generator": true
+            }
+          ]
+        }
+      ],
+      "notes": "准确回答两种环境值，额外的变量缺失路径也由同一实际引文支持。",
+      "key_points": null,
+      "candidate_sha256": "e5b78d722db2ac940c799f7f64c1137059e7728c162abe29d6b8c9b6b468d614",
+      "reviewer": "Codex (current session)",
+      "review_type": "model_assisted_nonblind_development_review",
+      "human_approved": false,
+      "training_eligible": false,
+      "result_sha256": "d3107096803c29232b4e41b64c2de8d0673bedb67676d4928c1de39de46caa9f"
+    },
+    "q-1e76f2749534ec63--current-rag": {
+      "candidate_id": "q-1e76f2749534ec63--current-rag",
+      "correctness": "partially_correct",
+      "citation_support": "partial",
+      "completeness": "adequate",
+      "abstention": "not_applicable",
+      "entry_scope": "correct",
+      "consistency": "contradictory",
+      "claims": [
+        {
+          "claim": "重复a后写覆盖，结果为{'a':'2','flag':None}。",
+          "status": "supported",
+          "rationale": "result[name]=value重复键更新同一个字典；无等号分支赋None。",
+          "evidence": [
+            {
+              "path": "src/requests/utils.py",
+              "start_line": 419,
+              "end_line": 428
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "src/requests/utils.py",
+              "start_line": 419,
+              "end_line": 428,
+              "content": "    result = {}\n    for item in _parse_list_header(value):\n        if \"=\" not in item:\n            result[item] = None\n            continue\n        name, value = item.split(\"=\", 1)\n        if value[:1] == value[-1:] == '\"':\n            value = unquote_header_value(value[1:-1])\n        result[name] = value\n    return result",
+              "content_sha256": "5a0733340f030cdd0d08aa4bf9ddadaa8dc5d56b748d541b1e779c24f95a6ad1",
+              "visible_to_generator": true
+            }
+          ]
+        },
+        {
+          "claim": "flag无等号，先置None再continue跳过后续拆分。",
+          "status": "supported",
+          "rationale": "421–423直接如此执行。",
+          "evidence": [
+            {
+              "path": "src/requests/utils.py",
+              "start_line": 421,
+              "end_line": 423
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "src/requests/utils.py",
+              "start_line": 421,
+              "end_line": 423,
+              "content": "        if \"=\" not in item:\n            result[item] = None\n            continue",
+              "content_sha256": "d8532995be6268c0518365cb0f40feff078e7d4a1257aa8216d510b63e5c4f65",
+              "visible_to_generator": true
+            }
+          ]
+        },
+        {
+          "claim": "L427字典写入在每次循环中执行。",
+          "status": "contradicted",
+          "rationale": "flag路径在423就continue，不能到427；这是答案额外解释中的局部错误，与上一句矛盾。",
+          "evidence": [
+            {
+              "path": "src/requests/utils.py",
+              "start_line": 421,
+              "end_line": 427
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "src/requests/utils.py",
+              "start_line": 421,
+              "end_line": 427,
+              "content": "        if \"=\" not in item:\n            result[item] = None\n            continue\n        name, value = item.split(\"=\", 1)\n        if value[:1] == value[-1:] == '\"':\n            value = unquote_header_value(value[1:-1])\n        result[name] = value",
+              "content_sha256": "15fae7ffd8229fb6944907e4d832f8fbb3bc354bdedd0ebc482f25d3c07822d0",
+              "visible_to_generator": true
+            }
+          ]
+        }
+      ],
+      "notes": "返回值与分支主解释可用，但明确声称L427在每次循环执行不成立；记录局部错误，不增加未问要求。",
+      "key_points": null,
+      "candidate_sha256": "7166c147c4e98174dd23f7fa5be38b7cadcd942232e101dcd8af7503f99e3d87",
+      "reviewer": "Codex (current session)",
+      "review_type": "model_assisted_nonblind_development_review",
+      "human_approved": false,
+      "training_eligible": false,
+      "result_sha256": "781bd4e714b4306a7f1eeece2ae3546a28c6f0471cb00020f74316291220ded0"
+    },
+    "q-34b9e0a5937a2ff3--current-rag": {
+      "candidate_id": "q-34b9e0a5937a2ff3--current-rag",
+      "correctness": "correct",
+      "citation_support": "partial",
+      "completeness": "adequate",
+      "abstention": "not_applicable",
+      "entry_scope": "correct",
+      "consistency": "consistent",
+      "claims": [
+        {
+          "claim": "truncate 清空表后把 _next_id 重置为 None。",
+          "status": "supported",
+          "rationale": "唯一正式引文698-707直接包含 clear 与 _next_id=None。",
+          "evidence": [
+            {
+              "path": "tinydb/table.py",
+              "start_line": 698,
+              "end_line": 707
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "tinydb/table.py",
+              "start_line": 698,
+              "end_line": 707,
+              "content": "    def truncate(self) -> None:\n        \"\"\"\n        Truncate the table by removing all documents.\n        \"\"\"\n\n        # Update the table by resetting all data\n        self._update_table(lambda table: table.clear())\n\n        # Reset document ID counter\n        self._next_id = None",
+              "content_sha256": "3cf9b594708493f5d472956456d50d07594d65883e82ab751133276c316caada",
+              "visible_to_generator": true
+            }
+          ]
+        },
+        {
+          "claim": "后续插入会重新计算 ID，空表从1开始，否则依据当前最大ID。",
+          "status": "supported",
+          "rationale": "这一主动补充在已交付的_get_next_id 744-777中成立，但没有被正式引用698-707覆盖。",
+          "evidence": [
+            {
+              "path": "tinydb/table.py",
+              "start_line": 744,
+              "end_line": 777
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "tinydb/table.py",
+              "start_line": 744,
+              "end_line": 777,
+              "content": "    def _get_next_id(self):\n        \"\"\"\n        Return the ID for a newly inserted document.\n        \"\"\"\n\n        # If we already know the next ID\n        if self._next_id is not None:\n            next_id = self._next_id\n            self._next_id = next_id + 1\n\n            return next_id\n\n        # Determine the next document ID by finding out the max ID value\n        # of the current table documents\n\n        # Read the table documents\n        table = self._read_table()\n\n        # If the table is empty, set the initial ID\n        if not table:\n            next_id = 1\n            self._next_id = next_id + 1\n\n            return next_id\n\n        # Determine the next ID based on the maximum ID that's currently in use\n        max_id = max(self.document_id_class(i) for i in table.keys())\n        next_id = max_id + 1\n\n        # The next ID we will return AFTER this call needs to be larger than\n        # the current next ID we calculated\n        self._next_id = next_id + 1\n\n        return next_id",
+              "content_sha256": "7071ae4713cbd234da84444a08b87445611fc04a6bda25abb91d300e1fb1d99d",
+              "visible_to_generator": true
+            }
+          ]
+        }
+      ],
+      "notes": "主要问题回答正确完整；主动补充的下次ID分配逻辑真实且模型已看见，却未落在正式引文内。按精确引用规则记partial，避免用正确主句遮蔽引用遗漏。",
+      "key_points": null,
+      "candidate_sha256": "1a9983b5de19289d2c6fb069df8add558e042df4f7694cd12bbbf45f02d12397",
+      "reviewer": "Codex (current session)",
+      "review_type": "model_assisted_nonblind_development_review",
+      "human_approved": false,
+      "training_eligible": false,
+      "result_sha256": "f685d61a970c2c515fb72f8eae2d89533309fb296390950e860f3a80a89ff758"
+    },
+    "q-e8efe7278b8bb71c--current-rag": {
+      "candidate_id": "q-e8efe7278b8bb71c--current-rag",
+      "correctness": "partially_correct",
+      "citation_support": "partial",
+      "completeness": "adequate",
+      "abstention": "appropriate",
+      "entry_scope": "correct",
+      "consistency": "consistent",
+      "claims": [
+        {
+          "claim": "仅凭库源码无法得出用户线上服务昨天实际缓存命中率，缺少实际运行信息。",
+          "status": "supported",
+          "rationale": "源码提供可调用的统计机制，不含用户服务的运行实例/时间序列；题目也没有提供遥测。",
+          "evidence": [
+            {
+              "path": "src/cachetools/__init__.py",
+              "start_line": 738,
+              "end_line": 766
+            },
+            {
+              "path": "src/cachetools/__init__.py",
+              "start_line": 769,
+              "end_line": 791
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "src/cachetools/__init__.py",
+              "start_line": 738,
+              "end_line": 766,
+              "content": "def cached(cache, key=keys.hashkey, lock=None, condition=None, info=False):\n    \"\"\"Decorator to wrap a function with a memoizing callable that saves\n    results in a cache.\n\n    \"\"\"\n    from ._cached import _wrapper\n\n    def decorator(func):\n        if info:\n            if isinstance(cache, Cache):\n\n                def make_info(hits, misses):\n                    return _CacheInfo(hits, misses, cache.maxsize, cache.currsize)\n\n            elif isinstance(cache, collections.abc.Mapping):\n\n                def make_info(hits, misses):\n                    return _CacheInfo(hits, misses, None, len(cache))\n\n            else:\n\n                def make_info(hits, misses):\n                    return _CacheInfo(hits, misses, 0, 0)\n\n            return _wrapper(func, cache, key, lock, condition, info=make_info)\n        else:\n            return _wrapper(func, cache, key, lock, condition)\n\n    return decorator",
+              "content_sha256": "dab0ce624acc549c0c7fbd7e8fede2cf2fa16add1f7a15fc76b668712a971670",
+              "visible_to_generator": true
+            },
+            {
+              "path": "src/cachetools/__init__.py",
+              "start_line": 769,
+              "end_line": 791,
+              "content": "def cachedmethod(cache, key=keys.methodkey, lock=None, condition=None, info=False):\n    \"\"\"Decorator to wrap a method with a memoizing callable that saves\n    results in a cache.\n\n    \"\"\"\n    from ._cachedmethod import _wrapper\n\n    def decorator(method):\n        if info:\n\n            def make_info(cache, hits, misses):\n                if isinstance(cache, Cache):\n                    return _CacheInfo(hits, misses, cache.maxsize, cache.currsize)\n                elif isinstance(cache, collections.abc.Mapping):\n                    return _CacheInfo(hits, misses, None, len(cache))\n                else:\n                    raise TypeError(\"cache(self) must return a mutable mapping\")\n\n            return _wrapper(method, cache, key, lock, condition, info=make_info)\n        else:\n            return _wrapper(method, cache, key, lock, condition)\n\n    return decorator",
+              "content_sha256": "71419a7c8d848b323d9b3ac0d8ac5df110132287a344f9c41141bb4c92dcc337",
+              "visible_to_generator": true
+            }
+          ]
+        },
+        {
+          "claim": "info=True 提供包含 hits/misses 的 _CacheInfo 统计能力。",
+          "status": "supported",
+          "rationale": "cached/cachedmethod 的 info 分支构造 make_info，并在wrapper中返回当前计数。",
+          "evidence": [
+            {
+              "path": "src/cachetools/__init__.py",
+              "start_line": 746,
+              "end_line": 760
+            },
+            {
+              "path": "src/cachetools/__init__.py",
+              "start_line": 775,
+              "end_line": 787
+            },
+            {
+              "path": "src/cachetools/_cachedmethod.py",
+              "start_line": 168,
+              "end_line": 176
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "src/cachetools/__init__.py",
+              "start_line": 746,
+              "end_line": 760,
+              "content": "        if info:\n            if isinstance(cache, Cache):\n\n                def make_info(hits, misses):\n                    return _CacheInfo(hits, misses, cache.maxsize, cache.currsize)\n\n            elif isinstance(cache, collections.abc.Mapping):\n\n                def make_info(hits, misses):\n                    return _CacheInfo(hits, misses, None, len(cache))\n\n            else:\n\n                def make_info(hits, misses):\n                    return _CacheInfo(hits, misses, 0, 0)",
+              "content_sha256": "4e49d248fed9d55c113206432137e2348391ed4639391ce968a6f87f2d0c8097",
+              "visible_to_generator": true
+            },
+            {
+              "path": "src/cachetools/__init__.py",
+              "start_line": 775,
+              "end_line": 787,
+              "content": "\n    def decorator(method):\n        if info:\n\n            def make_info(cache, hits, misses):\n                if isinstance(cache, Cache):\n                    return _CacheInfo(hits, misses, cache.maxsize, cache.currsize)\n                elif isinstance(cache, collections.abc.Mapping):\n                    return _CacheInfo(hits, misses, None, len(cache))\n                else:\n                    raise TypeError(\"cache(self) must return a mutable mapping\")\n\n            return _wrapper(method, cache, key, lock, condition, info=make_info)",
+              "content_sha256": "8e277f9cdc6c59d9a01786363864a576f640e3e2eef3b3aaf76447f0b5d7c247",
+              "visible_to_generator": true
+            },
+            {
+              "path": "src/cachetools/_cachedmethod.py",
+              "start_line": 168,
+              "end_line": 176,
+              "content": "                return val\n\n            def cache_clear(self):\n                self.cache.clear()\n                self.__hits = self.__misses = 0\n\n            def cache_info(self):\n                return info(self.cache, self.__hits, self.__misses)\n",
+              "content_sha256": "76f1cffc9f61edf28b799a56207de20d43aa6bf517d540c6544e56403b023b8c",
+              "visible_to_generator": true
+            }
+          ]
+        },
+        {
+          "claim": "cache_clear 会清空缓存并重置库内命中/未命中计数。",
+          "status": "supported",
+          "rationale": "三个已交付info wrapper的cache_clear均显式清零。",
+          "evidence": [
+            {
+              "path": "src/cachetools/_cachedmethod.py",
+              "start_line": 95,
+              "end_line": 102
+            },
+            {
+              "path": "src/cachetools/_cachedmethod.py",
+              "start_line": 135,
+              "end_line": 142
+            },
+            {
+              "path": "src/cachetools/_cachedmethod.py",
+              "start_line": 170,
+              "end_line": 176
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "src/cachetools/_cachedmethod.py",
+              "start_line": 95,
+              "end_line": 102,
+              "content": "            def cache_clear(self):\n                with self.cache_lock:\n                    self.cache.clear()\n                    self.__hits = self.__misses = 0\n\n            def cache_info(self):\n                with self.cache_lock:\n                    return info(self.cache, self.__hits, self.__misses)",
+              "content_sha256": "dd1aac184b0a3b2c24af4d95350b93141b9934fa1398ba6bac4fa0fef6254ecb",
+              "visible_to_generator": true
+            },
+            {
+              "path": "src/cachetools/_cachedmethod.py",
+              "start_line": 135,
+              "end_line": 142,
+              "content": "            def cache_clear(self):\n                with self.cache_lock:\n                    self.cache.clear()\n                    self.__hits = self.__misses = 0\n\n            def cache_info(self):\n                with self.cache_lock:\n                    return info(self.cache, self.__hits, self.__misses)",
+              "content_sha256": "dd1aac184b0a3b2c24af4d95350b93141b9934fa1398ba6bac4fa0fef6254ecb",
+              "visible_to_generator": true
+            },
+            {
+              "path": "src/cachetools/_cachedmethod.py",
+              "start_line": 170,
+              "end_line": 176,
+              "content": "            def cache_clear(self):\n                self.cache.clear()\n                self.__hits = self.__misses = 0\n\n            def cache_info(self):\n                return info(self.cache, self.__hits, self.__misses)\n",
+              "content_sha256": "5449a95b232fcc779ac3cac5fd5bf6a8d3e7a447a07aaf84c38a19de2ce69ca7",
+              "visible_to_generator": true
+            }
+          ]
+        },
+        {
+          "claim": "获取具体命中率必须显式info=True且服务运行时从未调用cache_clear。",
+          "status": "unsupported",
+          "rationale": "把一种库内计数方案误说为所有统计的必要条件；源码只说明info分支与清零行为，不能排除外部遥测、区间快照或清零后统计，也不能把无运行数据简化为从未清缓存。",
+          "evidence": [
+            {
+              "path": "src/cachetools/__init__.py",
+              "start_line": 738,
+              "end_line": 766
+            },
+            {
+              "path": "src/cachetools/_cachedmethod.py",
+              "start_line": 170,
+              "end_line": 176
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "src/cachetools/__init__.py",
+              "start_line": 738,
+              "end_line": 766,
+              "content": "def cached(cache, key=keys.hashkey, lock=None, condition=None, info=False):\n    \"\"\"Decorator to wrap a function with a memoizing callable that saves\n    results in a cache.\n\n    \"\"\"\n    from ._cached import _wrapper\n\n    def decorator(func):\n        if info:\n            if isinstance(cache, Cache):\n\n                def make_info(hits, misses):\n                    return _CacheInfo(hits, misses, cache.maxsize, cache.currsize)\n\n            elif isinstance(cache, collections.abc.Mapping):\n\n                def make_info(hits, misses):\n                    return _CacheInfo(hits, misses, None, len(cache))\n\n            else:\n\n                def make_info(hits, misses):\n                    return _CacheInfo(hits, misses, 0, 0)\n\n            return _wrapper(func, cache, key, lock, condition, info=make_info)\n        else:\n            return _wrapper(func, cache, key, lock, condition)\n\n    return decorator",
+              "content_sha256": "dab0ce624acc549c0c7fbd7e8fede2cf2fa16add1f7a15fc76b668712a971670",
+              "visible_to_generator": true
+            },
+            {
+              "path": "src/cachetools/_cachedmethod.py",
+              "start_line": 170,
+              "end_line": 176,
+              "content": "            def cache_clear(self):\n                self.cache.clear()\n                self.__hits = self.__misses = 0\n\n            def cache_info(self):\n                return info(self.cache, self.__hits, self.__misses)\n",
+              "content_sha256": "5449a95b232fcc779ac3cac5fd5bf6a8d3e7a447a07aaf84c38a19de2ce69ca7",
+              "visible_to_generator": true
+            }
+          ]
+        }
+      ],
+      "notes": "拒答核心合理且未编造数字，但主动补充了题目不要求的绝对必要条件；这些必要性结论没有源码依据。事实部分正确、引用部分支持，不能因insufficient_evidence=True便给整答正确。",
+      "key_points": null,
+      "candidate_sha256": "cb4f6e43a2ecb13170d661671ffb689a020169329da1daba264675297bf42ce6",
+      "reviewer": "Codex (current session)",
+      "review_type": "model_assisted_nonblind_development_review",
+      "human_approved": false,
+      "training_eligible": false,
+      "result_sha256": "9f7c80e93ee0b5c342fca48cbcc6ef5851cbe9acc9e39af354f0e2c2abf9c4a7"
+    },
+    "q-a92aef7a32d80025--current-rag": {
+      "candidate_id": "q-a92aef7a32d80025--current-rag",
+      "correctness": "correct",
+      "citation_support": "supported",
+      "completeness": "adequate",
+      "abstention": "not_applicable",
+      "entry_scope": "correct",
+      "consistency": "consistent",
+      "claims": [
+        {
+          "claim": "不传tag时返回jobs浅拷贝新列表，不是内部列表本身。",
+          "status": "supported",
+          "rationale": "130–131的self.jobs[:]直接支持。",
+          "evidence": [
+            {
+              "path": "schedule/__init__.py",
+              "start_line": 130,
+              "end_line": 131
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "schedule/__init__.py",
+              "start_line": 130,
+              "end_line": 131,
+              "content": "        if tag is None:\n            return self.jobs[:]",
+              "content_sha256": "3f14b89fa44857bca3edfd84c83343d97bdfd0c63012bc8bc5c3b336dff5dcf1",
+              "visible_to_generator": true
+            }
+          ]
+        }
+      ],
+      "notes": "问题只问容器是否本身；回答准确充分，无需额外要求说明Job对象共享。",
+      "key_points": null,
+      "candidate_sha256": "220d7663d2aaaf2174da5b55b2db8ba5aec94d9a54db1bd9368ad40d00e51d25",
+      "reviewer": "Codex (current session)",
+      "review_type": "model_assisted_nonblind_development_review",
+      "human_approved": false,
+      "training_eligible": false,
+      "result_sha256": "67b26364f97c44805606e29f0175f0c1a17a6cb4936e8cbd73d7ab3f6df65248"
+    },
+    "improvement-confirm-blinker-03--current-rag": {
+      "candidate_id": "improvement-confirm-blinker-03--current-rag",
+      "correctness": "correct",
+      "citation_support": "partial",
+      "completeness": "adequate",
+      "abstention": "not_applicable",
+      "entry_scope": "correct",
+      "consistency": "consistent",
+      "claims": [
+        {
+          "claim": "抛自定义BaseException也会在退出connected_to时disconnect。",
+          "status": "supported",
+          "rationale": "finally覆盖BaseException传播，189调用disconnect。",
+          "evidence": [
+            {
+              "path": "src/blinker/base.py",
+              "start_line": 184,
+              "end_line": 189
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "src/blinker/base.py",
+              "start_line": 184,
+              "end_line": 189,
+              "content": "        self.connect(receiver, sender=sender, weak=False)\n\n        try:\n            yield None\n        finally:\n            self.disconnect(receiver)",
+              "content_sha256": "420742d8d8471e1d9ecf6f3eb31b955406ebdc5dd372a3f8bee8d0b2fb440207",
+              "visible_to_generator": true
+            }
+          ]
+        },
+        {
+          "claim": "测试在Failure和BaseFailure两种异常下断言canary为[2]、sig.receivers为空。",
+          "status": "supported",
+          "rationale": "参数化异常及67–68断言均在已引可见源码中。",
+          "evidence": [
+            {
+              "path": "tests/test_context.py",
+              "start_line": 51,
+              "end_line": 68
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "tests/test_context.py",
+              "start_line": 51,
+              "end_line": 68,
+              "content": "@pytest.mark.parametrize(\"exc_type\", [Failure, BaseFailure])\ndef test_temp_connection_failure(exc_type: type[BaseException]) -> None:\n    sig = Signal()\n\n    canary = []\n\n    def receiver(sender: t.Any) -> None:\n        canary.append(sender)\n\n    with pytest.raises(exc_type):\n        sig.send(1)\n        with sig.connected_to(receiver):\n            sig.send(2)\n            raise exc_type\n        sig.send(3)\n\n    assert canary == [2]\n    assert not sig.receivers",
+              "content_sha256": "9aef9858a826e07d6fc5e32c2d2e11856f1694bef7ab66ee0a6ccca421d5b15e",
+              "visible_to_generator": true
+            }
+          ]
+        },
+        {
+          "claim": "测试中的BaseFailure继承BaseException。",
+          "status": "supported",
+          "rationale": "类定义在47–48；模型引文从51开始，未覆盖此定义。",
+          "evidence": [
+            {
+              "path": "tests/test_context.py",
+              "start_line": 47,
+              "end_line": 48
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "tests/test_context.py",
+              "start_line": 47,
+              "end_line": 48,
+              "content": "class BaseFailure(BaseException):\n    pass",
+              "content_sha256": "124ad4bbc510dd9aafb6aaa4fa502faa1eb0237582dc4374a93250ba625885c3",
+              "visible_to_generator": false
+            }
+          ]
+        }
+      ],
+      "notes": "核心清理行为和测试断言正确充分。仅测试类继承关系定义位于未交付且未引用的47–48，保留这个小型来源遗漏，不改判核心事实。",
+      "key_points": null,
+      "candidate_sha256": "b7827630bc51e113d98173c6aebd5276837e538cee3b359dad747e0fda26cdda",
+      "reviewer": "Codex (current session)",
+      "review_type": "model_assisted_nonblind_development_review",
+      "human_approved": false,
+      "training_eligible": false,
+      "result_sha256": "3882f99223b308d78fb970969e9c2c9facd3c382ece7d89e361729297405eace"
+    },
+    "improvement-confirm-blinker-04--current-rag": {
+      "candidate_id": "improvement-confirm-blinker-04--current-rag",
+      "correctness": "partially_correct",
+      "citation_support": "partial",
+      "completeness": "adequate",
+      "abstention": "not_applicable",
+      "entry_scope": "correct",
+      "consistency": "contradictory",
+      "claims": [
+        {
+          "claim": "直接send不会自动await；遇异步接收器且无_async_wrapper时抛RuntimeError。",
+          "status": "supported",
+          "rationale": "243–247明确判断并走包装或抛错。",
+          "evidence": [
+            {
+              "path": "src/blinker/base.py",
+              "start_line": 241,
+              "end_line": 247
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "src/blinker/base.py",
+              "start_line": 241,
+              "end_line": 247,
+              "content": "\n        for receiver in self.receivers_for(sender):\n            if iscoroutinefunction(receiver):\n                if _async_wrapper is None:\n                    raise RuntimeError(\"Cannot send to a coroutine function.\")\n\n                result = _async_wrapper(receiver)(sender, **kwargs)",
+              "content_sha256": "931019bda7d2ec46169a2ed164e08482aa454b00eab77fae41c25bf17b7be2f8",
+              "visible_to_generator": true
+            }
+          ]
+        },
+        {
+          "claim": "send_async对同步接收器需要_sync_wrapper，异步接收器直接await。",
+          "status": "supported",
+          "rationale": "291–299的条件和调用支持。",
+          "evidence": [
+            {
+              "path": "src/blinker/base.py",
+              "start_line": 291,
+              "end_line": 299
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "src/blinker/base.py",
+              "start_line": 291,
+              "end_line": 299,
+              "content": "\n        for receiver in self.receivers_for(sender):\n            if not iscoroutinefunction(receiver):\n                if _sync_wrapper is None:\n                    raise RuntimeError(\"Cannot send to a non-coroutine function.\")\n\n                result = await _sync_wrapper(receiver)(sender, **kwargs)\n            else:\n                result = await receiver(sender, **kwargs)",
+              "content_sha256": "aa0749a403523ea3c645a5832c95adae6c15ffd33bb7c6527e0ff83029a1e49d",
+              "visible_to_generator": true
+            }
+          ]
+        },
+        {
+          "claim": "混用同步与异步接收器必须通过send_async调用，send要求所有接收器同步。",
+          "status": "contradicted",
+          "rationale": "send有_async_wrapper分支允许异步接收器，这也是答案后段自己给出的另一种入口。",
+          "evidence": [
+            {
+              "path": "src/blinker/base.py",
+              "start_line": 241,
+              "end_line": 249
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "src/blinker/base.py",
+              "start_line": 241,
+              "end_line": 249,
+              "content": "\n        for receiver in self.receivers_for(sender):\n            if iscoroutinefunction(receiver):\n                if _async_wrapper is None:\n                    raise RuntimeError(\"Cannot send to a coroutine function.\")\n\n                result = _async_wrapper(receiver)(sender, **kwargs)\n            else:\n                result = receiver(sender, **kwargs)",
+              "content_sha256": "b19ed017ffb9fbb956c55d1206e7d3cd3adce00a197c7626d106d559ec2ee3c7",
+              "visible_to_generator": true
+            }
+          ]
+        },
+        {
+          "claim": "send也可传_async_wrapper将异步转同步，而同步接收器直接调用。",
+          "status": "supported",
+          "rationale": "247与249支持；额外细节249在交付上下文中但不在正式引文列表。",
+          "evidence": [
+            {
+              "path": "src/blinker/base.py",
+              "start_line": 241,
+              "end_line": 249
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "src/blinker/base.py",
+              "start_line": 241,
+              "end_line": 249,
+              "content": "\n        for receiver in self.receivers_for(sender):\n            if iscoroutinefunction(receiver):\n                if _async_wrapper is None:\n                    raise RuntimeError(\"Cannot send to a coroutine function.\")\n\n                result = _async_wrapper(receiver)(sender, **kwargs)\n            else:\n                result = receiver(sender, **kwargs)",
+              "content_sha256": "b19ed017ffb9fbb956c55d1206e7d3cd3adce00a197c7626d106d559ec2ee3c7",
+              "visible_to_generator": true
+            }
+          ]
+        }
+      ],
+      "notes": "两个入口主要条件均回答，但绝对化“必须send_async/所有同步”与后文send加wrapper方案互相矛盾；保留错误，不能因解释了替代方案就消除先前断言。",
+      "key_points": null,
+      "candidate_sha256": "4d7c00adbec194c94a55b1b0c5b7d1f50c19c4e01128a7764c130fbfd334562c",
+      "reviewer": "Codex (current session)",
+      "review_type": "model_assisted_nonblind_development_review",
+      "human_approved": false,
+      "training_eligible": false,
+      "result_sha256": "98d8a80044663febb608acb0d7a3ec4344b4d42a0ac91a44e7a42305ee34109d"
+    },
+    "q-cbd73685dc57410f--current-rag": {
+      "candidate_id": "q-cbd73685dc57410f--current-rag",
+      "correctness": "partially_correct",
+      "citation_support": "partial",
+      "completeness": "adequate",
+      "abstention": "not_applicable",
+      "entry_scope": "correct",
+      "consistency": "consistent",
+      "claims": [
+        {
+          "claim": "timer()==link.expires 时 __contains__ 返回False。",
+          "status": "supported",
+          "rationale": "严格小于比较，边界相等不成立。",
+          "evidence": [
+            {
+              "path": "src/cachetools/__init__.py",
+              "start_line": 476,
+              "end_line": 482
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "src/cachetools/__init__.py",
+              "start_line": 476,
+              "end_line": 482,
+              "content": "    def __contains__(self, key):\n        try:\n            link = self.__links[key]  # no reordering\n        except KeyError:\n            return False\n        else:\n            return self.timer() < link.expires",
+              "content_sha256": "619cdb700350853fc1273ac2992540f96568a27fb4f4732d482848dd80791a32",
+              "visible_to_generator": true
+            }
+          ]
+        },
+        {
+          "claim": "__contains__ 不删除过期项、不调整LRU顺序。",
+          "status": "supported",
+          "rationale": "函数只读links并比较时间，直接字典访问注明no reordering。",
+          "evidence": [
+            {
+              "path": "src/cachetools/__init__.py",
+              "start_line": 476,
+              "end_line": 482
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "src/cachetools/__init__.py",
+              "start_line": 476,
+              "end_line": 482,
+              "content": "    def __contains__(self, key):\n        try:\n            link = self.__links[key]  # no reordering\n        except KeyError:\n            return False\n        else:\n            return self.timer() < link.expires",
+              "content_sha256": "619cdb700350853fc1273ac2992540f96568a27fb4f4732d482848dd80791a32",
+              "visible_to_generator": true
+            }
+          ]
+        },
+        {
+          "claim": "过期项的删除由 __delitem__ 或 __getitem__ 触发。",
+          "status": "contradicted",
+          "rationale": "__delitem__会删除，但TTLCache.__getitem__检测过期后调用__missing__，继承实现只抛KeyError而不删除；真正批量过期清理在expire。484-494虽未引用但实际已交付，106-107及expire为评审补读，未算作模型可见。",
+          "evidence": [
+            {
+              "path": "src/cachetools/__init__.py",
+              "start_line": 484,
+              "end_line": 494
+            },
+            {
+              "path": "src/cachetools/__init__.py",
+              "start_line": 106,
+              "end_line": 107
+            },
+            {
+              "path": "src/cachetools/__init__.py",
+              "start_line": 550,
+              "end_line": 564
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "src/cachetools/__init__.py",
+              "start_line": 484,
+              "end_line": 494,
+              "content": "    def __getitem__(self, key, cache_getitem=Cache.__getitem__):\n        try:\n            link = self.__getlink(key)\n        except KeyError:\n            expired = False\n        else:\n            expired = not (self.timer() < link.expires)\n        if expired:\n            return self.__missing__(key)\n        else:\n            return cache_getitem(self, key)",
+              "content_sha256": "003f34d3b4fd6885dea00773240f968e3aad9fcb4b3b0b8de45355bc58027414",
+              "visible_to_generator": true
+            },
+            {
+              "path": "src/cachetools/__init__.py",
+              "start_line": 106,
+              "end_line": 107,
+              "content": "    def __missing__(self, key):\n        raise KeyError(key)",
+              "content_sha256": "97e11a1ded2ced073ba89fb1025108f65d5b22fcce82a6ed2f5e77760f0f12d2",
+              "visible_to_generator": false
+            },
+            {
+              "path": "src/cachetools/__init__.py",
+              "start_line": 550,
+              "end_line": 564,
+              "content": "            time = self.timer()\n        root = self.__root\n        curr = root.next\n        links = self.__links\n        expired = []\n        cache_delitem = Cache.__delitem__\n        cache_getitem = Cache.__getitem__\n        while curr is not root and not (time < curr.expires):\n            expired.append((curr.key, cache_getitem(self, curr.key)))\n            cache_delitem(self, curr.key)\n            del links[curr.key]\n            next = curr.next\n            curr.unlink()\n            curr = next\n        return expired",
+              "content_sha256": "b2d55f84a46d6a5a16087a9cc30d5d6b4c59106f61a6b07b870f1d47885f5ec2",
+              "visible_to_generator": false
+            }
+          ]
+        }
+      ],
+      "notes": "核心三问均答对，但主动添加删除机制错误，不能忽略括号里的重要事实；并非检索缺失，__getitem__反证已在实际输入。",
+      "key_points": null,
+      "candidate_sha256": "f3bc21c6f60bb463298eccf46ed58a63edeca4110d9f0e80b865e14a56eed82f",
+      "reviewer": "Codex (current session)",
+      "review_type": "model_assisted_nonblind_development_review",
+      "human_approved": false,
+      "training_eligible": false,
+      "result_sha256": "4daa2e8e23ed8e5fc144c0920246d129545bb857c8118dc59393f96ee22dfeb3"
+    },
+    "improvement-confirm-tenacity-01--current-rag": {
+      "candidate_id": "improvement-confirm-tenacity-01--current-rag",
+      "correctness": "partially_correct",
+      "citation_support": "partial",
+      "completeness": "partial",
+      "abstention": "not_applicable",
+      "entry_scope": "correct",
+      "consistency": "consistent",
+      "claims": [
+        {
+          "claim": "stop_after_delay(10)不能保证9秒失败后不再睡到12秒。",
+          "status": "supported",
+          "rationale": "该策略只比较本次已耗时9与10，117并未加upcoming_sleep；100–107也明确可能超限。",
+          "evidence": [
+            {
+              "path": "tenacity/stop.py",
+              "start_line": 100,
+              "end_line": 117
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "tenacity/stop.py",
+              "start_line": 100,
+              "end_line": 117,
+              "content": "class stop_after_delay(stop_base):\n    \"\"\"\n    Stop when the time from the first attempt >= limit.\n\n    Note: `max_delay` will be exceeded, so when used with a `wait`, the actual total delay will be greater\n    than `max_delay` by some of the final sleep period before `max_delay` is exceeded.\n\n    If you need stricter timing with waits, consider `stop_before_delay` instead.\n    \"\"\"\n\n    def __init__(self, max_delay: _utils.time_unit_type) -> None:\n        self.max_delay = _utils.to_seconds(max_delay)\n\n    @override\n    def __call__(self, retry_state: \"RetryCallState\") -> bool:\n        if retry_state.seconds_since_start is None:\n            raise RuntimeError(\"__call__() called but seconds_since_start is not set\")\n        return retry_state.seconds_since_start >= self.max_delay",
+              "content_sha256": "8bbfc79cff11c4df0bcd8d54d8685bc55f260d405fccf99ad103fe29f382a3f3",
+              "visible_to_generator": true
+            }
+          ]
+        },
+        {
+          "claim": "当总耗时已达到10秒，仍会执行最后一次实际wait导致12秒。",
+          "status": "contradicted",
+          "rationale": "真正流程先算upcoming_sleep再stop，已达10时stop_after_delay为True，走终止分支不再调度DoSleep。题设超限发生在9秒判未停止后睡3秒。",
+          "evidence": [
+            {
+              "path": "tenacity/stop.py",
+              "start_line": 114,
+              "end_line": 117
+            },
+            {
+              "path": "tenacity/__init__.py",
+              "start_line": 468,
+              "end_line": 500
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "tenacity/stop.py",
+              "start_line": 114,
+              "end_line": 117,
+              "content": "    def __call__(self, retry_state: \"RetryCallState\") -> bool:\n        if retry_state.seconds_since_start is None:\n            raise RuntimeError(\"__call__() called but seconds_since_start is not set\")\n        return retry_state.seconds_since_start >= self.max_delay",
+              "content_sha256": "4ce74b04ed036ba05cb74a3227ef0f4474abdad73e20d675fa8da22b2340e2f5",
+              "visible_to_generator": true
+            },
+            {
+              "path": "tenacity/__init__.py",
+              "start_line": 468,
+              "end_line": 500,
+              "content": "        self._add_action_func(self._run_wait)\n        self._add_action_func(self._run_stop)\n        self._add_action_func(self._post_stop_check_actions)\n\n    def _post_stop_check_actions(self, retry_state: \"RetryCallState\") -> None:\n        if self.iter_state.stop_run_result:\n            if self.retry_error_callback:\n                self._add_action_func(self.retry_error_callback)\n                return\n\n            def exc_check(rs: \"RetryCallState\") -> None:\n                fut = t.cast(\"Future\", rs.outcome)\n                retry_exc = self.retry_error_cls(fut)\n                if self.reraise:\n                    retry_exc.reraise()\n                raise retry_exc from fut.exception()\n\n            self._add_action_func(exc_check)\n            return\n\n        def next_action(rs: \"RetryCallState\") -> None:\n            sleep = rs.upcoming_sleep\n            rs.next_action = RetryAction(sleep)\n            rs.idle_for += sleep\n            self.statistics[\"idle_for\"] += sleep\n            self.statistics[\"attempt_number\"] += 1\n\n        self._add_action_func(next_action)\n\n        if self.before_sleep is not None:\n            self._add_action_func(self.before_sleep)\n\n        self._add_action_func(lambda rs: DoSleep(rs.upcoming_sleep))",
+              "content_sha256": "e13577c3e00314c3404d45954fec1331fb39713b0b3477d875fa41afdbcc61ac",
+              "visible_to_generator": false
+            }
+          ]
+        },
+        {
+          "claim": "应改用stop_before_delay。",
+          "status": "supported",
+          "rationale": "120–138把seconds_since_start与upcoming_sleep相加后比较阈值。",
+          "evidence": [
+            {
+              "path": "tenacity/stop.py",
+              "start_line": 120,
+              "end_line": 138
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "tenacity/stop.py",
+              "start_line": 120,
+              "end_line": 138,
+              "content": "class stop_before_delay(stop_base):\n    \"\"\"\n    Stop right before the next attempt would take place after the time from the first attempt >= limit.\n\n    Most useful when you are using with a `wait` function like wait_random_exponential, but need to make\n    sure that the max_delay is not exceeded.\n    \"\"\"\n\n    def __init__(self, max_delay: _utils.time_unit_type) -> None:\n        self.max_delay = _utils.to_seconds(max_delay)\n\n    @override\n    def __call__(self, retry_state: \"RetryCallState\") -> bool:\n        if retry_state.seconds_since_start is None:\n            raise RuntimeError(\"__call__() called but seconds_since_start is not set\")\n        return (\n            retry_state.seconds_since_start + retry_state.upcoming_sleep\n            >= self.max_delay\n        )",
+              "content_sha256": "46eb9706d81e5376279c20254630b76adb71f39cd06271c162be9d3069024b85",
+              "visible_to_generator": false
+            }
+          ]
+        },
+        {
+          "claim": "Tenacity先执行wait策略进行实际等待，再调用stop判断。",
+          "status": "contradicted",
+          "rationale": "429–430先计算等待值，468–470按序计算wait与stop；只有未停时500才加DoSleep。将等待计算与真正sleep混为一谈。",
+          "evidence": [
+            {
+              "path": "tenacity/__init__.py",
+              "start_line": 429,
+              "end_line": 434
+            },
+            {
+              "path": "tenacity/__init__.py",
+              "start_line": 460,
+              "end_line": 500
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "tenacity/__init__.py",
+              "start_line": 429,
+              "end_line": 434,
+              "content": "    def _run_wait(self, retry_state: \"RetryCallState\") -> None:\n        retry_state.upcoming_sleep = self.wait(retry_state)\n\n    def _run_stop(self, retry_state: \"RetryCallState\") -> None:\n        self.statistics[\"delay_since_first_attempt\"] = retry_state.seconds_since_start\n        self.iter_state.stop_run_result = self.stop(retry_state)",
+              "content_sha256": "b9a52d49eafde6dbe9dd39bf3d6685a1729abd662f172299b157bf6d6e8d7357",
+              "visible_to_generator": false
+            },
+            {
+              "path": "tenacity/__init__.py",
+              "start_line": 460,
+              "end_line": 500,
+              "content": "    def _post_retry_check_actions(self, retry_state: \"RetryCallState\") -> None:\n        if not (self.iter_state.is_explicit_retry or self.iter_state.retry_run_result):\n            self._add_action_func(lambda rs: rs.outcome.result())\n            return\n\n        if self.after is not None:\n            self._add_action_func(self.after)\n\n        self._add_action_func(self._run_wait)\n        self._add_action_func(self._run_stop)\n        self._add_action_func(self._post_stop_check_actions)\n\n    def _post_stop_check_actions(self, retry_state: \"RetryCallState\") -> None:\n        if self.iter_state.stop_run_result:\n            if self.retry_error_callback:\n                self._add_action_func(self.retry_error_callback)\n                return\n\n            def exc_check(rs: \"RetryCallState\") -> None:\n                fut = t.cast(\"Future\", rs.outcome)\n                retry_exc = self.retry_error_cls(fut)\n                if self.reraise:\n                    retry_exc.reraise()\n                raise retry_exc from fut.exception()\n\n            self._add_action_func(exc_check)\n            return\n\n        def next_action(rs: \"RetryCallState\") -> None:\n            sleep = rs.upcoming_sleep\n            rs.next_action = RetryAction(sleep)\n            rs.idle_for += sleep\n            self.statistics[\"idle_for\"] += sleep\n            self.statistics[\"attempt_number\"] += 1\n\n        self._add_action_func(next_action)\n\n        if self.before_sleep is not None:\n            self._add_action_func(self.before_sleep)\n\n        self._add_action_func(lambda rs: DoSleep(rs.upcoming_sleep))",
+              "content_sha256": "367460bfa9128d9fa5a8011ccfe24290748b882b45f94ed25e96398fc860276c",
+              "visible_to_generator": false
+            }
+          ]
+        }
+      ],
+      "notes": "结论和替代策略名正确；题目明确要求的调用顺序答错，且没有说明next sleep相加的具体判定。当前实际context无120–138和429–500，不能借旧充分源码实验替代该输入事实。",
+      "key_points": null,
+      "candidate_sha256": "eb6cfb15d9cfad8a6513f51fc39a5a6bb917f84495d9ce9283541114e8bdd897",
+      "reviewer": "Codex (current session)",
+      "review_type": "model_assisted_nonblind_development_review",
+      "human_approved": false,
+      "training_eligible": false,
+      "result_sha256": "22be801d11108ad91ca3560ea564cc538ccbeb3f34f0662f7c629280e0e10fcd"
+    },
+    "improvement-confirm-tenacity-04--current-rag": {
+      "candidate_id": "improvement-confirm-tenacity-04--current-rag",
+      "correctness": "correct",
+      "citation_support": "partial",
+      "completeness": "adequate",
+      "abstention": "not_applicable",
+      "entry_scope": "correct",
+      "consistency": "consistent",
+      "claims": [
+        {
+          "claim": "本次disabled同步调用只运行一次、传播原始ValueError，不包装RetryError。",
+          "status": "supported",
+          "rationale": "同题同步测试1697–1710及1671–1683直接验证一次调用和ValueError；无需依赖async入口来证明。",
+          "evidence": [
+            {
+              "path": "tests/test_tenacity.py",
+              "start_line": 1697,
+              "end_line": 1710
+            },
+            {
+              "path": "tests/test_tenacity.py",
+              "start_line": 1671,
+              "end_line": 1683
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "tests/test_tenacity.py",
+              "start_line": 1697,
+              "end_line": 1710,
+              "content": "    def test_enabled_false_via_retry_with(self) -> None:\n        \"\"\"retry_with(enabled=False) disables retrying.\"\"\"\n        call_count = 0\n\n        @retry(stop=tenacity.stop_after_attempt(3))\n        def always_fails() -> None:\n            nonlocal call_count\n            call_count += 1\n            raise ValueError(\"fail\")\n\n        disabled = always_fails.retry_with(enabled=False)\n        with pytest.raises(ValueError, match=\"fail\"):\n            disabled()\n        assert call_count == 1",
+              "content_sha256": "242c3afcac4cc1083736afad59bf8fa683fd6c0c9cbd68c0c4d5f0aa42fc8d71",
+              "visible_to_generator": true
+            },
+            {
+              "path": "tests/test_tenacity.py",
+              "start_line": 1671,
+              "end_line": 1683,
+              "content": "    def test_enabled_false_skips_retry(self) -> None:\n        \"\"\"When enabled=False, the function is called directly without retrying.\"\"\"\n        call_count = 0\n\n        @retry(enabled=False, stop=tenacity.stop_after_attempt(3))\n        def always_fails() -> None:\n            nonlocal call_count\n            call_count += 1\n            raise ValueError(\"fail\")\n\n        with pytest.raises(ValueError, match=\"fail\"):\n            always_fails()\n        assert call_count == 1",
+              "content_sha256": "e63ec5a7dca961ff478b46d4f9ceb7c2c4178fef7c56cd8aea8991bf80a54fe2",
+              "visible_to_generator": true
+            }
+          ]
+        },
+        {
+          "claim": "copy创建新实例，enabled覆盖为False，原策略对象不被原地修改。",
+          "status": "supported",
+          "rationale": "288–321返回self.__class__，用_first_set选择覆盖配置。",
+          "evidence": [
+            {
+              "path": "tenacity/__init__.py",
+              "start_line": 288,
+              "end_line": 321
+            },
+            {
+              "path": "tenacity/__init__.py",
+              "start_line": 186,
+              "end_line": 187
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "tenacity/__init__.py",
+              "start_line": 288,
+              "end_line": 321,
+              "content": "    def copy(\n        self,\n        sleep: t.Callable[[int | float], None] | object = _unset,\n        stop: \"StopBaseT | object\" = _unset,\n        wait: \"WaitBaseT | object\" = _unset,\n        retry: retry_base | object = _unset,\n        before: t.Callable[[\"RetryCallState\"], None] | object = _unset,\n        after: t.Callable[[\"RetryCallState\"], None] | object = _unset,\n        before_sleep: t.Callable[[\"RetryCallState\"], None] | object | None = _unset,\n        reraise: bool | object = _unset,\n        retry_error_cls: type[RetryError] | object = _unset,\n        retry_error_callback: t.Callable[[\"RetryCallState\"], t.Any]\n        | object\n        | None = _unset,\n        name: str | object | None = _unset,\n        enabled: bool | object = _unset,\n    ) -> \"Self\":\n        \"\"\"Copy this object with some parameters changed if needed.\"\"\"\n        return self.__class__(\n            sleep=_first_set(sleep, self.sleep),\n            stop=_first_set(stop, self.stop),\n            wait=_first_set(wait, self.wait),\n            retry=_first_set(retry, self.retry),\n            before=_first_set(before, self.before),\n            after=_first_set(after, self.after),\n            before_sleep=_first_set(before_sleep, self.before_sleep),\n            reraise=_first_set(reraise, self.reraise),\n            retry_error_cls=_first_set(retry_error_cls, self.retry_error_cls),\n            retry_error_callback=_first_set(\n                retry_error_callback, self.retry_error_callback\n            ),\n            name=_first_set(name, self._name),\n            enabled=_first_set(enabled, self.enabled),\n        )",
+              "content_sha256": "c8dc54c3e7342becbdfef871e778349494e86ef2ecc2f556ce767ed763fccd2f",
+              "visible_to_generator": true
+            },
+            {
+              "path": "tenacity/__init__.py",
+              "start_line": 186,
+              "end_line": 187,
+              "content": "def _first_set(first: t.Any | object, second: t.Any) -> t.Any:\n    return second if first is _unset else first",
+              "content_sha256": "c920d2ce7ddf3d283ec85849b1ea68c8eca59b024da0d073e628b10294e522e1",
+              "visible_to_generator": true
+            }
+          ]
+        },
+        {
+          "claim": "retry_with通过copy再wraps构造独立包装，不永久改原wrapped。",
+          "status": "supported",
+          "rationale": "406–407的连接关系正确，但该实现没交付且未引用；693只有类型声明。",
+          "evidence": [
+            {
+              "path": "tenacity/__init__.py",
+              "start_line": 406,
+              "end_line": 407
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "tenacity/__init__.py",
+              "start_line": 406,
+              "end_line": 407,
+              "content": "        def retry_with(*args: t.Any, **kwargs: t.Any) -> \"_RetryDecorated[P, R]\":\n            return self.copy(*args, **kwargs).wraps(f)",
+              "content_sha256": "49f3e9339688c6cf39fbcb80f9fec09c12453e8f8a62dcd16bad0caef49f4225",
+              "visible_to_generator": false
+            }
+          ]
+        }
+      ],
+      "notes": "三个业务结论均准确，且本次disabled条件覆盖历史默认条件。主要来源遗漏是retry_with连接copy的真正同步实现406–407；文中219–220实际来自所引async文件，不能当同步实现，但同步测试充分支持单次异常行为。",
+      "key_points": null,
+      "candidate_sha256": "a168bf4de0a96ae4ea7ab9f46e5aafe264e8177f049f21c8ab1b9c950d86589a",
+      "reviewer": "Codex (current session)",
+      "review_type": "model_assisted_nonblind_development_review",
+      "human_approved": false,
+      "training_eligible": false,
+      "result_sha256": "539bd5f9bba5de4b0786abe410af59e797695590beedd1578682ad0f2883c36a"
+    },
+    "q-f33bdd28fc012276--current-rag": {
+      "candidate_id": "q-f33bdd28fc012276--current-rag",
+      "correctness": "correct",
+      "citation_support": "supported",
+      "completeness": "adequate",
+      "abstention": "not_applicable",
+      "entry_scope": "correct",
+      "consistency": "consistent",
+      "claims": [
+        {
+          "claim": "已有键get后若key仍存在就调用__touch更新最近使用顺序。",
+          "status": "supported",
+          "rationale": "__getitem__获取值后检查存在并touch。",
+          "evidence": [
+            {
+              "path": "src/cachetools/__init__.py",
+              "start_line": 294,
+              "end_line": 298
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "src/cachetools/__init__.py",
+              "start_line": 294,
+              "end_line": 298,
+              "content": "    def __getitem__(self, key, cache_getitem=Cache.__getitem__):\n        value = cache_getitem(self, key)\n        if key in self:  # __missing__ may not store item\n            self.__touch(key)\n        return value",
+              "content_sha256": "5ad59483f065104c2f24c4743c8ec6f05fdf6b357a01e453b1d0a77d0ae03935",
+              "visible_to_generator": true
+            }
+          ]
+        },
+        {
+          "claim": "__touch把key移到OrderedDict末尾；不存在时插入。",
+          "status": "supported",
+          "rationale": "move_to_end加KeyError回退；答案仅表述通常已有key路径。",
+          "evidence": [
+            {
+              "path": "src/cachetools/__init__.py",
+              "start_line": 321,
+              "end_line": 326
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "src/cachetools/__init__.py",
+              "start_line": 321,
+              "end_line": 326,
+              "content": "    def __touch(self, key):\n        \"\"\"Mark as recently used\"\"\"\n        try:\n            self.__order.move_to_end(key)\n        except KeyError:\n            self.__order[key] = None",
+              "content_sha256": "a2691d1e2bec417d646f645ce9460bb9d8f12675f5f77c3572816b910526a6ff",
+              "visible_to_generator": true
+            }
+          ]
+        },
+        {
+          "claim": "继承的__contains__只检查底层字典，不touch或更新顺序。",
+          "status": "supported",
+          "rationale": "Cache.__contains__只有key in __data。",
+          "evidence": [
+            {
+              "path": "src/cachetools/__init__.py",
+              "start_line": 103,
+              "end_line": 104
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "src/cachetools/__init__.py",
+              "start_line": 103,
+              "end_line": 104,
+              "content": "    def __contains__(self, key):\n        return key in self.__data",
+              "content_sha256": "4adc1029719bce8bf16121691ed41452e495257a8e3f28a654e8c4cee690795b",
+              "visible_to_generator": true
+            }
+          ]
+        }
+      ],
+      "notes": "完整准确区分getitem与成员检查；三处实际引用对应调用链，无额外无依据行为。",
+      "key_points": null,
+      "candidate_sha256": "8acd1e565b9f417a32c935cd1d29fbbbd71063e0d2ed0a9426cedb082b9db576",
+      "reviewer": "Codex (current session)",
+      "review_type": "model_assisted_nonblind_development_review",
+      "human_approved": false,
+      "training_eligible": false,
+      "result_sha256": "93ff3aca1c4f28bced148ca75872bcdc463d7535136746d55500575a4320b73c"
+    },
+    "q-db5fcad1bf22b5a3--current-rag": {
+      "candidate_id": "q-db5fcad1bf22b5a3--current-rag",
+      "correctness": "partially_correct",
+      "citation_support": "partial",
+      "completeness": "adequate",
+      "abstention": "not_applicable",
+      "entry_scope": "correct",
+      "consistency": "consistent",
+      "claims": [
+        {
+          "claim": "显式no_proxy优先于环境no_proxy/NO_PROXY来做目标匹配；非空返回代表未绕过并得到环境代理映射。",
+          "status": "supported",
+          "rationale": "769–771仅None时读取环境；822–825以绕过结果选择空字典或getproxies，所引267–272有非空断言。",
+          "evidence": [
+            {
+              "path": "src/requests/utils.py",
+              "start_line": 769,
+              "end_line": 771
+            },
+            {
+              "path": "src/requests/utils.py",
+              "start_line": 816,
+              "end_line": 825
+            },
+            {
+              "path": "tests/test_utils.py",
+              "start_line": 267,
+              "end_line": 272
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "src/requests/utils.py",
+              "start_line": 769,
+              "end_line": 771,
+              "content": "    no_proxy_arg = no_proxy\n    if no_proxy is None:\n        no_proxy = get_proxy(\"no_proxy\")",
+              "content_sha256": "687c697bcb7b0ab5fbc3e58c992186e388ed4fd1ddde0266cd640aef6879d88b",
+              "visible_to_generator": true
+            },
+            {
+              "path": "src/requests/utils.py",
+              "start_line": 816,
+              "end_line": 825,
+              "content": "def get_environ_proxies(url, no_proxy=None):\n    \"\"\"\n    Return a dict of environment proxies.\n\n    :rtype: dict\n    \"\"\"\n    if should_bypass_proxies(url, no_proxy=no_proxy):\n        return {}\n    else:\n        return getproxies()",
+              "content_sha256": "988e8929b6e4d2c33a504031023aa337574e2ea74a7acb00327a141ab2bd390d",
+              "visible_to_generator": true
+            },
+            {
+              "path": "tests/test_utils.py",
+              "start_line": 267,
+              "end_line": 272,
+              "content": "    def test_not_bypass_no_proxy_keyword(self, url, monkeypatch):\n        # This is testing that the 'no_proxy' argument overrides the\n        # environment variable 'no_proxy'\n        monkeypatch.setenv(\"http_proxy\", \"http://proxy.example.com:3128/\")\n        no_proxy = \"192.168.1.1,requests.com\"\n        assert get_environ_proxies(url, no_proxy=no_proxy) != {}",
+              "content_sha256": "35d84bc707b0f58055b8d91fdd8e48a91b5820149ebf94093d709bbe7850f15c",
+              "visible_to_generator": true
+            }
+          ]
+        },
+        {
+          "claim": "匹配显式no_proxy目标时返回空字典，表示绕过代理。",
+          "status": "supported",
+          "rationale": "778–801的匹配返回True后822–823返回空字典。",
+          "evidence": [
+            {
+              "path": "src/requests/utils.py",
+              "start_line": 778,
+              "end_line": 801
+            },
+            {
+              "path": "src/requests/utils.py",
+              "start_line": 822,
+              "end_line": 825
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "src/requests/utils.py",
+              "start_line": 778,
+              "end_line": 801,
+              "content": "    if no_proxy:\n        # We need to check whether we match here. We need to see if we match\n        # the end of the hostname, both with and without the port.\n        no_proxy = (host for host in no_proxy.replace(\" \", \"\").split(\",\") if host)\n\n        if is_ipv4_address(parsed.hostname):\n            for proxy_ip in no_proxy:\n                if is_valid_cidr(proxy_ip):\n                    if address_in_network(parsed.hostname, proxy_ip):\n                        return True\n                elif parsed.hostname == proxy_ip:\n                    # If no_proxy ip was defined in plain IP notation instead of cidr notation &\n                    # matches the IP of the index\n                    return True\n        else:\n            host_with_port = parsed.hostname\n            if parsed.port:\n                host_with_port += f\":{parsed.port}\"\n\n            for host in no_proxy:\n                if parsed.hostname.endswith(host) or host_with_port.endswith(host):\n                    # The URL does match something in no_proxy, so we don't want\n                    # to apply the proxies on this URL.\n                    return True",
+              "content_sha256": "978a1e838d8b69dd036905f4dfd6f7abe91839ca6a02b0b73e66848fe27f4f19",
+              "visible_to_generator": true
+            },
+            {
+              "path": "src/requests/utils.py",
+              "start_line": 822,
+              "end_line": 825,
+              "content": "    if should_bypass_proxies(url, no_proxy=no_proxy):\n        return {}\n    else:\n        return getproxies()",
+              "content_sha256": "33caaae9b0cd009dd37602bec250841035bbf359c69b50798851dbf89e14edaa",
+              "visible_to_generator": true
+            }
+          ]
+        },
+        {
+          "claim": "显式传入no_proxy后不会覆盖环境变量中的no_proxy列表。",
+          "status": "contradicted",
+          "rationale": "未直接命中时803会用set_environ暂时覆盖环境以调用proxy_bypass；734–752证明确实写os.environ并恢复。若仅指不永久变更则可成立，但原回答未限定临时性。",
+          "evidence": [
+            {
+              "path": "src/requests/utils.py",
+              "start_line": 803,
+              "end_line": 808
+            },
+            {
+              "path": "src/requests/utils.py",
+              "start_line": 734,
+              "end_line": 752
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "src/requests/utils.py",
+              "start_line": 803,
+              "end_line": 808,
+              "content": "    with set_environ(\"no_proxy\", no_proxy_arg):\n        # parsed.hostname can be `None` in cases such as a file URI.\n        try:\n            bypass = proxy_bypass(parsed.hostname)\n        except (TypeError, socket.gaierror):\n            bypass = False",
+              "content_sha256": "feb87a5698e7719e4b3f2128509cdade799b735e278ce5540b96a4443b328e8f",
+              "visible_to_generator": true
+            },
+            {
+              "path": "src/requests/utils.py",
+              "start_line": 734,
+              "end_line": 752,
+              "content": "def set_environ(env_name, value):\n    \"\"\"Set the environment variable 'env_name' to 'value'\n\n    Save previous value, yield, and then restore the previous value stored in\n    the environment variable 'env_name'.\n\n    If 'value' is None, do nothing\"\"\"\n    value_changed = value is not None\n    if value_changed:\n        old_value = os.environ.get(env_name)\n        os.environ[env_name] = value\n    try:\n        yield\n    finally:\n        if value_changed:\n            if old_value is None:\n                del os.environ[env_name]\n            else:\n                os.environ[env_name] = old_value",
+              "content_sha256": "8e052c761219f62300ab44169388241425ddb1e19168d12c846ab85d96f64b79",
+              "visible_to_generator": false
+            }
+          ]
+        }
+      ],
+      "notes": "题目两项主要语义答对；主动补充“不覆盖环境变量”过于绝对，遗漏临时set_environ路径。不是把未问实现细节列为额外完整性要求，而是核对它自行宣称的事实。",
+      "key_points": null,
+      "candidate_sha256": "5f0c348a20b6b9ca6e663e55914ade1cfe36ee09078321366a84985b69b05326",
+      "reviewer": "Codex (current session)",
+      "review_type": "model_assisted_nonblind_development_review",
+      "human_approved": false,
+      "training_eligible": false,
+      "result_sha256": "5035cf81646b4b706753691c741c9a6bb9be53d7a2951bf3d7016c40ae30efbd"
+    },
+    "improvement-confirm-tenacity-02--current-rag": {
+      "candidate_id": "improvement-confirm-tenacity-02--current-rag",
+      "correctness": "incorrect",
+      "citation_support": "unsupported",
+      "completeness": "partial",
+      "abstention": "not_applicable",
+      "entry_scope": "mixed",
+      "consistency": "consistent",
+      "claims": [
+        {
+          "claim": "默认异常策略下首次成功也会执行after，after在成功失败每次完成后触发。",
+          "status": "contradicted",
+          "rationale": "默认retry_if_exception_type对成功结果不重试，460–463提前返回，465–466才是after调度，因此成功路径跳过。",
+          "evidence": [
+            {
+              "path": "tenacity/__init__.py",
+              "start_line": 259,
+              "end_line": 266
+            },
+            {
+              "path": "tenacity/retry.py",
+              "start_line": 88,
+              "end_line": 105
+            },
+            {
+              "path": "tenacity/__init__.py",
+              "start_line": 460,
+              "end_line": 466
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "tenacity/__init__.py",
+              "start_line": 259,
+              "end_line": 266,
+              "content": "    def __init__(\n        self,\n        sleep: t.Callable[[int | float], None] = sleep,\n        stop: \"StopBaseT\" = stop_never,\n        wait: \"WaitBaseT\" = wait_none(),\n        retry: \"RetryBaseT\" = retry_if_exception_type(),\n        before: t.Callable[[\"RetryCallState\"], None] = before_nothing,\n        after: t.Callable[[\"RetryCallState\"], None] = after_nothing,",
+              "content_sha256": "e42e1e8d6c4266ec698800bb829fdceff0f934adb2caeaa0de3bae95ca0a7758",
+              "visible_to_generator": false
+            },
+            {
+              "path": "tenacity/retry.py",
+              "start_line": 88,
+              "end_line": 105,
+              "content": "class retry_if_exception(retry_base):\n    \"\"\"Retry strategy that retries if an exception verifies a predicate.\"\"\"\n\n    def __init__(self, predicate: typing.Callable[[BaseException], bool]) -> None:\n        self.predicate = predicate\n\n    @override\n    def __call__(self, retry_state: \"RetryCallState\") -> bool:\n        if retry_state.outcome is None:\n            raise RuntimeError(\"__call__() called before outcome was set\")\n\n        if retry_state.outcome.failed:\n            exception = retry_state.outcome.exception()\n            if exception is None:\n                raise RuntimeError(\"outcome failed but the exception is None\")\n            return self.predicate(exception)\n        return False\n",
+              "content_sha256": "4c94d91fd1a0c41ce1b9f7e7f171741e9068d576e65b56360a20c3f9032b95bf",
+              "visible_to_generator": false
+            },
+            {
+              "path": "tenacity/__init__.py",
+              "start_line": 460,
+              "end_line": 466,
+              "content": "    def _post_retry_check_actions(self, retry_state: \"RetryCallState\") -> None:\n        if not (self.iter_state.is_explicit_retry or self.iter_state.retry_run_result):\n            self._add_action_func(lambda rs: rs.outcome.result())\n            return\n\n        if self.after is not None:\n            self._add_action_func(self.after)",
+              "content_sha256": "ed98cb68710d5153075623d1b5d46f0946b3a12ebdb32ae76395ede8c3ebf1d0",
+              "visible_to_generator": false
+            }
+          ]
+        },
+        {
+          "claim": "前两次异常第三次成功时after记录第三次attempt_number=3。",
+          "status": "contradicted",
+          "rationale": "仓库test_after_attempts最终断言回调记录的attempt_number==2。",
+          "evidence": [
+            {
+              "path": "tests/test_tenacity.py",
+              "start_line": 1853,
+              "end_line": 1870
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "tests/test_tenacity.py",
+              "start_line": 1853,
+              "end_line": 1870,
+              "content": "    def test_after_attempts(self) -> None:\n        TestBeforeAfterAttempts._attempt_number = 0\n\n        def _after(retry_state: RetryCallState) -> None:\n            TestBeforeAfterAttempts._attempt_number = retry_state.attempt_number\n\n        @retry(\n            wait=tenacity.wait_fixed(0.1),\n            stop=tenacity.stop_after_attempt(3),\n            after=_after,\n        )\n        def _test_after() -> None:\n            if TestBeforeAfterAttempts._attempt_number < 2:\n                raise Exception(\"testing after_attempts handler\")\n\n        _test_after()\n\n        self.assertTrue(TestBeforeAfterAttempts._attempt_number == 2)",
+              "content_sha256": "a1325d17a55b7019d349cfaf8c5c45a3b194635dac22914f8632662e8d599a2b",
+              "visible_to_generator": false
+            }
+          ]
+        },
+        {
+          "claim": "retrying.py中的Retrying.__call__末尾无条件调用self.after。",
+          "status": "contradicted",
+          "rationale": "固定快照同步实现位于tenacity/__init__.py；__call__调度iter结果，没有该无条件调用，after由_post_retry_check_actions条件追加。",
+          "evidence": [
+            {
+              "path": "tenacity/__init__.py",
+              "start_line": 460,
+              "end_line": 470
+            },
+            {
+              "path": "tenacity/__init__.py",
+              "start_line": 537,
+              "end_line": 566
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "tenacity/__init__.py",
+              "start_line": 460,
+              "end_line": 470,
+              "content": "    def _post_retry_check_actions(self, retry_state: \"RetryCallState\") -> None:\n        if not (self.iter_state.is_explicit_retry or self.iter_state.retry_run_result):\n            self._add_action_func(lambda rs: rs.outcome.result())\n            return\n\n        if self.after is not None:\n            self._add_action_func(self.after)\n\n        self._add_action_func(self._run_wait)\n        self._add_action_func(self._run_stop)\n        self._add_action_func(self._post_stop_check_actions)",
+              "content_sha256": "e431525731d106471ecd4b806e17218680d05c377451e62e0b7c9d9fadccd425",
+              "visible_to_generator": false
+            },
+            {
+              "path": "tenacity/__init__.py",
+              "start_line": 537,
+              "end_line": 566,
+              "content": "    def __call__(\n        self,\n        fn: t.Callable[..., WrappedFnReturnT],\n        *args: t.Any,\n        **kwargs: t.Any,\n    ) -> WrappedFnReturnT:\n        if not self.enabled:\n            return fn(*args, **kwargs)\n\n        self.begin()\n\n        retry_state = RetryCallState(retry_object=self, fn=fn, args=args, kwargs=kwargs)\n        while True:\n            do = self.iter(retry_state=retry_state)\n            if isinstance(do, DoAttempt):\n                try:\n                    result = fn(*args, **kwargs)\n                except BaseException:\n                    retry_state.set_exception(sys.exc_info())  # type: ignore[arg-type]\n                else:\n                    retry_state.set_result(result)\n            elif isinstance(do, DoSleep):\n                retry_state.prepare_for_next_attempt()\n                self.sleep(do)\n            else:\n                return do  # type: ignore[no-any-return]\n\n\nclass Future(futures.Future[t.Any]):\n    \"\"\"Encapsulates a (future or past) attempted call to a target function.\"\"\"",
+              "content_sha256": "a1cf716a910d997c85964add4af405c70762853c96b035b785232ce35f7be885",
+              "visible_to_generator": false
+            }
+          ]
+        },
+        {
+          "claim": "test_defaults及test_after日志格式测试验证或间接支持成功失败都自动触发after。",
+          "status": "unsupported",
+          "rationale": "前者仅检查配置默认值；test_after直接构造状态调用日志回调，不等价于测试重试器何时调度after。",
+          "evidence": [
+            {
+              "path": "tests/test_tenacity.py",
+              "start_line": 1559,
+              "end_line": 1563
+            },
+            {
+              "path": "tests/test_after.py",
+              "start_line": 28,
+              "end_line": 48
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "tests/test_tenacity.py",
+              "start_line": 1559,
+              "end_line": 1563,
+              "content": "    def test_defaults(self) -> None:\n        self.assertTrue(_retryable_default(NoNameErrorAfterCount(5)))\n        self.assertTrue(_retryable_default_f(NoNameErrorAfterCount(5)))\n        self.assertTrue(_retryable_default(NoCustomErrorAfterCount(5)))\n        self.assertTrue(_retryable_default_f(NoCustomErrorAfterCount(5)))",
+              "content_sha256": "9909c07003aa57a2e00ad51cee79e78b322afe0b88fc82257ac8491e75adc130",
+              "visible_to_generator": true
+            },
+            {
+              "path": "tests/test_after.py",
+              "start_line": 28,
+              "end_line": 48,
+              "content": "    def test_01_default(self) -> None:\n        \"\"\"Test log formatting.\"\"\"\n        log = unittest.mock.MagicMock(spec=\"logging.Logger.log\")\n        logger = unittest.mock.MagicMock(spec=\"logging.Logger\", log=log)\n\n        sec_format = \"%.3g\"\n        delay_since_first_attempt = 0.1\n\n        retry_state = test_tenacity.make_retry_state(\n            self.previous_attempt_number, delay_since_first_attempt\n        )\n        fun = after_log(\n            logger=logger, log_level=self.log_level\n        )  # use default sec_format\n        fun(retry_state)\n        log.assert_called_once_with(\n            self.log_level,\n            f\"Finished call to '{retry_state.get_fn_name()}' \"\n            f\"after {sec_format % retry_state.seconds_since_start}(s), \"\n            f\"this was the {_utils.to_ordinal(retry_state.attempt_number)} time calling it.\",\n        )",
+              "content_sha256": "eaed1c5e4a27609adcb9f7e294dc3837f1a2aaf88cd031cdda6f5b89696600bf",
+              "visible_to_generator": true
+            }
+          ]
+        }
+      ],
+      "notes": "本轮实际6窗口只有回调日志单元测试和默认配置，没有after控制分支或test_after_attempts；缺失调度证据后仍输出确定性错误并虚构文件/调用位置。与历史充分源码也误读的结果分开记录。",
+      "key_points": null,
+      "candidate_sha256": "b1dadc52922bd2c5769694c5f03c81ce240057e90af5c4fb222cccb87c5ef5a4",
+      "reviewer": "Codex (current session)",
+      "review_type": "model_assisted_nonblind_development_review",
+      "human_approved": false,
+      "training_eligible": false,
+      "result_sha256": "a6973a90d887a488f2b7e9ae33c627e4294732b78c8f1f15ce55305d3c808c11"
+    },
+    "q-c4e449cd956c6738--current-rag": {
+      "candidate_id": "q-c4e449cd956c6738--current-rag",
+      "correctness": "correct",
+      "citation_support": "supported",
+      "completeness": "adequate",
+      "abstention": "not_applicable",
+      "entry_scope": "correct",
+      "consistency": "consistent",
+      "claims": [
+        {
+          "claim": "本轮遍历jobs浅拷贝，执行中追加的新任务不会进入本轮。",
+          "status": "supported",
+          "rationale": "118处for job in self.jobs[:]，后续原列表追加不改此遍历容器。",
+          "evidence": [
+            {
+              "path": "schedule/__init__.py",
+              "start_line": 118,
+              "end_line": 120
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "schedule/__init__.py",
+              "start_line": 118,
+              "end_line": 120,
+              "content": "        for job in self.jobs[:]:\n            self._run_job(job)\n            time.sleep(delay_seconds)",
+              "content_sha256": "c7dbb244934947a5e3f55b70d5a9e2f24063b08e10becda5219f8669970cc8ce",
+              "visible_to_generator": true
+            }
+          ]
+        },
+        {
+          "claim": "每任务后sleep，包括最后一个任务之后也sleep2秒。",
+          "status": "supported",
+          "rationale": "119执行后120无条件sleep，循环末尾没有最后项跳过逻辑。",
+          "evidence": [
+            {
+              "path": "schedule/__init__.py",
+              "start_line": 118,
+              "end_line": 120
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "schedule/__init__.py",
+              "start_line": 118,
+              "end_line": 120,
+              "content": "        for job in self.jobs[:]:\n            self._run_job(job)\n            time.sleep(delay_seconds)",
+              "content_sha256": "c7dbb244934947a5e3f55b70d5a9e2f24063b08e10becda5219f8669970cc8ce",
+              "visible_to_generator": true
+            }
+          ]
+        }
+      ],
+      "notes": "回答覆盖追加任务、延迟先后以及末项sleep全部显式子问题，不另加异常路径或计时要求。",
+      "key_points": null,
+      "candidate_sha256": "bf0528e8f3b57b4e7f4af22c09174db45a8c5ab4601f3c0b2acfe1f4141d8a4a",
+      "reviewer": "Codex (current session)",
+      "review_type": "model_assisted_nonblind_development_review",
+      "human_approved": false,
+      "training_eligible": false,
+      "result_sha256": "b0d6317a17e193a313fccff8414a1d7ec530f3bc63450b411badb41391972463"
+    },
+    "q-815d14e549c1754b--current-rag": {
+      "candidate_id": "q-815d14e549c1754b--current-rag",
+      "correctness": "correct",
+      "citation_support": "partial",
+      "completeness": "adequate",
+      "abstention": "not_applicable",
+      "entry_scope": "correct",
+      "consistency": "consistent",
+      "claims": [
+        {
+          "claim": "非Mapping直接抛ValueError而不转换。",
+          "status": "supported",
+          "rationale": "类型校验位于转换/插入之前。",
+          "evidence": [
+            {
+              "path": "tinydb/table.py",
+              "start_line": 147,
+              "end_line": 149
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "tinydb/table.py",
+              "start_line": 147,
+              "end_line": 149,
+              "content": "        # Make sure the document implements the ``Mapping`` interface\n        if not isinstance(document, Mapping):\n            raise ValueError('Document is not a Mapping')",
+              "content_sha256": "c97c94812d3d20fe6f6a0b01453044681c00ecbfaa1168f7bc80accf429229fe",
+              "visible_to_generator": true
+            }
+          ]
+        },
+        {
+          "claim": "Document使用自身doc_id并把_next_id=None防止复用。",
+          "status": "supported",
+          "rationale": "原引文152-158直接支持两个行为。",
+          "evidence": [
+            {
+              "path": "tinydb/table.py",
+              "start_line": 152,
+              "end_line": 158
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "tinydb/table.py",
+              "start_line": 152,
+              "end_line": 158,
+              "content": "        if isinstance(document, self.document_class):\n            # For a `Document` object we use the specified ID\n            doc_id = document.doc_id\n\n            # We also reset the stored next ID so the next insert won't\n            # re-use document IDs by accident when storing an old value\n            self._next_id = None",
+              "content_sha256": "3550df3c651bc11ffbd4fb005a682bc336f9ebb7577f6af167b36003ab72b306",
+              "visible_to_generator": true
+            }
+          ]
+        },
+        {
+          "claim": "普通Mapping通过_get_next_id生成ID。",
+          "status": "supported",
+          "rationale": "实际交付139-177内的else159-161证实，但正式引文只到158，遗漏主动补充的else分支。",
+          "evidence": [
+            {
+              "path": "tinydb/table.py",
+              "start_line": 159,
+              "end_line": 161
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "tinydb/table.py",
+              "start_line": 159,
+              "end_line": 161,
+              "content": "        else:\n            # In all other cases we use the next free ID\n            doc_id = self._get_next_id()",
+              "content_sha256": "598726bf121626503fddb51eb501c5f90f5ae28f361b1f5aa4105cc2226d4ad7",
+              "visible_to_generator": true
+            }
+          ]
+        }
+      ],
+      "notes": "题目要求两问均正确；额外说明普通Mapping分支真实且可见，但未被正式引用覆盖，故citation partial。",
+      "key_points": null,
+      "candidate_sha256": "4813e77963810eb569a9b0a5b96fc97bb9005f218ba19ccc4d89d5ea94f1438f",
+      "reviewer": "Codex (current session)",
+      "review_type": "model_assisted_nonblind_development_review",
+      "human_approved": false,
+      "training_eligible": false,
+      "result_sha256": "8b8ec8885241bb2ba302d9288b0da1bf43b88d9916e2c6e5947334eab5703d4a"
+    },
+    "improvement-confirm-blinker-02--current-rag": {
+      "candidate_id": "improvement-confirm-blinker-02--current-rag",
+      "correctness": "correct",
+      "citation_support": "supported",
+      "completeness": "adequate",
+      "abstention": "not_applicable",
+      "entry_scope": "correct",
+      "consistency": "consistent",
+      "claims": [
+        {
+          "claim": "同一receiver既注册ANY又注册123，send(123)只调用一次。",
+          "status": "supported",
+          "rationale": "342–343将两组receiver ID做集合并集，重复ID只保留一次。",
+          "evidence": [
+            {
+              "path": "src/blinker/base.py",
+              "start_line": 342,
+              "end_line": 345
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "src/blinker/base.py",
+              "start_line": 342,
+              "end_line": 345,
+              "content": "        if sender_id in self._by_sender:\n            ids = self._by_sender[ANY_ID] | self._by_sender[sender_id]\n        else:\n            ids = self._by_sender[ANY_ID].copy()",
+              "content_sha256": "97150ea0d518df3a17cfc8e5f065872b7695a53c8cb90893329ab461583b07e1",
+              "visible_to_generator": true
+            }
+          ]
+        },
+        {
+          "claim": "test_no_double_send先send()得到[None]，再send(123)为[None,123]验证只新增一次。",
+          "status": "supported",
+          "rationale": "405–412包含双注册、两次发送及对应断言，正式引文397–414覆盖。",
+          "evidence": [
+            {
+              "path": "tests/test_signals.py",
+              "start_line": 397,
+              "end_line": 414
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "tests/test_signals.py",
+              "start_line": 397,
+              "end_line": 414,
+              "content": "def test_no_double_send() -> None:\n    sentinel = []\n\n    def received(sender: t.Any) -> None:\n        sentinel.append(sender)\n\n    sig = blinker.Signal()\n\n    sig.connect(received, 123)\n    sig.connect(received)\n\n    assert not sentinel\n    sig.send()\n    assert sentinel == [None]\n    sig.send(123)\n    assert sentinel == [None, 123]\n    sig.send()\n    assert sentinel == [None, 123, None]",
+              "content_sha256": "4353e18c11322c495e1fdbb3a93dce8268bf596ea5f68492bcf670f6ff205e47",
+              "visible_to_generator": true
+            }
+          ]
+        }
+      ],
+      "notes": "主要机制和仓库测试断言均准确。“合并后的列表”用词不精确，但全文已明确集合合并和ID去重，不把此措辞误判为不同业务机制。",
+      "key_points": null,
+      "candidate_sha256": "3a7c05874feda48899607c800d6ce652d2362e863c784b5e81795b8ee2d287f5",
+      "reviewer": "Codex (current session)",
+      "review_type": "model_assisted_nonblind_development_review",
+      "human_approved": false,
+      "training_eligible": false,
+      "result_sha256": "7530af004561670076904be938961a14b655d62c0f4f7ded60b3b073c32fc442"
+    },
+    "q-5a0f102fc760bd1e--current-rag": {
+      "candidate_id": "q-5a0f102fc760bd1e--current-rag",
+      "correctness": "correct",
+      "citation_support": "supported",
+      "completeness": "adequate",
+      "abstention": "not_applicable",
+      "entry_scope": "correct",
+      "consistency": "consistent",
+      "claims": [
+        {
+          "claim": "缺键且不传default时抛KeyError；显式default=None时返回None。",
+          "status": "supported",
+          "rationale": "默认哨兵__marker，身份判定进入raise或return default；原引文覆盖全部分支。",
+          "evidence": [
+            {
+              "path": "src/cachetools/__init__.py",
+              "start_line": 127,
+              "end_line": 135
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "src/cachetools/__init__.py",
+              "start_line": 127,
+              "end_line": 135,
+              "content": "    def pop(self, key, default=__marker):\n        if key in self:\n            value = self[key]\n            del self[key]\n        elif default is self.__marker:\n            raise KeyError(key)\n        else:\n            value = default\n        return value",
+              "content_sha256": "c00ebd3a005d021cb2ac6e36482676cfeb5b431fa1afc2acd1fc0127b39bffbb",
+              "visible_to_generator": true
+            }
+          ]
+        },
+        {
+          "claim": "区分缺省参数与显式None靠私有哨兵，不以None为缺省。",
+          "status": "supported",
+          "rationale": "函数签名及default is self.__marker直接支持。",
+          "evidence": [
+            {
+              "path": "src/cachetools/__init__.py",
+              "start_line": 127,
+              "end_line": 135
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "src/cachetools/__init__.py",
+              "start_line": 127,
+              "end_line": 135,
+              "content": "    def pop(self, key, default=__marker):\n        if key in self:\n            value = self[key]\n            del self[key]\n        elif default is self.__marker:\n            raise KeyError(key)\n        else:\n            value = default\n        return value",
+              "content_sha256": "c00ebd3a005d021cb2ac6e36482676cfeb5b431fa1afc2acd1fc0127b39bffbb",
+              "visible_to_generator": true
+            }
+          ]
+        }
+      ],
+      "notes": "准确解释缺省哨兵与None的差异，没有多余错误推断。",
+      "key_points": null,
+      "candidate_sha256": "76d429f5bde7b81cfaea348d6fc35e7897dd7f0d400540b5795c32239043b50b",
+      "reviewer": "Codex (current session)",
+      "review_type": "model_assisted_nonblind_development_review",
+      "human_approved": false,
+      "training_eligible": false,
+      "result_sha256": "7a18bcfc37e2eb48858522bfbb482bf1b552a804681bc5523e7d23a7c745c2db"
+    },
+    "q-1803ac7237f279cd--current-rag": {
+      "candidate_id": "q-1803ac7237f279cd--current-rag",
+      "correctness": "correct",
+      "citation_support": "supported",
+      "completeness": "adequate",
+      "abstention": "appropriate",
+      "entry_scope": "not_applicable",
+      "consistency": "contradictory",
+      "claims": [
+        {
+          "claim": "库源码本身不能给出用户生产进程现在DATABASE_URL的值。",
+          "status": "supported",
+          "rationale": "库从用户路径/运行时参数加载；没有该进程环境或配置就不能据源码推出真实值。此为信息边界判断，不把本机实际环境作为评审输入。",
+          "evidence": [
+            {
+              "path": "src/dotenv/main.py",
+              "start_line": 431,
+              "end_line": 479
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "src/dotenv/main.py",
+              "start_line": 431,
+              "end_line": 479,
+              "content": "def load_dotenv(\n    dotenv_path: Optional[StrPath] = None,\n    stream: Optional[IO[str]] = None,\n    verbose: bool = False,\n    override: bool = False,\n    interpolate: bool = True,\n    encoding: Optional[str] = \"utf-8\",\n) -> bool:\n    \"\"\"Parse a .env file and then load all the variables found as environment variables.\n\n    Parameters:\n        dotenv_path: Absolute or relative path to .env file. A leading `~` is\n            expanded to the user's home directory.\n        stream: Text stream (such as `io.StringIO`) with .env content, used if\n            `dotenv_path` is `None`.\n        verbose: Whether to output a warning the .env file is missing.\n        override: Whether to override the system environment variables with the variables\n            from the `.env` file.\n        interpolate: Whether to interpolate variables using POSIX variable expansion.\n        encoding: Encoding to be used to read the file.\n    Returns:\n        Bool: True if at least one environment variable is set else False\n\n    If both `dotenv_path` and `stream` are `None`, `find_dotenv()` is used to find the\n    .env file with its default parameters. If you need to change the default parameters\n    of `find_dotenv()`, you can explicitly call `find_dotenv()` and pass the result\n    to this function as `dotenv_path`.\n\n    If the environment variable `PYTHON_DOTENV_DISABLED` is set to a truthy value,\n    .env loading is disabled.\n    \"\"\"\n    if _load_dotenv_disabled():\n        logger.debug(\n            \"python-dotenv: .env loading disabled by PYTHON_DOTENV_DISABLED environment variable\"\n        )\n        return False\n\n    if dotenv_path is None and stream is None:\n        dotenv_path = find_dotenv()\n\n    dotenv = DotEnv(\n        dotenv_path=dotenv_path,\n        stream=stream,\n        verbose=verbose,\n        interpolate=interpolate,\n        override=override,\n        encoding=encoding,\n    )\n    return dotenv.set_as_environment_variables()",
+              "content_sha256": "a98919f338a48b77f7ca2577286c84cc694a6f9ea13af7d2e32bc97d870f3135",
+              "visible_to_generator": true
+            }
+          ]
+        },
+        {
+          "claim": "实际加载取决于.env路径、override覆盖参数及PYTHON_DOTENV_DISABLED禁用状态。",
+          "status": "supported",
+          "rationale": "load_dotenv检查禁用、必要时find_dotenv、把参数交给DotEnv并执行环境写入。",
+          "evidence": [
+            {
+              "path": "src/dotenv/main.py",
+              "start_line": 431,
+              "end_line": 479
+            },
+            {
+              "path": "src/dotenv/main.py",
+              "start_line": 376,
+              "end_line": 428
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "src/dotenv/main.py",
+              "start_line": 431,
+              "end_line": 479,
+              "content": "def load_dotenv(\n    dotenv_path: Optional[StrPath] = None,\n    stream: Optional[IO[str]] = None,\n    verbose: bool = False,\n    override: bool = False,\n    interpolate: bool = True,\n    encoding: Optional[str] = \"utf-8\",\n) -> bool:\n    \"\"\"Parse a .env file and then load all the variables found as environment variables.\n\n    Parameters:\n        dotenv_path: Absolute or relative path to .env file. A leading `~` is\n            expanded to the user's home directory.\n        stream: Text stream (such as `io.StringIO`) with .env content, used if\n            `dotenv_path` is `None`.\n        verbose: Whether to output a warning the .env file is missing.\n        override: Whether to override the system environment variables with the variables\n            from the `.env` file.\n        interpolate: Whether to interpolate variables using POSIX variable expansion.\n        encoding: Encoding to be used to read the file.\n    Returns:\n        Bool: True if at least one environment variable is set else False\n\n    If both `dotenv_path` and `stream` are `None`, `find_dotenv()` is used to find the\n    .env file with its default parameters. If you need to change the default parameters\n    of `find_dotenv()`, you can explicitly call `find_dotenv()` and pass the result\n    to this function as `dotenv_path`.\n\n    If the environment variable `PYTHON_DOTENV_DISABLED` is set to a truthy value,\n    .env loading is disabled.\n    \"\"\"\n    if _load_dotenv_disabled():\n        logger.debug(\n            \"python-dotenv: .env loading disabled by PYTHON_DOTENV_DISABLED environment variable\"\n        )\n        return False\n\n    if dotenv_path is None and stream is None:\n        dotenv_path = find_dotenv()\n\n    dotenv = DotEnv(\n        dotenv_path=dotenv_path,\n        stream=stream,\n        verbose=verbose,\n        interpolate=interpolate,\n        override=override,\n        encoding=encoding,\n    )\n    return dotenv.set_as_environment_variables()",
+              "content_sha256": "a98919f338a48b77f7ca2577286c84cc694a6f9ea13af7d2e32bc97d870f3135",
+              "visible_to_generator": true
+            },
+            {
+              "path": "src/dotenv/main.py",
+              "start_line": 376,
+              "end_line": 428,
+              "content": "def find_dotenv(\n    filename: str = \".env\",\n    raise_error_if_not_found: bool = False,\n    usecwd: bool = False,\n) -> str:\n    \"\"\"\n    Search in increasingly higher folders for the given file\n\n    A leading `~` in `filename` is expanded to the user's home directory, and\n    an absolute `filename` is returned as is if it exists.\n\n    Returns path to the file if found, or an empty string otherwise\n    \"\"\"\n    filename = os.path.expanduser(filename)\n\n    def _is_interactive():\n        \"\"\"Decide whether this is running in a REPL or IPython notebook\"\"\"\n        if hasattr(sys, \"ps1\") or hasattr(sys, \"ps2\"):\n            return True\n        try:\n            main = __import__(\"__main__\", None, None, fromlist=[\"__file__\"])\n        except ModuleNotFoundError:\n            return False\n        return not hasattr(main, \"__file__\")\n\n    def _is_debugger():\n        return sys.gettrace() is not None\n\n    if usecwd or _is_interactive() or _is_debugger() or getattr(sys, \"frozen\", False):\n        # Should work without __file__, e.g. in REPL or IPython notebook.\n        path = os.getcwd()\n    else:\n        # will work for .py files\n        frame = sys._getframe()\n        current_file = __file__\n\n        while frame.f_code.co_filename == current_file or not os.path.exists(\n            frame.f_code.co_filename\n        ):\n            assert frame.f_back is not None\n            frame = frame.f_back\n        frame_filename = frame.f_code.co_filename\n        path = os.path.dirname(os.path.abspath(frame_filename))\n\n    for dirname in _walk_to_root(path):\n        check_path = os.path.join(dirname, filename)\n        if _is_file_or_fifo(check_path):\n            return check_path\n\n    if raise_error_if_not_found:\n        raise IOError(\"File not found\")\n\n    return \"\"",
+              "content_sha256": "d9e0387342f784fcaadd58ca453e26f378009f4aa7a1f95f7ca3318ee3462261",
+              "visible_to_generator": true
+            }
+          ]
+        }
+      ],
+      "notes": "正文合理拒答且解释缺少私有运行配置；“不记录或暴露”按静态源码未包含用户实际值理解，不误判为所有API均不能读取环境。insufficient_evidence=False与正文拒答不符，单列协议字段错误，沿用既有评分规则不把该字段替换为事实错误。 主复核：正文明确不能回答私有数值而insufficient_evidence=False，属于输出内部矛盾，consistency据此记contradictory；事实正确性不因该字段简单归零。此规则在候选生成前统一用于所有私有题。",
+      "key_points": null,
+      "candidate_sha256": "fe90a31cc612382812c9c1dc69b692521c86462c2cb3703e20272af746b89f6a",
+      "reviewer": "Codex (current session)",
+      "review_type": "model_assisted_nonblind_development_review",
+      "human_approved": false,
+      "training_eligible": false,
+      "result_sha256": "a3aba86f9b4401baeafde516fd6ca31e3682dca15fb92f20208d8aa18f9df7e1"
+    },
+    "q-342b7c23442b0be4--current-rag": {
+      "candidate_id": "q-342b7c23442b0be4--current-rag",
+      "correctness": "partially_correct",
+      "citation_support": "partial",
+      "completeness": "partial",
+      "abstention": "not_applicable",
+      "entry_scope": "correct",
+      "consistency": "contradictory",
+      "claims": [
+        {
+          "claim": "命中_query_cache返回cached_results[:]的新浅拷贝列表。",
+          "status": "supported",
+          "rationale": "正式引用267直接表明切片返回，254-257注释亦说明fresh copy。",
+          "evidence": [
+            {
+              "path": "tinydb/table.py",
+              "start_line": 254,
+              "end_line": 267
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "tinydb/table.py",
+              "start_line": 254,
+              "end_line": 267,
+              "content": "        internal cache. The returned list is a fresh copy, but its\n        documents are the same objects held by the cache -- treat them as\n        read-only, since mutating one (a key or a nested value) corrupts\n        what a later identical search returns.\n\n        :param cond: the condition to check against\n        :returns: list of matching documents\n        \"\"\"\n\n        # First, we check the query cache to see if it has results for this\n        # query\n        cached_results = self._query_cache.get(cond)\n        if cached_results is not None:\n            return cached_results[:]",
+              "content_sha256": "e48ea584c638a1f06177ea20380762fbd3970dd51d47ef02cc832a7bf8307d2b",
+              "visible_to_generator": true
+            }
+          ]
+        },
+        {
+          "claim": "对返回列表pop/append、改变长度会改变缓存列表并污染下次同查询结果。",
+          "status": "contradicted",
+          "rationale": "返回的是新列表，增删仅作用于返回列表；不会修改缓存原列表。注释明确只共享Document，且缓存初始化也存docs[:]。",
+          "evidence": [
+            {
+              "path": "tinydb/table.py",
+              "start_line": 254,
+              "end_line": 267
+            },
+            {
+              "path": "tinydb/table.py",
+              "start_line": 291,
+              "end_line": 297
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "tinydb/table.py",
+              "start_line": 254,
+              "end_line": 267,
+              "content": "        internal cache. The returned list is a fresh copy, but its\n        documents are the same objects held by the cache -- treat them as\n        read-only, since mutating one (a key or a nested value) corrupts\n        what a later identical search returns.\n\n        :param cond: the condition to check against\n        :returns: list of matching documents\n        \"\"\"\n\n        # First, we check the query cache to see if it has results for this\n        # query\n        cached_results = self._query_cache.get(cond)\n        if cached_results is not None:\n            return cached_results[:]",
+              "content_sha256": "e48ea584c638a1f06177ea20380762fbd3970dd51d47ef02cc832a7bf8307d2b",
+              "visible_to_generator": true
+            },
+            {
+              "path": "tinydb/table.py",
+              "start_line": 291,
+              "end_line": 297,
+              "content": "        is_cacheable: Callable[[], bool] = getattr(cond, 'is_cacheable',\n                                                   lambda: True)\n        if is_cacheable():\n            # Update the query cache\n            self._query_cache[cond] = docs[:]\n\n        return docs",
+              "content_sha256": "b9865982239b7394b2a8fe0746a8a9324a95cccff761ea0e9c2917a73bfa130c",
+              "visible_to_generator": true
+            }
+          ]
+        },
+        {
+          "claim": "修改Document字段会污染缓存中所有Document对象的状态。",
+          "status": "partial",
+          "rationale": "同一个被修改Document在缓存中共享，后续相同查询会看到其改动；但不会因此修改其他所有Document的字段。原句把影响范围夸大。",
+          "evidence": [
+            {
+              "path": "tinydb/table.py",
+              "start_line": 254,
+              "end_line": 257
+            },
+            {
+              "path": "tinydb/table.py",
+              "start_line": 265,
+              "end_line": 267
+            },
+            {
+              "path": "tinydb/table.py",
+              "start_line": 291,
+              "end_line": 297
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "tinydb/table.py",
+              "start_line": 254,
+              "end_line": 257,
+              "content": "        internal cache. The returned list is a fresh copy, but its\n        documents are the same objects held by the cache -- treat them as\n        read-only, since mutating one (a key or a nested value) corrupts\n        what a later identical search returns.",
+              "content_sha256": "a342bf7852ec549172f943baa79950e8af3a9c184d89148367576f82145c6736",
+              "visible_to_generator": true
+            },
+            {
+              "path": "tinydb/table.py",
+              "start_line": 265,
+              "end_line": 267,
+              "content": "        cached_results = self._query_cache.get(cond)\n        if cached_results is not None:\n            return cached_results[:]",
+              "content_sha256": "751ab16d9b30b41fb44c39f04265c2b6745e48720bd67b26add4ecb52ae4013d",
+              "visible_to_generator": true
+            },
+            {
+              "path": "tinydb/table.py",
+              "start_line": 291,
+              "end_line": 297,
+              "content": "        is_cacheable: Callable[[], bool] = getattr(cond, 'is_cacheable',\n                                                   lambda: True)\n        if is_cacheable():\n            # Update the query cache\n            self._query_cache[cond] = docs[:]\n\n        return docs",
+              "content_sha256": "b9865982239b7394b2a8fe0746a8a9324a95cccff761ea0e9c2917a73bfa130c",
+              "visible_to_generator": true
+            }
+          ]
+        }
+      ],
+      "notes": "核心对比的一半反了：列表结构不共享，Document对象才共享。完整实现和清楚注释均已交付，属解释错误；fresh copy与后文列表结构共享说法相冲突。",
+      "key_points": null,
+      "candidate_sha256": "f8ddf5e82d3b22a5abe0f91de914d4eea83fe5212065e297275ab41864daff60",
+      "reviewer": "Codex (current session)",
+      "review_type": "model_assisted_nonblind_development_review",
+      "human_approved": false,
+      "training_eligible": false,
+      "result_sha256": "c8bec6b4cd35fd1bb65943d4686f181524250ff3a319146250a3979ae4093bb4"
+    },
+    "q-bbad3968026fefab--current-rag": {
+      "candidate_id": "q-bbad3968026fefab--current-rag",
+      "correctness": "correct",
+      "citation_support": "supported",
+      "completeness": "adequate",
+      "abstention": "not_applicable",
+      "entry_scope": "correct",
+      "consistency": "consistent",
+      "claims": [
+        {
+          "claim": "override=False且环境已存在键时continue，不覆盖。",
+          "status": "supported",
+          "rationale": "109-110提前跳过键。",
+          "evidence": [
+            {
+              "path": "src/dotenv/main.py",
+              "start_line": 108,
+              "end_line": 110
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "src/dotenv/main.py",
+              "start_line": 108,
+              "end_line": 110,
+              "content": "        for k, v in self.dict().items():\n            if k in os.environ and not self.override:\n                continue",
+              "content_sha256": "7d13f95acd9b1419c44a4070ef3d0032425829231136c2c8d9ef0d0b3434b968",
+              "visible_to_generator": true
+            }
+          ]
+        },
+        {
+          "claim": "None跳过赋值，空字符串不属于None因此在未被提前跳过时仍写入环境。",
+          "status": "supported",
+          "rationale": "111-112只检查is not None，空串仍可赋值；答案也正确说明覆盖/键不存在前提。",
+          "evidence": [
+            {
+              "path": "src/dotenv/main.py",
+              "start_line": 108,
+              "end_line": 114
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "src/dotenv/main.py",
+              "start_line": 108,
+              "end_line": 114,
+              "content": "        for k, v in self.dict().items():\n            if k in os.environ and not self.override:\n                continue\n            if v is not None:\n                os.environ[k] = v\n\n        return True",
+              "content_sha256": "c97788b294dfe1c204ceb0a8e89248590f09a49d1f4c486cbfdd132369ec66e7",
+              "visible_to_generator": true
+            }
+          ]
+        }
+      ],
+      "notes": "准确分清已有键跳过与值为None跳过两层条件，未把空字符串当作None。",
+      "key_points": null,
+      "candidate_sha256": "1c3af8a070af05960a698e1cf8964339f64db13daf5df5555f850a57100a6d28",
+      "reviewer": "Codex (current session)",
+      "review_type": "model_assisted_nonblind_development_review",
+      "human_approved": false,
+      "training_eligible": false,
+      "result_sha256": "94e3b5a3cd55ecfe47873333e88e2f785aaa6a7f791cf9006d2f908851b5da73"
+    },
+    "improvement-confirm-blinker-01--current-rag": {
+      "candidate_id": "improvement-confirm-blinker-01--current-rag",
+      "correctness": "partially_correct",
+      "citation_support": "partial",
+      "completeness": "partial",
+      "abstention": "not_applicable",
+      "entry_scope": "mixed",
+      "consistency": "contradictory",
+      "claims": [
+        {
+          "claim": "connect默认weak=True；无其他强引用的局部回调回收后清理断连。",
+          "status": "supported",
+          "rationale": "91默认参数，100–113说明弱引用，399–412定义清理回调。",
+          "evidence": [
+            {
+              "path": "src/blinker/base.py",
+              "start_line": 91,
+              "end_line": 115
+            },
+            {
+              "path": "src/blinker/base.py",
+              "start_line": 399,
+              "end_line": 412
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "src/blinker/base.py",
+              "start_line": 91,
+              "end_line": 115,
+              "content": "    def connect(self, receiver: F, sender: t.Any = ANY, weak: bool = True) -> F:\n        \"\"\"Connect ``receiver`` to be called when the signal is sent by\n        ``sender``.\n\n        :param receiver: The callable to call when :meth:`send` is called with\n            the given ``sender``, passing ``sender`` as a positional argument\n            along with any extra keyword arguments.\n        :param sender: Any object or :data:`ANY`. ``receiver`` will only be\n            called when :meth:`send` is called with this sender. If ``ANY``, the\n            receiver will be called for any sender. A receiver may be connected\n            to multiple senders by calling :meth:`connect` multiple times.\n        :param weak: Track the receiver with a :mod:`weakref`. The receiver will\n            be automatically disconnected when it is garbage collected. When\n            connecting a receiver defined within a function, set to ``False``,\n            otherwise it will be disconnected when the function scope ends.\n        \"\"\"\n        receiver_id = make_id(receiver)\n        sender_id = ANY_ID if sender is ANY else make_id(sender)\n\n        if weak:\n            self.receivers[receiver_id] = make_ref(\n                receiver, self._make_cleanup_receiver(receiver_id)\n            )\n        else:\n            self.receivers[receiver_id] = receiver",
+              "content_sha256": "d6bcfb6d4ee0c0bb2eacc5487c8a78d79ff314325d1d245e553b4845a872b248",
+              "visible_to_generator": true
+            },
+            {
+              "path": "src/blinker/base.py",
+              "start_line": 399,
+              "end_line": 412,
+              "content": "    def _make_cleanup_receiver(\n        self, receiver_id: c.Hashable\n    ) -> c.Callable[[weakref.ref[c.Callable[..., t.Any]]], None]:\n        \"\"\"Create a callback function to disconnect a weakly referenced\n        receiver when it is garbage collected.\n        \"\"\"\n\n        def cleanup(ref: weakref.ref[c.Callable[..., t.Any]]) -> None:\n            # If the interpreter is shutting down, disconnecting can result in a\n            # weird ignored exception. Don't call it in that case.\n            if not sys.is_finalizing():\n                self._disconnect(receiver_id, ANY_ID)\n\n        return cleanup",
+              "content_sha256": "a04e60cc2749bcb67507d82dcabd7bdf45bcae419cf21c4950fd3e6d4f12058c",
+              "visible_to_generator": true
+            }
+          ]
+        },
+        {
+          "claim": "weak=False直接将receiver存入self.receivers形成强引用。",
+          "status": "supported",
+          "rationale": "114–115直接存储原对象。",
+          "evidence": [
+            {
+              "path": "src/blinker/base.py",
+              "start_line": 110,
+              "end_line": 115
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "src/blinker/base.py",
+              "start_line": 110,
+              "end_line": 115,
+              "content": "        if weak:\n            self.receivers[receiver_id] = make_ref(\n                receiver, self._make_cleanup_receiver(receiver_id)\n            )\n        else:\n            self.receivers[receiver_id] = receiver",
+              "content_sha256": "9fc71690fcea6be81ef3707b11f4f58dbc90a10344a578d0a7c544b86c0ea8d1",
+              "visible_to_generator": true
+            }
+          ]
+        },
+        {
+          "claim": "即使weak=False也必须另存外部引用，否则局部作用域退出或GC仍会使回调失效，第二次send可能不触发。",
+          "status": "contradicted",
+          "rationale": "self.receivers本身是强引用；现有test_strong_receiver删除局部变量并GC后仍send成功，断言同一fn_id保留。与答案自己的强引用存储解释也矛盾。",
+          "evidence": [
+            {
+              "path": "src/blinker/base.py",
+              "start_line": 114,
+              "end_line": 115
+            },
+            {
+              "path": "tests/test_signals.py",
+              "start_line": 240,
+              "end_line": 257
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "src/blinker/base.py",
+              "start_line": 114,
+              "end_line": 115,
+              "content": "        else:\n            self.receivers[receiver_id] = receiver",
+              "content_sha256": "a0e4d30598fe859f6c17ad6dc020889fd1f073cd8b72d0b6ca2aceb2f2a9c0ec",
+              "visible_to_generator": true
+            },
+            {
+              "path": "tests/test_signals.py",
+              "start_line": 240,
+              "end_line": 257,
+              "content": "def test_strong_receiver() -> None:\n    sentinel = []\n\n    def received(sender: t.Any) -> None:\n        sentinel.append(sender)\n\n    fn_id = id(received)\n\n    sig = blinker.Signal()\n    sig.connect(received, weak=False)\n\n    del received\n    collect_acyclic_refs()\n\n    assert not sentinel\n    sig.send()\n    assert sentinel\n    assert [id(fn) for fn in sig.receivers.values()] == [fn_id]",
+              "content_sha256": "6f2a86a68f184101743716fe34c5aab9c70242b4c07b0574ac5305a7fd34af6f",
+              "visible_to_generator": false
+            }
+          ]
+        },
+        {
+          "claim": "以blinker.connect/blinker.send作为库接口提供修正与测试代码。",
+          "status": "unsupported",
+          "rationale": "题设接口为sig.connect/sig.send；固定库__init__.py仅导出Signal等，无模块级connect/send。未说明blinker变量是Signal实例，代码按常规导入不可直接用。",
+          "evidence": [
+            {
+              "path": "src/blinker/__init__.py",
+              "start_line": 3,
+              "end_line": 17
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "src/blinker/__init__.py",
+              "start_line": 3,
+              "end_line": 17,
+              "content": "from .base import ANY\nfrom .base import default_namespace\nfrom .base import NamedSignal\nfrom .base import Namespace\nfrom .base import Signal\nfrom .base import signal\n\n__all__ = [\n    \"ANY\",\n    \"default_namespace\",\n    \"NamedSignal\",\n    \"Namespace\",\n    \"Signal\",\n    \"signal\",\n]",
+              "content_sha256": "177490118d8ecc2fb55bb5621859cf810d550fbacd092dca5ad34b97e30626e2",
+              "visible_to_generator": false
+            }
+          ]
+        },
+        {
+          "claim": "给出可验证弱/强引用差异的仓库现有测试位置。",
+          "status": "partial",
+          "rationale": "输出给出新伪测试及错误GC预期，没有指出实际test_weak_receiver(219)或test_strong_receiver(240)，当前检索也未提供这些测试。",
+          "evidence": [
+            {
+              "path": "tests/test_signals.py",
+              "start_line": 219,
+              "end_line": 257
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "tests/test_signals.py",
+              "start_line": 219,
+              "end_line": 257,
+              "content": "def test_weak_receiver() -> None:\n    sentinel = []\n\n    def received(sender: t.Any, **kw: t.Any) -> None:\n        sentinel.append(kw)\n\n    sig = blinker.Signal()\n\n    sig.connect(received, weak=True)\n\n    del received\n    collect_acyclic_refs()\n\n    assert not sentinel\n    sig.send()\n    assert not sentinel\n    assert not sig.receivers\n    values_are_empty_sets_(sig._by_receiver)\n    values_are_empty_sets_(sig._by_sender)\n\n\ndef test_strong_receiver() -> None:\n    sentinel = []\n\n    def received(sender: t.Any) -> None:\n        sentinel.append(sender)\n\n    fn_id = id(received)\n\n    sig = blinker.Signal()\n    sig.connect(received, weak=False)\n\n    del received\n    collect_acyclic_refs()\n\n    assert not sentinel\n    sig.send()\n    assert sentinel\n    assert [id(fn) for fn in sig.receivers.values()] == [fn_id]",
+              "content_sha256": "0ad8f8fc4dcd2b4eeee01b33c33a15799e4b4fb5c980a5259f89e7808e2a2676",
+              "visible_to_generator": false
+            }
+          ]
+        }
+      ],
+      "notes": "弱引用默认结论正确，但强引用修正的关键条件与自产测试预期错误；代码还换成未定义模块入口，业务修复不可直接采用。根因同时包含已有115行语义误读及所需测试未检出，不能仅归于缺源码。",
+      "key_points": null,
+      "candidate_sha256": "0909c3fce6f7b9a01f0b08f7168565855e36ba0d679cbc8de58b75dff43e3cbe",
+      "reviewer": "Codex (current session)",
+      "review_type": "model_assisted_nonblind_development_review",
+      "human_approved": false,
+      "training_eligible": false,
+      "result_sha256": "117ff044043d4a7ba7b0eafbf5a26587a472d2cec56064e93eae89fc1c3081ed"
+    },
+    "improvement-confirm-tenacity-05--current-rag": {
+      "candidate_id": "improvement-confirm-tenacity-05--current-rag",
+      "correctness": "correct",
+      "citation_support": "not_applicable",
+      "completeness": "adequate",
+      "abstention": "appropriate",
+      "entry_scope": "not_applicable",
+      "consistency": "consistent",
+      "claims": [
+        {
+          "claim": "无法从未附调用配置、日志或运行状态的库源码确定指定公司昨天的实际重试次数、每次等待和最终堆栈。",
+          "status": "unverifiable",
+          "rationale": "按明确题设，这些实际运行数据没有给出，答案正确拒绝猜测；不要求源码证明不存在的公司运行记录。",
+          "evidence": [],
+          "verified_evidence": []
+        }
+      ],
+      "notes": "insufficient_evidence=true且未编造数值、默认生产配置或堆栈，覆盖全部所求运行数据。额外列出的releasenotes/开发文档引用无助于该结论，拒答本身无需源码引文；不将这些无关定位算成业务证明。",
+      "key_points": null,
+      "candidate_sha256": "5df00342bcc6479e22cc432c577a486a8084859298d1edcc0916d095f1f71076",
+      "reviewer": "Codex (current session)",
+      "review_type": "model_assisted_nonblind_development_review",
+      "human_approved": false,
+      "training_eligible": false,
+      "result_sha256": "8386ade3bf7fe88dbc84a255e91dfb93120863b3e1bdb0d5d874d689243887a8"
+    },
+    "q-0244a89b40349ca9--current-rag": {
+      "candidate_id": "q-0244a89b40349ca9--current-rag",
+      "correctness": "correct",
+      "citation_support": "partial",
+      "completeness": "adequate",
+      "abstention": "not_applicable",
+      "entry_scope": "correct",
+      "consistency": "consistent",
+      "claims": [
+        {
+          "claim": "_got_registered_once阻止蓝图注册后的setup方法；True时抛AssertionError，原因是修改无法一致应用。",
+          "status": "supported",
+          "rationale": "213–221直接检查该标志、抛异常并解释限制目的。",
+          "evidence": [
+            {
+              "path": "src/flask/sansio/blueprints.py",
+              "start_line": 213,
+              "end_line": 221
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "src/flask/sansio/blueprints.py",
+              "start_line": 213,
+              "end_line": 221,
+              "content": "    def _check_setup_finished(self, f_name: str) -> None:\n        if self._got_registered_once:\n            raise AssertionError(\n                f\"The setup method '{f_name}' can no longer be called on the blueprint\"\n                f\" '{self.name}'. It has already been registered at least once, any\"\n                \" changes will not be applied consistently.\\n\"\n                \"Make sure all imports, decorators, functions, etc. needed to set up\"\n                \" the blueprint are done before registering it.\"\n            )",
+              "content_sha256": "b4c75a22b022e443069d149a3fa2bbd7039fe362fe691335625fc8f904e534ed",
+              "visible_to_generator": true
+            }
+          ]
+        },
+        {
+          "claim": "record和record_once为受检查的setup方法示例。",
+          "status": "supported",
+          "rationale": "record与record_once的@setupmethod在223及232；wrapper42–49在调用前做检查。record及wrapper未包含在本次交付。",
+          "evidence": [
+            {
+              "path": "src/flask/sansio/blueprints.py",
+              "start_line": 223,
+              "end_line": 244
+            },
+            {
+              "path": "src/flask/sansio/scaffold.py",
+              "start_line": 42,
+              "end_line": 49
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "src/flask/sansio/blueprints.py",
+              "start_line": 223,
+              "end_line": 244,
+              "content": "    @setupmethod\n    def record(self, func: DeferredSetupFunction) -> None:\n        \"\"\"Registers a function that is called when the blueprint is\n        registered on the application.  This function is called with the\n        state as argument as returned by the :meth:`make_setup_state`\n        method.\n        \"\"\"\n        self.deferred_functions.append(func)\n\n    @setupmethod\n    def record_once(self, func: DeferredSetupFunction) -> None:\n        \"\"\"Works like :meth:`record` but wraps the function in another\n        function that will ensure the function is only called once.  If the\n        blueprint is registered a second time on the application, the\n        function passed is not called.\n        \"\"\"\n\n        def wrapper(state: BlueprintSetupState) -> None:\n            if state.first_registration:\n                func(state)\n\n        self.record(update_wrapper(wrapper, func))",
+              "content_sha256": "4d6ae17f74b3c528558bc7d8655c1d02fbb9130758d4af9da7cbe8a702257fb6",
+              "visible_to_generator": false
+            },
+            {
+              "path": "src/flask/sansio/scaffold.py",
+              "start_line": 42,
+              "end_line": 49,
+              "content": "def setupmethod(f: F) -> F:\n    f_name = f.__name__\n\n    def wrapper_func(self: Scaffold, *args: t.Any, **kwargs: t.Any) -> t.Any:\n        self._check_setup_finished(f_name)\n        return f(self, *args, **kwargs)\n\n    return t.cast(F, update_wrapper(wrapper_func, f))",
+              "content_sha256": "bef14a46bf8ebc8fd2672d8b1939d041b7cb99d472b153cda9a4f5759b0526c2",
+              "visible_to_generator": false
+            }
+          ]
+        },
+        {
+          "claim": "蓝图注册时把该标志设为True。",
+          "status": "supported",
+          "rationale": "register中320赋True，事实正确，但320未交付且不在模型正式引文中。",
+          "evidence": [
+            {
+              "path": "src/flask/sansio/blueprints.py",
+              "start_line": 319,
+              "end_line": 321
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "src/flask/sansio/blueprints.py",
+              "start_line": 319,
+              "end_line": 321,
+              "content": "        app.blueprints[name] = self\n        self._got_registered_once = True\n        state = self.make_setup_state(app, options, first_bp_registration)",
+              "content_sha256": "25a6216a7f15dc472b41000adda91ad5fb80ebde5e3f10192db6d2f3091cc88b",
+              "visible_to_generator": false
+            }
+          ]
+        }
+      ],
+      "notes": "实际问题问保护标志的用途；答案准确完整，不能因dataset还列first_registration辨析而强加其必须主动对比。保留主动补充的赋值位置/调用装饰器来源遗漏，不宣称全篇精确引文支持。",
+      "key_points": null,
+      "candidate_sha256": "933e3e360c8716ab89987a5f7c0c74614efd77174948debab3d4899c6aa48088",
+      "reviewer": "Codex (current session)",
+      "review_type": "model_assisted_nonblind_development_review",
+      "human_approved": false,
+      "training_eligible": false,
+      "result_sha256": "0e7ba3a20a932946bb7da025bfbf73f233bab32e853756a35df29fcec50c3d72"
+    },
+    "improvement-confirm-blinker-05--current-rag": {
+      "candidate_id": "improvement-confirm-blinker-05--current-rag",
+      "correctness": "correct",
+      "citation_support": "not_applicable",
+      "completeness": "adequate",
+      "abstention": "appropriate",
+      "entry_scope": "not_applicable",
+      "consistency": "consistent",
+      "claims": [
+        {
+          "claim": "没有日志、埋点或进程访问，库源码不足以给出公司24小时订单信号数和最慢回调耗时。",
+          "status": "unverifiable",
+          "rationale": "题目明确不给运行数据，正确拒答；实际数值本就不可从静态快照验证，不能为拒答强求不存在的生产源码证明。",
+          "evidence": [],
+          "verified_evidence": []
+        }
+      ],
+      "notes": "insufficient_evidence=true，无编造次数或耗时。答复覆盖两个私有指标，不要求额外日志采集设计。",
+      "key_points": null,
+      "candidate_sha256": "0809f1d5dfbc1cadb2476c2be6e574fe5cd4170121bc6d0aafed6dc85822ed16",
+      "reviewer": "Codex (current session)",
+      "review_type": "model_assisted_nonblind_development_review",
+      "human_approved": false,
+      "training_eligible": false,
+      "result_sha256": "1617eba28d4fb1854ff841aca4f4b786bd0e711ea742691ed05cd39eb35ec772"
+    },
+    "q-76e803220d6e43cf--current-rag": {
+      "candidate_id": "q-76e803220d6e43cf--current-rag",
+      "correctness": "correct",
+      "citation_support": "supported",
+      "completeness": "adequate",
+      "abstention": "not_applicable",
+      "entry_scope": "correct",
+      "consistency": "consistent",
+      "claims": [
+        {
+          "claim": "times=0为空迭代器且不调用function，times=2最多消费两次，None无限按需重复。",
+          "status": "supported",
+          "rationale": "336–338分别构造无限或有限repeat再starmap；285–288确认0时next才抛StopIteration。",
+          "evidence": [
+            {
+              "path": "more_itertools/recipes.py",
+              "start_line": 336,
+              "end_line": 338
+            },
+            {
+              "path": "tests/test_recipes.py",
+              "start_line": 285,
+              "end_line": 288
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "more_itertools/recipes.py",
+              "start_line": 336,
+              "end_line": 338,
+              "content": "    if times is None:\n        return starmap(function, repeat(args))\n    return starmap(function, repeat(args, times))",
+              "content_sha256": "0b40642f75c7f61dca7f2881dcc9b305d3f9e2099195c6c4dd2816f72087c657",
+              "visible_to_generator": true
+            },
+            {
+              "path": "tests/test_recipes.py",
+              "start_line": 285,
+              "end_line": 288,
+              "content": "    def test_null_times(self):\n        \"\"\"repeat 0 should return an empty iterator\"\"\"\n        r = mi.repeatfunc(range, 0, 3)\n        self.assertRaises(StopIteration, lambda: next(r))",
+              "content_sha256": "4caf2831da5879e193423ee8f75f6bfb0a2b4cbfbb2f1ab404118abdb744e2f9",
+              "visible_to_generator": true
+            }
+          ]
+        },
+        {
+          "claim": "创建repeatfunc迭代器不立即执行function，starmap消费时才调用。",
+          "status": "supported",
+          "rationale": "两个分支均返回starmap迭代器，无function(*args)的提前调用。",
+          "evidence": [
+            {
+              "path": "more_itertools/recipes.py",
+              "start_line": 336,
+              "end_line": 338
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "more_itertools/recipes.py",
+              "start_line": 336,
+              "end_line": 338,
+              "content": "    if times is None:\n        return starmap(function, repeat(args))\n    return starmap(function, repeat(args, times))",
+              "content_sha256": "0b40642f75c7f61dca7f2881dcc9b305d3f9e2099195c6c4dd2816f72087c657",
+              "visible_to_generator": true
+            }
+          ]
+        }
+      ],
+      "notes": "覆盖0/2/None和惰性、两分支全部要求；“立即抛StopIteration”结合后文next(r)引用理解为空迭代器被消费时，不凭省略语境额外扣分。",
+      "key_points": null,
+      "candidate_sha256": "77bcb34cf3ae45d43996834a25fff8a6b2a775352588c1e7315364e2980db30b",
+      "reviewer": "Codex (current session)",
+      "review_type": "model_assisted_nonblind_development_review",
+      "human_approved": false,
+      "training_eligible": false,
+      "result_sha256": "d1f0d585e5436292e8b8cbe10251d56648c2490e7267cfab7e1d977d62676bd0"
+    },
+    "q-ae6f6ee7cb6da33c--current-rag": {
+      "candidate_id": "q-ae6f6ee7cb6da33c--current-rag",
+      "correctness": "partially_correct",
+      "citation_support": "partial",
+      "completeness": "adequate",
+      "abstention": "appropriate",
+      "entry_scope": "mixed",
+      "consistency": "contradictory",
+      "claims": [
+        {
+          "claim": "仅凭库源码不能得知用户未提供数据库中的客户文档数量。",
+          "status": "supported",
+          "rationale": "正式引文只描述通用持久化结构，不包含用户数据库内容；拒绝从源码推出私有数值合理。",
+          "evidence": [
+            {
+              "path": "tinydb/database.py",
+              "start_line": 17,
+              "end_line": 67
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "tinydb/database.py",
+              "start_line": 17,
+              "end_line": 67,
+              "content": "class TinyDB(TableBase):\n    \"\"\"\n    The main class of TinyDB.\n\n    The ``TinyDB`` class is responsible for creating the storage class instance\n    that will store this database's documents, managing the database\n    tables as well as providing access to the default table.\n\n    For table management, a simple ``dict`` is used that stores the table class\n    instances accessible using their table name.\n\n    Default table access is provided by forwarding all unknown method calls\n    and property access operations to the default table by implementing\n    ``__getattr__``.\n\n    When creating a new instance, all arguments and keyword arguments (except\n    for ``storage``) will be passed to the storage class that is provided. If\n    no storage class is specified, :class:`~tinydb.storages.JSONStorage` will be\n    used.\n\n    .. admonition:: Customization\n\n        For customization, the following class variables can be set:\n\n        - ``table_class`` defines the class that is used to create tables,\n        - ``default_table_name`` defines the name of the default table, and\n        - ``default_storage_class`` will define the class that will be used to\n          create storage instances if no other storage is passed.\n\n        .. versionadded:: 4.0\n\n    .. admonition:: Data Storage Model\n\n        Data is stored using a storage class that provides persistence for a\n        ``dict`` instance. This ``dict`` contains all tables and their data.\n        The data is modelled like this::\n\n            {\n                'table1': {\n                    0: {document...},\n                    1: {document...},\n                },\n                'table2': {\n                    ...\n                }\n            }\n\n        Each entry in this ``dict`` uses the table name as its key and a\n        ``dict`` of documents as its value. The document ``dict`` contains\n        document IDs as keys and the documents themselves as values.\n",
+              "content_sha256": "4a4ef7e4f0cb121f2d12089c3e4c903a31ba7ec7e6f8f6236ae765fbda16fe88",
+              "visible_to_generator": true
+            }
+          ]
+        },
+        {
+          "claim": "库使用字典形式的表/文档数据，实际数量来自存储中读出的文档。",
+          "status": "supported",
+          "rationale": "数据模型由正式引文支持；更具体的动态读取机制由评审补读的_read_table/len支持，后者未交付给模型。",
+          "evidence": [
+            {
+              "path": "tinydb/database.py",
+              "start_line": 45,
+              "end_line": 67
+            },
+            {
+              "path": "tinydb/table.py",
+              "start_line": 725,
+              "end_line": 742
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "tinydb/database.py",
+              "start_line": 45,
+              "end_line": 67,
+              "content": "\n        .. versionadded:: 4.0\n\n    .. admonition:: Data Storage Model\n\n        Data is stored using a storage class that provides persistence for a\n        ``dict`` instance. This ``dict`` contains all tables and their data.\n        The data is modelled like this::\n\n            {\n                'table1': {\n                    0: {document...},\n                    1: {document...},\n                },\n                'table2': {\n                    ...\n                }\n            }\n\n        Each entry in this ``dict`` uses the table name as its key and a\n        ``dict`` of documents as its value. The document ``dict`` contains\n        document IDs as keys and the documents themselves as values.\n",
+              "content_sha256": "0573acae19d7945b04f29ec1ed8b1618bc7d80a0a2909be9cba300c254de0109",
+              "visible_to_generator": true
+            },
+            {
+              "path": "tinydb/table.py",
+              "start_line": 725,
+              "end_line": 742,
+              "content": "    def __len__(self):\n        \"\"\"\n        Count the total number of documents in this table.\n        \"\"\"\n\n        return len(self._read_table())\n\n    def __iter__(self) -> Iterator[Document]:\n        \"\"\"\n        Iterate over all documents stored in the table.\n\n        :returns: an iterator over all documents.\n        \"\"\"\n\n        # Iterate all documents and their IDs\n        for doc_id, doc in self._read_table().items():\n            # Convert documents to the document class\n            yield self.document_class(doc, self.document_id_class(doc_id))",
+              "content_sha256": "b5ba637b299ffbc5761fd8e185928b90151277fce6fedeb239e5877c0d2391b0",
+              "visible_to_generator": false
+            }
+          ]
+        },
+        {
+          "claim": "必须通过TinyDB实例的方法来获取数量，并以count()或all()为例。",
+          "status": "partial",
+          "rationale": "all()确实可列出文档，但count需要cond参数，裸count()不能运行；数据也可在取得存储内容后直接统计，因此API不是唯一路径。这是主动补充的API建议，而不是对题目另加要求；全部API补读均仅作评审证据。",
+          "evidence": [
+            {
+              "path": "tinydb/table.py",
+              "start_line": 235,
+              "end_line": 247
+            },
+            {
+              "path": "tinydb/table.py",
+              "start_line": 709,
+              "end_line": 716
+            },
+            {
+              "path": "tinydb/database.py",
+              "start_line": 251,
+              "end_line": 268
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "tinydb/table.py",
+              "start_line": 235,
+              "end_line": 247,
+              "content": "    def all(self) -> list[Document]:\n        \"\"\"\n        Get all documents stored in the table.\n\n        :returns: a list with all documents.\n        \"\"\"\n\n        # iter(self) (implemented in Table.__iter__ provides an iterator\n        # that returns all documents in this table. We use it to get a list\n        # of all documents by using the ``list`` constructor to perform the\n        # conversion.\n\n        return list(iter(self))",
+              "content_sha256": "311ba73a32d7b12f6c4efe1d36f2286bea739903f7cb5761bf8002a8698453e3",
+              "visible_to_generator": false
+            },
+            {
+              "path": "tinydb/table.py",
+              "start_line": 709,
+              "end_line": 716,
+              "content": "    def count(self, cond: QueryLike) -> int:\n        \"\"\"\n        Count the documents matching a query.\n\n        :param cond: the condition use\n        \"\"\"\n\n        return len(self.search(cond))",
+              "content_sha256": "156f6005fe0ea3cf7f19ed746c48fefeeb2f9eb8bf337c85a89233daa716ff0f",
+              "visible_to_generator": false
+            },
+            {
+              "path": "tinydb/database.py",
+              "start_line": 251,
+              "end_line": 268,
+              "content": "    def __getattr__(self, name):\n        \"\"\"\n        Forward all unknown attribute calls to the default table instance.\n        \"\"\"\n        return getattr(self.table(self.default_table_name), name)\n\n    # Here we forward magic methods to the default table instance. These are\n    # not handled by __getattr__ so we need to forward them manually here\n\n    def __len__(self):\n        \"\"\"\n        Get the total number of documents in the default table.\n\n        >>> db = TinyDB('db.json')\n        >>> len(db)\n        0\n        \"\"\"\n        return len(self.table(self.default_table_name))",
+              "content_sha256": "ae9f887b081e8631c118db0559f1c958ecb94667bea6489586561ffeb13fcb6b",
+              "visible_to_generator": false
+            }
+          ]
+        }
+      ],
+      "notes": "正文拒绝虚构数量是正确的，但后续API建议过强且count()缺必要查询条件；额外实现/API未被交付或引用，不能因首句合理便把整答判全对。insufficient_evidence=False另列协议字段错误。 主复核：正文明确不能回答私有数值而insufficient_evidence=False，属于输出内部矛盾，consistency据此记contradictory；事实正确性不因该字段简单归零。此规则在候选生成前统一用于所有私有题。",
+      "key_points": null,
+      "candidate_sha256": "ac3d49fb314e1e22971fa967867a30efe6703a1a6e410dbf140abc88fc9cd7fa",
+      "reviewer": "Codex (current session)",
+      "review_type": "model_assisted_nonblind_development_review",
+      "human_approved": false,
+      "training_eligible": false,
+      "result_sha256": "982be4b5f4aa5564451435663785354739f2409dca7f748a1a42fe80fac580cd"
+    },
+    "q-262c1cf5abc5b82e--current-rag": {
+      "candidate_id": "q-262c1cf5abc5b82e--current-rag",
+      "correctness": "correct",
+      "citation_support": "supported",
+      "completeness": "adequate",
+      "abstention": "not_applicable",
+      "entry_scope": "correct",
+      "consistency": "consistent",
+      "claims": [
+        {
+          "claim": "JSONStorage.read对空文件返回None而非空字典。",
+          "status": "supported",
+          "rationale": "size为零分支直接返回None。",
+          "evidence": [
+            {
+              "path": "tinydb/storages.py",
+              "start_line": 125,
+              "end_line": 134
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "tinydb/storages.py",
+              "start_line": 125,
+              "end_line": 134,
+              "content": "    def read(self) -> Optional[dict[str, dict[str, Any]]]:\n        # Get the file size by moving the cursor to the file end and reading\n        # its location\n        self._handle.seek(0, os.SEEK_END)\n        size = self._handle.tell()\n\n        if not size:\n            # File is empty, so we return ``None`` so TinyDB can properly\n            # initialize the database\n            return None",
+              "content_sha256": "f6cae97ab3b5b271b05a5274c4028535cefa5d1f3f28f7ae51bde47269e88d34",
+              "visible_to_generator": true
+            }
+          ]
+        },
+        {
+          "claim": "通过seek(0,os.SEEK_END)移动到末尾，再tell读取大小。",
+          "status": "supported",
+          "rationale": "127-129直接展示两个调用。",
+          "evidence": [
+            {
+              "path": "tinydb/storages.py",
+              "start_line": 125,
+              "end_line": 129
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "tinydb/storages.py",
+              "start_line": 125,
+              "end_line": 129,
+              "content": "    def read(self) -> Optional[dict[str, dict[str, Any]]]:\n        # Get the file size by moving the cursor to the file end and reading\n        # its location\n        self._handle.seek(0, os.SEEK_END)\n        size = self._handle.tell()",
+              "content_sha256": "0b645c3fcedf98cb59b7b57bc3ef4706025dca1d03dbce385c3b81248d652a8e",
+              "visible_to_generator": true
+            }
+          ]
+        }
+      ],
+      "notes": "准确覆盖空文件返回值与大小检测方法，正式引文包含两处。",
+      "key_points": null,
+      "candidate_sha256": "626b9dfe145af382096fb7511d64b14e3afca23bfa6478982d93750bf5346601",
+      "reviewer": "Codex (current session)",
+      "review_type": "model_assisted_nonblind_development_review",
+      "human_approved": false,
+      "training_eligible": false,
+      "result_sha256": "d7a285a7bc135a1004c7c01026764ee245d25ec6c6c40a256146d1691d4e5bc9"
+    },
+    "q-9651d7a4b096b6d7--current-rag": {
+      "candidate_id": "q-9651d7a4b096b6d7--current-rag",
+      "correctness": "correct",
+      "citation_support": "supported",
+      "completeness": "adequate",
+      "abstention": "not_applicable",
+      "entry_scope": "correct",
+      "consistency": "consistent",
+      "claims": [
+        {
+          "claim": "显式ensure_ascii=False、sort_keys=False保留，不被True属性覆盖。",
+          "status": "supported",
+          "rationale": "177–178使用kwargs.setdefault，已有键不改。",
+          "evidence": [
+            {
+              "path": "src/flask/json/provider.py",
+              "start_line": 176,
+              "end_line": 179
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "src/flask/json/provider.py",
+              "start_line": 176,
+              "end_line": 179,
+              "content": "        kwargs.setdefault(\"default\", self.default)\n        kwargs.setdefault(\"ensure_ascii\", self.ensure_ascii)\n        kwargs.setdefault(\"sort_keys\", self.sort_keys)\n        return json.dumps(obj, **kwargs)",
+              "content_sha256": "95eb04c8db45c693a91b0d5fe056001af4107c530df581d7b01dff2cad0dc56e",
+              "visible_to_generator": true
+            }
+          ]
+        },
+        {
+          "claim": "未传时以属性True作为默认，本次dumps不修改provider属性。",
+          "status": "supported",
+          "rationale": "176–179仅写本次kwargs并调用json.dumps，没有给self属性赋值；144–155声明属性默认True。",
+          "evidence": [
+            {
+              "path": "src/flask/json/provider.py",
+              "start_line": 144,
+              "end_line": 155
+            },
+            {
+              "path": "src/flask/json/provider.py",
+              "start_line": 176,
+              "end_line": 179
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "src/flask/json/provider.py",
+              "start_line": 144,
+              "end_line": 155,
+              "content": "    ensure_ascii = True\n    \"\"\"Replace non-ASCII characters with escape sequences. This may be\n    more compatible with some clients, but can be disabled for better\n    performance and size.\n    \"\"\"\n\n    sort_keys = True\n    \"\"\"Sort the keys in any serialized dicts. This may be useful for\n    some caching situations, but can be disabled for better performance.\n    When enabled, keys must all be strings, they are not converted\n    before sorting.\n    \"\"\"",
+              "content_sha256": "4c6ab46f18e5c6354a7b47b056c49441e5887ff7169ba25b46989eb8710c5cd9",
+              "visible_to_generator": true
+            },
+            {
+              "path": "src/flask/json/provider.py",
+              "start_line": 176,
+              "end_line": 179,
+              "content": "        kwargs.setdefault(\"default\", self.default)\n        kwargs.setdefault(\"ensure_ascii\", self.ensure_ascii)\n        kwargs.setdefault(\"sort_keys\", self.sort_keys)\n        return json.dumps(obj, **kwargs)",
+              "content_sha256": "95eb04c8db45c693a91b0d5fe056001af4107c530df581d7b01dff2cad0dc56e",
+              "visible_to_generator": true
+            }
+          ]
+        }
+      ],
+      "notes": "三个实际子问题均完整准确，原引文均在已交付源码窗口中。",
+      "key_points": null,
+      "candidate_sha256": "d5c8dba17ba7dd1b8078c9b668a0aa3e4721b97ff4645cda5eb0819b661729a6",
+      "reviewer": "Codex (current session)",
+      "review_type": "model_assisted_nonblind_development_review",
+      "human_approved": false,
+      "training_eligible": false,
+      "result_sha256": "db9862c944e0242eae86098dfaf5522b658569da23cbe402a13ada6ba1089bdc"
+    },
+    "q-bc525cfef5654a48--current-rag": {
+      "candidate_id": "q-bc525cfef5654a48--current-rag",
+      "correctness": "correct",
+      "citation_support": "supported",
+      "completeness": "partial",
+      "abstention": "not_applicable",
+      "entry_scope": "correct",
+      "consistency": "consistent",
+      "claims": [
+        {
+          "claim": "write先更新self.cache并累积修改次数，达到WRITE_CACHE_SIZE时flush，而非每次写底层。",
+          "status": "supported",
+          "rationale": "write在更新cache与计数后比较阈值调用flush。答案虽未显式展开计数累加，但正确说明阈值触发。",
+          "evidence": [
+            {
+              "path": "tinydb/middlewares.py",
+              "start_line": 108,
+              "end_line": 118
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "tinydb/middlewares.py",
+              "start_line": 108,
+              "end_line": 118,
+              "content": "    def write(self, data):\n        if self._closed:\n            raise ValueError('I/O operation on closed storage')\n\n        # Store data in cache\n        self.cache = data\n        self._cache_modified_count += 1\n\n        # Check if we need to flush the cache\n        if self._cache_modified_count >= self.WRITE_CACHE_SIZE:\n            self.flush()",
+              "content_sha256": "f8217fbc2430dcbe3cd6bbee26f1c3a73d542d394afd633bf41a5337a6a037a2",
+              "visible_to_generator": true
+            }
+          ]
+        },
+        {
+          "claim": "close先调用flush，再关闭底层；重复close因_closed直接返回。",
+          "status": "supported",
+          "rationale": "close前置closed检查与flush/storage.close顺序均被引用。",
+          "evidence": [
+            {
+              "path": "tinydb/middlewares.py",
+              "start_line": 132,
+              "end_line": 142
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "tinydb/middlewares.py",
+              "start_line": 132,
+              "end_line": 142,
+              "content": "    def close(self):\n        if self._closed:\n            return\n\n        # Flush potentially unwritten data\n        self.flush()\n\n        # Let the storage clean up too\n        self.storage.close()\n        self._closed = True\n        self.cache = None",
+              "content_sha256": "5cb0e556a8140a9acfae759731e888671c6bacf10aad1b2a74a6aab1537a3062",
+              "visible_to_generator": true
+            }
+          ]
+        }
+      ],
+      "notes": "写缓存/阈值/关闭与重复关闭主流程正确，但未解释flush仅在脏计数>0时写底层并把计数清零，容易把close中的flush误读为无条件额外写入。对题目所问刷新行为记完整性partial，不额外要求未问的关闭后write异常。",
+      "key_points": null,
+      "candidate_sha256": "e586fad92218beb912f36fe6255c59e8a88b36b311967122e34c58598ce99baa",
+      "reviewer": "Codex (current session)",
+      "review_type": "model_assisted_nonblind_development_review",
+      "human_approved": false,
+      "training_eligible": false,
+      "result_sha256": "0bd5705de07901916e6b45471741280cd69f8d6c2f3a02ac0a39898a1ad66d8a"
+    },
+    "q-dce4d164575a7561--current-rag": {
+      "candidate_id": "q-dce4d164575a7561--current-rag",
+      "correctness": "correct",
+      "citation_support": "supported",
+      "completeness": "adequate",
+      "abstention": "not_applicable",
+      "entry_scope": "correct",
+      "consistency": "consistent",
+      "claims": [
+        {
+          "claim": "dotenv_values显式以override=True构造DotEnv。",
+          "status": "supported",
+          "rationale": "正式引用510-517中515为override=True。",
+          "evidence": [
+            {
+              "path": "src/dotenv/main.py",
+              "start_line": 510,
+              "end_line": 517
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "src/dotenv/main.py",
+              "start_line": 510,
+              "end_line": 517,
+              "content": "    return DotEnv(\n        dotenv_path=dotenv_path,\n        stream=stream,\n        verbose=verbose,\n        interpolate=interpolate,\n        override=True,\n        encoding=encoding,\n    ).dict()",
+              "content_sha256": "eb4f422bc7edac52d88db425dd84450034aab34d06b0fa8815852c2c6e9864d1",
+              "visible_to_generator": true
+            }
+          ]
+        },
+        {
+          "claim": "返回DotEnv(...).dict()，不调用set_as_environment_variables。",
+          "status": "supported",
+          "rationale": "完整return链只调用dict，实际交付dict也只解析返回映射；环境写方法为另一入口。",
+          "evidence": [
+            {
+              "path": "src/dotenv/main.py",
+              "start_line": 510,
+              "end_line": 517
+            },
+            {
+              "path": "src/dotenv/main.py",
+              "start_line": 79,
+              "end_line": 93
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "src/dotenv/main.py",
+              "start_line": 510,
+              "end_line": 517,
+              "content": "    return DotEnv(\n        dotenv_path=dotenv_path,\n        stream=stream,\n        verbose=verbose,\n        interpolate=interpolate,\n        override=True,\n        encoding=encoding,\n    ).dict()",
+              "content_sha256": "eb4f422bc7edac52d88db425dd84450034aab34d06b0fa8815852c2c6e9864d1",
+              "visible_to_generator": true
+            },
+            {
+              "path": "src/dotenv/main.py",
+              "start_line": 79,
+              "end_line": 93,
+              "content": "    def dict(self) -> Dict[str, Optional[str]]:\n        \"\"\"Return dotenv as dict\"\"\"\n        if self._dict is not None:\n            return self._dict\n\n        raw_values = self.parse()\n\n        if self.interpolate:\n            self._dict = OrderedDict(\n                resolve_variables(raw_values, override=self.override)\n            )\n        else:\n            self._dict = OrderedDict(raw_values)\n\n        return self._dict",
+              "content_sha256": "6f1b8c117e000aca12297dad3484058d2e0fea593b4309b8d13416bc8319ccf5",
+              "visible_to_generator": true
+            }
+          ]
+        }
+      ],
+      "notes": "准确回答override值及是否写环境，两问直接由函数return链证明；评审列dict补充证据已交付但不需要把这一题改为引用缺失。",
+      "key_points": null,
+      "candidate_sha256": "4dd74de1f5dad4be9c7f0cb628219331a0259d7375d61a8c1aa12bf055ec3aa5",
+      "reviewer": "Codex (current session)",
+      "review_type": "model_assisted_nonblind_development_review",
+      "human_approved": false,
+      "training_eligible": false,
+      "result_sha256": "be5008784cc4a2b5d6781e600b765445618b3c1e31042e8fa615a24508f08790"
+    }
+  },
+  "groups": {
+    "all/bm25_code": {
+      "records": 36,
+      "success": 36,
+      "model_requests": 36,
+      "tool_calls": 0,
+      "episodes_using_tools": 0,
+      "citation_ranges_valid": 36,
+      "initial_reference_complete": 21,
+      "final_reference_complete": 21,
+      "initial_nonblank_reference_complete": 23,
+      "final_nonblank_reference_complete": 23,
+      "requests_without_usage": 0,
+      "requests_without_elapsed": 0,
+      "prompt_tokens": 95801,
+      "completion_tokens": 9895,
+      "generator_seconds": 465.19200000000006,
+      "reviewed": 36,
+      "factually_correct": 23,
+      "core_supported": 19,
+      "fully_resolved": 16,
+      "insufficiency_flag_true": 3,
+      "insufficiency_flag_false": 2
+    },
+    "added-confirmation/bm25_code": {
+      "records": 6,
+      "success": 6,
+      "model_requests": 6,
+      "tool_calls": 0,
+      "episodes_using_tools": 0,
+      "citation_ranges_valid": 6,
+      "initial_reference_complete": 5,
+      "final_reference_complete": 5,
+      "initial_nonblank_reference_complete": 6,
+      "final_nonblank_reference_complete": 6,
+      "requests_without_usage": 0,
+      "requests_without_elapsed": 0,
+      "prompt_tokens": 13791,
+      "completion_tokens": 1522,
+      "generator_seconds": 81.281,
+      "reviewed": 6,
+      "factually_correct": 3,
+      "core_supported": 3,
+      "fully_resolved": 2
+    },
+    "current-python-development-diagnostic/bm25_code": {
+      "records": 36,
+      "success": 36,
+      "model_requests": 36,
+      "tool_calls": 0,
+      "episodes_using_tools": 0,
+      "citation_ranges_valid": 36,
+      "initial_reference_complete": 21,
+      "final_reference_complete": 21,
+      "initial_nonblank_reference_complete": 23,
+      "final_nonblank_reference_complete": 23,
+      "requests_without_usage": 0,
+      "requests_without_elapsed": 0,
+      "prompt_tokens": 95801,
+      "completion_tokens": 9895,
+      "generator_seconds": 465.19200000000006,
+      "reviewed": 36,
+      "factually_correct": 23,
+      "core_supported": 19,
+      "fully_resolved": 16,
+      "insufficiency_flag_true": 3,
+      "insufficiency_flag_false": 2
+    },
+    "answerable/bm25_code": {
+      "records": 31,
+      "success": 31,
+      "model_requests": 31,
+      "tool_calls": 0,
+      "episodes_using_tools": 0,
+      "citation_ranges_valid": 31,
+      "initial_reference_complete": 21,
+      "final_reference_complete": 21,
+      "initial_nonblank_reference_complete": 23,
+      "final_nonblank_reference_complete": 23,
+      "requests_without_usage": 0,
+      "requests_without_elapsed": 0,
+      "prompt_tokens": 82015,
+      "completion_tokens": 8640,
+      "generator_seconds": 406.7220000000001,
+      "reviewed": 31,
+      "factually_correct": 20,
+      "core_supported": 17,
+      "fully_resolved": 14
+    },
+    "older-development/bm25_code": {
+      "records": 4,
+      "success": 4,
+      "model_requests": 4,
+      "tool_calls": 0,
+      "episodes_using_tools": 0,
+      "citation_ranges_valid": 4,
+      "initial_reference_complete": 3,
+      "final_reference_complete": 3,
+      "initial_nonblank_reference_complete": 3,
+      "final_nonblank_reference_complete": 3,
+      "requests_without_usage": 0,
+      "requests_without_elapsed": 0,
+      "prompt_tokens": 11579,
+      "completion_tokens": 1035,
+      "generator_seconds": 48.391999999999996,
+      "reviewed": 4,
+      "factually_correct": 2,
+      "core_supported": 1,
+      "fully_resolved": 1
+    },
+    "added-retrieval-development/bm25_code": {
+      "records": 12,
+      "success": 12,
+      "model_requests": 12,
+      "tool_calls": 0,
+      "episodes_using_tools": 0,
+      "citation_ranges_valid": 12,
+      "initial_reference_complete": 8,
+      "final_reference_complete": 8,
+      "initial_nonblank_reference_complete": 9,
+      "final_nonblank_reference_complete": 9,
+      "requests_without_usage": 0,
+      "requests_without_elapsed": 0,
+      "prompt_tokens": 33224,
+      "completion_tokens": 2408,
+      "generator_seconds": 118.018,
+      "reviewed": 12,
+      "factually_correct": 10,
+      "core_supported": 9,
+      "fully_resolved": 7,
+      "insufficiency_flag_true": 1,
+      "insufficiency_flag_false": 2
+    },
+    "revealed-confirmation-development/bm25_code": {
+      "records": 10,
+      "success": 10,
+      "model_requests": 10,
+      "tool_calls": 0,
+      "episodes_using_tools": 0,
+      "citation_ranges_valid": 10,
+      "initial_reference_complete": 1,
+      "final_reference_complete": 1,
+      "initial_nonblank_reference_complete": 1,
+      "final_nonblank_reference_complete": 1,
+      "requests_without_usage": 0,
+      "requests_without_elapsed": 0,
+      "prompt_tokens": 25167,
+      "completion_tokens": 3800,
+      "generator_seconds": 164.78199999999998,
+      "reviewed": 10,
+      "factually_correct": 5,
+      "core_supported": 3,
+      "fully_resolved": 3,
+      "insufficiency_flag_true": 2,
+      "insufficiency_flag_false": 0
+    },
+    "older-confirmation/bm25_code": {
+      "records": 4,
+      "success": 4,
+      "model_requests": 4,
+      "tool_calls": 0,
+      "episodes_using_tools": 0,
+      "citation_ranges_valid": 4,
+      "initial_reference_complete": 4,
+      "final_reference_complete": 4,
+      "initial_nonblank_reference_complete": 4,
+      "final_nonblank_reference_complete": 4,
+      "requests_without_usage": 0,
+      "requests_without_elapsed": 0,
+      "prompt_tokens": 12040,
+      "completion_tokens": 1130,
+      "generator_seconds": 52.71900000000001,
+      "reviewed": 4,
+      "factually_correct": 3,
+      "core_supported": 3,
+      "fully_resolved": 3
+    },
+    "unanswerable/bm25_code": {
+      "records": 5,
+      "success": 5,
+      "model_requests": 5,
+      "tool_calls": 0,
+      "episodes_using_tools": 0,
+      "citation_ranges_valid": 5,
+      "insufficiency_flag_true": 3,
+      "insufficiency_flag_false": 2,
+      "requests_without_usage": 0,
+      "requests_without_elapsed": 0,
+      "prompt_tokens": 13786,
+      "completion_tokens": 1255,
+      "generator_seconds": 58.47,
+      "reviewed": 5,
+      "factually_correct": 3,
+      "core_supported": 2,
+      "fully_resolved": 2
+    }
+  },
+  "retrieval": {
+    "shared_initial": {
+      "answerable": 31,
+      "reference_complete": 21,
+      "nonblank_reference_complete": 23
+    }
+  },
+  "new_requests": 36,
+  "combined_requests": 1319,
+  "paid_requests": 0,
+  "human_approved": false,
+  "training_eligible": false,
+  "reporting_implementation": "4432a399824bc989792b734caf26caf8da5ada5fef0941d184fd5a00d4ae2e6b",
+  "usage_observation_note": "Token/time sums include observed values only. Missing usage and elapsed time remain unknown in raw records; reservations still count every sent or ambiguous request.",
+  "checks": {
+    "independent_source_reviews": {
+      "artifacts\\rag-refresh-2026-10-26\\review-storage.json": "4e84b49c92d01e3bd51742818e8fb6440374e16d0a38ac8a55529a3b31ee3f43",
+      "artifacts\\rag-refresh-2026-10-26\\review-behavior.json": "dd0f5f9eca7917fafce2969009cd93cde5922d57f5516ccaa11aded811d804bb"
+    },
+    "reviewed_cases": 36,
+    "source_answerable": 31,
+    "private_runtime": 5,
+    "private_refusal_flag_consistent": 3,
+    "private_refusal_flag_mismatch_case_ids": [
+      "q-1803ac7237f279cd--current-rag",
+      "q-ae6f6ee7cb6da33c--current-rag"
+    ],
+    "review_adjudication": "All actual questions and voluntary material claims checked. A prose refusal with insufficient_evidence=false is consistency=contradictory while keeping its factual verdict; apply before candidate generation to all private tasks.",
+    "long_unit_dedup_actual_affected_cases": 0,
+    "rejected_source_filter": "artifacts/rag-refresh-2026-10-26/source-noise-offline.json",
+    "candidate_scope": "One existing instruction clause only, no new retrieval rule, mode, module or model profile. Six preselected cases, paired frozen current results, all required conditions/tests retained; no improvement or material regression means revert."
+  },
+  "scope": "One fresh run of the current default fixed BM25 code-aware RAG, daily local Qwen profile, no output/prompt/budget changes. All existing Python-library tasks from rag-system plus all ten already-revealed Blinker/Tenacity tasks: 36 questions, 31 source-answerable and 5 private-runtime, 9 repositories. Selected by repository language before generation, without selecting on prior answer score. Known development regression, not unseen generalization; no training, final-test access or automatic retry. Keep failures and all initial visible source. Purpose: measure current behavior and locate a minimal shared cause from actual new failures."
+}

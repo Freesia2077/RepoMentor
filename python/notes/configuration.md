@@ -1,43 +1,51 @@
-# 配置与数据隔离
+# 配置与数据
 
-Python 与原 TS Web 应用共处同一 Git 仓库，但应用配置、数据库、下载缓存和 SDK 会话目录分别归属。前端未重写，Python 核心不依赖 TS 启动。
+本机固定复用 `D:\anaconda\envs\repomentor\python.exe -s` 或 `run.ps1`，不另建环境。
 
-## 模型配置
+## 配置选择
 
-`load_model_settings()` 使用以下顺序选择**一个完整来源**：
+`ask/chat`、`report --runtime sdk/local` 共用已有 `load_chat_settings`，按下述顺序选择配置；没有覆盖时读取 Python 的 `config/model-settings.json`。离线查看和 stub 无需模型设置。Claude 兼容入口需要自己的 Anthropic-compatible profile。
 
-1. 调用者提供的文件，例如 CLI `--settings`。
-2. `REPOMENTOR_PY_SETTINGS` 指定的绝对文件路径。
-3. 专属环境变量组：`REPOMENTOR_PY_API_KEY`、`REPOMENTOR_PY_BASE_URL`、`REPOMENTOR_PY_MODEL`，可选 `REPOMENTOR_PY_PROVIDER`。
-4. Python 主目录下的 `config/model-settings.json`。
+通用加载顺序：调用者文件 → `REPOMENTOR_PY_SETTINGS` → 完整 `REPOMENTOR_PY_*` 模型环境变量组 → Python 默认文件。选择完整来源，不拼接字段；无效配置报错。路径环境变量必须为绝对路径。不读取 TS 配置、不自动加载 `.env`，不从共享 `ANTHROPIC_*` / `OPENAI_API_KEY` 获取应用配置。
 
-环境变量组一旦出现任意字段，就必须完整提供必填项；不从默认文件借用密钥或端点。显式文件无效时也不回退。文件支持 `provider`、`apiKey`、`baseUrl`、`model`、`timeout_seconds`、`max_turns`、`max_budget_usd`，完整空模板在 `config/model-settings.example.json`。
+`ChatSettings` 记录 backend、服务版本、模型 revision、量化、总窗口、输出上限、采样和 tokenizer 身份。`presence_penalty` 是可选参数，显式设置后在固定 RAG 与 SDK 中均传到后端；未设置时省略，保持旧 profile 身份。不要输出或提交真实 key。
 
-Python 不自动搜寻当前目录、父目录、目标仓库的 `.env` 或 TS 设置。运行时不读取或修改 TS 配置，也不自动迁移；用户明确要求时，可一次性复制到 Python 本地配置，此后分别维护。真实调用前需要填写 Python 独立配置；stub、已有报告复核及缓存命中的实验不需要凭据。
+执行路径与模型配置分别选择：新建 `ask/chat` 和 `report` 默认SDK，`--engine rag` 选择固定问答对照；已存在的聊天会话沿用保存引擎。两条问答路径共用代码增强取证，SDK在此基础上由Runner补查。`--retriever`选择检索器，`--source-bytes`限制初始源码，均不修改模型总窗口。更改默认入口不代表回答质量通过验收。
 
-## 路径
+## 日常与校准配置
 
-`paths.py` 集中解析位置。源码/可编辑安装默认主目录是 Python 包所在的 `python/`；独立 wheel 安装默认 `~/.repomentor-python/`。`REPOMENTOR_PY_HOME` 可指定专属主目录。
+日常 profile 为既有 Qwen3.5-9B Q4_K_M，关闭思考、温度0 / top_p=1。各项上限的作用与单位不同：
 
-`REPOMENTOR_PY_DATA_DIR` 覆盖私有数据根目录（默认主目录下 `artifacts/`）。CLI 使用其 `runtime/`；实验使用 `corpus/` 和 `live/`；SDK 临时 cwd 与 `CLAUDE_CONFIG_DIR` 使用 `sdk-tmp/session-*`，会话结束删除。`--data-dir` 仅覆盖当前 CLI 的快照、数据库和报告目录，不改变实验缓存或 SDK 临时根目录。
+| 项目 | 配置位置 | 当前日常值与含义 |
+| --- | --- | --- |
+| 模型单次总窗口 | profile `context_window` | 16,384 tokens；输入、工具/schema、模板余量和输出共同使用 |
+| 最终回答输出 | profile `max_tokens` / `--answer-max-tokens` | 最多2,048 tokens；属于总窗口的一部分 |
+| SDK单次研究输出 | `SdkAgentEngine` | 最多1,536 tokens，且不超过profile输出上限 |
+| 初始检索源码 | `RetrievalPolicy.source_bytes` / `--source-bytes` | 最多8,000 UTF-8字节、6个检索单元；不是8K tokens |
+| SDK累计交付源码 | `AgentLimits.max_source_bytes` | 默认36,000字节；跨工具调用累计，不是单次模型窗口 |
 
-路径类环境变量要求绝对路径，以免根目录启动、Notebook 和 CLI 使用不同数据。显式 CLI 路径参数允许相对当前工作目录。公开实验清单和已保存样例继续位于 `python/experiments/`，属于可版本化记录，不能当作私有运行目录。
+问答最终输出遵循profile，报告最终输出默认2,048 tokens；`--answer-max-tokens`显式覆盖二者。SDK日常问答默认最多8次决策、6次工具、300秒。冻结实验可单独限制为4次决策或其他预算，实际值见各自dataset的 `protocol.settings`、`policies` 和 `protocol.limits`；不回写日常profile。通用 `ChatSettings` 类的缺省值也不能代替本机显式profile。未因单个开发案例推广新配置。
 
-默认目录保持与既有 Python 产物兼容，没有重新下载语料或重跑历史模型报告。`freeze_corpus.py --legacy` 也只使用 Python 已审计的 manifest，不再从 TS benchmark 创建回退数据。
+日常配置与历史校准实验分别记录，不把开发诊断中的采样、思考或大窗口配置推广为默认。客户端窗口、服务模型别名与digest须一致；模板、工具/schema、输入和输出共同计入预算。非思考路径使用固定tokenizer并核验身份，历史结果从[实验索引](experiment-index.md)查询。
 
-## SDK 协议环境
+## 检索与部署
 
-官方 SDK 子进程仍需要 `ANTHROPIC_*` 参数，Python adapter 从已选定的 `ModelSettings` 显式生成这些参数。SDK 会合并父进程环境，因此 adapter 在子进程覆盖继承的 `ANTHROPIC_*` 模型/认证/请求头设置，并关闭外部 Bedrock、Vertex、Foundry 路由开关；父进程环境不修改。操作系统的 PATH、代理等通用环境仍正常继承。这是配置隔离，不是操作系统沙箱。
+默认 `syntax / bm25 / cpu`，代码增强开启。神经路径显式指定 `--retriever hybrid-rerank --retrieval-device cuda`，从本地权重加载；检索配置为 `config/model-settings.retrieval.json`，可用 `--retrieval-settings` 或 `REPOMENTOR_PY_RETRIEVAL_SETTINGS` 覆盖。
 
-SDK 的 cwd、配置目录和 MCP 配置与之前一样受控，不加载目标仓库的设置。日志只输出脱敏后的配置；配置无效会在克隆仓库前失败。单次调用超时默认使用 Python 模型配置中的值，只有 `--call-timeout` 显式覆盖。
+本机便携 Ollama 0.34.3，回环端口11435、单并发，复用已有模型层。运行与停止：
 
-## 维护约定
+```powershell
+.\scripts\ollama_local.ps1 status
+.\scripts\ollama_local.ps1 start
+.\scripts\ollama_local.ps1 stop
+```
 
-真实模型配置被 `.gitignore` 排除，公开模板不含凭据。后续 CLI、Notebook 和实验入口应复用 `config.py` 与 `paths.py`，不要重新拼接 TS 路径或从共享模型变量读取配置。历史 TS 对照和资产迁移脚本仍是显式、非日常入口。
+启动器按父PID和完整程序路径管理本项目 runner；`LLAMA_ARG_FIT_TARGET=2048` 是显存余量，不是 token 上限。本机 RTX4060 Laptop 8GB 的速度和offload层数受当时资源占用影响，不把不同运行条件的耗时用于公平排名。新机器安装和权重准备入口见[scripts 索引](../scripts/README.md)，本机已有环境无需重复下载。
 
-## 本轮验证（2026-09-23）
+## 保存与协议
 
-- 指定 Conda 环境下，完整 Python 测试 57 项通过，1 项历史 TS 对照未选中；异常脱敏修正后另复跑配置测试 9 项通过。
-- 覆盖配置来源优先级、不混用凭据、无 TS/通用环境回退、从不同 cwd 启动、独立数据目录、SDK 参数映射、缺配置时不克隆，以及保留文件指定的超时。
-- 从仓库根目录执行 doctor 和真实 CLI stub 流程，产物位于 `python/artifacts/runtime/`；mitt 历史报告复用命中，0 次新增模型 API 调用。
-- Ruff 检查与格式检查通过。未读取或修改真实 TS 配置，未启动 TS 前后端。
+`REPOMENTOR_PY_DATA_DIR` 管独立私有数据根；`--data-dir` 只覆盖该 CLI 的运行目录，不自动迁移模型、快照或缓存。私有数据包含 runtime 会话/索引、corpus 快照、models、tokenizers、服务PID/日志。公开实验位于 `experiments/`，属于结果证据。
+
+SDK 使用显式兼容客户端，关闭 tracing、自动 HTTP 重试和代理继承。六次工具额度统计仓库操作，答案提交另记且不绕过八次模型预算。[Ollama 0.34.3 官方兼容清单](https://github.com/ollama/ollama/blob/v0.34.3/docs/api/openai-compatibility.mdx)未承诺支持 `tool_choice`；预算耗尽由 SDK 回调停止工具循环，不依赖服务遵从此字段。Claude 兼容设置只映射到子进程环境；这不是操作系统沙箱。发送中途失败不自动重发，已发送或不确定 dispatch 都计入对应账本。
+
+模型/快照/配置/输入/实现身份变化后新建会话。旧批次通过离线归档命令核验；不要改身份字段强行复用。凭据、模型设置、权重、源码缓存和运行数据库不提交。

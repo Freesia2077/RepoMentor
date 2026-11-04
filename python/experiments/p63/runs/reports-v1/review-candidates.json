@@ -1,0 +1,397 @@
+[
+  {
+    "candidate_id": "a49e4bd2be3afe40fa747ecb",
+    "source_file": "experiments/p63/runs/reports-v1/cases/ai--nanoid.json",
+    "stage": "explorer",
+    "record_sha256": "4fe3cb9013e142e4d12da59ef8f00d3bfdfcd5f37836eb8ff47dd998fec25da1",
+    "task_id": "history-dev-06",
+    "snapshot_id": "30e277e52d238ad871cb5684",
+    "mode": "sdk",
+    "question": "介绍仓库的用途、类型、技术栈、入口文件和主要模块职责。readme package pyproject index main __init__ src",
+    "answer": {
+      "evidenceClaims": [
+        {
+          "claim": "仓库用途是生成 JavaScript 中用于 URL 的短、安全、唯一的字符串 ID。",
+          "confidence": "high",
+          "evidence": [
+            {
+              "path": "README.md",
+              "supports": "L8: A tiny, secure, URL-friendly, unique string ID generator for JavaScript."
+            },
+            {
+              "path": "package.json",
+              "supports": "L4: A tiny (127 bytes), secure URL-friendly unique string ID generator"
+            }
+          ]
+        },
+        {
+          "claim": "仓库类型是纯 JavaScript 库，无外部依赖，支持 Node.js 和浏览器环境。",
+          "confidence": "high",
+          "evidence": [
+            {
+              "path": "README.md",
+              "supports": "L13: No dependencies."
+            },
+            {
+              "path": "package.json",
+              "supports": "L21: type: module, L23-24: browser field mapping"
+            }
+          ]
+        },
+        {
+          "claim": "仓库技术栈基于 Vite 构建，使用原生 crypto 进行随机数生成。",
+          "confidence": "high",
+          "evidence": [
+            {
+              "path": "package.json",
+              "supports": "L45: start script uses vite"
+            },
+            {
+              "path": "index.js",
+              "supports": "L13: crypto.getRandomValues, L24: Buffer.allocUnsafe"
+            }
+          ]
+        }
+      ],
+      "evidenceCoverage": {
+        "examinedFiles": [
+          "index.js",
+          "README.md",
+          "package.json"
+        ],
+        "gaps": [
+          {
+            "kind": "missing_evidence",
+            "subject": "src 目录结构",
+            "summary": "未找到 src 目录源码，无法确认内部模块职责。",
+            "severity": "medium"
+          },
+          {
+            "kind": "missing_evidence",
+            "subject": "bin 目录源码",
+            "summary": "package.json 仅列出 bin 路径，未读取 bin/nanoid.js 源码。",
+            "severity": "low"
+          }
+        ]
+      },
+      "projectType": {
+        "primary": "JavaScript Library",
+        "secondary": [
+          "CLI Tool",
+          "Build Tool Support"
+        ]
+      },
+      "techStack": {
+        "language": "JavaScript (ESM)",
+        "framework": "Vite",
+        "buildTool": "pnpm / vite build (implied by scripts)"
+      },
+      "fileCount": 49,
+      "entryPoints": [
+        {
+          "file": "index.js",
+          "role": "Main Entry (Default)"
+        },
+        {
+          "file": "index.js",
+          "role": "Browser Entry (via exports)"
+        },
+        {
+          "file": "index.js",
+          "role": "React Native Entry (via exports)"
+        },
+        {
+          "file": "index.js",
+          "role": "Non-Secure Entry (via ./non-secure export)"
+        },
+        {
+          "file": "index.js",
+          "role": "CLI Entry (via ./bin/nanoid.js)"
+        }
+      ],
+      "moduleMap": [
+        {
+          "path": "index.js",
+          "responsibility": "Export nanoid function, random, customRandom, urlAlphabet.",
+          "importance": "core",
+          "justification": "L3: export { urlAlphabet }, L18: export function random"
+        },
+        {
+          "path": "README.md",
+          "responsibility": "Document usage, API, installation, and security features.",
+          "importance": "core",
+          "justification": "L1-25: Usage examples, L264: Usage section header"
+        },
+        {
+          "path": "package.json",
+          "responsibility": "Define package metadata, exports, scripts, and dependencies.",
+          "importance": "core",
+          "justification": "L1-50: name, exports, scripts"
+        }
+      ],
+      "directorySummary": "src 目录未读取，无法确认内部模块职责。",
+      "projectSummary": "Nano ID 是一个用于 JavaScript 的轻量级、安全、URL 友好的唯一字符串 ID 生成器。它使用原生 crypto 生成随机数，支持 Node.js 和浏览器环境。主要入口文件是 index.js，通过 package.json 的 exports 字段支持默认、浏览器、React Native 和非安全模式。构建工具为 Vite，包管理器为 pnpm。未读取 src 目录和 bin 目录源码，因此无法确认内部模块职责和 CLI 具体实现细节。"
+    },
+    "status": "success",
+    "visible_context": [
+      {
+        "path": "index.js",
+        "start_line": 1,
+        "end_line": 50,
+        "content": "import { urlAlphabet } from './url-alphabet/index.js'\n\nexport { urlAlphabet }\n\n// `crypto.getRandomValues` rejects requests over 65536 bytes,\n// so bigger buffers are filled by chunks.\nconst GET_RANDOM_LIMIT = 65536\n\nfunction fillRandom(buffer) {\n  let from = 0\n  while (from < buffer.length) {\n    let to = Math.min(from + GET_RANDOM_LIMIT, buffer.length)\n    crypto.getRandomValues(buffer.subarray(from, to))\n    from = to\n  }\n}\n\nexport function random(bytes) {\n  // `|=` convert `bytes` to number to prevent `valueOf` abusing\n  bytes |= 0\n  if (bytes < 0) throw new RangeError('Wrong ID size')\n  // `random()` is used rarely and not in hot paths, so it makes\n  // a direct crypto call instead of using a byte pool.\n  let buffer = Buffer.allocUnsafe(bytes)\n  fillRandom(buffer)\n  return buffer\n}\n\nexport function customRandom(alphabet, defaultSize, getRandom) {\n  // Random bytes are 0-255. `random % alphabet.length` can waste\n  // that entropy by making some symbols more likely.\n  //\n  // `safeByteCutoff` will be divided by `alphabet.length` without remainder\n  // fixing issue of broken distribution.\n  //\n  // Example: with 17 symbols, `safeByteCutoff` is 255.\n  // Bytes 0-254 preserve entropy evenly: each symbol gets 15 source bytes.\n  // Byte 255 would map to `0` again, making one symbol slightly more likely.\n  // So we reject 255.\n  let safeByteCutoff = 256 - (256 % alphabet.length)\n\n  // Power-of-two alphabets can use `& mask` instead of modulo.\n  if (safeByteCutoff === 256) {\n    let mask = alphabet.length - 1\n\n    return (size = defaultSize) => {\n      if (!size) return ''\n      let id = ''\n      while (true) {\n        let bytes = getRandom(size)",
+        "content_sha256": "1e6c174c3942046811c578202bd44b247cd9cfdd5add5fa32315a901b4c1ef1a"
+      },
+      {
+        "path": "README.md",
+        "start_line": 1,
+        "end_line": 50,
+        "content": "# Nano ID\n\n<img src=\"https://ai.github.io/nanoid/logo.svg\" align=\"right\"\n     alt=\"Nano ID logo by Anton Lovchikov\" width=\"180\" height=\"94\">\n\n**English** | [日本語](./README.ja.md) | [Русский](./README.ru.md) | [简体中文](./README.zh-CN.md) | [Bahasa Indonesia](./README.id-ID.md) | [한국어](./README.ko.md) | [العربية](./README.ar.md)\n\nA tiny, secure, URL-friendly, unique string ID generator for JavaScript.\n\n> “An amazing level of senseless perfectionism,\n> which is simply impossible not to respect.”\n\n- **Small.** 127 bytes (minified and brotlied). No dependencies.\n  [Size Limit] controls the size.\n- **Fast.** 50% faster than native `crypto.randomUUID()`.\n- **Safe.** It uses hardware random generator. Can be used in clusters.\n- **Short IDs.** It uses a larger alphabet than UUID (`A-Za-z0-9_-`).\n  So ID size was reduced from 36 to 21 symbols.\n- **Portable.** Nano ID was ported\n  to over [20 programming languages](./README.md#other-programming-languages).\n\n```js\nimport { nanoid } from \"nanoid\";\nmodel.id = nanoid(); //=> \"V1StGXR8_Z5jdHi6B-myT\"\n```\n\n---\n\n<img src=\"https://cdn.evilmartians.com/badges/logo-no-label.svg\" alt=\"\" width=\"22\" height=\"16\" />  Nano ID is built by <b><a href=\"https://evilmartians.com/\">Evil Martians</a></b>, an American design and engineering consultancy for <b>developer tools, AI, and cybersecurity startups</b>.\n\n---\n\n[Size Limit]: https://github.com/ai/size-limit\n\n## Table of Contents\n\n- [Table of Contents](#table-of-contents)\n- [Comparison with UUID](#comparison-with-uuid)\n- [Benchmark](#benchmark)\n- [Security](#security)\n- [Install](#install)\n  - [JSR](#jsr)\n  - [CDN](#cdn)\n- [API](#api)\n  - [Custom Alphabet or Size](#custom-alphabet-or-size)\n  - [Custom Random Bytes Generator](#custom-random-bytes-generator)\n  - [Non-Secure](#non-secure)\n- [Usage](#usage)\n  - [React](#react)\n  - [React Native](#react-native)",
+        "content_sha256": "d55f2dc98aeeddd51e79378378b4cbba4f21b46891951581df2a177ec43c2833"
+      },
+      {
+        "path": "package.json",
+        "start_line": 1,
+        "end_line": 50,
+        "content": "{\n  \"name\": \"nanoid\",\n  \"version\": \"6.0.1\",\n  \"description\": \"A tiny (127 bytes), secure URL-friendly unique string ID generator\",\n  \"keywords\": [\n    \"id\",\n    \"random\",\n    \"url\",\n    \"uuid\"\n  ],\n  \"license\": \"MIT\",\n  \"author\": \"Andrey Sitnik <andrey@sitnik.es>\",\n  \"repository\": \"ai/nanoid\",\n  \"funding\": [\n    {\n      \"type\": \"github\",\n      \"url\": \"https://github.com/sponsors/ai\"\n    }\n  ],\n  \"bin\": \"./bin/nanoid.js\",\n  \"type\": \"module\",\n  \"sideEffects\": false,\n  \"browser\": {\n    \"./index.js\": \"./index.browser.js\"\n  },\n  \"types\": \"./index.d.ts\",\n  \"react-native\": {\n    \"./index.js\": \"./index.browser.js\"\n  },\n  \"exports\": {\n    \".\": {\n      \"types\": \"./index.d.ts\",\n      \"browser\": \"./index.browser.js\",\n      \"react-native\": \"./index.browser.js\",\n      \"default\": \"./index.js\"\n    },\n    \"./non-secure\": {\n      \"types\": \"./non-secure/index.d.ts\",\n      \"default\": \"./non-secure/index.js\"\n    },\n    \"./package.json\": \"./package.json\"\n  },\n  \"scripts\": {\n    \"clean\": \"rm -rf coverage\",\n    \"start\": \"vite --host 0.0.0.0 test/demo/\",\n    \"test:coverage\": \"bnt --coverage 100 --coverage-exclude 'test/*'\",\n    \"test:lint\": \"oxlint\",\n    \"test:size\": \"pnpm clean && size-limit\",\n    \"test:versions\": \"node ./test/check-versions.js\",\n    \"test:prebuild\": \"node ./test/check-prebuild.js\",",
+        "content_sha256": "50e3e3fd55ff49144a8545e5919ffda0eadc2d399c118a9b83e897fe01f077ac"
+      },
+      {
+        "path": "README.md",
+        "start_line": 264,
+        "end_line": 264,
+        "content": "## Usage",
+        "content_sha256": "63bfd61a0561b255a2caa0a2e3add091ca7e327f2fa06a407cbb2ff341b858d8"
+      },
+      {
+        "path": "pnpm-lock.yaml",
+        "start_line": 811,
+        "end_line": 845,
+        "content": "    hasBin: true\n    peerDependencies:\n      '@types/node': ^20.19.0 || >=22.12.0\n      '@vitejs/devtools': ^0.7.1\n      esbuild: ^0.27.0 || ^0.28.0\n      jiti: '>=1.21.0'\n      less: ^4.0.0\n      sass: ^1.70.0\n      sass-embedded: ^1.70.0\n      stylus: '>=0.54.8'\n      sugarss: ^5.0.0\n      terser: ^5.16.0\n      tsx: ^4.8.1\n      yaml: ^2.4.2\n    peerDependenciesMeta:\n      '@types/node':\n        optional: true\n      '@vitejs/devtools':\n        optional: true\n      esbuild:\n        optional: true\n      jiti:\n        optional: true\n      less:\n        optional: true\n      sass:\n        optional: true\n      sass-embedded:\n        optional: true\n      stylus:\n        optional: true\n      sugarss:\n        optional: true\n      terser:\n        optional: true",
+        "content_sha256": "ff1127a1ccf2b2cef86d37113300760ba0e7c4b396c48d40b02ec654cb50df88"
+      },
+      {
+        "path": "pnpm-lock.yaml",
+        "start_line": 1336,
+        "end_line": 1362,
+        "content": "      '@typescript/typescript-netbsd-x64': 7.0.2\n      '@typescript/typescript-openbsd-arm64': 7.0.2\n      '@typescript/typescript-openbsd-x64': 7.0.2\n      '@typescript/typescript-sunos-x64': 7.0.2\n      '@typescript/typescript-win32-arm64': 7.0.2\n      '@typescript/typescript-win32-x64': 7.0.2\n\n  uid-safe@2.1.5:\n    dependencies:\n      random-bytes: 1.0.0\n\n  uid@2.0.2:\n    dependencies:\n      '@lukeed/csprng': 1.1.0\n\n  uuid@14.0.2: {}\n\n  vite@8.3.0(terser@5.51.2):\n    dependencies:\n      lightningcss: 1.33.0\n      picomatch: 4.0.7\n      postcss: 8.5.28\n      rolldown: 1.2.8\n      tinyglobby: 0.2.17\n    optionalDependencies:\n      fsevents: 2.3.3\n      terser: 5.51.2",
+        "content_sha256": "e18ab4c67fc1017cda980129bb2776247cec0ce5d726af293289d65404281bb9"
+      }
+    ],
+    "quality": {
+      "version": "answer-diagnostics-v1",
+      "issues": [],
+      "semantic_correctness": "not_scored",
+      "complete": null,
+      "human_approved": false
+    },
+    "reviewer": "Codex nonblind model review",
+    "human_approved": false
+  },
+  {
+    "candidate_id": "0d4460b6a7af54d1414cb9e7",
+    "source_file": "experiments/p63/runs/reports-v1/cases/ai--nanoid.json",
+    "stage": "mentor",
+    "record_sha256": "47f8b49009894fcd3b2f5fc438a46b89685a763a3ad090e40f9dbdd4130a1c64",
+    "task_id": "history-dev-06",
+    "snapshot_id": "30e277e52d238ad871cb5684",
+    "mode": "sdk",
+    "question": "解释核心实现、静态依赖与架构，给出从入口到实现再到测试的阅读路径。src index core __init__ test",
+    "answer": null,
+    "status": "truncated",
+    "visible_context": [],
+    "quality": {
+      "version": "answer-diagnostics-v1",
+      "issues": [
+        {
+          "code": "generation_truncated",
+          "severity": "error"
+        }
+      ],
+      "semantic_correctness": "not_scored",
+      "complete": null,
+      "human_approved": false
+    },
+    "reviewer": "Codex nonblind model review",
+    "human_approved": false
+  },
+  {
+    "candidate_id": "959cb55deef483f419bddd1a",
+    "source_file": "experiments/p63/runs/reports-v1/cases/developit--mitt.json",
+    "stage": "explorer",
+    "record_sha256": "0fe0b2974549069c9bd4db1ab3dbd3261b134972d2388fa62ceac39baf376907",
+    "task_id": "history-dev-04",
+    "snapshot_id": "dfdc0816797bf578d0363591",
+    "mode": "sdk",
+    "question": "介绍仓库的用途、类型、技术栈、入口文件和主要模块职责。readme package pyproject index main __init__ src",
+    "answer": {
+      "evidenceClaims": [
+        {
+          "claim": "仓库用途是提供轻量级（约 200 字节压缩）的功能型事件发射器/发布订阅系统。",
+          "confidence": "high",
+          "evidence": [
+            {
+              "path": "package.json",
+              "supports": "L4: 'description': 'Tiny 200b functional Event Emitter / pubsub.'; L34-35: 'keywords': ['events', 'eventemitter', 'emitter', 'pubsub']"
+            },
+            {
+              "path": "README.md",
+              "supports": "L11: 'Tiny 200b functional event emitter / pubsub.'; L13-14: 'Microscopic: weighs less than 200 bytes gzipped'; L15: 'Familiar: same names & ideas as Node's EventEmitter'"
+            }
+          ]
+        },
+        {
+          "claim": "仓库技术栈基于 TypeScript 和 Node.js/NPM 生态，使用 microbundle 构建，支持 IE9+。",
+          "confidence": "high",
+          "evidence": [
+            {
+              "path": "package.json",
+              "supports": "L9: 'source': 'src/index.ts'; L24: 'bundle': 'microbundle -f es,cjs,umd'; L37: 'homepage': 'https://github.com/developit/mitt'"
+            },
+            {
+              "path": "README.md",
+              "supports": "L19: 'Mitt was made for the browser, but works in any JavaScript runtime. It has no dependencies and supports IE9+.'"
+            }
+          ]
+        },
+        {
+          "claim": "入口文件为 src/index.ts，主要模块职责是定义泛型事件发射器接口并导出 mitt 函数。",
+          "confidence": "high",
+          "evidence": [
+            {
+              "path": "package.json",
+              "supports": "L9: 'source': 'src/index.ts'; L6: 'main': 'dist/mitt.js'"
+            },
+            {
+              "path": "src/index.ts",
+              "supports": "L23-39: 定义 Emitter 接口包含 all, on, off, emit 方法；L46-48: 导出默认 mitt 函数"
+            }
+          ]
+        }
+      ],
+      "evidenceCoverage": {
+        "examinedFiles": [
+          "package.json",
+          "README.md",
+          "src/index.ts"
+        ],
+        "gaps": [
+          {
+            "kind": "missing_evidence",
+            "subject": "具体模块职责的源码实现细节（如内部 Map 结构）",
+            "summary": "未读取 src 目录下除 index.ts 外的其他源码文件，无法确认内部实现机制。",
+            "severity": "medium"
+          },
+          {
+            "kind": "missing_evidence",
+            "subject": "测试文件的具体断言逻辑",
+            "summary": "未读取 test/index_test.ts 和 test/test-types-compilation.ts，无法确认测试覆盖范围。",
+            "severity": "low"
+          }
+        ]
+      },
+      "projectType": {
+        "primary": "npm_package",
+        "secondary": [
+          "typescript_project",
+          "javascript_library"
+        ]
+      },
+      "techStack": {
+        "language": "TypeScript",
+        "framework": "None",
+        "buildTool": "microbundle (configured in package.json L24)"
+      },
+      "fileCount": 13,
+      "entryPoints": [
+        {
+          "file": "src/index.ts",
+          "role": "main_source"
+        }
+      ],
+      "moduleMap": [
+        {
+          "path": "src/index.ts",
+          "responsibility": "定义泛型事件发射器类型（EventType, Handler, Emitter）并导出 mitt 函数",
+          "importance": "core",
+          "justification": "package.json L9 指向此文件，且包含所有核心类型定义和导出逻辑"
+        }
+      ],
+      "directorySummary": "仓库包含 package.json、README.md、src/index.ts 等文件，核心逻辑集中在 src/index.ts 中。",
+      "projectSummary": "这是一个轻量级、无依赖、支持 IE9+ 的 TypeScript 事件发射器库，使用 microbundle 构建多格式输出。"
+    },
+    "status": "success",
+    "visible_context": [
+      {
+        "path": "package.json",
+        "start_line": 1,
+        "end_line": 50,
+        "content": "{\n  \"name\": \"mitt\",\n  \"version\": \"3.0.1\",\n  \"description\": \"Tiny 200b functional Event Emitter / pubsub.\",\n  \"module\": \"dist/mitt.mjs\",\n  \"main\": \"dist/mitt.js\",\n  \"jsnext:main\": \"dist/mitt.mjs\",\n  \"umd:main\": \"dist/mitt.umd.js\",\n  \"source\": \"src/index.ts\",\n  \"typings\": \"index.d.ts\",\n  \"exports\": {\n    \"types\": \"./index.d.ts\",\n    \"module\": \"./dist/mitt.mjs\",\n    \"import\": \"./dist/mitt.mjs\",\n    \"require\": \"./dist/mitt.js\",\n    \"default\": \"./dist/mitt.mjs\"\n  },\n  \"scripts\": {\n    \"test\": \"npm-run-all --silent typecheck lint mocha test-types\",\n    \"mocha\": \"mocha test\",\n    \"test-types\": \"tsc test/test-types-compilation.ts --noEmit --strict\",\n    \"lint\": \"eslint src test --ext ts --ext js\",\n    \"typecheck\": \"tsc --noEmit\",\n    \"bundle\": \"microbundle -f es,cjs,umd\",\n    \"build\": \"npm-run-all --silent clean -p bundle -s docs\",\n    \"clean\": \"rimraf dist\",\n    \"docs\": \"documentation readme src/index.ts --section API -q --parse-extension ts\",\n    \"release\": \"npm run -s build -s && npm t && git commit -am $npm_package_version && git tag $npm_package_version && git push && git push --tags && npm publish\"\n  },\n  \"repository\": \"developit/mitt\",\n  \"keywords\": [\n    \"events\",\n    \"eventemitter\",\n    \"emitter\",\n    \"pubsub\"\n  ],\n  \"homepage\": \"https://github.com/developit/mitt\",\n  \"authors\": [\n    \"Jason Miller <jason@developit.ca>\"\n  ],\n  \"license\": \"MIT\",\n  \"files\": [\n    \"dist\",\n    \"index.d.ts\"\n  ],\n  \"mocha\": {\n    \"extension\": [\n      \"ts\"\n    ],\n    \"require\": [",
+        "content_sha256": "4fe0695184264c8404395588e5c0e5f885c1d1ae5f173faecfd1d01a15d84445"
+      },
+      {
+        "path": "README.md",
+        "start_line": 1,
+        "end_line": 50,
+        "content": "<p align=\"center\">\n  <img src=\"https://i.imgur.com/BqsX9NT.png\" width=\"300\" height=\"300\" alt=\"mitt\">\n  <br>\n  <a href=\"https://www.npmjs.org/package/mitt\"><img src=\"https://img.shields.io/npm/v/mitt.svg\" alt=\"npm\"></a>\n  <img src=\"https://github.com/developit/mitt/workflows/CI/badge.svg\" alt=\"build status\">\n  <a href=\"https://unpkg.com/mitt/dist/mitt.js\"><img src=\"https://img.badgesize.io/https://unpkg.com/mitt/dist/mitt.js?compression=gzip\" alt=\"gzip size\"></a>\n</p>\n\n# Mitt\n\n> Tiny 200b functional event emitter / pubsub.\n\n-   **Microscopic:** weighs less than 200 bytes gzipped\n-   **Useful:** a wildcard `\"*\"` event type listens to all events\n-   **Familiar:** same names & ideas as [Node's EventEmitter](https://nodejs.org/api/events.html#events_class_eventemitter)\n-   **Functional:** methods don't rely on `this`\n-   **Great Name:** somehow [mitt](https://npm.im/mitt) wasn't taken\n\nMitt was made for the browser, but works in any JavaScript runtime. It has no dependencies and supports IE9+.\n\n## Table of Contents\n\n-   [Install](#install)\n-   [Usage](#usage)\n-   [Examples & Demos](#examples--demos)\n-   [API](#api)\n-   [Contribute](#contribute)\n-   [License](#license)\n\n## Install\n\nThis project uses [node](http://nodejs.org) and [npm](https://npmjs.com). Go check them out if you don't have them locally installed.\n\n```sh\n$ npm install --save mitt\n```\n\nThen with a module bundler like [rollup](http://rollupjs.org/) or [webpack](https://webpack.js.org/), use as you would anything else:\n\n```javascript\n// using ES6 modules\nimport mitt from 'mitt'\n\n// using CommonJS modules\nvar mitt = require('mitt')\n```\n\nThe [UMD](https://github.com/umdjs/umd) build is also available on [unpkg](https://unpkg.com):\n\n```html",
+        "content_sha256": "fb4e27a57ec36ec2af2c91ef248a1858ab4c51e8da0a7b9c70d52ef4f0f3852f"
+      },
+      {
+        "path": "src/index.ts",
+        "start_line": 1,
+        "end_line": 50,
+        "content": "export type EventType = string | symbol;\n\n// An event handler can take an optional event argument\n// and should not return a value\nexport type Handler<T = unknown> = (event: T) => void;\nexport type WildcardHandler<T = Record<string, unknown>> = (\n\ttype: keyof T,\n\tevent: T[keyof T]\n) => void;\n\n// An array of all currently registered event handlers for a type\nexport type EventHandlerList<T = unknown> = Array<Handler<T>>;\nexport type WildCardEventHandlerList<T = Record<string, unknown>> = Array<\n\tWildcardHandler<T>\n>;\n\n// A map of event types and their corresponding event handlers.\nexport type EventHandlerMap<Events extends Record<EventType, unknown>> = Map<\n\tkeyof Events | '*',\n\tEventHandlerList<Events[keyof Events]> | WildCardEventHandlerList<Events>\n>;\n\nexport interface Emitter<Events extends Record<EventType, unknown>> {\n\tall: EventHandlerMap<Events>;\n\n\ton<Key extends keyof Events>(type: Key, handler: Handler<Events[Key]>): void;\n\ton(type: '*', handler: WildcardHandler<Events>): void;\n\n\toff<Key extends keyof Events>(\n\t\ttype: Key,\n\t\thandler?: Handler<Events[Key]>\n\t): void;\n\toff(type: '*', handler: WildcardHandler<Events>): void;\n\n\temit<Key extends keyof Events>(type: Key, event: Events[Key]): void;\n\temit<Key extends keyof Events>(\n\t\ttype: undefined extends Events[Key] ? Key : never\n\t): void;\n}\n\n/**\n * Mitt: Tiny (~200b) functional event emitter / pubsub.\n * @name mitt\n * @returns {Mitt}\n */\nexport default function mitt<Events extends Record<EventType, unknown>>(\n\tall?: EventHandlerMap<Events>\n): Emitter<Events> {\n\ttype GenericEventHandler =\n\t\t| Handler<Events[keyof Events]>",
+        "content_sha256": "636378778afc10cf45932b8a4ec56799c684ad9b835ef7371bd9977836e98d9c"
+      },
+      {
+        "path": "README.md",
+        "start_line": 123,
+        "end_line": 125,
+        "content": "## API\n\n<!-- Generated by documentation.js. Update this documentation by updating the source code. -->",
+        "content_sha256": "b5d357c2fac953aaaa7c2d07fdcd99c05c90adb249b46e1c0f874af45a963c56"
+      },
+      {
+        "path": "README.md",
+        "start_line": 203,
+        "end_line": 205,
+        "content": "## License\n\n[MIT License](https://opensource.org/licenses/MIT) © [Jason Miller](https://jasonformat.com/)",
+        "content_sha256": "5a81a1f5211ad6d4928e5710d1567f23154ce8303a563e527770796eab3ad3a2"
+      }
+    ],
+    "quality": {
+      "version": "answer-diagnostics-v1",
+      "issues": [],
+      "semantic_correctness": "not_scored",
+      "complete": null,
+      "human_approved": false
+    },
+    "reviewer": "Codex nonblind model review",
+    "human_approved": false
+  },
+  {
+    "candidate_id": "e7158f50de487591b9b0448d",
+    "source_file": "experiments/p63/runs/reports-v1/cases/developit--mitt.json",
+    "stage": "mentor",
+    "record_sha256": "ee4b97e05fe3c97944453d8434a06a8b4318883751a99a16ec2af01cdc5c843a",
+    "task_id": "history-dev-04",
+    "snapshot_id": "dfdc0816797bf578d0363591",
+    "mode": "sdk",
+    "question": "解释核心实现、静态依赖与架构，给出从入口到实现再到测试的阅读路径。src index core __init__ test",
+    "answer": null,
+    "status": "truncated",
+    "visible_context": [],
+    "quality": {
+      "version": "answer-diagnostics-v1",
+      "issues": [
+        {
+          "code": "generation_truncated",
+          "severity": "error"
+        }
+      ],
+      "semantic_correctness": "not_scored",
+      "complete": null,
+      "human_approved": false
+    },
+    "reviewer": "Codex nonblind model review",
+    "human_approved": false
+  }
+]

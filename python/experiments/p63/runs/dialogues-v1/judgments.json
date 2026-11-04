@@ -1,0 +1,581 @@
+[
+  {
+    "candidate_id": "9ef41081d89709938e5e51fb",
+    "correctness": "correct",
+    "citation_support": "supported",
+    "completeness": "adequate",
+    "abstention": "not_applicable",
+    "entry_scope": "correct",
+    "consistency": "consistent",
+    "claims": [
+      {
+        "claim": "ensure_ascii 默认为 True",
+        "status": "supported",
+        "rationale": "属性赋值支持。",
+        "evidence": [
+          {
+            "path": "src/flask/json/provider.py",
+            "start_line": 144,
+            "end_line": 148
+          }
+        ],
+        "verified_evidence": [
+          {
+            "path": "src/flask/json/provider.py",
+            "start_line": 144,
+            "end_line": 148,
+            "content": "    ensure_ascii = True\n    \"\"\"Replace non-ASCII characters with escape sequences. This may be\n    more compatible with some clients, but can be disabled for better\n    performance and size.\n    \"\"\"",
+            "content_sha256": "ee092b2a487a1f1330c288514c7523b7bf64a98400affa02027cb584358f7847",
+            "visible_to_generator": true
+          }
+        ]
+      }
+    ],
+    "notes": "默认 True，引用定义与说明。",
+    "key_points": null,
+    "candidate_sha256": "368fc71099fac6af5bb2b8ca62ff77040df40dd86c575eda33705df46898d6d8",
+    "reviewer": "Codex (current session)",
+    "review_type": "nonblind_model_development_review",
+    "human_approved": false,
+    "training_eligible": false,
+    "solved": true
+  },
+  {
+    "candidate_id": "cc0db79500caafeca3d403fc",
+    "correctness": "correct",
+    "citation_support": "supported",
+    "completeness": "adequate",
+    "abstention": "not_applicable",
+    "entry_scope": "correct",
+    "consistency": "consistent",
+    "claims": [
+      {
+        "claim": "False 时保留原 Unicode 字符",
+        "status": "supported",
+        "rationale": "属性说明支持；对应测试还比较真实雪人字符。",
+        "evidence": [
+          {
+            "path": "src/flask/json/provider.py",
+            "start_line": 144,
+            "end_line": 148
+          },
+          {
+            "path": "tests/test_json.py",
+            "start_line": 48,
+            "end_line": 54
+          }
+        ],
+        "verified_evidence": [
+          {
+            "path": "src/flask/json/provider.py",
+            "start_line": 144,
+            "end_line": 148,
+            "content": "    ensure_ascii = True\n    \"\"\"Replace non-ASCII characters with escape sequences. This may be\n    more compatible with some clients, but can be disabled for better\n    performance and size.\n    \"\"\"",
+            "content_sha256": "ee092b2a487a1f1330c288514c7523b7bf64a98400affa02027cb584358f7847",
+            "visible_to_generator": true
+          },
+          {
+            "path": "tests/test_json.py",
+            "start_line": 48,
+            "end_line": 54,
+            "content": "@pytest.mark.parametrize(\n    \"test_value,expected\", [(True, '\"\\\\u2603\"'), (False, '\"\\u2603\"')]\n)\ndef test_json_as_unicode(test_value, expected, app, app_ctx):\n    app.json.ensure_ascii = test_value\n    rv = app.json.dumps(\"\\N{SNOWMAN}\")\n    assert rv == expected",
+            "content_sha256": "abbec6ea28d255affa27b1352a9ab6fafa2ddad25386325a49481501a7fe5b63",
+            "visible_to_generator": false
+          }
+        ]
+      }
+    ],
+    "notes": "跟进开关 False 的 Unicode 行为正确，沿用正确目标。",
+    "key_points": null,
+    "candidate_sha256": "8baefad7861c432b2808ff90f2af7c1aac9a73dc164137aef46eab2fc53743df",
+    "reviewer": "Codex (current session)",
+    "review_type": "nonblind_model_development_review",
+    "human_approved": false,
+    "training_eligible": false,
+    "solved": true
+  },
+  {
+    "candidate_id": "897795f606a338b057b23c21",
+    "correctness": "correct",
+    "citation_support": "supported",
+    "completeness": "adequate",
+    "abstention": "not_applicable",
+    "entry_scope": "correct",
+    "consistency": "consistent",
+    "claims": [
+      {
+        "claim": "test_json_as_unicode 验证开关",
+        "status": "supported",
+        "rationale": "参数 True/False，赋值后序列化并比较预期。",
+        "evidence": [
+          {
+            "path": "tests/test_json.py",
+            "start_line": 48,
+            "end_line": 54
+          }
+        ],
+        "verified_evidence": [
+          {
+            "path": "tests/test_json.py",
+            "start_line": 48,
+            "end_line": 54,
+            "content": "@pytest.mark.parametrize(\n    \"test_value,expected\", [(True, '\"\\\\u2603\"'), (False, '\"\\u2603\"')]\n)\ndef test_json_as_unicode(test_value, expected, app, app_ctx):\n    app.json.ensure_ascii = test_value\n    rv = app.json.dumps(\"\\N{SNOWMAN}\")\n    assert rv == expected",
+            "content_sha256": "abbec6ea28d255affa27b1352a9ab6fafa2ddad25386325a49481501a7fe5b63",
+            "visible_to_generator": true
+          }
+        ]
+      }
+    ],
+    "notes": "准确定位测试名称并引用开关两种参数与断言。",
+    "key_points": null,
+    "candidate_sha256": "91452b95ca42db0ebc705d02312c34fde744f8cd643bfdaf19abfd55f4870deb",
+    "reviewer": "Codex (current session)",
+    "review_type": "nonblind_model_development_review",
+    "human_approved": false,
+    "training_eligible": false,
+    "solved": true
+  },
+  {
+    "candidate_id": "daf74aab74bcad6178ea85ae",
+    "correctness": "correct",
+    "citation_support": "supported",
+    "completeness": "partial",
+    "abstention": "not_applicable",
+    "entry_scope": "correct",
+    "consistency": "consistent",
+    "claims": [
+      {
+        "claim": "dump 写文件，具体 dumps 返回字符串",
+        "status": "supported",
+        "rationale": "fp.write(self.dumps(...)) 和 DefaultJSONProvider.dumps 支持。",
+        "evidence": [
+          {
+            "path": "src/flask/json/provider.py",
+            "start_line": 49,
+            "end_line": 57
+          },
+          {
+            "path": "src/flask/json/provider.py",
+            "start_line": 166,
+            "end_line": 179
+          }
+        ],
+        "verified_evidence": [
+          {
+            "path": "src/flask/json/provider.py",
+            "start_line": 49,
+            "end_line": 57,
+            "content": "    def dump(self, obj: t.Any, fp: t.IO[str], **kwargs: t.Any) -> None:\n        \"\"\"Serialize data as JSON and write to a file.\n\n        :param obj: The data to serialize.\n        :param fp: A file opened for writing text. Should use the UTF-8\n            encoding to be valid JSON.\n        :param kwargs: May be passed to the underlying JSON library.\n        \"\"\"\n        fp.write(self.dumps(obj, **kwargs))",
+            "content_sha256": "eabc78676d2f1d6542018a170e32dc6a6ea18d9c028c46a54886d9373cfdae93",
+            "visible_to_generator": true
+          },
+          {
+            "path": "src/flask/json/provider.py",
+            "start_line": 166,
+            "end_line": 179,
+            "content": "    def dumps(self, obj: t.Any, **kwargs: t.Any) -> str:\n        \"\"\"Serialize data as JSON to a string.\n\n        Keyword arguments are passed to :func:`json.dumps`. Sets some\n        parameter defaults from the :attr:`default`,\n        :attr:`ensure_ascii`, and :attr:`sort_keys` attributes.\n\n        :param obj: The data to serialize.\n        :param kwargs: Passed to :func:`json.dumps`.\n        \"\"\"\n        kwargs.setdefault(\"default\", self.default)\n        kwargs.setdefault(\"ensure_ascii\", self.ensure_ascii)\n        kwargs.setdefault(\"sort_keys\", self.sort_keys)\n        return json.dumps(obj, **kwargs)",
+            "content_sha256": "2b62604253e6930250ab4c10f2a09f8c95ba0a57a5cc06d2083db8021fa5b88c",
+            "visible_to_generator": true
+          }
+        ]
+      }
+    ],
+    "notes": "切换目标后引用了 dump 和 dumps，写入/字符串区别正确；问的是返回行为，未明确 dump 返回 None，且引用 dumps 为具体默认实现。",
+    "key_points": null,
+    "candidate_sha256": "b1b07652c363e7a587c6924747d65054fe3911ddafd4ad43658e7d41ba6394dd",
+    "reviewer": "Codex (current session)",
+    "review_type": "nonblind_model_development_review",
+    "human_approved": false,
+    "training_eligible": false,
+    "solved": false
+  },
+  {
+    "candidate_id": "9205060cececf7ece7d8523c",
+    "correctness": "correct",
+    "citation_support": "supported",
+    "completeness": "adequate",
+    "abstention": "not_applicable",
+    "entry_scope": "correct",
+    "consistency": "consistent",
+    "claims": [
+      {
+        "claim": "on 不转小写",
+        "status": "supported",
+        "rationale": "FOO/Bar 原样保留，小写键不存在。",
+        "evidence": [
+          {
+            "path": "test/index_test.ts",
+            "start_line": 79,
+            "end_line": 90
+          }
+        ],
+        "verified_evidence": [
+          {
+            "path": "test/index_test.ts",
+            "start_line": 79,
+            "end_line": 90,
+            "content": "\t\tit('should NOT normalize case', () => {\n\t\t\tconst foo = () => {};\n\t\t\tinst.on('FOO', foo);\n\t\t\tinst.on('Bar', foo);\n\t\t\tinst.on('baz:baT!', foo);\n\n\t\t\texpect(events.get('FOO')).to.deep.equal([foo]);\n\t\t\texpect(events.has('foo')).to.equal(false);\n\t\t\texpect(events.get('Bar')).to.deep.equal([foo]);\n\t\t\texpect(events.has('bar')).to.equal(false);\n\t\t\texpect(events.get('baz:baT!')).to.deep.equal([foo]);\n\t\t});",
+            "content_sha256": "7c7ae10f82f38319cf3cf181161ee7bfb29bde7819610b697836ace1ba119048",
+            "visible_to_generator": true
+          }
+        ]
+      }
+    ],
+    "notes": "不转小写的结论由真实测试断言支持。",
+    "key_points": null,
+    "candidate_sha256": "a0241f57838de312d1a3f6e00710c28ccb693f61b2e62b1b50acc119c7812cfe",
+    "reviewer": "Codex (current session)",
+    "review_type": "nonblind_model_development_review",
+    "human_approved": false,
+    "training_eligible": false,
+    "solved": true
+  },
+  {
+    "candidate_id": "a0734d659c0c68656857b9ff",
+    "correctness": "correct",
+    "citation_support": "supported",
+    "completeness": "adequate",
+    "abstention": "not_applicable",
+    "entry_scope": "correct",
+    "consistency": "consistent",
+    "claims": [
+      {
+        "claim": "测试验证不同大小写不合并",
+        "status": "supported",
+        "rationale": "断言原始键存在、小写键不存在。",
+        "evidence": [
+          {
+            "path": "test/index_test.ts",
+            "start_line": 79,
+            "end_line": 90
+          }
+        ],
+        "verified_evidence": [
+          {
+            "path": "test/index_test.ts",
+            "start_line": 79,
+            "end_line": 90,
+            "content": "\t\tit('should NOT normalize case', () => {\n\t\t\tconst foo = () => {};\n\t\t\tinst.on('FOO', foo);\n\t\t\tinst.on('Bar', foo);\n\t\t\tinst.on('baz:baT!', foo);\n\n\t\t\texpect(events.get('FOO')).to.deep.equal([foo]);\n\t\t\texpect(events.has('foo')).to.equal(false);\n\t\t\texpect(events.get('Bar')).to.deep.equal([foo]);\n\t\t\texpect(events.has('bar')).to.equal(false);\n\t\t\texpect(events.get('baz:baT!')).to.deep.equal([foo]);\n\t\t});",
+            "content_sha256": "7c7ae10f82f38319cf3cf181161ee7bfb29bde7819610b697836ace1ba119048",
+            "visible_to_generator": true
+          }
+        ]
+      }
+    ],
+    "notes": "沿用 on 目标，说明不同大小写视为不同键，并引用真实断言。",
+    "key_points": null,
+    "candidate_sha256": "8c82222a84597c726f6298e0ddec5747924d0922d933d1f6341f4f07e2e66437",
+    "reviewer": "Codex (current session)",
+    "review_type": "nonblind_model_development_review",
+    "human_approved": false,
+    "training_eligible": false,
+    "solved": true
+  },
+  {
+    "candidate_id": "b9cf8ce5b22818f0f9fda4ac",
+    "correctness": "correct",
+    "citation_support": "supported",
+    "completeness": "adequate",
+    "abstention": "not_applicable",
+    "entry_scope": "correct",
+    "consistency": "consistent",
+    "claims": [
+      {
+        "claim": "清空该类型处理器",
+        "status": "supported",
+        "rationale": "all.set(type, [])。",
+        "evidence": [
+          {
+            "path": "src/index.ts",
+            "start_line": 82,
+            "end_line": 91
+          }
+        ],
+        "verified_evidence": [
+          {
+            "path": "src/index.ts",
+            "start_line": 82,
+            "end_line": 91,
+            "content": "\t\toff<Key extends keyof Events>(type: Key, handler?: GenericEventHandler) {\n\t\t\tconst handlers: Array<GenericEventHandler> | undefined = all!.get(type);\n\t\t\tif (handlers) {\n\t\t\t\tif (handler) {\n\t\t\t\t\thandlers.splice(handlers.indexOf(handler) >>> 0, 1);\n\t\t\t\t} else {\n\t\t\t\t\tall!.set(type, []);\n\t\t\t\t}\n\t\t\t}\n\t\t},",
+            "content_sha256": "3999fdef36669b69849c862d08047c5ed32691b99d7e2ba932a515e43d3324e0",
+            "visible_to_generator": true
+          }
+        ]
+      }
+    ],
+    "notes": "省略 handler 时清空该类型全部处理器，set 空数组及文档支持。",
+    "key_points": null,
+    "candidate_sha256": "5c30cb83c38ceacf573f1aa4dde52201daf81f55c218862867962ee5f78e52cd",
+    "reviewer": "Codex (current session)",
+    "review_type": "nonblind_model_development_review",
+    "human_approved": false,
+    "training_eligible": false,
+    "solved": true
+  },
+  {
+    "candidate_id": "8e82eb5ecfec7a0a94d9c887",
+    "correctness": "partially_correct",
+    "citation_support": "partial",
+    "completeness": "adequate",
+    "abstention": "not_applicable",
+    "entry_scope": "correct",
+    "consistency": "contradictory",
+    "claims": [
+      {
+        "claim": "先说会删键，后说不会删键",
+        "status": "partial",
+        "rationale": "实际只清空数组而保留键。",
+        "evidence": [
+          {
+            "path": "src/index.ts",
+            "start_line": 82,
+            "end_line": 91
+          }
+        ],
+        "verified_evidence": [
+          {
+            "path": "src/index.ts",
+            "start_line": 82,
+            "end_line": 91,
+            "content": "\t\toff<Key extends keyof Events>(type: Key, handler?: GenericEventHandler) {\n\t\t\tconst handlers: Array<GenericEventHandler> | undefined = all!.get(type);\n\t\t\tif (handlers) {\n\t\t\t\tif (handler) {\n\t\t\t\t\thandlers.splice(handlers.indexOf(handler) >>> 0, 1);\n\t\t\t\t} else {\n\t\t\t\t\tall!.set(type, []);\n\t\t\t\t}\n\t\t\t}\n\t\t},",
+            "content_sha256": "3999fdef36669b69849c862d08047c5ed32691b99d7e2ba932a515e43d3324e0",
+            "visible_to_generator": true
+          }
+        ]
+      }
+    ],
+    "notes": "后半句不删除键正确，但对是否删除开头答“会”，前后矛盾。",
+    "key_points": null,
+    "candidate_sha256": "6c5200616b57c8b009976ace9cfdc9d9d8b68885b2fae029398627a48f98defa",
+    "reviewer": "Codex (current session)",
+    "review_type": "nonblind_model_development_review",
+    "human_approved": false,
+    "training_eligible": false,
+    "solved": false
+  },
+  {
+    "candidate_id": "3695d00d235f72a74d0468d7",
+    "correctness": "unverifiable",
+    "citation_support": "not_applicable",
+    "completeness": "insufficient",
+    "abstention": "not_applicable",
+    "entry_scope": "unverifiable",
+    "consistency": "consistent",
+    "claims": [
+      {
+        "claim": "没有可发布答案",
+        "status": "unverifiable",
+        "rationale": "首轮研究输出截断；后三轮阻塞，没有伪造关联答案。",
+        "evidence": [],
+        "verified_evidence": []
+      }
+    ],
+    "notes": "首轮研究输出截断；后三轮阻塞，没有伪造关联答案。",
+    "key_points": null,
+    "candidate_sha256": "1b553a6e4832bc020f10e6f048a98541bce1db5f24c4c8b6b61db62902012f80",
+    "reviewer": "Codex (current session)",
+    "review_type": "nonblind_model_development_review",
+    "human_approved": false,
+    "training_eligible": false,
+    "solved": false
+  },
+  {
+    "candidate_id": "fc12e7d6fb27fd3ff836dfb0",
+    "correctness": "correct",
+    "citation_support": "partial",
+    "completeness": "adequate",
+    "abstention": "not_applicable",
+    "entry_scope": "correct",
+    "consistency": "consistent",
+    "claims": [
+      {
+        "claim": "True 返回空字典，否则 getproxies",
+        "status": "supported",
+        "rationale": "完整函数支持，引用范围缺 False 分支。",
+        "evidence": [
+          {
+            "path": "src/requests/utils.py",
+            "start_line": 816,
+            "end_line": 825
+          }
+        ],
+        "verified_evidence": [
+          {
+            "path": "src/requests/utils.py",
+            "start_line": 816,
+            "end_line": 825,
+            "content": "def get_environ_proxies(url, no_proxy=None):\n    \"\"\"\n    Return a dict of environment proxies.\n\n    :rtype: dict\n    \"\"\"\n    if should_bypass_proxies(url, no_proxy=no_proxy):\n        return {}\n    else:\n        return getproxies()",
+            "content_sha256": "988e8929b6e4d2c33a504031023aa337574e2ea74a7acb00327a141ab2bd390d",
+            "visible_to_generator": true
+          }
+        ]
+      }
+    ],
+    "notes": "bypass True/False 两分支描述正确，但只引用 True 分支，漏掉返回 getproxies 的 825 行。",
+    "key_points": null,
+    "candidate_sha256": "a5a91454bd06d42e8833d546be513750eab8b9f4f6b13ee5a2f1211d7a831eb9",
+    "reviewer": "Codex (current session)",
+    "review_type": "nonblind_model_development_review",
+    "human_approved": false,
+    "training_eligible": false,
+    "solved": false
+  },
+  {
+    "candidate_id": "0d5ab2d13bf31024a3443c51",
+    "correctness": "correct",
+    "citation_support": "supported",
+    "completeness": "adequate",
+    "abstention": "not_applicable",
+    "entry_scope": "correct",
+    "consistency": "consistent",
+    "claims": [
+      {
+        "claim": "显式 no_proxy 优先",
+        "status": "supported",
+        "rationale": "只有 no_proxy is None 时才读环境。",
+        "evidence": [
+          {
+            "path": "src/requests/utils.py",
+            "start_line": 769,
+            "end_line": 771
+          }
+        ],
+        "verified_evidence": [
+          {
+            "path": "src/requests/utils.py",
+            "start_line": 769,
+            "end_line": 771,
+            "content": "    no_proxy_arg = no_proxy\n    if no_proxy is None:\n        no_proxy = get_proxy(\"no_proxy\")",
+            "content_sha256": "687c697bcb7b0ab5fbc3e58c992186e388ed4fd1ddde0266cd640aef6879d88b",
+            "visible_to_generator": true
+          }
+        ]
+      }
+    ],
+    "notes": "追问补查到了实际 None 条件，显式参数优先正确且有直接引用。",
+    "key_points": null,
+    "candidate_sha256": "93b3f1b5204f6809aa87eb6da82b191cf4a3885f21c9bc3896e883f4257f3f39",
+    "reviewer": "Codex (current session)",
+    "review_type": "nonblind_model_development_review",
+    "human_approved": false,
+    "training_eligible": false,
+    "solved": true
+  },
+  {
+    "candidate_id": "1754e88fac27f5599d9d1d69",
+    "correctness": "partially_correct",
+    "citation_support": "partial",
+    "completeness": "partial",
+    "abstention": "not_applicable",
+    "entry_scope": "correct",
+    "consistency": "consistent",
+    "claims": [
+      {
+        "claim": "非空字典断言验证未绕过",
+        "status": "supported",
+        "rationale": "test_not_bypass 确有这个断言。",
+        "evidence": [
+          {
+            "path": "tests/test_utils.py",
+            "start_line": 242,
+            "end_line": 243
+          }
+        ],
+        "verified_evidence": [
+          {
+            "path": "tests/test_utils.py",
+            "start_line": 242,
+            "end_line": 243,
+            "content": "    def test_not_bypass(self, url):\n        assert get_environ_proxies(url, no_proxy=None) != {}",
+            "content_sha256": "519656fefb5f1e2764f7cf30fd6a7892caea6d1fb8f02691f331a1ff8df6e38d",
+            "visible_to_generator": true
+          }
+        ]
+      },
+      {
+        "claim": "断言所属测试名为 test_get_environ_proxies",
+        "status": "contradicted",
+        "rationale": "所引函数实际名为 test_not_bypass。",
+        "evidence": [
+          {
+            "path": "tests/test_utils.py",
+            "start_line": 242,
+            "end_line": 243
+          }
+        ],
+        "verified_evidence": [
+          {
+            "path": "tests/test_utils.py",
+            "start_line": 242,
+            "end_line": 243,
+            "content": "    def test_not_bypass(self, url):\n        assert get_environ_proxies(url, no_proxy=None) != {}",
+            "content_sha256": "519656fefb5f1e2764f7cf30fd6a7892caea6d1fb8f02691f331a1ff8df6e38d",
+            "visible_to_generator": true
+          }
+        ]
+      }
+    ],
+    "notes": "非空断言是真实的，但实际函数名是 test_not_bypass，沿用了题目错误名称而未纠正。",
+    "key_points": null,
+    "candidate_sha256": "85ff412dc8b62b2d676dc45d1b612a906d1f10321bc6bb2c9a375ba28d2a1057",
+    "reviewer": "Codex (current session)",
+    "review_type": "nonblind_model_development_review",
+    "human_approved": false,
+    "training_eligible": false,
+    "solved": false
+  },
+  {
+    "candidate_id": "39c3bcca5fb6d5944ad3d541",
+    "correctness": "correct",
+    "citation_support": "partial",
+    "completeness": "partial",
+    "abstention": "appropriate",
+    "entry_scope": "correct",
+    "consistency": "consistent",
+    "claims": [
+      {
+        "claim": "测试不能证明线上代理可达",
+        "status": "supported",
+        "rationale": "get_environ_proxies 仅判断绕过并返回配置，无连通请求。",
+        "evidence": [
+          {
+            "path": "src/requests/utils.py",
+            "start_line": 816,
+            "end_line": 825
+          },
+          {
+            "path": "tests/test_utils.py",
+            "start_line": 242,
+            "end_line": 243
+          }
+        ],
+        "verified_evidence": [
+          {
+            "path": "src/requests/utils.py",
+            "start_line": 816,
+            "end_line": 825,
+            "content": "def get_environ_proxies(url, no_proxy=None):\n    \"\"\"\n    Return a dict of environment proxies.\n\n    :rtype: dict\n    \"\"\"\n    if should_bypass_proxies(url, no_proxy=no_proxy):\n        return {}\n    else:\n        return getproxies()",
+            "content_sha256": "988e8929b6e4d2c33a504031023aa337574e2ea74a7acb00327a141ab2bd390d",
+            "visible_to_generator": false
+          },
+          {
+            "path": "tests/test_utils.py",
+            "start_line": 242,
+            "end_line": 243,
+            "content": "    def test_not_bypass(self, url):\n        assert get_environ_proxies(url, no_proxy=None) != {}",
+            "content_sha256": "519656fefb5f1e2764f7cf30fd6a7892caea6d1fb8f02691f331a1ff8df6e38d",
+            "visible_to_generator": true
+          }
+        ]
+      }
+    ],
+    "notes": "不能证明线上可达是正确的，但未解释只检查代理配置、没有网络连通性测量；单独断言引用不足。",
+    "key_points": null,
+    "candidate_sha256": "175e638d2f1d9ebdefa84e1d53538f007b8860ed7bf17e86d23f7a48ca185c3a",
+    "reviewer": "Codex (current session)",
+    "review_type": "nonblind_model_development_review",
+    "human_approved": false,
+    "training_eligible": false,
+    "solved": false
+  }
+]

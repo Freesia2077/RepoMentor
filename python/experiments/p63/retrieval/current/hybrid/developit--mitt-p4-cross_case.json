@@ -1,0 +1,250 @@
+{
+  "task_id": "developit--mitt-p4-cross_case",
+  "repository": "developit/mitt",
+  "split": "validation",
+  "index_id": "321067e423593b25c93984cd",
+  "base_index_id": "cfe4cd5c1dc29345298aef27",
+  "chunk_ids_sha256": "dfa5a607241b1ee1d71fa2bec1e9a93f26572ed93ff6e235aeeac99caa2415c7",
+  "retriever": "hybrid",
+  "metrics": {
+    "recall_at_6": 1.0,
+    "recall_at_20": 1.0,
+    "mrr": 1.0,
+    "target_overlap_recall_at_6": 1.0,
+    "target_overlap_recall_at_20": 1.0,
+    "line_coverage_at_6": 1.0
+  },
+  "first_query_seconds": 0.002510900000061156,
+  "warm_query_seconds": 0.007464100000106555,
+  "index_open_build_seconds": 0.09483559999989666,
+  "chunks": 91,
+  "candidates": [
+    {
+      "snapshot_id": "dfdc0816797bf578d0363591",
+      "chunk_id": "37bc1b2cefd41977c95f3a31",
+      "path": "src/index.ts",
+      "start_line": 66,
+      "end_line": 73,
+      "content_hash": "0a5bf296ae849cd916f0b4eedbc3b3dbd431acb523f64fede2782b79ff119004",
+      "content": "\t\ton<Key extends keyof Events>(type: Key, handler: GenericEventHandler) {\n\t\t\tconst handlers: Array<GenericEventHandler> | undefined = all!.get(type);\n\t\t\tif (handlers) {\n\t\t\t\thandlers.push(handler);\n\t\t\t} else {\n\t\t\t\tall!.set(type, [handler] as EventHandlerList<Events[keyof Events]>);\n\t\t\t}\n\t\t},",
+      "symbol": "mitt.on",
+      "truncated": false
+    },
+    {
+      "snapshot_id": "dfdc0816797bf578d0363591",
+      "chunk_id": "d16136306a6dd93aed1ca596",
+      "path": "src/index.ts",
+      "start_line": 46,
+      "end_line": 48,
+      "content_hash": "4971337b917d33120efcc73ce79d767fbd33c600c9f3f0d9257ae3b3a8486fe5",
+      "content": "export default function mitt<Events extends Record<EventType, unknown>>(\n\tall?: EventHandlerMap<Events>\n): Emitter<Events> {",
+      "symbol": "mitt",
+      "truncated": false
+    },
+    {
+      "snapshot_id": "dfdc0816797bf578d0363591",
+      "chunk_id": "a163da9bf09298078f9fecc2",
+      "path": "test/index_test.ts",
+      "start_line": 79,
+      "end_line": 90,
+      "content_hash": "7c7ae10f82f38319cf3cf181161ee7bfb29bde7819610b697836ace1ba119048",
+      "content": "\t\tit('should NOT normalize case', () => {\n\t\t\tconst foo = () => {};\n\t\t\tinst.on('FOO', foo);\n\t\t\tinst.on('Bar', foo);\n\t\t\tinst.on('baz:baT!', foo);\n\n\t\t\texpect(events.get('FOO')).to.deep.equal([foo]);\n\t\t\texpect(events.has('foo')).to.equal(false);\n\t\t\texpect(events.get('Bar')).to.deep.equal([foo]);\n\t\t\texpect(events.has('bar')).to.equal(false);\n\t\t\texpect(events.get('baz:baT!')).to.deep.equal([foo]);\n\t\t});",
+      "symbol": "describe:'mitt#'.describe:'on()'.it:'should NOT normalize case'",
+      "truncated": false
+    },
+    {
+      "snapshot_id": "dfdc0816797bf578d0363591",
+      "chunk_id": "461f7b0604c9898cce558967",
+      "path": "test/index_test.ts",
+      "start_line": 121,
+      "end_line": 136,
+      "content_hash": "0c8e4952c1c08847cd1045d3c53f4057129dd7591fb106c9fdb86a402f70d6a3",
+      "content": "\t\tit('should NOT normalize case', () => {\n\t\t\tconst foo = () => {};\n\t\t\tinst.on('FOO', foo);\n\t\t\tinst.on('Bar', foo);\n\t\t\tinst.on('baz:bat!', foo);\n\n\t\t\tinst.off('FOO', foo);\n\t\t\tinst.off('Bar', foo);\n\t\t\tinst.off('baz:baT!', foo);\n\n\t\t\texpect(events.get('FOO')).to.be.empty;\n\t\t\texpect(events.has('foo')).to.equal(false);\n\t\t\texpect(events.get('Bar')).to.be.empty;\n\t\t\texpect(events.has('bar')).to.equal(false);\n\t\t\texpect(events.get('baz:bat!')).to.have.lengthOf(1);\n\t\t});",
+      "symbol": "describe:'mitt#'.describe:'off()'.it:'should NOT normalize case'",
+      "truncated": false
+    },
+    {
+      "snapshot_id": "dfdc0816797bf578d0363591",
+      "chunk_id": "ab438e22b6804d7d1dc966b2",
+      "path": "test/index_test.ts",
+      "start_line": 176,
+      "end_line": 187,
+      "content_hash": "a46a29e60735e70e1f3edbbcce03aceb8d10418981e3f70eb98d22faee9791e4",
+      "content": "\t\tit('should NOT ignore case', () => {\n\t\t\tconst onFoo = spy(),\n\t\t\t\tonFOO = spy();\n\t\t\tevents.set('Foo', [onFoo]);\n\t\t\tevents.set('FOO', [onFOO]);\n\n\t\t\tinst.emit('Foo', 'Foo arg');\n\t\t\tinst.emit('FOO', 'FOO arg');\n\n\t\t\texpect(onFoo).to.have.been.calledOnce.and.calledWith('Foo arg');\n\t\t\texpect(onFOO).to.have.been.calledOnce.and.calledWith('FOO arg');\n\t\t});",
+      "symbol": "describe:'mitt#'.describe:'emit()'.it:'should NOT ignore case'",
+      "truncated": false
+    },
+    {
+      "snapshot_id": "dfdc0816797bf578d0363591",
+      "chunk_id": "0411b98a1da63ce9b6a61abb",
+      "path": "test/index_test.ts",
+      "start_line": 7,
+      "end_line": 23,
+      "content_hash": "a663ac8cf61a38762a58cfd70b5ed017f13f5297f5f9bb39dd792271ce930d1d",
+      "content": "describe('mitt', () => {\n\tit('should default export be a function', () => {\n\t\texpect(mitt).to.be.a('function');\n\t});\n\n\tit('should accept an optional event handler map', () => {\n\t\texpect(() => mitt(new Map())).not.to.throw;\n\t\tconst map = new Map();\n\t\tconst a = spy();\n\t\tconst b = spy();\n\t\tmap.set('foo', [a, b]);\n\t\tconst events = mitt<{ foo: undefined }>(map);\n\t\tevents.emit('foo');\n\t\texpect(a).to.have.been.calledOnce;\n\t\texpect(b).to.have.been.calledOnce;\n\t});\n});",
+      "symbol": "describe:'mitt'",
+      "truncated": false
+    },
+    {
+      "snapshot_id": "dfdc0816797bf578d0363591",
+      "chunk_id": "09d6a1e86ae4433fc6d2950d",
+      "path": "test/index_test.ts",
+      "start_line": 52,
+      "end_line": 54,
+      "content_hash": "0da93d3fe4c3daa8b49437efdf705594f1ae76cb6974d27ecf27319415a3cf78",
+      "content": "\t\tit('should be a function', () => {\n\t\t\texpect(inst).to.have.property('on').that.is.a('function');\n\t\t});",
+      "symbol": "describe:'mitt#'.describe:'on()'.it:'should be a function'",
+      "truncated": false
+    },
+    {
+      "snapshot_id": "dfdc0816797bf578d0363591",
+      "chunk_id": "d10c1801272a2b6830284697",
+      "path": "test/index_test.ts",
+      "start_line": 100,
+      "end_line": 105,
+      "content_hash": "8d8dc86be729ff1ab191de9f7404023cf0ea7f3416628c4f4556aa46ba160b10",
+      "content": "\t\tit('should add duplicate listeners', () => {\n\t\t\tconst foo = () => {};\n\t\t\tinst.on('foo', foo);\n\t\t\tinst.on('foo', foo);\n\t\t\texpect(events.get('foo')).to.deep.equal([foo, foo]);\n\t\t});",
+      "symbol": "describe:'mitt#'.describe:'on()'.it:'should add duplicate listeners'",
+      "truncated": false
+    },
+    {
+      "snapshot_id": "dfdc0816797bf578d0363591",
+      "chunk_id": "18e34a39d32de1411ccdbe30",
+      "path": "test/index_test.ts",
+      "start_line": 63,
+      "end_line": 68,
+      "content_hash": "4ff3d43f70d3246dda6bb755151fae77e765e092ef36dffcced6e1eace532254",
+      "content": "\t\tit('should register handlers for any type strings', () => {\n\t\t\tconst foo = () => {};\n\t\t\tinst.on('constructor', foo);\n\n\t\t\texpect(events.get('constructor')).to.deep.equal([foo]);\n\t\t});",
+      "symbol": "describe:'mitt#'.describe:'on()'.it:'should register handlers for any type strings'",
+      "truncated": false
+    },
+    {
+      "snapshot_id": "dfdc0816797bf578d0363591",
+      "chunk_id": "5c80b97c679456dc29a86db9",
+      "path": "test/index_test.ts",
+      "start_line": 45,
+      "end_line": 49,
+      "content_hash": "7a43c3b580b1697e58953405469427430ef30045a4558643471061bd6a33cec8",
+      "content": "\tdescribe('properties', () => {\n\t\tit('should expose the event handler map', () => {\n\t\t\texpect(inst).to.have.property('all').that.is.a('map');\n\t\t});\n\t});",
+      "symbol": "describe:'mitt#'.describe:'properties'",
+      "truncated": false
+    },
+    {
+      "snapshot_id": "dfdc0816797bf578d0363591",
+      "chunk_id": "398f62da77cacf70fd3ca321",
+      "path": "src/index.ts",
+      "start_line": 40,
+      "end_line": 45,
+      "content_hash": "cf4b08479555c465b8adecb70b010b33da64b5ed4b4bb59435bc1232a081e6d8",
+      "content": "\n/**\n * Mitt: Tiny (~200b) functional event emitter / pubsub.\n * @name mitt\n * @returns {Mitt}\n */",
+      "symbol": null,
+      "truncated": false
+    },
+    {
+      "snapshot_id": "dfdc0816797bf578d0363591",
+      "chunk_id": "c368dfc991d12569dd20413d",
+      "path": "test/index_test.ts",
+      "start_line": 106,
+      "end_line": 106,
+      "content_hash": "eeb3378540a4dca9097029153450ed75305e36749ca7f2171abe9e32c0779d6f",
+      "content": "\t});",
+      "symbol": "describe:'mitt#'.describe:'on()'",
+      "truncated": false
+    },
+    {
+      "snapshot_id": "dfdc0816797bf578d0363591",
+      "chunk_id": "a564fae76d2c3f27a7a2e05a",
+      "path": "README.md",
+      "start_line": 30,
+      "end_line": 55,
+      "content_hash": "b97681c794122ff86fc722bf9f29648f3c46b1554bb47b1f9e0532322c999413",
+      "content": "## Install\n\nThis project uses [node](http://nodejs.org) and [npm](https://npmjs.com). Go check them out if you don't have them locally installed.\n\n```sh\n$ npm install --save mitt\n```\n\nThen with a module bundler like [rollup](http://rollupjs.org/) or [webpack](https://webpack.js.org/), use as you would anything else:\n\n```javascript\n// using ES6 modules\nimport mitt from 'mitt'\n\n// using CommonJS modules\nvar mitt = require('mitt')\n```\n\nThe [UMD](https://github.com/umdjs/umd) build is also available on [unpkg](https://unpkg.com):\n\n```html\n<script src=\"https://unpkg.com/mitt/dist/mitt.umd.js\"></script>\n```\n\nYou can find the library on `window.mitt`.\n",
+      "symbol": "Mitt / Install",
+      "truncated": false
+    },
+    {
+      "snapshot_id": "dfdc0816797bf578d0363591",
+      "chunk_id": "df318b56c085d38155e69fe1",
+      "path": "test/index_test.ts",
+      "start_line": 161,
+      "end_line": 163,
+      "content_hash": "8e41e7a9ec2cba02f34e875b8d71491b0ef32f06129a48a02fda11aa8342aa2a",
+      "content": "\t\tit('should be a function', () => {\n\t\t\texpect(inst).to.have.property('emit').that.is.a('function');\n\t\t});",
+      "symbol": "describe:'mitt#'.describe:'emit()'.it:'should be a function'",
+      "truncated": false
+    },
+    {
+      "snapshot_id": "dfdc0816797bf578d0363591",
+      "chunk_id": "111801a9c48e5b4fafe54cd2",
+      "path": "README.md",
+      "start_line": 9,
+      "end_line": 20,
+      "content_hash": "18ace986bdba2357cf5c21af93e3bfc267f0520f2f4f637f637a497530e5b2c6",
+      "content": "# Mitt\n\n> Tiny 200b functional event emitter / pubsub.\n\n-   **Microscopic:** weighs less than 200 bytes gzipped\n-   **Useful:** a wildcard `\"*\"` event type listens to all events\n-   **Familiar:** same names & ideas as [Node's EventEmitter](https://nodejs.org/api/events.html#events_class_eventemitter)\n-   **Functional:** methods don't rely on `this`\n-   **Great Name:** somehow [mitt](https://npm.im/mitt) wasn't taken\n\nMitt was made for the browser, but works in any JavaScript runtime. It has no dependencies and supports IE9+.\n",
+      "symbol": "Mitt",
+      "truncated": false
+    },
+    {
+      "snapshot_id": "dfdc0816797bf578d0363591",
+      "chunk_id": "204b7de171d2fff071ab4730",
+      "path": "tsconfig.json",
+      "start_line": 1,
+      "end_line": 15,
+      "content_hash": "53fdc22b600a681df059f026abbdbda6b25e0f3cad8c6a1ec114318f1038c97e",
+      "content": "{\n\t\"compileOnSave\": false,\n\t\"compilerOptions\": {\n\t\t\"strict\": true,\n\t\t\"noEmit\": true,\n\t\t\"declaration\": true,\n\t\t\"moduleResolution\": \"node\",\n\t\t\"skipLibCheck\": true,\n\t\t\"esModuleInterop\": true,\n\t},\n\t\"include\": [\n\t\t\"src/*.ts\",\n\t\t\"test/*.ts\"\n\t]\n}",
+      "symbol": null,
+      "truncated": false
+    },
+    {
+      "snapshot_id": "dfdc0816797bf578d0363591",
+      "chunk_id": "07603d367f8e124fab0ed6c1",
+      "path": "test/index_test.ts",
+      "start_line": 70,
+      "end_line": 77,
+      "content_hash": "83d6adcd92345f0c20a957a6f9a1cba0ec7ec213bd9b62df26ad6a1df1fe009c",
+      "content": "\t\tit('should append handler for existing type', () => {\n\t\t\tconst foo = () => {};\n\t\t\tconst bar = () => {};\n\t\t\tinst.on('foo', foo);\n\t\t\tinst.on('foo', bar);\n\n\t\t\texpect(events.get('foo')).to.deep.equal([foo, bar]);\n\t\t});",
+      "symbol": "describe:'mitt#'.describe:'on()'.it:'should append handler for existing type'",
+      "truncated": false
+    },
+    {
+      "snapshot_id": "dfdc0816797bf578d0363591",
+      "chunk_id": "ebcaea37c2f509f7107d782b",
+      "path": "src/index.ts",
+      "start_line": 2,
+      "end_line": 4,
+      "content_hash": "b76ab6ec6297367d8cacf2fe3ba4457a776e26469d194315e7601ada88854639",
+      "content": "\n// An event handler can take an optional event argument\n// and should not return a value",
+      "symbol": null,
+      "truncated": false
+    },
+    {
+      "snapshot_id": "dfdc0816797bf578d0363591",
+      "chunk_id": "b45077a237018f6545f1875e",
+      "path": "package.json",
+      "start_line": 1,
+      "end_line": 23,
+      "content_hash": "3fb0fa3d303c59545e9f7a982f1237f083ee0a58d6209f4c3763d7d932e4ed01",
+      "content": "{\n  \"name\": \"mitt\",\n  \"version\": \"3.0.1\",\n  \"description\": \"Tiny 200b functional Event Emitter / pubsub.\",\n  \"module\": \"dist/mitt.mjs\",\n  \"main\": \"dist/mitt.js\",\n  \"jsnext:main\": \"dist/mitt.mjs\",\n  \"umd:main\": \"dist/mitt.umd.js\",\n  \"source\": \"src/index.ts\",\n  \"typings\": \"index.d.ts\",\n  \"exports\": {\n    \"types\": \"./index.d.ts\",\n    \"module\": \"./dist/mitt.mjs\",\n    \"import\": \"./dist/mitt.mjs\",\n    \"require\": \"./dist/mitt.js\",\n    \"default\": \"./dist/mitt.mjs\"\n  },\n  \"scripts\": {\n    \"test\": \"npm-run-all --silent typecheck lint mocha test-types\",\n    \"mocha\": \"mocha test\",\n    \"test-types\": \"tsc test/test-types-compilation.ts --noEmit --strict\",\n    \"lint\": \"eslint src test --ext ts --ext js\",\n    \"typecheck\": \"tsc --noEmit\",",
+      "symbol": null,
+      "truncated": false
+    },
+    {
+      "snapshot_id": "dfdc0816797bf578d0363591",
+      "chunk_id": "5b00557f9f1054e8d428561b",
+      "path": "README.md",
+      "start_line": 138,
+      "end_line": 143,
+      "content_hash": "b06b022b358ea1ecab5b756298278b8590a9cc8290c425f40e2fdfc31fa21daf",
+      "content": "### mitt\n\nMitt: Tiny (~200b) functional event emitter / pubsub.\n\nReturns **Mitt** \n",
+      "symbol": "Mitt / API / mitt",
+      "truncated": false
+    }
+  ],
+  "neural_work": {
+    "embedding_hits": 17,
+    "embedding_new": 0,
+    "rerank_hits": 0,
+    "rerank_new": 0
+  },
+  "generation_requests": 0
+}

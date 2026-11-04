@@ -135,7 +135,7 @@ async def test_cli_uses_python_model_config_and_preserves_its_timeout(home, repo
         return StubRuntime()
 
     monkeypatch.setattr(claude, "ClaudeSdkRuntime", fake_runtime)
-    args = parser().parse_args(["report", "--repository", str(repo)])
+    args = parser().parse_args(["report", "--runtime", "claude", "--repository", str(repo)])
     assert await async_main(args) == 0
     assert captured[0].model == "python-model" and captured[0].timeout_seconds == 17
     assert (home / "artifacts/runtime/repomentor-python.sqlite3").is_file()

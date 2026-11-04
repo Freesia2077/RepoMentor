@@ -1,0 +1,3395 @@
+{
+  "questions": 10,
+  "planned_answers": 36,
+  "records": 36,
+  "reviews": {
+    "improvement-confirm-blinker-04--agentic_no_tools": {
+      "candidate_id": "improvement-confirm-blinker-04--agentic_no_tools",
+      "correctness": "correct",
+      "citation_support": "supported",
+      "completeness": "partial",
+      "abstention": "not_applicable",
+      "entry_scope": "correct",
+      "consistency": "consistent",
+      "claims": [
+        {
+          "claim": "题中的直接sig.send()不自动await，不能直接混用异步接收器。",
+          "status": "supported",
+          "rationale": "以不传wrapper的sig.send()为当前条件，该结论由测试RuntimeError与实现分支支持。没有据此扩张成任何带wrapper的send都不可用。",
+          "evidence": [
+            {
+              "path": "tests/test_signals.py",
+              "start_line": 274,
+              "end_line": 283
+            },
+            {
+              "path": "src/blinker/base.py",
+              "start_line": 242,
+              "end_line": 249
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "tests/test_signals.py",
+              "start_line": 274,
+              "end_line": 283,
+              "content": "\n    sig = blinker.Signal()\n    sig.connect(received)\n    sig.connect(received_async)\n\n    await sig.send_async(_sync_wrapper=wrapper)  # type: ignore[arg-type]\n    assert len(sentinel) == 2\n\n    with pytest.raises(RuntimeError):\n        sig.send()",
+              "content_sha256": "efe2a4dae35607217eb813290aef5c39134d85c9b61bd23b2822ffa5da61a385",
+              "visible_to_generator": true
+            },
+            {
+              "path": "src/blinker/base.py",
+              "start_line": 242,
+              "end_line": 249,
+              "content": "        for receiver in self.receivers_for(sender):\n            if iscoroutinefunction(receiver):\n                if _async_wrapper is None:\n                    raise RuntimeError(\"Cannot send to a coroutine function.\")\n\n                result = _async_wrapper(receiver)(sender, **kwargs)\n            else:\n                result = receiver(sender, **kwargs)",
+              "content_sha256": "f002a9e305297def4b3e9c82db0aa19b97b36f3504042234eae269fa8ff36056",
+              "visible_to_generator": false
+            }
+          ]
+        },
+        {
+          "claim": "send_async直接await异步回调，混合同步回调需_sync_wrapper包装。",
+          "status": "supported",
+          "rationale": "文档277–288给异步接收器直接await路径，290–311给_sync_wrapper混用路径，实际输入包含这些部分。",
+          "evidence": [
+            {
+              "path": "docs/index.rst",
+              "start_line": 277,
+              "end_line": 311
+            },
+            {
+              "path": "src/blinker/base.py",
+              "start_line": 292,
+              "end_line": 299
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "docs/index.rst",
+              "start_line": 277,
+              "end_line": 311,
+              "content": "Receivers can be coroutine functions which can be called and awaited\nvia the :meth:`~Signal.send_async` method:\n\n.. code-block:: python\n\n   sig = blinker.Signal()\n\n   async def receiver():\n       ...\n\n   sig.connect(receiver)\n   await sig.send_async()\n\nThis however requires that all receivers are awaitable which then\nprecludes the usage of :meth:`~Signal.send`. To mix and match the\n:meth:`~Signal.send_async` method takes a ``_sync_wrapper`` argument\nsuch as:\n\n.. code-block:: python\n\n   sig = blinker.Signal()\n\n   def receiver():\n       ...\n\n   sig.connect(receiver)\n\n   def wrapper(func):\n\n       async def inner(*args, **kwargs):\n           func(*args, **kwargs)\n\n       return inner\n\n   await sig.send_async(_sync_wrapper=wrapper)",
+              "content_sha256": "fae77ed684a19f15263a9a8ebd6a440e6d31f62b2f65f420a7bcd76b0123e1ff",
+              "visible_to_generator": true
+            },
+            {
+              "path": "src/blinker/base.py",
+              "start_line": 292,
+              "end_line": 299,
+              "content": "        for receiver in self.receivers_for(sender):\n            if not iscoroutinefunction(receiver):\n                if _sync_wrapper is None:\n                    raise RuntimeError(\"Cannot send to a non-coroutine function.\")\n\n                result = await _sync_wrapper(receiver)(sender, **kwargs)\n            else:\n                result = await receiver(sender, **kwargs)",
+              "content_sha256": "e093caca255e0bca8b3fe2082fb7ad9af9adf54e85b7ac174f5146774b054f5d",
+              "visible_to_generator": false
+            }
+          ]
+        }
+      ],
+      "notes": "按照题中无参数的直接sig.send()理解“不能混用”，不额外推定其否认所有wrapper用法；已答内容正确。仍缺同步入口_async_wrapper替代以及异步入口缺_sync_wrapper时的RuntimeError实际条件，因此完整性partial。正式引文支持主要结论，异步直接await部分同文件可见文档277–288有轻微引用范围遗漏，但本题形式引文跨异步说明与示例，整体支持可核验。 原匿名判断先保存并校验，再揭盲；Blinker/Tenacity分由独立子agent来源复核，非人审。",
+      "key_points": null,
+      "candidate_sha256": "7aff873297a599e433c582008a1f10d6cf2d36e7793ad43b6b3ae1d40087b049",
+      "reviewer": "Codex (current session)",
+      "review_type": "model_assisted_nonblind_development_review",
+      "human_approved": false,
+      "training_eligible": false,
+      "result_sha256": "9978989045c50cef74926e93966f4e5b0c7ff04363cc52062d6504bfb81d3c87"
+    },
+    "improvement-confirm-blinker-03--agentic": {
+      "candidate_id": "improvement-confirm-blinker-03--agentic",
+      "correctness": "correct",
+      "citation_support": "supported",
+      "completeness": "partial",
+      "abstention": "not_applicable",
+      "entry_scope": "correct",
+      "consistency": "consistent",
+      "claims": [
+        {
+          "claim": "离开connected_to后接收器不会保留，因为finally调用disconnect。",
+          "status": "supported",
+          "rationale": "正式引文包含进入时weak=False及try/yield/finally/disconnect，覆盖BaseException路径。",
+          "evidence": [
+            {
+              "path": "src/blinker/base.py",
+              "start_line": 167,
+              "end_line": 189
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "src/blinker/base.py",
+              "start_line": 167,
+              "end_line": 189,
+              "content": "    @contextmanager\n    def connected_to(\n        self, receiver: c.Callable[..., t.Any], sender: t.Any = ANY\n    ) -> c.Generator[None, None, None]:\n        \"\"\"A context manager that temporarily connects ``receiver`` to the\n        signal while a ``with`` block executes. When the block exits, the\n        receiver is disconnected. Useful for tests.\n\n        :param receiver: The callable to call when :meth:`send` is called with\n            the given ``sender``, passing ``sender`` as a positional argument\n            along with any extra keyword arguments.\n        :param sender: Any object or :data:`ANY`. ``receiver`` will only be\n            called when :meth:`send` is called with this sender. If ``ANY``, the\n            receiver will be called for any sender.\n\n        .. versionadded:: 1.1\n        \"\"\"\n        self.connect(receiver, sender=sender, weak=False)\n\n        try:\n            yield None\n        finally:\n            self.disconnect(receiver)",
+              "content_sha256": "b2f37b095c222dfe4a710319ff0d423fd22ab9f5959e96139c8f7ecae3450e28",
+              "visible_to_generator": true
+            }
+          ]
+        }
+      ],
+      "notes": "当前结论和清理机制正确且有实际可见来源支持；正文没有说明Exception/BaseException参数化测试、canary==[2]和not sig.receivers。可见test_context仅57–58的回调体，没有异常路径与最终断言，不能由评审后补源码算成模型完成了该子问。 原匿名判断先保存并校验，再揭盲；Blinker/Tenacity分由独立子agent来源复核，非人审。",
+      "key_points": null,
+      "candidate_sha256": "c4e21dd2fd8558ef7036e90c1fdbcfba2eb4e0c1d5df13a29f48097d1c3b82d5",
+      "reviewer": "Codex (current session)",
+      "review_type": "model_assisted_nonblind_development_review",
+      "human_approved": false,
+      "training_eligible": false,
+      "result_sha256": "d6b163e13a4fab770aa1e9b01ee2e5e9d30be9bdc67419cb13fc6dfc3e3ccea9"
+    },
+    "improvement-confirm-tenacity-04--agentic_no_tools": {
+      "candidate_id": "improvement-confirm-tenacity-04--agentic_no_tools",
+      "correctness": "unverifiable",
+      "citation_support": "unverifiable",
+      "completeness": "unverifiable",
+      "abstention": "unverifiable",
+      "entry_scope": "unverifiable",
+      "consistency": "unverifiable",
+      "claims": [
+        {
+          "claim": "交付答案为None，不能判断其事实和必要内容",
+          "status": "unverifiable",
+          "rationale": "保留原failed状态，不从未通过校验的原始生成中恢复一个答案。",
+          "evidence": [],
+          "verified_evidence": []
+        }
+      ],
+      "notes": "工作流引文校验失败，最终answer=None；不是事实incorrect，也不构造成功答案。不把这次失败从分母剔除。 原匿名判断先保存并校验，再揭盲；Blinker/Tenacity分由独立子agent来源复核，非人审。",
+      "key_points": null,
+      "candidate_sha256": "3ae6e3d11df1feb08354dca9f44e7a703902077c03aede2a8032cc355a83efa7",
+      "reviewer": "Codex (current session)",
+      "review_type": "model_assisted_nonblind_development_review",
+      "human_approved": false,
+      "training_eligible": false,
+      "result_sha256": "900ec75444256c741b4e99e884ffb974709c1d3eccbc555a7c4b8f6274694765"
+    },
+    "improvement-confirm-tenacity-01--bm25_code--repeat": {
+      "candidate_id": "improvement-confirm-tenacity-01--bm25_code--repeat",
+      "correctness": "correct",
+      "citation_support": "supported",
+      "completeness": "partial",
+      "abstention": "not_applicable",
+      "entry_scope": "correct",
+      "consistency": "consistent",
+      "claims": [
+        {
+          "claim": "stop_after_delay不能保证9秒失败后不再睡到12秒",
+          "status": "supported",
+          "rationale": "100-117明确只比较已用时间，说明max_delay可能被最后等待超过。",
+          "evidence": [
+            {
+              "path": "tenacity/stop.py",
+              "start_line": 100,
+              "end_line": 117
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "tenacity/stop.py",
+              "start_line": 100,
+              "end_line": 117,
+              "content": "class stop_after_delay(stop_base):\n    \"\"\"\n    Stop when the time from the first attempt >= limit.\n\n    Note: `max_delay` will be exceeded, so when used with a `wait`, the actual total delay will be greater\n    than `max_delay` by some of the final sleep period before `max_delay` is exceeded.\n\n    If you need stricter timing with waits, consider `stop_before_delay` instead.\n    \"\"\"\n\n    def __init__(self, max_delay: _utils.time_unit_type) -> None:\n        self.max_delay = _utils.to_seconds(max_delay)\n\n    @override\n    def __call__(self, retry_state: \"RetryCallState\") -> bool:\n        if retry_state.seconds_since_start is None:\n            raise RuntimeError(\"__call__() called but seconds_since_start is not set\")\n        return retry_state.seconds_since_start >= self.max_delay",
+              "content_sha256": "8bbfc79cff11c4df0bcd8d54d8685bc55f260d405fccf99ad103fe29f382a3f3",
+              "visible_to_generator": true
+            }
+          ]
+        },
+        {
+          "claim": "若把下一等待计入限制应改用stop_before_delay",
+          "status": "supported",
+          "rationale": "文档130-138明确给出提前一次停止的替代策略，可作有效替代证据。",
+          "evidence": [
+            {
+              "path": "doc/source/index.rst",
+              "start_line": 130,
+              "end_line": 138
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "doc/source/index.rst",
+              "start_line": 130,
+              "end_line": 138,
+              "content": "If you're on a tight deadline, and exceeding your delay time isn't ok,\nthen you can give up on retries one attempt before you would exceed the delay.\n\n.. testcode::\n\n    @retry(stop=stop_before_delay(10))\n    def stop_before_10_s():\n        print(\"Stopping 1 attempt before 10 seconds\")\n        raise Exception",
+              "content_sha256": "df8a02fc05d0ad615f7485f729295f9c48f96dc8e3699cbe9a32c2025ac6b396",
+              "visible_to_generator": true
+            }
+          ]
+        },
+        {
+          "claim": "没有解释等待计算与停止判断顺序",
+          "status": "unverifiable",
+          "rationale": "正文未给9+3的比较，也没有说明_run_wait先计算upcoming_sleep，再_run_stop，再决定DoSleep。",
+          "evidence": [
+            {
+              "path": "tenacity/__init__.py",
+              "start_line": 429,
+              "end_line": 434
+            },
+            {
+              "path": "tenacity/__init__.py",
+              "start_line": 460,
+              "end_line": 500
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "tenacity/__init__.py",
+              "start_line": 429,
+              "end_line": 434,
+              "content": "    def _run_wait(self, retry_state: \"RetryCallState\") -> None:\n        retry_state.upcoming_sleep = self.wait(retry_state)\n\n    def _run_stop(self, retry_state: \"RetryCallState\") -> None:\n        self.statistics[\"delay_since_first_attempt\"] = retry_state.seconds_since_start\n        self.iter_state.stop_run_result = self.stop(retry_state)",
+              "content_sha256": "b9a52d49eafde6dbe9dd39bf3d6685a1729abd662f172299b157bf6d6e8d7357",
+              "visible_to_generator": false
+            },
+            {
+              "path": "tenacity/__init__.py",
+              "start_line": 460,
+              "end_line": 500,
+              "content": "    def _post_retry_check_actions(self, retry_state: \"RetryCallState\") -> None:\n        if not (self.iter_state.is_explicit_retry or self.iter_state.retry_run_result):\n            self._add_action_func(lambda rs: rs.outcome.result())\n            return\n\n        if self.after is not None:\n            self._add_action_func(self.after)\n\n        self._add_action_func(self._run_wait)\n        self._add_action_func(self._run_stop)\n        self._add_action_func(self._post_stop_check_actions)\n\n    def _post_stop_check_actions(self, retry_state: \"RetryCallState\") -> None:\n        if self.iter_state.stop_run_result:\n            if self.retry_error_callback:\n                self._add_action_func(self.retry_error_callback)\n                return\n\n            def exc_check(rs: \"RetryCallState\") -> None:\n                fut = t.cast(\"Future\", rs.outcome)\n                retry_exc = self.retry_error_cls(fut)\n                if self.reraise:\n                    retry_exc.reraise()\n                raise retry_exc from fut.exception()\n\n            self._add_action_func(exc_check)\n            return\n\n        def next_action(rs: \"RetryCallState\") -> None:\n            sleep = rs.upcoming_sleep\n            rs.next_action = RetryAction(sleep)\n            rs.idle_for += sleep\n            self.statistics[\"idle_for\"] += sleep\n            self.statistics[\"attempt_number\"] += 1\n\n        self._add_action_func(next_action)\n\n        if self.before_sleep is not None:\n            self._add_action_func(self.before_sleep)\n\n        self._add_action_func(lambda rs: DoSleep(rs.upcoming_sleep))",
+              "content_sha256": "367460bfa9128d9fa5a8011ccfe24290748b882b45f94ed25e96398fc860276c",
+              "visible_to_generator": false
+            }
+          ]
+        }
+      ],
+      "notes": "两个直接结论正确并有可见文档支持。将严格停止解释为本题限制等待的语境，不扩展为抢占网络请求的硬超时；题目明确要求的顺序未回答。 原匿名判断先保存并校验，再揭盲；Blinker/Tenacity分由独立子agent来源复核，非人审。",
+      "key_points": null,
+      "candidate_sha256": "5a5c3ea828e76d6947bc4c99246ccc626833452c7da1c91d59889505cc95bf9d",
+      "reviewer": "Codex (current session)",
+      "review_type": "model_assisted_nonblind_development_review",
+      "human_approved": false,
+      "training_eligible": false,
+      "result_sha256": "45b1f66a4803cfa3717c0d92d4f617ef0bdfbd7150d24c76473c4e359a6da9d2"
+    },
+    "improvement-confirm-blinker-05--agentic": {
+      "candidate_id": "improvement-confirm-blinker-05--agentic",
+      "correctness": "unverifiable",
+      "citation_support": "not_applicable",
+      "completeness": "insufficient",
+      "abstention": "appropriate",
+      "entry_scope": "not_applicable",
+      "consistency": "consistent",
+      "claims": [
+        {
+          "claim": "仅用insufficient_evidence标记拒答，没有给出具体运行数据缺口。",
+          "status": "unverifiable",
+          "rationale": "未编造计数或耗时且标志为true，但单一标记不说明为什么静态仓库不足、应补什么日志或遥测。",
+          "evidence": [],
+          "verified_evidence": []
+        }
+      ],
+      "notes": "拒答方向与insufficient_evidence=true一致，未编造生产数字；正文只有一个标记，缺必要解释与具体所需运行数据，因此内容不可视为完整业务回答。无可核验事实时用unverifiable，不能靠格式成功记成正确或完整。 原匿名判断先保存并校验，再揭盲；Blinker/Tenacity分由独立子agent来源复核，非人审。",
+      "key_points": null,
+      "candidate_sha256": "91a7b28ccbef2d095328280c5db402470280a7b8857782aee3f9b8e43576f0be",
+      "reviewer": "Codex (current session)",
+      "review_type": "model_assisted_nonblind_development_review",
+      "human_approved": false,
+      "training_eligible": false,
+      "result_sha256": "c595fb3c34d30fdbbaf1d64e1249d4c83721a0c35ad2d528bcf15a53981fa780"
+    },
+    "improvement-confirm-blinker-05--bm25_code": {
+      "candidate_id": "improvement-confirm-blinker-05--bm25_code",
+      "correctness": "unverifiable",
+      "citation_support": "not_applicable",
+      "completeness": "insufficient",
+      "abstention": "appropriate",
+      "entry_scope": "not_applicable",
+      "consistency": "consistent",
+      "claims": [
+        {
+          "claim": "仅用不足标记拒答，没有给出具体运行数据缺口。",
+          "status": "unverifiable",
+          "rationale": "未编造计数或耗时且标志为true，但单一标记不说明为什么静态仓库不足、应补什么日志或遥测。",
+          "evidence": [],
+          "verified_evidence": []
+        }
+      ],
+      "notes": "拒答方向与insufficient_evidence=true一致，未编造生产数字；正文只有一个标记，缺必要解释与具体所需运行数据，因此内容不可视为完整业务回答。无可核验事实时用unverifiable，不能靠格式成功记成正确或完整。 原匿名判断先保存并校验，再揭盲；Blinker/Tenacity分由独立子agent来源复核，非人审。",
+      "key_points": null,
+      "candidate_sha256": "6597f8098f6b38e1169f33aa7ca35d19c992e2af8e891028515bce86f09fa829",
+      "reviewer": "Codex (current session)",
+      "review_type": "model_assisted_nonblind_development_review",
+      "human_approved": false,
+      "training_eligible": false,
+      "result_sha256": "30bdbfb95467899033685509c1a0b3f9c37307e8a467c64d311a71419c1651c6"
+    },
+    "improvement-confirm-tenacity-01--agentic_no_tools": {
+      "candidate_id": "improvement-confirm-tenacity-01--agentic_no_tools",
+      "correctness": "partially_correct",
+      "citation_support": "partial",
+      "completeness": "partial",
+      "abstention": "not_applicable",
+      "entry_scope": "correct",
+      "consistency": "contradictory",
+      "claims": [
+        {
+          "claim": "stop_after_delay不能避免12秒且应改stop_before_delay",
+          "status": "supported",
+          "rationale": "stop.py100-117说明可超出最后等待，文档130-138给出提前停止替代。",
+          "evidence": [
+            {
+              "path": "tenacity/stop.py",
+              "start_line": 100,
+              "end_line": 117
+            },
+            {
+              "path": "doc/source/index.rst",
+              "start_line": 130,
+              "end_line": 138
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "tenacity/stop.py",
+              "start_line": 100,
+              "end_line": 117,
+              "content": "class stop_after_delay(stop_base):\n    \"\"\"\n    Stop when the time from the first attempt >= limit.\n\n    Note: `max_delay` will be exceeded, so when used with a `wait`, the actual total delay will be greater\n    than `max_delay` by some of the final sleep period before `max_delay` is exceeded.\n\n    If you need stricter timing with waits, consider `stop_before_delay` instead.\n    \"\"\"\n\n    def __init__(self, max_delay: _utils.time_unit_type) -> None:\n        self.max_delay = _utils.to_seconds(max_delay)\n\n    @override\n    def __call__(self, retry_state: \"RetryCallState\") -> bool:\n        if retry_state.seconds_since_start is None:\n            raise RuntimeError(\"__call__() called but seconds_since_start is not set\")\n        return retry_state.seconds_since_start >= self.max_delay",
+              "content_sha256": "8bbfc79cff11c4df0bcd8d54d8685bc55f260d405fccf99ad103fe29f382a3f3",
+              "visible_to_generator": true
+            },
+            {
+              "path": "doc/source/index.rst",
+              "start_line": 130,
+              "end_line": 138,
+              "content": "If you're on a tight deadline, and exceeding your delay time isn't ok,\nthen you can give up on retries one attempt before you would exceed the delay.\n\n.. testcode::\n\n    @retry(stop=stop_before_delay(10))\n    def stop_before_10_s():\n        print(\"Stopping 1 attempt before 10 seconds\")\n        raise Exception",
+              "content_sha256": "df8a02fc05d0ad615f7485f729295f9c48f96dc8e3699cbe9a32c2025ac6b396",
+              "visible_to_generator": true
+            }
+          ]
+        },
+        {
+          "claim": "stop_after_delay在等待后检查而stop_before_delay在等待前检查",
+          "status": "contradicted",
+          "rationale": "两策略均由同一个_run_stop在_run_wait计算后、DoSleep之前调用；区别是stop_before_delay加upcoming_sleep，不是改变调度阶段。",
+          "evidence": [
+            {
+              "path": "tenacity/__init__.py",
+              "start_line": 429,
+              "end_line": 434
+            },
+            {
+              "path": "tenacity/__init__.py",
+              "start_line": 460,
+              "end_line": 500
+            },
+            {
+              "path": "tenacity/stop.py",
+              "start_line": 114,
+              "end_line": 138
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "tenacity/__init__.py",
+              "start_line": 429,
+              "end_line": 434,
+              "content": "    def _run_wait(self, retry_state: \"RetryCallState\") -> None:\n        retry_state.upcoming_sleep = self.wait(retry_state)\n\n    def _run_stop(self, retry_state: \"RetryCallState\") -> None:\n        self.statistics[\"delay_since_first_attempt\"] = retry_state.seconds_since_start\n        self.iter_state.stop_run_result = self.stop(retry_state)",
+              "content_sha256": "b9a52d49eafde6dbe9dd39bf3d6685a1729abd662f172299b157bf6d6e8d7357",
+              "visible_to_generator": false
+            },
+            {
+              "path": "tenacity/__init__.py",
+              "start_line": 460,
+              "end_line": 500,
+              "content": "    def _post_retry_check_actions(self, retry_state: \"RetryCallState\") -> None:\n        if not (self.iter_state.is_explicit_retry or self.iter_state.retry_run_result):\n            self._add_action_func(lambda rs: rs.outcome.result())\n            return\n\n        if self.after is not None:\n            self._add_action_func(self.after)\n\n        self._add_action_func(self._run_wait)\n        self._add_action_func(self._run_stop)\n        self._add_action_func(self._post_stop_check_actions)\n\n    def _post_stop_check_actions(self, retry_state: \"RetryCallState\") -> None:\n        if self.iter_state.stop_run_result:\n            if self.retry_error_callback:\n                self._add_action_func(self.retry_error_callback)\n                return\n\n            def exc_check(rs: \"RetryCallState\") -> None:\n                fut = t.cast(\"Future\", rs.outcome)\n                retry_exc = self.retry_error_cls(fut)\n                if self.reraise:\n                    retry_exc.reraise()\n                raise retry_exc from fut.exception()\n\n            self._add_action_func(exc_check)\n            return\n\n        def next_action(rs: \"RetryCallState\") -> None:\n            sleep = rs.upcoming_sleep\n            rs.next_action = RetryAction(sleep)\n            rs.idle_for += sleep\n            self.statistics[\"idle_for\"] += sleep\n            self.statistics[\"attempt_number\"] += 1\n\n        self._add_action_func(next_action)\n\n        if self.before_sleep is not None:\n            self._add_action_func(self.before_sleep)\n\n        self._add_action_func(lambda rs: DoSleep(rs.upcoming_sleep))",
+              "content_sha256": "367460bfa9128d9fa5a8011ccfe24290748b882b45f94ed25e96398fc860276c",
+              "visible_to_generator": false
+            },
+            {
+              "path": "tenacity/stop.py",
+              "start_line": 114,
+              "end_line": 138,
+              "content": "    def __call__(self, retry_state: \"RetryCallState\") -> bool:\n        if retry_state.seconds_since_start is None:\n            raise RuntimeError(\"__call__() called but seconds_since_start is not set\")\n        return retry_state.seconds_since_start >= self.max_delay\n\n\nclass stop_before_delay(stop_base):\n    \"\"\"\n    Stop right before the next attempt would take place after the time from the first attempt >= limit.\n\n    Most useful when you are using with a `wait` function like wait_random_exponential, but need to make\n    sure that the max_delay is not exceeded.\n    \"\"\"\n\n    def __init__(self, max_delay: _utils.time_unit_type) -> None:\n        self.max_delay = _utils.to_seconds(max_delay)\n\n    @override\n    def __call__(self, retry_state: \"RetryCallState\") -> bool:\n        if retry_state.seconds_since_start is None:\n            raise RuntimeError(\"__call__() called but seconds_since_start is not set\")\n        return (\n            retry_state.seconds_since_start + retry_state.upcoming_sleep\n            >= self.max_delay\n        )",
+              "content_sha256": "a19edb5b25551b0cc95fa51b60e62a1e6abde430918f79c89c1088214ebf0803",
+              "visible_to_generator": false
+            }
+          ]
+        },
+        {
+          "claim": "等待计算与停止检查的先后顺序已正确说明",
+          "status": "contradicted",
+          "rationale": "答案只写尝试/检查/等待，缺失等待计算阶段，并把stop_after_delay的位置写成等待后，与其前述顺序也相冲突。",
+          "evidence": [
+            {
+              "path": "tenacity/__init__.py",
+              "start_line": 429,
+              "end_line": 434
+            },
+            {
+              "path": "tenacity/__init__.py",
+              "start_line": 460,
+              "end_line": 500
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "tenacity/__init__.py",
+              "start_line": 429,
+              "end_line": 434,
+              "content": "    def _run_wait(self, retry_state: \"RetryCallState\") -> None:\n        retry_state.upcoming_sleep = self.wait(retry_state)\n\n    def _run_stop(self, retry_state: \"RetryCallState\") -> None:\n        self.statistics[\"delay_since_first_attempt\"] = retry_state.seconds_since_start\n        self.iter_state.stop_run_result = self.stop(retry_state)",
+              "content_sha256": "b9a52d49eafde6dbe9dd39bf3d6685a1729abd662f172299b157bf6d6e8d7357",
+              "visible_to_generator": false
+            },
+            {
+              "path": "tenacity/__init__.py",
+              "start_line": 460,
+              "end_line": 500,
+              "content": "    def _post_retry_check_actions(self, retry_state: \"RetryCallState\") -> None:\n        if not (self.iter_state.is_explicit_retry or self.iter_state.retry_run_result):\n            self._add_action_func(lambda rs: rs.outcome.result())\n            return\n\n        if self.after is not None:\n            self._add_action_func(self.after)\n\n        self._add_action_func(self._run_wait)\n        self._add_action_func(self._run_stop)\n        self._add_action_func(self._post_stop_check_actions)\n\n    def _post_stop_check_actions(self, retry_state: \"RetryCallState\") -> None:\n        if self.iter_state.stop_run_result:\n            if self.retry_error_callback:\n                self._add_action_func(self.retry_error_callback)\n                return\n\n            def exc_check(rs: \"RetryCallState\") -> None:\n                fut = t.cast(\"Future\", rs.outcome)\n                retry_exc = self.retry_error_cls(fut)\n                if self.reraise:\n                    retry_exc.reraise()\n                raise retry_exc from fut.exception()\n\n            self._add_action_func(exc_check)\n            return\n\n        def next_action(rs: \"RetryCallState\") -> None:\n            sleep = rs.upcoming_sleep\n            rs.next_action = RetryAction(sleep)\n            rs.idle_for += sleep\n            self.statistics[\"idle_for\"] += sleep\n            self.statistics[\"attempt_number\"] += 1\n\n        self._add_action_func(next_action)\n\n        if self.before_sleep is not None:\n            self._add_action_func(self.before_sleep)\n\n        self._add_action_func(lambda rs: DoSleep(rs.upcoming_sleep))",
+              "content_sha256": "367460bfa9128d9fa5a8011ccfe24290748b882b45f94ed25e96398fc860276c",
+              "visible_to_generator": false
+            }
+          ]
+        }
+      ],
+      "notes": "是否可能超时和替代策略正确，但明确要求的顺序解释错误。语义反证的核心_run_wait/_run_stop未见于候选输入，不用后补源码提高支持。 原匿名判断先保存并校验，再揭盲；Blinker/Tenacity分由独立子agent来源复核，非人审。",
+      "key_points": null,
+      "candidate_sha256": "be0059fc6affe4dd254e488e1bd6dcdc23e6acd14f5dfbeb9c1050e69fad0444",
+      "reviewer": "Codex (current session)",
+      "review_type": "model_assisted_nonblind_development_review",
+      "human_approved": false,
+      "training_eligible": false,
+      "result_sha256": "c4c14f3b20d5ab8b37517552b5378f4f30815d170d8e145e5419fac955792305"
+    },
+    "improvement-confirm-blinker-01--agentic": {
+      "candidate_id": "improvement-confirm-blinker-01--agentic",
+      "correctness": "partially_correct",
+      "citation_support": "partial",
+      "completeness": "partial",
+      "abstention": "not_applicable",
+      "entry_scope": "correct",
+      "consistency": "consistent",
+      "claims": [
+        {
+          "claim": "默认weak=True，以弱引用保存；回调回收时断开。",
+          "status": "supported",
+          "rationale": "connect签名/注释和weak分支直接支持，所引用102–105、110–115在实际输入。",
+          "evidence": [
+            {
+              "path": "src/blinker/base.py",
+              "start_line": 91,
+              "end_line": 115
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "src/blinker/base.py",
+              "start_line": 91,
+              "end_line": 115,
+              "content": "    def connect(self, receiver: F, sender: t.Any = ANY, weak: bool = True) -> F:\n        \"\"\"Connect ``receiver`` to be called when the signal is sent by\n        ``sender``.\n\n        :param receiver: The callable to call when :meth:`send` is called with\n            the given ``sender``, passing ``sender`` as a positional argument\n            along with any extra keyword arguments.\n        :param sender: Any object or :data:`ANY`. ``receiver`` will only be\n            called when :meth:`send` is called with this sender. If ``ANY``, the\n            receiver will be called for any sender. A receiver may be connected\n            to multiple senders by calling :meth:`connect` multiple times.\n        :param weak: Track the receiver with a :mod:`weakref`. The receiver will\n            be automatically disconnected when it is garbage collected. When\n            connecting a receiver defined within a function, set to ``False``,\n            otherwise it will be disconnected when the function scope ends.\n        \"\"\"\n        receiver_id = make_id(receiver)\n        sender_id = ANY_ID if sender is ANY else make_id(sender)\n\n        if weak:\n            self.receivers[receiver_id] = make_ref(\n                receiver, self._make_cleanup_receiver(receiver_id)\n            )\n        else:\n            self.receivers[receiver_id] = receiver",
+              "content_sha256": "d6bcfb6d4ee0c0bb2eacc5487c8a78d79ff314325d1d245e553b4845a872b248",
+              "visible_to_generator": true
+            }
+          ]
+        },
+        {
+          "claim": "注册时weak=False可以保活回调，另行保存对象也是安全的持有方式。",
+          "status": "supported",
+          "rationale": "weak=False将receiver直接保存；并保存回调是冗余建议，不把它误判成必须同时满足的库条件。",
+          "evidence": [
+            {
+              "path": "src/blinker/base.py",
+              "start_line": 110,
+              "end_line": 115
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "src/blinker/base.py",
+              "start_line": 110,
+              "end_line": 115,
+              "content": "        if weak:\n            self.receivers[receiver_id] = make_ref(\n                receiver, self._make_cleanup_receiver(receiver_id)\n            )\n        else:\n            self.receivers[receiver_id] = receiver",
+              "content_sha256": "9fc71690fcea6be81ef3707b11f4f58dbc90a10344a578d0a7c544b86c0ea8d1",
+              "visible_to_generator": true
+            }
+          ]
+        },
+        {
+          "claim": "test_has_receivers可以显示局部接收器删除收集后的失效与weak=False保活。",
+          "status": "supported",
+          "rationale": "438–443是删除和空接收器断言，445–450是weak=False且仍有接收器；这段完整测试实际已见。",
+          "evidence": [
+            {
+              "path": "tests/test_signals.py",
+              "start_line": 417,
+              "end_line": 450
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "tests/test_signals.py",
+              "start_line": 417,
+              "end_line": 450,
+              "content": "def test_has_receivers() -> None:\n    def received(_: t.Any) -> None:\n        return None\n\n    sig = blinker.Signal()\n    assert not sig.has_receivers_for(None)\n    assert not sig.has_receivers_for(blinker.ANY)\n\n    sig.connect(received, \"xyz\")\n    assert not sig.has_receivers_for(None)\n    assert not sig.has_receivers_for(blinker.ANY)\n    assert sig.has_receivers_for(\"xyz\")\n\n    class Object:\n        pass\n\n    o = Object()\n\n    sig.connect(received, o)\n    assert sig.has_receivers_for(o)\n\n    del received\n    collect_acyclic_refs()\n\n    assert not sig.has_receivers_for(\"xyz\")\n    assert list(sig.receivers_for(\"xyz\")) == []\n    assert list(sig.receivers_for(o)) == []\n\n    sig.connect(lambda sender: None, weak=False)\n    assert sig.has_receivers_for(\"xyz\")\n    assert sig.has_receivers_for(o)\n    assert sig.has_receivers_for(None)\n    assert sig.has_receivers_for(blinker.ANY)\n    assert sig.has_receivers_for(\"xyz\")",
+              "content_sha256": "2f47feb4755430bcf158e2df9d4a98bbc98fb0566a7fb8c72bb54842742f023e",
+              "visible_to_generator": true
+            }
+          ]
+        },
+        {
+          "claim": "test_signal_signals_weak_sender验证本题receiver弱/强引用的差异。",
+          "status": "contradicted",
+          "rationale": "该测试以weak=False连接receiver，删除的是sender2，不是received；验证sender回收不能替代receiver保活对照。",
+          "evidence": [
+            {
+              "path": "tests/test_signals.py",
+              "start_line": 123,
+              "end_line": 158
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "tests/test_signals.py",
+              "start_line": 123,
+              "end_line": 158,
+              "content": "def test_signal_signals_weak_sender() -> None:\n    sentinel = Sentinel()\n    sig = blinker.Signal()\n\n    connected = sentinel.make_receiver(\"receiver_connected\")\n    disconnected = sentinel.make_receiver(\"receiver_disconnected\")\n    receiver1 = sentinel.make_receiver(\"receiver1\")\n    receiver2 = sentinel.make_receiver(\"receiver2\")\n\n    class Sender:\n        \"\"\"A weakref-able object.\"\"\"\n\n    sig.receiver_connected.connect(connected)\n    sig.receiver_disconnected.connect(disconnected)\n\n    sender1 = Sender()\n    sig.connect(receiver1, sender=sender1, weak=False)\n    # regular disconnect of weak-able sender works fine\n    sig.disconnect(receiver1, sender=sender1)\n\n    assert len(sentinel) == 2\n\n    del sentinel[:]\n    sender2 = Sender()\n    sig.connect(receiver2, sender=sender2, weak=False)\n\n    # force sender2 to go out of scope\n    del sender2\n    collect_acyclic_refs()\n\n    # no disconnect signal is fired\n    assert len(sentinel) == 1\n\n    # and everything really is disconnected\n    sig.send(\"abc\")\n    assert len(sentinel) == 1",
+              "content_sha256": "4bbf1f6c9993236dd7820b58ef17b908bf8f8c5ee2915a87fed98ba08262ee63",
+              "visible_to_generator": true
+            }
+          ]
+        }
+      ],
+      "notes": "实现结论和weak=False方案正确；接受test_has_receivers作为等价测试，不机械限定219–257。另一处把weak_sender测试用作receiver强弱差异证据是实际定位错误，且正文没有说明任何具体删除/收集/发送或has_receivers断言。保留partial事实与引文，未视为完整解决。 原匿名判断先保存并校验，再揭盲；Blinker/Tenacity分由独立子agent来源复核，非人审。",
+      "key_points": null,
+      "candidate_sha256": "eebbdd1e6a92d669b86fbdc43c95543a524ebf12a863d3a09303f6c4d0afb481",
+      "reviewer": "Codex (current session)",
+      "review_type": "model_assisted_nonblind_development_review",
+      "human_approved": false,
+      "training_eligible": false,
+      "result_sha256": "ea58e3002d2e520e0991f525625576dd6f6f1dce307ac9330622cdd97da83513"
+    },
+    "improvement-confirm-blinker-02--agentic": {
+      "candidate_id": "improvement-confirm-blinker-02--agentic",
+      "correctness": "partially_correct",
+      "citation_support": "partial",
+      "completeness": "partial",
+      "abstention": "not_applicable",
+      "entry_scope": "correct",
+      "consistency": "consistent",
+      "claims": [
+        {
+          "claim": "send(123)只触发该回调一次。",
+          "status": "supported",
+          "rationale": "测试的sentinel从[None]到[None,123]，结果正确。",
+          "evidence": [
+            {
+              "path": "tests/test_signals.py",
+              "start_line": 397,
+              "end_line": 414
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "tests/test_signals.py",
+              "start_line": 397,
+              "end_line": 414,
+              "content": "def test_no_double_send() -> None:\n    sentinel = []\n\n    def received(sender: t.Any) -> None:\n        sentinel.append(sender)\n\n    sig = blinker.Signal()\n\n    sig.connect(received, 123)\n    sig.connect(received)\n\n    assert not sentinel\n    sig.send()\n    assert sentinel == [None]\n    sig.send(123)\n    assert sentinel == [None, 123]\n    sig.send()\n    assert sentinel == [None, 123, None]",
+              "content_sha256": "4353e18c11322c495e1fdbb3a93dce8268bf596ea5f68492bcf670f6ff205e47",
+              "visible_to_generator": true
+            }
+          ]
+        },
+        {
+          "claim": "用(回调函数,发送者)键去重同一sender的重复注册就保证ANY和123跨sender也只调用一次。",
+          "status": "contradicted",
+          "rationale": "ANY与123是两条不同sender关联，单按该二元关系去重不能解释跨关联合并；实际receivers字典按receiver_id保存，receivers_for对两个sender桶的receiver_id集合做并集再遍历。",
+          "evidence": [
+            {
+              "path": "src/blinker/base.py",
+              "start_line": 107,
+              "end_line": 118
+            },
+            {
+              "path": "src/blinker/base.py",
+              "start_line": 342,
+              "end_line": 349
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "src/blinker/base.py",
+              "start_line": 107,
+              "end_line": 118,
+              "content": "        receiver_id = make_id(receiver)\n        sender_id = ANY_ID if sender is ANY else make_id(sender)\n\n        if weak:\n            self.receivers[receiver_id] = make_ref(\n                receiver, self._make_cleanup_receiver(receiver_id)\n            )\n        else:\n            self.receivers[receiver_id] = receiver\n\n        self._by_sender[sender_id].add(receiver_id)\n        self._by_receiver[receiver_id].add(sender_id)",
+              "content_sha256": "948264abac47a2e73bf86b5bc06fdfd71c9858980d76524f7b908963919879f8",
+              "visible_to_generator": false
+            },
+            {
+              "path": "src/blinker/base.py",
+              "start_line": 342,
+              "end_line": 349,
+              "content": "        if sender_id in self._by_sender:\n            ids = self._by_sender[ANY_ID] | self._by_sender[sender_id]\n        else:\n            ids = self._by_sender[ANY_ID].copy()\n\n        for receiver_id in ids:\n            receiver = self.receivers.get(receiver_id)\n",
+              "content_sha256": "855fd05543fb40900933c7e5ec04bd7a1b4f1f8ebffc7986bb346bd9ec097f0e",
+              "visible_to_generator": false
+            }
+          ]
+        }
+      ],
+      "notes": "结论正确，但所说二元键及同sender去重并非本题跨ANY/123只发送一次的机制；应说明接收器ID集合并集。正式引文只证明测试结果，未支持内部键结构，正文也未交代[None,123]断言。此处保留机制事实错误而非只按遗漏计分。 原匿名判断先保存并校验，再揭盲；Blinker/Tenacity分由独立子agent来源复核，非人审。",
+      "key_points": null,
+      "candidate_sha256": "11ad1af3c50acf7f7476ec2268ec64e685078e80f9a76d5be0da61fa9c2b8446",
+      "reviewer": "Codex (current session)",
+      "review_type": "model_assisted_nonblind_development_review",
+      "human_approved": false,
+      "training_eligible": false,
+      "result_sha256": "734f293711f53f018b1e01812ae77df58dc15ed0920d2c757e4cd80ec3b8924c"
+    },
+    "improvement-confirm-tenacity-03--agentic": {
+      "candidate_id": "improvement-confirm-tenacity-03--agentic",
+      "correctness": "partially_correct",
+      "citation_support": "partial",
+      "completeness": "adequate",
+      "abstention": "not_applicable",
+      "entry_scope": "correct",
+      "consistency": "consistent",
+      "claims": [
+        {
+          "claim": "正常回调返回fallback时本例会返回字符串而非抛ValueError",
+          "status": "supported",
+          "rationale": "本候选可见472-486，callback分支确实排入回调并提前返回。",
+          "evidence": [
+            {
+              "path": "tenacity/__init__.py",
+              "start_line": 472,
+              "end_line": 486
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "tenacity/__init__.py",
+              "start_line": 472,
+              "end_line": 486,
+              "content": "    def _post_stop_check_actions(self, retry_state: \"RetryCallState\") -> None:\n        if self.iter_state.stop_run_result:\n            if self.retry_error_callback:\n                self._add_action_func(self.retry_error_callback)\n                return\n\n            def exc_check(rs: \"RetryCallState\") -> None:\n                fut = t.cast(\"Future\", rs.outcome)\n                retry_exc = self.retry_error_cls(fut)\n                if self.reraise:\n                    retry_exc.reraise()\n                raise retry_exc from fut.exception()\n\n            self._add_action_func(exc_check)\n            return",
+              "content_sha256": "27f56f54b49fe5b9ece029c0e019a73c8bd869a2f30fdd2abdadb0fc604e0f5c",
+              "visible_to_generator": true
+            }
+          ]
+        },
+        {
+          "claim": "先调用callback后再根据reraise处理回调结果",
+          "status": "contradicted",
+          "rationale": "callback存在时475-476提前return，不进入reraise所在的478-486分支；不检查返回值是否异常对象。",
+          "evidence": [
+            {
+              "path": "tenacity/__init__.py",
+              "start_line": 472,
+              "end_line": 486
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "tenacity/__init__.py",
+              "start_line": 472,
+              "end_line": 486,
+              "content": "    def _post_stop_check_actions(self, retry_state: \"RetryCallState\") -> None:\n        if self.iter_state.stop_run_result:\n            if self.retry_error_callback:\n                self._add_action_func(self.retry_error_callback)\n                return\n\n            def exc_check(rs: \"RetryCallState\") -> None:\n                fut = t.cast(\"Future\", rs.outcome)\n                retry_exc = self.retry_error_cls(fut)\n                if self.reraise:\n                    retry_exc.reraise()\n                raise retry_exc from fut.exception()\n\n            self._add_action_func(exc_check)\n            return",
+              "content_sha256": "27f56f54b49fe5b9ece029c0e019a73c8bd869a2f30fdd2abdadb0fc604e0f5c",
+              "visible_to_generator": true
+            }
+          ]
+        },
+        {
+          "claim": "callback返回异常对象且reraise=True时会抛出该对象",
+          "status": "contradicted",
+          "rationale": "异常对象若由callback正常返回，仍作为普通action结果由同步调用者返回，不会因此进入reraise；callback自己raise属于另一种情况。",
+          "evidence": [
+            {
+              "path": "tenacity/__init__.py",
+              "start_line": 472,
+              "end_line": 486
+            },
+            {
+              "path": "tenacity/__init__.py",
+              "start_line": 436,
+              "end_line": 441
+            },
+            {
+              "path": "tenacity/__init__.py",
+              "start_line": 548,
+              "end_line": 562
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "tenacity/__init__.py",
+              "start_line": 472,
+              "end_line": 486,
+              "content": "    def _post_stop_check_actions(self, retry_state: \"RetryCallState\") -> None:\n        if self.iter_state.stop_run_result:\n            if self.retry_error_callback:\n                self._add_action_func(self.retry_error_callback)\n                return\n\n            def exc_check(rs: \"RetryCallState\") -> None:\n                fut = t.cast(\"Future\", rs.outcome)\n                retry_exc = self.retry_error_cls(fut)\n                if self.reraise:\n                    retry_exc.reraise()\n                raise retry_exc from fut.exception()\n\n            self._add_action_func(exc_check)\n            return",
+              "content_sha256": "27f56f54b49fe5b9ece029c0e019a73c8bd869a2f30fdd2abdadb0fc604e0f5c",
+              "visible_to_generator": true
+            },
+            {
+              "path": "tenacity/__init__.py",
+              "start_line": 436,
+              "end_line": 441,
+              "content": "    def iter(self, retry_state: \"RetryCallState\") -> DoAttempt | DoSleep | t.Any:\n        self._begin_iter(retry_state)\n        result = None\n        for action in self.iter_state.actions:\n            result = action(retry_state)\n        return result",
+              "content_sha256": "600f803e805093b5fa54a66ec1b1aab369f5692eee640b04ed985d1ce7f0b606",
+              "visible_to_generator": false
+            },
+            {
+              "path": "tenacity/__init__.py",
+              "start_line": 548,
+              "end_line": 562,
+              "content": "        retry_state = RetryCallState(retry_object=self, fn=fn, args=args, kwargs=kwargs)\n        while True:\n            do = self.iter(retry_state=retry_state)\n            if isinstance(do, DoAttempt):\n                try:\n                    result = fn(*args, **kwargs)\n                except BaseException:\n                    retry_state.set_exception(sys.exc_info())  # type: ignore[arg-type]\n                else:\n                    retry_state.set_result(result)\n            elif isinstance(do, DoSleep):\n                retry_state.prepare_for_next_attempt()\n                self.sleep(do)\n            else:\n                return do  # type: ignore[no-any-return]",
+              "content_sha256": "8cba8206bbb28dbf22fe8c85c5b56e2504db946bd99c7ba46e1f5e6f1ca09789",
+              "visible_to_generator": false
+            }
+          ]
+        }
+      ],
+      "notes": "本例fallback结论正确，但题目要求解释的配置优先关系被写成先回调再reraise，且多加了错误的异常对象分支。已有正确源码仍发生条件误读。 原匿名判断先保存并校验，再揭盲；Blinker/Tenacity分由独立子agent来源复核，非人审。",
+      "key_points": null,
+      "candidate_sha256": "aeada187a16d8186885afbc4122af25fe7366dbd72ee876d5a387b640ea16417",
+      "reviewer": "Codex (current session)",
+      "review_type": "model_assisted_nonblind_development_review",
+      "human_approved": false,
+      "training_eligible": false,
+      "result_sha256": "ca73a9ba0667fba25224a65e8c27674ff4e01fe29d2d38b71148c5bede8cc2ca"
+    },
+    "improvement-confirm-blinker-05--agentic_no_tools": {
+      "candidate_id": "improvement-confirm-blinker-05--agentic_no_tools",
+      "correctness": "correct",
+      "citation_support": "not_applicable",
+      "completeness": "adequate",
+      "abstention": "appropriate",
+      "entry_scope": "not_applicable",
+      "consistency": "consistent",
+      "claims": [
+        {
+          "claim": "不能依据给定静态仓库回答公司过去24小时的订单发送次数和最慢回调耗时。",
+          "status": "unverifiable",
+          "rationale": "这是依据题干明确未提供运行日志或进程访问作出的信息边界判断，无需伪造仓库行号证明公司的私有状态。",
+          "evidence": [],
+          "verified_evidence": []
+        },
+        {
+          "claim": "Blinker提供通用信号分发能力，并非题中生产运行记录。",
+          "status": "supported",
+          "rationale": "文档定位为信号分发库；没有把库函数的存在替代实际遥测。",
+          "evidence": [
+            {
+              "path": "docs/index.rst",
+              "start_line": 1,
+              "end_line": 28
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "docs/index.rst",
+              "start_line": 1,
+              "end_line": 28,
+              "content": ".. rst-class:: hide-header\n\nBlinker Documentation\n=====================\n\n.. image:: _static/blinker-named.png\n    :align: center\n\n.. currentmodule:: blinker\n\nBlinker provides fast & simple object-to-object and broadcast\nsignaling for Python objects.\n\nThe core of Blinker is quite small but provides powerful features:\n\n - a global registry of named signals\n - anonymous signals\n - custom name registries\n - permanently or temporarily connected receivers\n - automatically disconnected receivers via weak referencing\n - sending arbitrary data payloads\n - collecting return values from signal receivers\n - thread safety\n\nBlinker was written by Jason Kirtand and is provided under the MIT\nLicense. The library supports Python 3.9 or later.\n\n",
+              "content_sha256": "5b4af8a9183145aebc45dfd9806ce8402a2c07deeb4dd3f4bf9eeb5c2524aa58",
+              "visible_to_generator": true
+            }
+          ]
+        }
+      ],
+      "notes": "明确无法回答并指出缺少生产日志、信号计数和耗时数据，未编造数字；这已表达本题所需的具体运行信息缺口，insufficient_evidence=true。逻辑性拒答不依赖所附源码引文，不能把这些引文当公司遥测证据。 原匿名判断先保存并校验，再揭盲；Blinker/Tenacity分由独立子agent来源复核，非人审。",
+      "key_points": null,
+      "candidate_sha256": "5ce209982f5c050a9aeba069ed233f5b8ff47dd7ee7dd3f897e81ac7f1182434",
+      "reviewer": "Codex (current session)",
+      "review_type": "model_assisted_nonblind_development_review",
+      "human_approved": false,
+      "training_eligible": false,
+      "result_sha256": "56abce3f4ea1b3b408bc19b30a7aa7ebb7badb78df744551363e2c5d989a29bc"
+    },
+    "improvement-confirm-tenacity-05--agentic_no_tools": {
+      "candidate_id": "improvement-confirm-tenacity-05--agentic_no_tools",
+      "correctness": "correct",
+      "citation_support": "not_applicable",
+      "completeness": "adequate",
+      "abstention": "appropriate",
+      "entry_scope": "not_applicable",
+      "consistency": "consistent",
+      "claims": [
+        {
+          "claim": "仅凭源码不能给出特定服务昨天的准确重试次数等待和堆栈",
+          "status": "unverifiable",
+          "rationale": "这是题目明确缺少调用配置、日志和运行状态的逻辑信息边界；无需以普通库代码证明某公司的私有事实。",
+          "evidence": [],
+          "verified_evidence": []
+        },
+        {
+          "claim": "insufficient_evidence为true，与拒绝猜测一致",
+          "status": "unverifiable",
+          "rationale": "该协议字段与正文核对一致，不是可用目标源码行证明的命题。",
+          "evidence": [],
+          "verified_evidence": []
+        }
+      ],
+      "notes": "适当拒答，覆盖题目三项私有运行数据；未把默认配置当生产事实，也未添加错误库机制。题干已明确未提供三类外部数据，不把复述同一缺失清单设为额外必答；正文与True标志一致。附带的普通库来源不当作公司运行记录。 原匿名判断先保存并校验，再揭盲；Blinker/Tenacity分由独立子agent来源复核，非人审。",
+      "key_points": null,
+      "candidate_sha256": "c8292d24b702369647d11497ed58ac6b43b76329e428bc20a33850f8ce1ee3cd",
+      "reviewer": "Codex (current session)",
+      "review_type": "model_assisted_nonblind_development_review",
+      "human_approved": false,
+      "training_eligible": false,
+      "result_sha256": "f541f65b94f8eca789062262c5e02a30128a569664460698f66958051476b71d"
+    },
+    "improvement-confirm-tenacity-05--agentic": {
+      "candidate_id": "improvement-confirm-tenacity-05--agentic",
+      "correctness": "correct",
+      "citation_support": "not_applicable",
+      "completeness": "adequate",
+      "abstention": "appropriate",
+      "entry_scope": "not_applicable",
+      "consistency": "consistent",
+      "claims": [
+        {
+          "claim": "仅凭源码不能给出特定服务昨天的准确重试次数等待和堆栈",
+          "status": "unverifiable",
+          "rationale": "这是题目明确缺少调用配置、日志和运行状态的逻辑信息边界；无需以普通库代码证明某公司的私有事实。",
+          "evidence": [],
+          "verified_evidence": []
+        },
+        {
+          "claim": "insufficient_evidence为true，与拒绝猜测一致",
+          "status": "unverifiable",
+          "rationale": "该协议字段与正文核对一致，不是可用目标源码行证明的命题。",
+          "evidence": [],
+          "verified_evidence": []
+        }
+      ],
+      "notes": "适当拒答，覆盖题目三项私有运行数据；未把默认配置当生产事实，也未添加错误库机制。题干已明确未提供三类外部数据，不把复述同一缺失清单设为额外必答；正文与True标志一致。附带的普通库来源不当作公司运行记录。 原匿名判断先保存并校验，再揭盲；Blinker/Tenacity分由独立子agent来源复核，非人审。",
+      "key_points": null,
+      "candidate_sha256": "f1bd2d71794df1134c8336d1382ceea153be77c3d1703aaf141a9a3e242b4ce3",
+      "reviewer": "Codex (current session)",
+      "review_type": "model_assisted_nonblind_development_review",
+      "human_approved": false,
+      "training_eligible": false,
+      "result_sha256": "7a1f080e89630665da717655be5f1a431c982bbf78dd1a24964f1bdf84082cf0"
+    },
+    "improvement-confirm-tenacity-02--agentic": {
+      "candidate_id": "improvement-confirm-tenacity-02--agentic",
+      "correctness": "incorrect",
+      "citation_support": "unsupported",
+      "completeness": "adequate",
+      "abstention": "not_applicable",
+      "entry_scope": "correct",
+      "consistency": "consistent",
+      "claims": [
+        {
+          "claim": "默认异常策略下首次成功也调用after，第三次成功后记录3",
+          "status": "contradicted",
+          "rationale": "默认成功结果retry为False，460-466直接取result并return，跳过after；1853-1870测试明确最后记录2。",
+          "evidence": [
+            {
+              "path": "tenacity/__init__.py",
+              "start_line": 460,
+              "end_line": 466
+            },
+            {
+              "path": "tests/test_tenacity.py",
+              "start_line": 1853,
+              "end_line": 1870
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "tenacity/__init__.py",
+              "start_line": 460,
+              "end_line": 466,
+              "content": "    def _post_retry_check_actions(self, retry_state: \"RetryCallState\") -> None:\n        if not (self.iter_state.is_explicit_retry or self.iter_state.retry_run_result):\n            self._add_action_func(lambda rs: rs.outcome.result())\n            return\n\n        if self.after is not None:\n            self._add_action_func(self.after)",
+              "content_sha256": "ed98cb68710d5153075623d1b5d46f0946b3a12ebdb32ae76395ede8c3ebf1d0",
+              "visible_to_generator": false
+            },
+            {
+              "path": "tests/test_tenacity.py",
+              "start_line": 1853,
+              "end_line": 1870,
+              "content": "    def test_after_attempts(self) -> None:\n        TestBeforeAfterAttempts._attempt_number = 0\n\n        def _after(retry_state: RetryCallState) -> None:\n            TestBeforeAfterAttempts._attempt_number = retry_state.attempt_number\n\n        @retry(\n            wait=tenacity.wait_fixed(0.1),\n            stop=tenacity.stop_after_attempt(3),\n            after=_after,\n        )\n        def _test_after() -> None:\n            if TestBeforeAfterAttempts._attempt_number < 2:\n                raise Exception(\"testing after_attempts handler\")\n\n        _test_after()\n\n        self.assertTrue(TestBeforeAfterAttempts._attempt_number == 2)",
+              "content_sha256": "a1325d17a55b7019d349cfaf8c5c45a3b194635dac22914f8632662e8d599a2b",
+              "visible_to_generator": false
+            }
+          ]
+        },
+        {
+          "claim": "_post_stop_check_actions会继续触发包括after的后续回调",
+          "status": "contradicted",
+          "rationale": "472-500只有停止处理、下一动作和before_sleep，没有after；after已在464-466按重试条件安排。",
+          "evidence": [
+            {
+              "path": "tenacity/__init__.py",
+              "start_line": 460,
+              "end_line": 500
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "tenacity/__init__.py",
+              "start_line": 460,
+              "end_line": 500,
+              "content": "    def _post_retry_check_actions(self, retry_state: \"RetryCallState\") -> None:\n        if not (self.iter_state.is_explicit_retry or self.iter_state.retry_run_result):\n            self._add_action_func(lambda rs: rs.outcome.result())\n            return\n\n        if self.after is not None:\n            self._add_action_func(self.after)\n\n        self._add_action_func(self._run_wait)\n        self._add_action_func(self._run_stop)\n        self._add_action_func(self._post_stop_check_actions)\n\n    def _post_stop_check_actions(self, retry_state: \"RetryCallState\") -> None:\n        if self.iter_state.stop_run_result:\n            if self.retry_error_callback:\n                self._add_action_func(self.retry_error_callback)\n                return\n\n            def exc_check(rs: \"RetryCallState\") -> None:\n                fut = t.cast(\"Future\", rs.outcome)\n                retry_exc = self.retry_error_cls(fut)\n                if self.reraise:\n                    retry_exc.reraise()\n                raise retry_exc from fut.exception()\n\n            self._add_action_func(exc_check)\n            return\n\n        def next_action(rs: \"RetryCallState\") -> None:\n            sleep = rs.upcoming_sleep\n            rs.next_action = RetryAction(sleep)\n            rs.idle_for += sleep\n            self.statistics[\"idle_for\"] += sleep\n            self.statistics[\"attempt_number\"] += 1\n\n        self._add_action_func(next_action)\n\n        if self.before_sleep is not None:\n            self._add_action_func(self.before_sleep)\n\n        self._add_action_func(lambda rs: DoSleep(rs.upcoming_sleep))",
+              "content_sha256": "367460bfa9128d9fa5a8011ccfe24290748b882b45f94ed25e96398fc860276c",
+              "visible_to_generator": false
+            }
+          ]
+        },
+        {
+          "claim": "tests/test_after.py测试验证首次成功也调用after",
+          "status": "unsupported",
+          "rationale": "这些测试手动构造retry_state并直接调用after_log以验证日志格式，并不执行首次成功的重试包装。",
+          "evidence": [
+            {
+              "path": "tests/test_after.py",
+              "start_line": 28,
+              "end_line": 66
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "tests/test_after.py",
+              "start_line": 28,
+              "end_line": 66,
+              "content": "    def test_01_default(self) -> None:\n        \"\"\"Test log formatting.\"\"\"\n        log = unittest.mock.MagicMock(spec=\"logging.Logger.log\")\n        logger = unittest.mock.MagicMock(spec=\"logging.Logger\", log=log)\n\n        sec_format = \"%.3g\"\n        delay_since_first_attempt = 0.1\n\n        retry_state = test_tenacity.make_retry_state(\n            self.previous_attempt_number, delay_since_first_attempt\n        )\n        fun = after_log(\n            logger=logger, log_level=self.log_level\n        )  # use default sec_format\n        fun(retry_state)\n        log.assert_called_once_with(\n            self.log_level,\n            f\"Finished call to '{retry_state.get_fn_name()}' \"\n            f\"after {sec_format % retry_state.seconds_since_start}(s), \"\n            f\"this was the {_utils.to_ordinal(retry_state.attempt_number)} time calling it.\",\n        )\n\n    def test_02_none_seconds_since_start(self) -> None:\n        \"\"\"Test log formatting when seconds_since_start is None.\"\"\"\n        log = unittest.mock.MagicMock(spec=\"logging.Logger.log\")\n        logger = unittest.mock.MagicMock(spec=\"logging.Logger\", log=log)\n\n        retry_state = test_tenacity.make_retry_state(self.previous_attempt_number, 0.1)\n        retry_state.outcome_timestamp = None\n        assert retry_state.seconds_since_start is None\n\n        fun = after_log(logger=logger, log_level=self.log_level)\n        fun(retry_state)\n        log.assert_called_once_with(\n            self.log_level,\n            f\"Finished call to '{retry_state.get_fn_name()}' \"\n            f\"after ?(s), \"\n            f\"this was the {_utils.to_ordinal(retry_state.attempt_number)} time calling it.\",\n        )",
+              "content_sha256": "c2f387a1904632e0f0d2ab93a39d7b30a99c6480fe7b24470632553806bfd56a",
+              "visible_to_generator": false
+            }
+          ]
+        }
+      ],
+      "notes": "条件、计数、控制分支与测试解释均错；该候选虽见post_stop窗口，仍没取得真正post_retry分支。参考后补读只用作反证。 原匿名判断先保存并校验，再揭盲；Blinker/Tenacity分由独立子agent来源复核，非人审。",
+      "key_points": null,
+      "candidate_sha256": "166d7cf18b2e3db4481de5f36114f3a90ecfa3964f3546e5ed1ec2303ffe02b3",
+      "reviewer": "Codex (current session)",
+      "review_type": "model_assisted_nonblind_development_review",
+      "human_approved": false,
+      "training_eligible": false,
+      "result_sha256": "af2f1914de9effb225c1b08a48c89af98d134fb683e40ee841295f1fa932bf7b"
+    },
+    "improvement-confirm-blinker-02--agentic_no_tools--repeat": {
+      "candidate_id": "improvement-confirm-blinker-02--agentic_no_tools--repeat",
+      "correctness": "correct",
+      "citation_support": "supported",
+      "completeness": "partial",
+      "abstention": "not_applicable",
+      "entry_scope": "correct",
+      "consistency": "consistent",
+      "claims": [
+        {
+          "claim": "sig.send(123)不会对同一接收器调用两次。",
+          "status": "supported",
+          "rationale": "正式引文的测试同时连接123和ANY，send(123)只再追加一次123。",
+          "evidence": [
+            {
+              "path": "tests/test_signals.py",
+              "start_line": 397,
+              "end_line": 414
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "tests/test_signals.py",
+              "start_line": 397,
+              "end_line": 414,
+              "content": "def test_no_double_send() -> None:\n    sentinel = []\n\n    def received(sender: t.Any) -> None:\n        sentinel.append(sender)\n\n    sig = blinker.Signal()\n\n    sig.connect(received, 123)\n    sig.connect(received)\n\n    assert not sentinel\n    sig.send()\n    assert sentinel == [None]\n    sig.send(123)\n    assert sentinel == [None, 123]\n    sig.send()\n    assert sentinel == [None, 123, None]",
+              "content_sha256": "4353e18c11322c495e1fdbb3a93dce8268bf596ea5f68492bcf670f6ff205e47",
+              "visible_to_generator": true
+            }
+          ]
+        }
+      ],
+      "notes": "主要结论正确且测试引文直接支持；正文完全没有去重实现或题目要求的关键断言解释。不能由参考里的集合并集或引文中未说明的sentinel值替模型补齐答案。 原匿名判断先保存并校验，再揭盲；Blinker/Tenacity分由独立子agent来源复核，非人审。",
+      "key_points": null,
+      "candidate_sha256": "64b235a67e51f3e8be2ee9c34dcef2b11fe6cedc54b5a7d3a6936543fba3b045",
+      "reviewer": "Codex (current session)",
+      "review_type": "model_assisted_nonblind_development_review",
+      "human_approved": false,
+      "training_eligible": false,
+      "result_sha256": "137e54a824c205c4339dcf80319bba4160122c515ab09679de3fc5678e9e0951"
+    },
+    "improvement-confirm-tenacity-01--agentic_no_tools--repeat": {
+      "candidate_id": "improvement-confirm-tenacity-01--agentic_no_tools--repeat",
+      "correctness": "partially_correct",
+      "citation_support": "partial",
+      "completeness": "partial",
+      "abstention": "not_applicable",
+      "entry_scope": "correct",
+      "consistency": "contradictory",
+      "claims": [
+        {
+          "claim": "stop_after_delay不能避免12秒且应改stop_before_delay",
+          "status": "supported",
+          "rationale": "stop.py100-117说明可超出最后等待，文档130-138给出提前停止替代。",
+          "evidence": [
+            {
+              "path": "tenacity/stop.py",
+              "start_line": 100,
+              "end_line": 117
+            },
+            {
+              "path": "doc/source/index.rst",
+              "start_line": 130,
+              "end_line": 138
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "tenacity/stop.py",
+              "start_line": 100,
+              "end_line": 117,
+              "content": "class stop_after_delay(stop_base):\n    \"\"\"\n    Stop when the time from the first attempt >= limit.\n\n    Note: `max_delay` will be exceeded, so when used with a `wait`, the actual total delay will be greater\n    than `max_delay` by some of the final sleep period before `max_delay` is exceeded.\n\n    If you need stricter timing with waits, consider `stop_before_delay` instead.\n    \"\"\"\n\n    def __init__(self, max_delay: _utils.time_unit_type) -> None:\n        self.max_delay = _utils.to_seconds(max_delay)\n\n    @override\n    def __call__(self, retry_state: \"RetryCallState\") -> bool:\n        if retry_state.seconds_since_start is None:\n            raise RuntimeError(\"__call__() called but seconds_since_start is not set\")\n        return retry_state.seconds_since_start >= self.max_delay",
+              "content_sha256": "8bbfc79cff11c4df0bcd8d54d8685bc55f260d405fccf99ad103fe29f382a3f3",
+              "visible_to_generator": true
+            },
+            {
+              "path": "doc/source/index.rst",
+              "start_line": 130,
+              "end_line": 138,
+              "content": "If you're on a tight deadline, and exceeding your delay time isn't ok,\nthen you can give up on retries one attempt before you would exceed the delay.\n\n.. testcode::\n\n    @retry(stop=stop_before_delay(10))\n    def stop_before_10_s():\n        print(\"Stopping 1 attempt before 10 seconds\")\n        raise Exception",
+              "content_sha256": "df8a02fc05d0ad615f7485f729295f9c48f96dc8e3699cbe9a32c2025ac6b396",
+              "visible_to_generator": true
+            }
+          ]
+        },
+        {
+          "claim": "stop_after_delay在等待后检查而stop_before_delay在等待前检查",
+          "status": "contradicted",
+          "rationale": "两策略均由同一个_run_stop在_run_wait计算后、DoSleep之前调用；区别是stop_before_delay加upcoming_sleep，不是改变调度阶段。",
+          "evidence": [
+            {
+              "path": "tenacity/__init__.py",
+              "start_line": 429,
+              "end_line": 434
+            },
+            {
+              "path": "tenacity/__init__.py",
+              "start_line": 460,
+              "end_line": 500
+            },
+            {
+              "path": "tenacity/stop.py",
+              "start_line": 114,
+              "end_line": 138
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "tenacity/__init__.py",
+              "start_line": 429,
+              "end_line": 434,
+              "content": "    def _run_wait(self, retry_state: \"RetryCallState\") -> None:\n        retry_state.upcoming_sleep = self.wait(retry_state)\n\n    def _run_stop(self, retry_state: \"RetryCallState\") -> None:\n        self.statistics[\"delay_since_first_attempt\"] = retry_state.seconds_since_start\n        self.iter_state.stop_run_result = self.stop(retry_state)",
+              "content_sha256": "b9a52d49eafde6dbe9dd39bf3d6685a1729abd662f172299b157bf6d6e8d7357",
+              "visible_to_generator": false
+            },
+            {
+              "path": "tenacity/__init__.py",
+              "start_line": 460,
+              "end_line": 500,
+              "content": "    def _post_retry_check_actions(self, retry_state: \"RetryCallState\") -> None:\n        if not (self.iter_state.is_explicit_retry or self.iter_state.retry_run_result):\n            self._add_action_func(lambda rs: rs.outcome.result())\n            return\n\n        if self.after is not None:\n            self._add_action_func(self.after)\n\n        self._add_action_func(self._run_wait)\n        self._add_action_func(self._run_stop)\n        self._add_action_func(self._post_stop_check_actions)\n\n    def _post_stop_check_actions(self, retry_state: \"RetryCallState\") -> None:\n        if self.iter_state.stop_run_result:\n            if self.retry_error_callback:\n                self._add_action_func(self.retry_error_callback)\n                return\n\n            def exc_check(rs: \"RetryCallState\") -> None:\n                fut = t.cast(\"Future\", rs.outcome)\n                retry_exc = self.retry_error_cls(fut)\n                if self.reraise:\n                    retry_exc.reraise()\n                raise retry_exc from fut.exception()\n\n            self._add_action_func(exc_check)\n            return\n\n        def next_action(rs: \"RetryCallState\") -> None:\n            sleep = rs.upcoming_sleep\n            rs.next_action = RetryAction(sleep)\n            rs.idle_for += sleep\n            self.statistics[\"idle_for\"] += sleep\n            self.statistics[\"attempt_number\"] += 1\n\n        self._add_action_func(next_action)\n\n        if self.before_sleep is not None:\n            self._add_action_func(self.before_sleep)\n\n        self._add_action_func(lambda rs: DoSleep(rs.upcoming_sleep))",
+              "content_sha256": "367460bfa9128d9fa5a8011ccfe24290748b882b45f94ed25e96398fc860276c",
+              "visible_to_generator": false
+            },
+            {
+              "path": "tenacity/stop.py",
+              "start_line": 114,
+              "end_line": 138,
+              "content": "    def __call__(self, retry_state: \"RetryCallState\") -> bool:\n        if retry_state.seconds_since_start is None:\n            raise RuntimeError(\"__call__() called but seconds_since_start is not set\")\n        return retry_state.seconds_since_start >= self.max_delay\n\n\nclass stop_before_delay(stop_base):\n    \"\"\"\n    Stop right before the next attempt would take place after the time from the first attempt >= limit.\n\n    Most useful when you are using with a `wait` function like wait_random_exponential, but need to make\n    sure that the max_delay is not exceeded.\n    \"\"\"\n\n    def __init__(self, max_delay: _utils.time_unit_type) -> None:\n        self.max_delay = _utils.to_seconds(max_delay)\n\n    @override\n    def __call__(self, retry_state: \"RetryCallState\") -> bool:\n        if retry_state.seconds_since_start is None:\n            raise RuntimeError(\"__call__() called but seconds_since_start is not set\")\n        return (\n            retry_state.seconds_since_start + retry_state.upcoming_sleep\n            >= self.max_delay\n        )",
+              "content_sha256": "a19edb5b25551b0cc95fa51b60e62a1e6abde430918f79c89c1088214ebf0803",
+              "visible_to_generator": false
+            }
+          ]
+        },
+        {
+          "claim": "等待计算与停止检查的先后顺序已正确说明",
+          "status": "contradicted",
+          "rationale": "答案只写尝试/检查/等待，缺失等待计算阶段，并把stop_after_delay的位置写成等待后，与其前述顺序也相冲突。",
+          "evidence": [
+            {
+              "path": "tenacity/__init__.py",
+              "start_line": 429,
+              "end_line": 434
+            },
+            {
+              "path": "tenacity/__init__.py",
+              "start_line": 460,
+              "end_line": 500
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "tenacity/__init__.py",
+              "start_line": 429,
+              "end_line": 434,
+              "content": "    def _run_wait(self, retry_state: \"RetryCallState\") -> None:\n        retry_state.upcoming_sleep = self.wait(retry_state)\n\n    def _run_stop(self, retry_state: \"RetryCallState\") -> None:\n        self.statistics[\"delay_since_first_attempt\"] = retry_state.seconds_since_start\n        self.iter_state.stop_run_result = self.stop(retry_state)",
+              "content_sha256": "b9a52d49eafde6dbe9dd39bf3d6685a1729abd662f172299b157bf6d6e8d7357",
+              "visible_to_generator": false
+            },
+            {
+              "path": "tenacity/__init__.py",
+              "start_line": 460,
+              "end_line": 500,
+              "content": "    def _post_retry_check_actions(self, retry_state: \"RetryCallState\") -> None:\n        if not (self.iter_state.is_explicit_retry or self.iter_state.retry_run_result):\n            self._add_action_func(lambda rs: rs.outcome.result())\n            return\n\n        if self.after is not None:\n            self._add_action_func(self.after)\n\n        self._add_action_func(self._run_wait)\n        self._add_action_func(self._run_stop)\n        self._add_action_func(self._post_stop_check_actions)\n\n    def _post_stop_check_actions(self, retry_state: \"RetryCallState\") -> None:\n        if self.iter_state.stop_run_result:\n            if self.retry_error_callback:\n                self._add_action_func(self.retry_error_callback)\n                return\n\n            def exc_check(rs: \"RetryCallState\") -> None:\n                fut = t.cast(\"Future\", rs.outcome)\n                retry_exc = self.retry_error_cls(fut)\n                if self.reraise:\n                    retry_exc.reraise()\n                raise retry_exc from fut.exception()\n\n            self._add_action_func(exc_check)\n            return\n\n        def next_action(rs: \"RetryCallState\") -> None:\n            sleep = rs.upcoming_sleep\n            rs.next_action = RetryAction(sleep)\n            rs.idle_for += sleep\n            self.statistics[\"idle_for\"] += sleep\n            self.statistics[\"attempt_number\"] += 1\n\n        self._add_action_func(next_action)\n\n        if self.before_sleep is not None:\n            self._add_action_func(self.before_sleep)\n\n        self._add_action_func(lambda rs: DoSleep(rs.upcoming_sleep))",
+              "content_sha256": "367460bfa9128d9fa5a8011ccfe24290748b882b45f94ed25e96398fc860276c",
+              "visible_to_generator": false
+            }
+          ]
+        }
+      ],
+      "notes": "是否可能超时和替代策略正确，但明确要求的顺序解释错误。语义反证的核心_run_wait/_run_stop未见于候选输入，不用后补源码提高支持。 原匿名判断先保存并校验，再揭盲；Blinker/Tenacity分由独立子agent来源复核，非人审。",
+      "key_points": null,
+      "candidate_sha256": "f1693e9283564a7a423a7a498184988c58d376706b650fbeea5d6554b23df894",
+      "reviewer": "Codex (current session)",
+      "review_type": "model_assisted_nonblind_development_review",
+      "human_approved": false,
+      "training_eligible": false,
+      "result_sha256": "de41d1d702fea1fa41e1e438051505f014ea318ce5aafb233975ee61c2d90f89"
+    },
+    "improvement-confirm-tenacity-04--bm25_code": {
+      "candidate_id": "improvement-confirm-tenacity-04--bm25_code",
+      "correctness": "correct",
+      "citation_support": "partial",
+      "completeness": "adequate",
+      "abstention": "not_applicable",
+      "entry_scope": "correct",
+      "consistency": "consistent",
+      "claims": [
+        {
+          "claim": "本次disabled调用只执行一次、原始ValueError传播而非RetryError",
+          "status": "supported",
+          "rationale": "同步test_enabled_false_via_retry_with直接调用disabled并断言ValueError及call_count==1，是有效替代证据。",
+          "evidence": [
+            {
+              "path": "tests/test_tenacity.py",
+              "start_line": 1697,
+              "end_line": 1710
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "tests/test_tenacity.py",
+              "start_line": 1697,
+              "end_line": 1710,
+              "content": "    def test_enabled_false_via_retry_with(self) -> None:\n        \"\"\"retry_with(enabled=False) disables retrying.\"\"\"\n        call_count = 0\n\n        @retry(stop=tenacity.stop_after_attempt(3))\n        def always_fails() -> None:\n            nonlocal call_count\n            call_count += 1\n            raise ValueError(\"fail\")\n\n        disabled = always_fails.retry_with(enabled=False)\n        with pytest.raises(ValueError, match=\"fail\"):\n            disabled()\n        assert call_count == 1",
+              "content_sha256": "242c3afcac4cc1083736afad59bf8fa683fd6c0c9cbd68c0c4d5f0aa42fc8d71",
+              "visible_to_generator": true
+            }
+          ]
+        },
+        {
+          "claim": "retry_with返回新配置副本，不永久改原包装",
+          "status": "supported",
+          "rationale": "copy的288-321可见且确实构造新实例；但将retry_with连接到copy/wrap的404-405未送入本候选，正式引的asyncio片段只展示异步wrapper，不能单独证明同步retry_with调用关系。",
+          "evidence": [
+            {
+              "path": "tenacity/__init__.py",
+              "start_line": 404,
+              "end_line": 405
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "tenacity/__init__.py",
+              "start_line": 404,
+              "end_line": 405,
+              "content": "            return copy(f, *args, **kw)\n",
+              "content_sha256": "6f9a5624a5037893c75c81e6ca2fc79de18a4e9ae96df2dad6b0b796cd6223fc",
+              "visible_to_generator": false
+            }
+          ]
+        }
+      ],
+      "notes": "三项具体结论均正确，当前disabled条件也未被固定history覆盖；不强制额外解释copy内部所有参数。支持partial的原因是同步retry_with->copy->wrap这个必要调用链接缺失，评审后补读的404-405不冒充模型已见。异步片段不是同步调用的直接证据。 原匿名判断先保存并校验，再揭盲；Blinker/Tenacity分由独立子agent来源复核，非人审。",
+      "key_points": null,
+      "candidate_sha256": "a1b550c5b058b6a58e002a87c97c1ba6c0d5343c2d7f054bbdaefd103be35c5b",
+      "reviewer": "Codex (current session)",
+      "review_type": "model_assisted_nonblind_development_review",
+      "human_approved": false,
+      "training_eligible": false,
+      "result_sha256": "afc4fd75aaf9d5f07e549631e61ad16bb88405100c76a561a55937a21cbed7a0"
+    },
+    "improvement-confirm-tenacity-03--bm25_code": {
+      "candidate_id": "improvement-confirm-tenacity-03--bm25_code",
+      "correctness": "partially_correct",
+      "citation_support": "partial",
+      "completeness": "partial",
+      "abstention": "not_applicable",
+      "entry_scope": "correct",
+      "consistency": "consistent",
+      "claims": [
+        {
+          "claim": "停止后先调用retry_error_callback，本例得到fallback而不重抛ValueError",
+          "status": "supported",
+          "rationale": "472-486说明回调分支提前return；文档395-413也允许回调提供非异常结果，但本候选未见472-486。",
+          "evidence": [
+            {
+              "path": "tenacity/__init__.py",
+              "start_line": 472,
+              "end_line": 486
+            },
+            {
+              "path": "doc/source/index.rst",
+              "start_line": 395,
+              "end_line": 413
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "tenacity/__init__.py",
+              "start_line": 472,
+              "end_line": 486,
+              "content": "    def _post_stop_check_actions(self, retry_state: \"RetryCallState\") -> None:\n        if self.iter_state.stop_run_result:\n            if self.retry_error_callback:\n                self._add_action_func(self.retry_error_callback)\n                return\n\n            def exc_check(rs: \"RetryCallState\") -> None:\n                fut = t.cast(\"Future\", rs.outcome)\n                retry_exc = self.retry_error_cls(fut)\n                if self.reraise:\n                    retry_exc.reraise()\n                raise retry_exc from fut.exception()\n\n            self._add_action_func(exc_check)\n            return",
+              "content_sha256": "27f56f54b49fe5b9ece029c0e019a73c8bd869a2f30fdd2abdadb0fc604e0f5c",
+              "visible_to_generator": false
+            },
+            {
+              "path": "doc/source/index.rst",
+              "start_line": 395,
+              "end_line": 413,
+              "content": "For example, you can call a custom callback function after all retries failed,\nwithout raising an exception (or you can re-raise or do anything really)\n\n.. testcode::\n\n    def return_last_value(retry_state):\n        \"\"\"return the result of the last call attempt\"\"\"\n        return retry_state.outcome.result()\n\n    def is_false(value):\n        \"\"\"Return True if value is False\"\"\"\n        return value is False\n\n    # will return False after trying 3 times to get a different result\n    @retry(stop=stop_after_attempt(3),\n           retry_error_callback=return_last_value,\n           retry=retry_if_result(is_false))\n    def eventually_return_false():\n        return False",
+              "content_sha256": "032c4cead4bb5f3848fa1a1eabd08b9c7aff455535b43ace120b0a36f659b2be",
+              "visible_to_generator": true
+            }
+          ]
+        },
+        {
+          "claim": "把fallback作为最终结果抛出给调用者",
+          "status": "contradicted",
+          "rationale": "同步返回路径是iter取得最后action结果后__call__直接return do，不是raise字符串。",
+          "evidence": [
+            {
+              "path": "tenacity/__init__.py",
+              "start_line": 436,
+              "end_line": 441
+            },
+            {
+              "path": "tenacity/__init__.py",
+              "start_line": 548,
+              "end_line": 562
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "tenacity/__init__.py",
+              "start_line": 436,
+              "end_line": 441,
+              "content": "    def iter(self, retry_state: \"RetryCallState\") -> DoAttempt | DoSleep | t.Any:\n        self._begin_iter(retry_state)\n        result = None\n        for action in self.iter_state.actions:\n            result = action(retry_state)\n        return result",
+              "content_sha256": "600f803e805093b5fa54a66ec1b1aab369f5692eee640b04ed985d1ce7f0b606",
+              "visible_to_generator": false
+            },
+            {
+              "path": "tenacity/__init__.py",
+              "start_line": 548,
+              "end_line": 562,
+              "content": "        retry_state = RetryCallState(retry_object=self, fn=fn, args=args, kwargs=kwargs)\n        while True:\n            do = self.iter(retry_state=retry_state)\n            if isinstance(do, DoAttempt):\n                try:\n                    result = fn(*args, **kwargs)\n                except BaseException:\n                    retry_state.set_exception(sys.exc_info())  # type: ignore[arg-type]\n                else:\n                    retry_state.set_result(result)\n            elif isinstance(do, DoSleep):\n                retry_state.prepare_for_next_attempt()\n                self.sleep(do)\n            else:\n                return do  # type: ignore[no-any-return]",
+              "content_sha256": "8cba8206bbb28dbf22fe8c85c5b56e2504db946bd99c7ba46e1f5e6f1ca09789",
+              "visible_to_generator": false
+            }
+          ]
+        }
+      ],
+      "notes": "主要结果选择方向是回调覆盖原异常，但使用抛出返回值这一错误术语，混淆返回与抛异常；不自动把它修正为return。若只把抛出理解为口语交付，具体fallback结论可接受，仍缺可见优先分支。正式引的206-217是RetryError.reraise本身、2091-2100是无回调成功测试，不能证明优先级。 原匿名判断先保存并校验，再揭盲；Blinker/Tenacity分由独立子agent来源复核，非人审。",
+      "key_points": null,
+      "candidate_sha256": "b4f5259311869e5747f976099a60aa232579c8d9ba203d185c84bc8972fd8ac1",
+      "reviewer": "Codex (current session)",
+      "review_type": "model_assisted_nonblind_development_review",
+      "human_approved": false,
+      "training_eligible": false,
+      "result_sha256": "991a92965644dbeabb542b1ab129f4389bf5a766a9d28f5f3f177d9e5324afea"
+    },
+    "improvement-confirm-blinker-02--agentic--repeat": {
+      "candidate_id": "improvement-confirm-blinker-02--agentic--repeat",
+      "correctness": "partially_correct",
+      "citation_support": "partial",
+      "completeness": "partial",
+      "abstention": "not_applicable",
+      "entry_scope": "correct",
+      "consistency": "consistent",
+      "claims": [
+        {
+          "claim": "send(123)只触发该回调一次。",
+          "status": "supported",
+          "rationale": "测试的sentinel从[None]到[None,123]，结果正确。",
+          "evidence": [
+            {
+              "path": "tests/test_signals.py",
+              "start_line": 397,
+              "end_line": 414
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "tests/test_signals.py",
+              "start_line": 397,
+              "end_line": 414,
+              "content": "def test_no_double_send() -> None:\n    sentinel = []\n\n    def received(sender: t.Any) -> None:\n        sentinel.append(sender)\n\n    sig = blinker.Signal()\n\n    sig.connect(received, 123)\n    sig.connect(received)\n\n    assert not sentinel\n    sig.send()\n    assert sentinel == [None]\n    sig.send(123)\n    assert sentinel == [None, 123]\n    sig.send()\n    assert sentinel == [None, 123, None]",
+              "content_sha256": "4353e18c11322c495e1fdbb3a93dce8268bf596ea5f68492bcf670f6ff205e47",
+              "visible_to_generator": true
+            }
+          ]
+        },
+        {
+          "claim": "用(回调函数,发送者)键去重同一sender的重复注册就保证ANY和123跨sender也只调用一次。",
+          "status": "contradicted",
+          "rationale": "ANY与123是两条不同sender关联，单按该二元关系去重不能解释跨关联合并；实际receivers字典按receiver_id保存，receivers_for对两个sender桶的receiver_id集合做并集再遍历。",
+          "evidence": [
+            {
+              "path": "src/blinker/base.py",
+              "start_line": 107,
+              "end_line": 118
+            },
+            {
+              "path": "src/blinker/base.py",
+              "start_line": 342,
+              "end_line": 349
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "src/blinker/base.py",
+              "start_line": 107,
+              "end_line": 118,
+              "content": "        receiver_id = make_id(receiver)\n        sender_id = ANY_ID if sender is ANY else make_id(sender)\n\n        if weak:\n            self.receivers[receiver_id] = make_ref(\n                receiver, self._make_cleanup_receiver(receiver_id)\n            )\n        else:\n            self.receivers[receiver_id] = receiver\n\n        self._by_sender[sender_id].add(receiver_id)\n        self._by_receiver[receiver_id].add(sender_id)",
+              "content_sha256": "948264abac47a2e73bf86b5bc06fdfd71c9858980d76524f7b908963919879f8",
+              "visible_to_generator": false
+            },
+            {
+              "path": "src/blinker/base.py",
+              "start_line": 342,
+              "end_line": 349,
+              "content": "        if sender_id in self._by_sender:\n            ids = self._by_sender[ANY_ID] | self._by_sender[sender_id]\n        else:\n            ids = self._by_sender[ANY_ID].copy()\n\n        for receiver_id in ids:\n            receiver = self.receivers.get(receiver_id)\n",
+              "content_sha256": "855fd05543fb40900933c7e5ec04bd7a1b4f1f8ebffc7986bb346bd9ec097f0e",
+              "visible_to_generator": false
+            }
+          ]
+        }
+      ],
+      "notes": "结论正确，但所说二元键及同sender去重并非本题跨ANY/123只发送一次的机制；应说明接收器ID集合并集。正式引文只证明测试结果，未支持内部键结构，正文也未交代[None,123]断言。此处保留机制事实错误而非只按遗漏计分。 原匿名判断先保存并校验，再揭盲；Blinker/Tenacity分由独立子agent来源复核，非人审。",
+      "key_points": null,
+      "candidate_sha256": "5dc18d2cc6af00e42a2a10065f704e64b190d10ef3dda4b2e527a6ae1f2b649f",
+      "reviewer": "Codex (current session)",
+      "review_type": "model_assisted_nonblind_development_review",
+      "human_approved": false,
+      "training_eligible": false,
+      "result_sha256": "74f9495dada8054a53591ef4ef32abc572ed6fe4dff8c82cffc0fc0b3c08ed60"
+    },
+    "improvement-confirm-tenacity-02--agentic_no_tools": {
+      "candidate_id": "improvement-confirm-tenacity-02--agentic_no_tools",
+      "correctness": "incorrect",
+      "citation_support": "unsupported",
+      "completeness": "partial",
+      "abstention": "not_applicable",
+      "entry_scope": "correct",
+      "consistency": "consistent",
+      "claims": [
+        {
+          "claim": "默认策略首次成功after，第三次成功记录3",
+          "status": "contradicted",
+          "rationale": "默认成功不重试，460-466直接返回；after_attempts整合测试最后记录2。",
+          "evidence": [
+            {
+              "path": "tenacity/__init__.py",
+              "start_line": 460,
+              "end_line": 466
+            },
+            {
+              "path": "tests/test_tenacity.py",
+              "start_line": 1853,
+              "end_line": 1870
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "tenacity/__init__.py",
+              "start_line": 460,
+              "end_line": 466,
+              "content": "    def _post_retry_check_actions(self, retry_state: \"RetryCallState\") -> None:\n        if not (self.iter_state.is_explicit_retry or self.iter_state.retry_run_result):\n            self._add_action_func(lambda rs: rs.outcome.result())\n            return\n\n        if self.after is not None:\n            self._add_action_func(self.after)",
+              "content_sha256": "ed98cb68710d5153075623d1b5d46f0946b3a12ebdb32ae76395ede8c3ebf1d0",
+              "visible_to_generator": false
+            },
+            {
+              "path": "tests/test_tenacity.py",
+              "start_line": 1853,
+              "end_line": 1870,
+              "content": "    def test_after_attempts(self) -> None:\n        TestBeforeAfterAttempts._attempt_number = 0\n\n        def _after(retry_state: RetryCallState) -> None:\n            TestBeforeAfterAttempts._attempt_number = retry_state.attempt_number\n\n        @retry(\n            wait=tenacity.wait_fixed(0.1),\n            stop=tenacity.stop_after_attempt(3),\n            after=_after,\n        )\n        def _test_after() -> None:\n            if TestBeforeAfterAttempts._attempt_number < 2:\n                raise Exception(\"testing after_attempts handler\")\n\n        _test_after()\n\n        self.assertTrue(TestBeforeAfterAttempts._attempt_number == 2)",
+              "content_sha256": "a1325d17a55b7019d349cfaf8c5c45a3b194635dac22914f8632662e8d599a2b",
+              "visible_to_generator": false
+            }
+          ]
+        },
+        {
+          "claim": "每次调用完成都有统一after触发逻辑",
+          "status": "contradicted",
+          "rationale": "after只在需重试的分支安排，不是通用完成回调。",
+          "evidence": [
+            {
+              "path": "tenacity/__init__.py",
+              "start_line": 460,
+              "end_line": 466
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "tenacity/__init__.py",
+              "start_line": 460,
+              "end_line": 466,
+              "content": "    def _post_retry_check_actions(self, retry_state: \"RetryCallState\") -> None:\n        if not (self.iter_state.is_explicit_retry or self.iter_state.retry_run_result):\n            self._add_action_func(lambda rs: rs.outcome.result())\n            return\n\n        if self.after is not None:\n            self._add_action_func(self.after)",
+              "content_sha256": "ed98cb68710d5153075623d1b5d46f0946b3a12ebdb32ae76395ede8c3ebf1d0",
+              "visible_to_generator": false
+            }
+          ]
+        },
+        {
+          "claim": "asyncio177-178显示after接收attempt_number",
+          "status": "supported",
+          "rationale": "这两行确实定义回调并追加编号，但不证明成功时调用。",
+          "evidence": [
+            {
+              "path": "tests/test_asyncio.py",
+              "start_line": 177,
+              "end_line": 178
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "tests/test_asyncio.py",
+              "start_line": 177,
+              "end_line": 178,
+              "content": "        def after(retry_state: RetryCallState) -> None:\n            attempts.append((retry_state.args[0], retry_state.attempt_number))",
+              "content_sha256": "64ae2592001efb2bb7caf9354abe3f1d7f85a896bd3273cae0446efd0dd91ead",
+              "visible_to_generator": true
+            }
+          ]
+        },
+        {
+          "claim": "test_defaults可验证其声称的成功after边界",
+          "status": "unsupported",
+          "rationale": "1559-1563只断言默认重试函数最终结果，没有after调用计数或首次成功触发断言。",
+          "evidence": [
+            {
+              "path": "tests/test_tenacity.py",
+              "start_line": 1559,
+              "end_line": 1563
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "tests/test_tenacity.py",
+              "start_line": 1559,
+              "end_line": 1563,
+              "content": "    def test_defaults(self) -> None:\n        self.assertTrue(_retryable_default(NoNameErrorAfterCount(5)))\n        self.assertTrue(_retryable_default_f(NoNameErrorAfterCount(5)))\n        self.assertTrue(_retryable_default(NoCustomErrorAfterCount(5)))\n        self.assertTrue(_retryable_default_f(NoCustomErrorAfterCount(5)))",
+              "content_sha256": "9909c07003aa57a2e00ad51cee79e78b322afe0b88fc82257ac8491e75adc130",
+              "visible_to_generator": true
+            }
+          ]
+        }
+      ],
+      "notes": "部分测试字面描述正确，但用于支撑的核心成功回调推论不成立；整体必要行为错误。 原匿名判断先保存并校验，再揭盲；Blinker/Tenacity分由独立子agent来源复核，非人审。",
+      "key_points": null,
+      "candidate_sha256": "0ba82c89b938f96500a01c8e613cd470da8c6abc6e38ff7f32b24f642d8cd866",
+      "reviewer": "Codex (current session)",
+      "review_type": "model_assisted_nonblind_development_review",
+      "human_approved": false,
+      "training_eligible": false,
+      "result_sha256": "fe5092167df059f6f83698397415644f241941e8128810249d15afb8c24c300a"
+    },
+    "improvement-confirm-blinker-04--bm25_code": {
+      "candidate_id": "improvement-confirm-blinker-04--bm25_code",
+      "correctness": "partially_correct",
+      "citation_support": "partial",
+      "completeness": "partial",
+      "abstention": "not_applicable",
+      "entry_scope": "correct",
+      "consistency": "consistent",
+      "claims": [
+        {
+          "claim": "直接sig.send()不会自动await异步回调，当前不传wrapper的调用遇到异步接收器会RuntimeError。",
+          "status": "supported",
+          "rationale": "混用测试对直接sig.send()断言RuntimeError。",
+          "evidence": [
+            {
+              "path": "tests/test_signals.py",
+              "start_line": 274,
+              "end_line": 283
+            },
+            {
+              "path": "src/blinker/base.py",
+              "start_line": 242,
+              "end_line": 249
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "tests/test_signals.py",
+              "start_line": 274,
+              "end_line": 283,
+              "content": "\n    sig = blinker.Signal()\n    sig.connect(received)\n    sig.connect(received_async)\n\n    await sig.send_async(_sync_wrapper=wrapper)  # type: ignore[arg-type]\n    assert len(sentinel) == 2\n\n    with pytest.raises(RuntimeError):\n        sig.send()",
+              "content_sha256": "efe2a4dae35607217eb813290aef5c39134d85c9b61bd23b2822ffa5da61a385",
+              "visible_to_generator": true
+            },
+            {
+              "path": "src/blinker/base.py",
+              "start_line": 242,
+              "end_line": 249,
+              "content": "        for receiver in self.receivers_for(sender):\n            if iscoroutinefunction(receiver):\n                if _async_wrapper is None:\n                    raise RuntimeError(\"Cannot send to a coroutine function.\")\n\n                result = _async_wrapper(receiver)(sender, **kwargs)\n            else:\n                result = receiver(sender, **kwargs)",
+              "content_sha256": "f002a9e305297def4b3e9c82db0aa19b97b36f3504042234eae269fa8ff36056",
+              "visible_to_generator": false
+            }
+          ]
+        },
+        {
+          "claim": "混用同步和异步回调必须改用send_async(_sync_wrapper=wrapper)。",
+          "status": "contradicted",
+          "rationale": "这是可行的一种路径，却不是唯一必要路径；同步send接受_async_wrapper并调用包装的异步receiver，文档313–316也明确等价用法。",
+          "evidence": [
+            {
+              "path": "src/blinker/base.py",
+              "start_line": 242,
+              "end_line": 249
+            },
+            {
+              "path": "docs/index.rst",
+              "start_line": 313,
+              "end_line": 316
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "src/blinker/base.py",
+              "start_line": 242,
+              "end_line": 249,
+              "content": "        for receiver in self.receivers_for(sender):\n            if iscoroutinefunction(receiver):\n                if _async_wrapper is None:\n                    raise RuntimeError(\"Cannot send to a coroutine function.\")\n\n                result = _async_wrapper(receiver)(sender, **kwargs)\n            else:\n                result = receiver(sender, **kwargs)",
+              "content_sha256": "f002a9e305297def4b3e9c82db0aa19b97b36f3504042234eae269fa8ff36056",
+              "visible_to_generator": false
+            },
+            {
+              "path": "docs/index.rst",
+              "start_line": 313,
+              "end_line": 316,
+              "content": "The equivalent usage for :meth:`~Signal.send` is via the\n``_async_wrapper`` argument. This usage is will depend on your event\nloop, and in the simple case whereby you aren't running within an\nevent loop the following example can be used:",
+              "content_sha256": "dfecf14ce2501b09963f846b3814ccd68f66cce6a4da29f583b2c0f6f6fd798e",
+              "visible_to_generator": true
+            }
+          ]
+        },
+        {
+          "claim": "给出的_sync_wrapper可以令异步入口调用普通同步函数。",
+          "status": "supported",
+          "rationale": "所引文档示例在async inner中调用func，再await send_async(_sync_wrapper=wrapper)。不要求额外运行示例。",
+          "evidence": [
+            {
+              "path": "docs/index.rst",
+              "start_line": 295,
+              "end_line": 311
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "docs/index.rst",
+              "start_line": 295,
+              "end_line": 311,
+              "content": ".. code-block:: python\n\n   sig = blinker.Signal()\n\n   def receiver():\n       ...\n\n   sig.connect(receiver)\n\n   def wrapper(func):\n\n       async def inner(*args, **kwargs):\n           func(*args, **kwargs)\n\n       return inner\n\n   await sig.send_async(_sync_wrapper=wrapper)",
+              "content_sha256": "0e68515d52138d114a520ba477a041bd25cf67db0a6387eec4425f43471c7baa",
+              "visible_to_generator": true
+            }
+          ]
+        }
+      ],
+      "notes": "保留正确的直接调用结论与可行的异步包装方案，但“要混用必须通过send_async”把一种方案说成必要条件，忽略send的_async_wrapper。这里按明确“必须”表述判机制范围错误；同步调用普通函数的示例本身可行。正文也未说明send_async没有_sync_wrapper会抛出的分支。 原匿名判断先保存并校验，再揭盲；Blinker/Tenacity分由独立子agent来源复核，非人审。",
+      "key_points": null,
+      "candidate_sha256": "f67f9f0682d307c43e7a7d4e07d45bdad93cfce05be7f48d40787d67a06210e1",
+      "reviewer": "Codex (current session)",
+      "review_type": "model_assisted_nonblind_development_review",
+      "human_approved": false,
+      "training_eligible": false,
+      "result_sha256": "b5f251ebec216ff3e948fb46447d50ff9ee2875d4238cb45438f921dadb8ba65"
+    },
+    "improvement-confirm-tenacity-05--bm25_code": {
+      "candidate_id": "improvement-confirm-tenacity-05--bm25_code",
+      "correctness": "correct",
+      "citation_support": "not_applicable",
+      "completeness": "adequate",
+      "abstention": "appropriate",
+      "entry_scope": "not_applicable",
+      "consistency": "consistent",
+      "claims": [
+        {
+          "claim": "仅凭源码不能给出特定服务昨天的准确重试次数等待和堆栈",
+          "status": "unverifiable",
+          "rationale": "这是题目明确缺少调用配置、日志和运行状态的逻辑信息边界；无需以普通库代码证明某公司的私有事实。",
+          "evidence": [],
+          "verified_evidence": []
+        },
+        {
+          "claim": "insufficient_evidence为true，与拒绝猜测一致",
+          "status": "unverifiable",
+          "rationale": "该协议字段与正文核对一致，不是可用目标源码行证明的命题。",
+          "evidence": [],
+          "verified_evidence": []
+        }
+      ],
+      "notes": "适当拒答，覆盖题目三项私有运行数据；未把默认配置当生产事实，也未添加错误库机制。题干已明确未提供三类外部数据，不把复述同一缺失清单设为额外必答；正文与True标志一致。附带的普通库来源不当作公司运行记录。 原匿名判断先保存并校验，再揭盲；Blinker/Tenacity分由独立子agent来源复核，非人审。",
+      "key_points": null,
+      "candidate_sha256": "1d82b130545c874c001e91a1617fc80cc29937d606017a70a0a7eb6d955978b0",
+      "reviewer": "Codex (current session)",
+      "review_type": "model_assisted_nonblind_development_review",
+      "human_approved": false,
+      "training_eligible": false,
+      "result_sha256": "32a7d147d832d836529abcf59bb8b5773975f330c82f01a27f15029dcfa8655d"
+    },
+    "improvement-confirm-blinker-03--bm25_code": {
+      "candidate_id": "improvement-confirm-blinker-03--bm25_code",
+      "correctness": "unverifiable",
+      "citation_support": "not_applicable",
+      "completeness": "insufficient",
+      "abstention": "appropriate",
+      "entry_scope": "correct",
+      "consistency": "consistent",
+      "claims": [
+        {
+          "claim": "回答仅写不足，未作出可核验的异常清理结论。",
+          "status": "unverifiable",
+          "rationale": "insufficient_evidence=true与不足标记一致，但没有具体说明缺哪段实现或测试，也没有完成可由仓库回答的问题。",
+          "evidence": [],
+          "verified_evidence": []
+        }
+      ],
+      "notes": "模型实际只见若干回调体/装饰器短片段，谨慎拒答不据此判成错误事实；它仍没有解决题目。所附引文不要求被当作拒答证明；缺少具体缺口与下一步位置，不能给核心或完整通过。 原匿名判断先保存并校验，再揭盲；Blinker/Tenacity分由独立子agent来源复核，非人审。",
+      "key_points": null,
+      "candidate_sha256": "1fa49fb9210d4732a1c91847bab6f5f543b96a7bd7f256cf7c67669217726d07",
+      "reviewer": "Codex (current session)",
+      "review_type": "model_assisted_nonblind_development_review",
+      "human_approved": false,
+      "training_eligible": false,
+      "result_sha256": "60c92ab487d1608b939b8bc00ac16df5e6e89fd2b62fe18f41ac898fe51afba8"
+    },
+    "improvement-confirm-blinker-01--agentic_no_tools": {
+      "candidate_id": "improvement-confirm-blinker-01--agentic_no_tools",
+      "correctness": "partially_correct",
+      "citation_support": "partial",
+      "completeness": "partial",
+      "abstention": "not_applicable",
+      "entry_scope": "correct",
+      "consistency": "consistent",
+      "claims": [
+        {
+          "claim": "局部回调不被默认注册持续强引用，回收后后续发送不再触发它。",
+          "status": "supported",
+          "rationale": "实现默认弱引用，test_has_receivers删除received并收集后接收器生成器为空。",
+          "evidence": [
+            {
+              "path": "src/blinker/base.py",
+              "start_line": 91,
+              "end_line": 115
+            },
+            {
+              "path": "tests/test_signals.py",
+              "start_line": 438,
+              "end_line": 443
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "src/blinker/base.py",
+              "start_line": 91,
+              "end_line": 115,
+              "content": "    def connect(self, receiver: F, sender: t.Any = ANY, weak: bool = True) -> F:\n        \"\"\"Connect ``receiver`` to be called when the signal is sent by\n        ``sender``.\n\n        :param receiver: The callable to call when :meth:`send` is called with\n            the given ``sender``, passing ``sender`` as a positional argument\n            along with any extra keyword arguments.\n        :param sender: Any object or :data:`ANY`. ``receiver`` will only be\n            called when :meth:`send` is called with this sender. If ``ANY``, the\n            receiver will be called for any sender. A receiver may be connected\n            to multiple senders by calling :meth:`connect` multiple times.\n        :param weak: Track the receiver with a :mod:`weakref`. The receiver will\n            be automatically disconnected when it is garbage collected. When\n            connecting a receiver defined within a function, set to ``False``,\n            otherwise it will be disconnected when the function scope ends.\n        \"\"\"\n        receiver_id = make_id(receiver)\n        sender_id = ANY_ID if sender is ANY else make_id(sender)\n\n        if weak:\n            self.receivers[receiver_id] = make_ref(\n                receiver, self._make_cleanup_receiver(receiver_id)\n            )\n        else:\n            self.receivers[receiver_id] = receiver",
+              "content_sha256": "d6bcfb6d4ee0c0bb2eacc5487c8a78d79ff314325d1d245e553b4845a872b248",
+              "visible_to_generator": false
+            },
+            {
+              "path": "tests/test_signals.py",
+              "start_line": 438,
+              "end_line": 443,
+              "content": "    del received\n    collect_acyclic_refs()\n\n    assert not sig.has_receivers_for(\"xyz\")\n    assert list(sig.receivers_for(\"xyz\")) == []\n    assert list(sig.receivers_for(o)) == []",
+              "content_sha256": "d37dd7cf04327505c4c47ea07f68167a6cc7c5e300c372a5ecd258f987b3e565",
+              "visible_to_generator": true
+            }
+          ]
+        },
+        {
+          "claim": "可使用weak=False或保有持续强引用来避免回调丢失。",
+          "status": "supported",
+          "rationale": "weak=False直接保存receiver；测试以未另存的lambda用weak=False注册后仍有接收器。",
+          "evidence": [
+            {
+              "path": "src/blinker/base.py",
+              "start_line": 110,
+              "end_line": 115
+            },
+            {
+              "path": "tests/test_signals.py",
+              "start_line": 445,
+              "end_line": 450
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "src/blinker/base.py",
+              "start_line": 110,
+              "end_line": 115,
+              "content": "        if weak:\n            self.receivers[receiver_id] = make_ref(\n                receiver, self._make_cleanup_receiver(receiver_id)\n            )\n        else:\n            self.receivers[receiver_id] = receiver",
+              "content_sha256": "9fc71690fcea6be81ef3707b11f4f58dbc90a10344a578d0a7c544b86c0ea8d1",
+              "visible_to_generator": false
+            },
+            {
+              "path": "tests/test_signals.py",
+              "start_line": 445,
+              "end_line": 450,
+              "content": "    sig.connect(lambda sender: None, weak=False)\n    assert sig.has_receivers_for(\"xyz\")\n    assert sig.has_receivers_for(o)\n    assert sig.has_receivers_for(None)\n    assert sig.has_receivers_for(blinker.ANY)\n    assert sig.has_receivers_for(\"xyz\")",
+              "content_sha256": "32e945d35feddd6b4bb2004a0ffde3c923546266c1967c7e321ac65b5928ed9f",
+              "visible_to_generator": true
+            }
+          ]
+        },
+        {
+          "claim": "只改成实例方法即可避免弱注册的生命周期问题。",
+          "status": "partial",
+          "rationale": "模块级/持久拥有者可以提供强引用，但实例方法本身也会经make_ref变成WeakMethod；若实例未被持有，单纯改成实例方法不保证存活。答案未明确这一条件。",
+          "evidence": [
+            {
+              "path": "src/blinker/_utilities.py",
+              "start_line": 60,
+              "end_line": 64
+            },
+            {
+              "path": "src/blinker/base.py",
+              "start_line": 110,
+              "end_line": 115
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "src/blinker/_utilities.py",
+              "start_line": 60,
+              "end_line": 64,
+              "content": "def make_ref(obj: T, callback: c.Callable[[ref[T]], None] | None = None) -> ref[T]:\n    if inspect.ismethod(obj):\n        return WeakMethod(obj, callback)  # type: ignore[arg-type, return-value]\n\n    return ref(obj, callback)",
+              "content_sha256": "349272cbe370a7c60f57261414da162365112e91697a7d615442acd2d581990e",
+              "visible_to_generator": false
+            },
+            {
+              "path": "src/blinker/base.py",
+              "start_line": 110,
+              "end_line": 115,
+              "content": "        if weak:\n            self.receivers[receiver_id] = make_ref(\n                receiver, self._make_cleanup_receiver(receiver_id)\n            )\n        else:\n            self.receivers[receiver_id] = receiver",
+              "content_sha256": "9fc71690fcea6be81ef3707b11f4f58dbc90a10344a578d0a7c544b86c0ea8d1",
+              "visible_to_generator": false
+            }
+          ]
+        }
+      ],
+      "notes": "已给出weak=False这一有效方案，test_has_receivers的438–450可作为弱/强存活差异的等价证据，不机械要求唯一参考测试。但“改用实例方法”缺少实例持有条件；正文没有实现位置/默认weak=True机制，并以“示例与验证位置见下文”结束而没有后文和断言说明。149–154仍是sender清理，不能支持receiver强弱差异。 原匿名判断先保存并校验，再揭盲；Blinker/Tenacity分由独立子agent来源复核，非人审。",
+      "key_points": null,
+      "candidate_sha256": "82a8ee2a652634f2d77dc5cf007e7891a73a8a15e59f5e1ac6844fea757e25ec",
+      "reviewer": "Codex (current session)",
+      "review_type": "model_assisted_nonblind_development_review",
+      "human_approved": false,
+      "training_eligible": false,
+      "result_sha256": "4283fb82fe44243f31d837c46a61e0284d7bb30b4f867585e1dbc0bdd6f0f8e2"
+    },
+    "improvement-confirm-blinker-02--agentic_no_tools": {
+      "candidate_id": "improvement-confirm-blinker-02--agentic_no_tools",
+      "correctness": "correct",
+      "citation_support": "supported",
+      "completeness": "partial",
+      "abstention": "not_applicable",
+      "entry_scope": "correct",
+      "consistency": "consistent",
+      "claims": [
+        {
+          "claim": "sig.send(123)不会对同一接收器调用两次。",
+          "status": "supported",
+          "rationale": "正式引文的测试同时连接123和ANY，send(123)只再追加一次123。",
+          "evidence": [
+            {
+              "path": "tests/test_signals.py",
+              "start_line": 397,
+              "end_line": 414
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "tests/test_signals.py",
+              "start_line": 397,
+              "end_line": 414,
+              "content": "def test_no_double_send() -> None:\n    sentinel = []\n\n    def received(sender: t.Any) -> None:\n        sentinel.append(sender)\n\n    sig = blinker.Signal()\n\n    sig.connect(received, 123)\n    sig.connect(received)\n\n    assert not sentinel\n    sig.send()\n    assert sentinel == [None]\n    sig.send(123)\n    assert sentinel == [None, 123]\n    sig.send()\n    assert sentinel == [None, 123, None]",
+              "content_sha256": "4353e18c11322c495e1fdbb3a93dce8268bf596ea5f68492bcf670f6ff205e47",
+              "visible_to_generator": true
+            }
+          ]
+        }
+      ],
+      "notes": "主要结论正确且测试引文直接支持；正文完全没有去重实现或题目要求的关键断言解释。不能由参考里的集合并集或引文中未说明的sentinel值替模型补齐答案。 原匿名判断先保存并校验，再揭盲；Blinker/Tenacity分由独立子agent来源复核，非人审。",
+      "key_points": null,
+      "candidate_sha256": "f1aefe8eae968da0ed4aad07e2cfcadcdd35f295cbea730c3b3689b9da478284",
+      "reviewer": "Codex (current session)",
+      "review_type": "model_assisted_nonblind_development_review",
+      "human_approved": false,
+      "training_eligible": false,
+      "result_sha256": "ce10274c9d307c229f5b0ac9c713085378119e74ca339d3e5f0c1c0e840ebb9b"
+    },
+    "improvement-confirm-tenacity-01--agentic": {
+      "candidate_id": "improvement-confirm-tenacity-01--agentic",
+      "correctness": "partially_correct",
+      "citation_support": "partial",
+      "completeness": "partial",
+      "abstention": "not_applicable",
+      "entry_scope": "correct",
+      "consistency": "consistent",
+      "claims": [
+        {
+          "claim": "stop_after_delay只比较已用时间>=10，9秒失败可再睡3秒",
+          "status": "supported",
+          "rationale": "114-117的比较只看seconds_since_start，9<10，下一等待可使总耗时达到12。",
+          "evidence": [
+            {
+              "path": "tenacity/stop.py",
+              "start_line": 114,
+              "end_line": 117
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "tenacity/stop.py",
+              "start_line": 114,
+              "end_line": 117,
+              "content": "    def __call__(self, retry_state: \"RetryCallState\") -> bool:\n        if retry_state.seconds_since_start is None:\n            raise RuntimeError(\"__call__() called but seconds_since_start is not set\")\n        return retry_state.seconds_since_start >= self.max_delay",
+              "content_sha256": "4ce74b04ed036ba05cb74a3227ef0f4474abdad73e20d675fa8da22b2340e2f5",
+              "visible_to_generator": true
+            }
+          ]
+        },
+        {
+          "claim": "睡到12秒后在下一次尝试前就停止，不会再进入下一重试循环",
+          "status": "contradicted",
+          "rationale": "DoSleep分支先prepare_for_next_attempt，睡后新iter看到outcome为空会直接DoAttempt；stop只在该次尝试结束后的重试路径判定，不能先行禁止12秒时开始的那次尝试。",
+          "evidence": [
+            {
+              "path": "tenacity/__init__.py",
+              "start_line": 443,
+              "end_line": 451
+            },
+            {
+              "path": "tenacity/__init__.py",
+              "start_line": 460,
+              "end_line": 500
+            },
+            {
+              "path": "tenacity/__init__.py",
+              "start_line": 548,
+              "end_line": 562
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "tenacity/__init__.py",
+              "start_line": 443,
+              "end_line": 451,
+              "content": "    def _begin_iter(self, retry_state: \"RetryCallState\") -> None:\n        self.iter_state.reset()\n\n        fut = retry_state.outcome\n        if fut is None:\n            if self.before is not None:\n                self._add_action_func(self.before)\n            self._add_action_func(lambda rs: DoAttempt())\n            return",
+              "content_sha256": "54703d3eadb84b3952077689761bef64aeb297f3f36ffbd3f7d9ae4871971dbd",
+              "visible_to_generator": false
+            },
+            {
+              "path": "tenacity/__init__.py",
+              "start_line": 460,
+              "end_line": 500,
+              "content": "    def _post_retry_check_actions(self, retry_state: \"RetryCallState\") -> None:\n        if not (self.iter_state.is_explicit_retry or self.iter_state.retry_run_result):\n            self._add_action_func(lambda rs: rs.outcome.result())\n            return\n\n        if self.after is not None:\n            self._add_action_func(self.after)\n\n        self._add_action_func(self._run_wait)\n        self._add_action_func(self._run_stop)\n        self._add_action_func(self._post_stop_check_actions)\n\n    def _post_stop_check_actions(self, retry_state: \"RetryCallState\") -> None:\n        if self.iter_state.stop_run_result:\n            if self.retry_error_callback:\n                self._add_action_func(self.retry_error_callback)\n                return\n\n            def exc_check(rs: \"RetryCallState\") -> None:\n                fut = t.cast(\"Future\", rs.outcome)\n                retry_exc = self.retry_error_cls(fut)\n                if self.reraise:\n                    retry_exc.reraise()\n                raise retry_exc from fut.exception()\n\n            self._add_action_func(exc_check)\n            return\n\n        def next_action(rs: \"RetryCallState\") -> None:\n            sleep = rs.upcoming_sleep\n            rs.next_action = RetryAction(sleep)\n            rs.idle_for += sleep\n            self.statistics[\"idle_for\"] += sleep\n            self.statistics[\"attempt_number\"] += 1\n\n        self._add_action_func(next_action)\n\n        if self.before_sleep is not None:\n            self._add_action_func(self.before_sleep)\n\n        self._add_action_func(lambda rs: DoSleep(rs.upcoming_sleep))",
+              "content_sha256": "367460bfa9128d9fa5a8011ccfe24290748b882b45f94ed25e96398fc860276c",
+              "visible_to_generator": false
+            },
+            {
+              "path": "tenacity/__init__.py",
+              "start_line": 548,
+              "end_line": 562,
+              "content": "        retry_state = RetryCallState(retry_object=self, fn=fn, args=args, kwargs=kwargs)\n        while True:\n            do = self.iter(retry_state=retry_state)\n            if isinstance(do, DoAttempt):\n                try:\n                    result = fn(*args, **kwargs)\n                except BaseException:\n                    retry_state.set_exception(sys.exc_info())  # type: ignore[arg-type]\n                else:\n                    retry_state.set_result(result)\n            elif isinstance(do, DoSleep):\n                retry_state.prepare_for_next_attempt()\n                self.sleep(do)\n            else:\n                return do  # type: ignore[no-any-return]",
+              "content_sha256": "8cba8206bbb28dbf22fe8c85c5b56e2504db946bd99c7ba46e1f5e6f1ca09789",
+              "visible_to_generator": false
+            }
+          ]
+        },
+        {
+          "claim": "stop_before_delay把即将等待计入限制，应换此策略",
+          "status": "supported",
+          "rationale": "131-138明确加upcoming_sleep后比较阈值。",
+          "evidence": [
+            {
+              "path": "tenacity/stop.py",
+              "start_line": 131,
+              "end_line": 138
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "tenacity/stop.py",
+              "start_line": 131,
+              "end_line": 138,
+              "content": "    @override\n    def __call__(self, retry_state: \"RetryCallState\") -> bool:\n        if retry_state.seconds_since_start is None:\n            raise RuntimeError(\"__call__() called but seconds_since_start is not set\")\n        return (\n            retry_state.seconds_since_start + retry_state.upcoming_sleep\n            >= self.max_delay\n        )",
+              "content_sha256": "3a05b2e46a7a31f1604f3cf6bfb97edce9ace1ffc095d452feab63cd0fa91aa0",
+              "visible_to_generator": true
+            }
+          ]
+        },
+        {
+          "claim": "没有说明先_run_wait计算等待后_run_stop判断",
+          "status": "unverifiable",
+          "rationale": "说在等待前检查不等于说明等待计算在stop之前；题目明确要求此顺序。",
+          "evidence": [
+            {
+              "path": "tenacity/__init__.py",
+              "start_line": 429,
+              "end_line": 434
+            },
+            {
+              "path": "tenacity/__init__.py",
+              "start_line": 460,
+              "end_line": 470
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "tenacity/__init__.py",
+              "start_line": 429,
+              "end_line": 434,
+              "content": "    def _run_wait(self, retry_state: \"RetryCallState\") -> None:\n        retry_state.upcoming_sleep = self.wait(retry_state)\n\n    def _run_stop(self, retry_state: \"RetryCallState\") -> None:\n        self.statistics[\"delay_since_first_attempt\"] = retry_state.seconds_since_start\n        self.iter_state.stop_run_result = self.stop(retry_state)",
+              "content_sha256": "b9a52d49eafde6dbe9dd39bf3d6685a1729abd662f172299b157bf6d6e8d7357",
+              "visible_to_generator": false
+            },
+            {
+              "path": "tenacity/__init__.py",
+              "start_line": 460,
+              "end_line": 470,
+              "content": "    def _post_retry_check_actions(self, retry_state: \"RetryCallState\") -> None:\n        if not (self.iter_state.is_explicit_retry or self.iter_state.retry_run_result):\n            self._add_action_func(lambda rs: rs.outcome.result())\n            return\n\n        if self.after is not None:\n            self._add_action_func(self.after)\n\n        self._add_action_func(self._run_wait)\n        self._add_action_func(self._run_stop)\n        self._add_action_func(self._post_stop_check_actions)",
+              "content_sha256": "e431525731d106471ecd4b806e17218680d05c377451e62e0b7c9d9fadccd425",
+              "visible_to_generator": false
+            }
+          ]
+        }
+      ],
+      "notes": "拿到stop_before_delay源码后主公式方向正确，但仍错误理解睡眠后何时重新检查停止，未读到调度主链。该错误不是把12秒处不再睡理解为不再执行的评审添加，原文明说不会再进入下一次重试循环。 原匿名判断先保存并校验，再揭盲；Blinker/Tenacity分由独立子agent来源复核，非人审。",
+      "key_points": null,
+      "candidate_sha256": "ba2f8f027a904cc76962e66b59bfc8fd80eb3c430437fdf44bf26482c23f3cd3",
+      "reviewer": "Codex (current session)",
+      "review_type": "model_assisted_nonblind_development_review",
+      "human_approved": false,
+      "training_eligible": false,
+      "result_sha256": "82f497043ffffd513ab214a58fd5a27b7a37170c49d71c1db549d943d93f08d0"
+    },
+    "improvement-confirm-tenacity-04--agentic": {
+      "candidate_id": "improvement-confirm-tenacity-04--agentic",
+      "correctness": "correct",
+      "citation_support": "partial",
+      "completeness": "adequate",
+      "abstention": "not_applicable",
+      "entry_scope": "correct",
+      "consistency": "consistent",
+      "claims": [
+        {
+          "claim": "本次disabled调用只执行一次、原始ValueError传播而非RetryError",
+          "status": "supported",
+          "rationale": "同步test_enabled_false_via_retry_with直接调用disabled并断言ValueError及call_count==1，是有效替代证据。",
+          "evidence": [
+            {
+              "path": "tests/test_tenacity.py",
+              "start_line": 1697,
+              "end_line": 1710
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "tests/test_tenacity.py",
+              "start_line": 1697,
+              "end_line": 1710,
+              "content": "    def test_enabled_false_via_retry_with(self) -> None:\n        \"\"\"retry_with(enabled=False) disables retrying.\"\"\"\n        call_count = 0\n\n        @retry(stop=tenacity.stop_after_attempt(3))\n        def always_fails() -> None:\n            nonlocal call_count\n            call_count += 1\n            raise ValueError(\"fail\")\n\n        disabled = always_fails.retry_with(enabled=False)\n        with pytest.raises(ValueError, match=\"fail\"):\n            disabled()\n        assert call_count == 1",
+              "content_sha256": "242c3afcac4cc1083736afad59bf8fa683fd6c0c9cbd68c0c4d5f0aa42fc8d71",
+              "visible_to_generator": true
+            }
+          ]
+        },
+        {
+          "claim": "retry_with返回新配置副本，不永久改原包装",
+          "status": "supported",
+          "rationale": "copy的288-321可见且确实构造新实例；但将retry_with连接到copy/wrap的404-405未送入本候选，正式引的asyncio片段只展示异步wrapper，不能单独证明同步retry_with调用关系。",
+          "evidence": [
+            {
+              "path": "tenacity/__init__.py",
+              "start_line": 404,
+              "end_line": 405
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "tenacity/__init__.py",
+              "start_line": 404,
+              "end_line": 405,
+              "content": "            return copy(f, *args, **kw)\n",
+              "content_sha256": "6f9a5624a5037893c75c81e6ca2fc79de18a4e9ae96df2dad6b0b796cd6223fc",
+              "visible_to_generator": false
+            }
+          ]
+        }
+      ],
+      "notes": "三项具体结论均正确，当前disabled条件也未被固定history覆盖；不强制额外解释copy内部所有参数。支持partial的原因是同步retry_with->copy->wrap这个必要调用链接缺失，评审后补读的404-405不冒充模型已见。异步片段不是同步调用的直接证据。 原匿名判断先保存并校验，再揭盲；Blinker/Tenacity分由独立子agent来源复核，非人审。",
+      "key_points": null,
+      "candidate_sha256": "9ea22f0347170e88ce01decec7095f6acbde5f7ee002ccee16ec1a7ba4a6897b",
+      "reviewer": "Codex (current session)",
+      "review_type": "model_assisted_nonblind_development_review",
+      "human_approved": false,
+      "training_eligible": false,
+      "result_sha256": "76bff272410bd862b36d0c7ba83525de1621b46e9886b6f53bd0c2f67a8c86f6"
+    },
+    "improvement-confirm-tenacity-01--agentic--repeat": {
+      "candidate_id": "improvement-confirm-tenacity-01--agentic--repeat",
+      "correctness": "partially_correct",
+      "citation_support": "partial",
+      "completeness": "partial",
+      "abstention": "not_applicable",
+      "entry_scope": "correct",
+      "consistency": "consistent",
+      "claims": [
+        {
+          "claim": "stop_after_delay只比较已用时间>=10，9秒失败可再睡3秒",
+          "status": "supported",
+          "rationale": "114-117的比较只看seconds_since_start，9<10，下一等待可使总耗时达到12。",
+          "evidence": [
+            {
+              "path": "tenacity/stop.py",
+              "start_line": 114,
+              "end_line": 117
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "tenacity/stop.py",
+              "start_line": 114,
+              "end_line": 117,
+              "content": "    def __call__(self, retry_state: \"RetryCallState\") -> bool:\n        if retry_state.seconds_since_start is None:\n            raise RuntimeError(\"__call__() called but seconds_since_start is not set\")\n        return retry_state.seconds_since_start >= self.max_delay",
+              "content_sha256": "4ce74b04ed036ba05cb74a3227ef0f4474abdad73e20d675fa8da22b2340e2f5",
+              "visible_to_generator": true
+            }
+          ]
+        },
+        {
+          "claim": "睡到12秒后在下一次尝试前就停止，不会再进入下一重试循环",
+          "status": "contradicted",
+          "rationale": "DoSleep分支先prepare_for_next_attempt，睡后新iter看到outcome为空会直接DoAttempt；stop只在该次尝试结束后的重试路径判定，不能先行禁止12秒时开始的那次尝试。",
+          "evidence": [
+            {
+              "path": "tenacity/__init__.py",
+              "start_line": 443,
+              "end_line": 451
+            },
+            {
+              "path": "tenacity/__init__.py",
+              "start_line": 460,
+              "end_line": 500
+            },
+            {
+              "path": "tenacity/__init__.py",
+              "start_line": 548,
+              "end_line": 562
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "tenacity/__init__.py",
+              "start_line": 443,
+              "end_line": 451,
+              "content": "    def _begin_iter(self, retry_state: \"RetryCallState\") -> None:\n        self.iter_state.reset()\n\n        fut = retry_state.outcome\n        if fut is None:\n            if self.before is not None:\n                self._add_action_func(self.before)\n            self._add_action_func(lambda rs: DoAttempt())\n            return",
+              "content_sha256": "54703d3eadb84b3952077689761bef64aeb297f3f36ffbd3f7d9ae4871971dbd",
+              "visible_to_generator": false
+            },
+            {
+              "path": "tenacity/__init__.py",
+              "start_line": 460,
+              "end_line": 500,
+              "content": "    def _post_retry_check_actions(self, retry_state: \"RetryCallState\") -> None:\n        if not (self.iter_state.is_explicit_retry or self.iter_state.retry_run_result):\n            self._add_action_func(lambda rs: rs.outcome.result())\n            return\n\n        if self.after is not None:\n            self._add_action_func(self.after)\n\n        self._add_action_func(self._run_wait)\n        self._add_action_func(self._run_stop)\n        self._add_action_func(self._post_stop_check_actions)\n\n    def _post_stop_check_actions(self, retry_state: \"RetryCallState\") -> None:\n        if self.iter_state.stop_run_result:\n            if self.retry_error_callback:\n                self._add_action_func(self.retry_error_callback)\n                return\n\n            def exc_check(rs: \"RetryCallState\") -> None:\n                fut = t.cast(\"Future\", rs.outcome)\n                retry_exc = self.retry_error_cls(fut)\n                if self.reraise:\n                    retry_exc.reraise()\n                raise retry_exc from fut.exception()\n\n            self._add_action_func(exc_check)\n            return\n\n        def next_action(rs: \"RetryCallState\") -> None:\n            sleep = rs.upcoming_sleep\n            rs.next_action = RetryAction(sleep)\n            rs.idle_for += sleep\n            self.statistics[\"idle_for\"] += sleep\n            self.statistics[\"attempt_number\"] += 1\n\n        self._add_action_func(next_action)\n\n        if self.before_sleep is not None:\n            self._add_action_func(self.before_sleep)\n\n        self._add_action_func(lambda rs: DoSleep(rs.upcoming_sleep))",
+              "content_sha256": "367460bfa9128d9fa5a8011ccfe24290748b882b45f94ed25e96398fc860276c",
+              "visible_to_generator": false
+            },
+            {
+              "path": "tenacity/__init__.py",
+              "start_line": 548,
+              "end_line": 562,
+              "content": "        retry_state = RetryCallState(retry_object=self, fn=fn, args=args, kwargs=kwargs)\n        while True:\n            do = self.iter(retry_state=retry_state)\n            if isinstance(do, DoAttempt):\n                try:\n                    result = fn(*args, **kwargs)\n                except BaseException:\n                    retry_state.set_exception(sys.exc_info())  # type: ignore[arg-type]\n                else:\n                    retry_state.set_result(result)\n            elif isinstance(do, DoSleep):\n                retry_state.prepare_for_next_attempt()\n                self.sleep(do)\n            else:\n                return do  # type: ignore[no-any-return]",
+              "content_sha256": "8cba8206bbb28dbf22fe8c85c5b56e2504db946bd99c7ba46e1f5e6f1ca09789",
+              "visible_to_generator": false
+            }
+          ]
+        },
+        {
+          "claim": "stop_before_delay把即将等待计入限制，应换此策略",
+          "status": "supported",
+          "rationale": "131-138明确加upcoming_sleep后比较阈值。",
+          "evidence": [
+            {
+              "path": "tenacity/stop.py",
+              "start_line": 131,
+              "end_line": 138
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "tenacity/stop.py",
+              "start_line": 131,
+              "end_line": 138,
+              "content": "    @override\n    def __call__(self, retry_state: \"RetryCallState\") -> bool:\n        if retry_state.seconds_since_start is None:\n            raise RuntimeError(\"__call__() called but seconds_since_start is not set\")\n        return (\n            retry_state.seconds_since_start + retry_state.upcoming_sleep\n            >= self.max_delay\n        )",
+              "content_sha256": "3a05b2e46a7a31f1604f3cf6bfb97edce9ace1ffc095d452feab63cd0fa91aa0",
+              "visible_to_generator": true
+            }
+          ]
+        },
+        {
+          "claim": "没有说明先_run_wait计算等待后_run_stop判断",
+          "status": "unverifiable",
+          "rationale": "说在等待前检查不等于说明等待计算在stop之前；题目明确要求此顺序。",
+          "evidence": [
+            {
+              "path": "tenacity/__init__.py",
+              "start_line": 429,
+              "end_line": 434
+            },
+            {
+              "path": "tenacity/__init__.py",
+              "start_line": 460,
+              "end_line": 470
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "tenacity/__init__.py",
+              "start_line": 429,
+              "end_line": 434,
+              "content": "    def _run_wait(self, retry_state: \"RetryCallState\") -> None:\n        retry_state.upcoming_sleep = self.wait(retry_state)\n\n    def _run_stop(self, retry_state: \"RetryCallState\") -> None:\n        self.statistics[\"delay_since_first_attempt\"] = retry_state.seconds_since_start\n        self.iter_state.stop_run_result = self.stop(retry_state)",
+              "content_sha256": "b9a52d49eafde6dbe9dd39bf3d6685a1729abd662f172299b157bf6d6e8d7357",
+              "visible_to_generator": false
+            },
+            {
+              "path": "tenacity/__init__.py",
+              "start_line": 460,
+              "end_line": 470,
+              "content": "    def _post_retry_check_actions(self, retry_state: \"RetryCallState\") -> None:\n        if not (self.iter_state.is_explicit_retry or self.iter_state.retry_run_result):\n            self._add_action_func(lambda rs: rs.outcome.result())\n            return\n\n        if self.after is not None:\n            self._add_action_func(self.after)\n\n        self._add_action_func(self._run_wait)\n        self._add_action_func(self._run_stop)\n        self._add_action_func(self._post_stop_check_actions)",
+              "content_sha256": "e431525731d106471ecd4b806e17218680d05c377451e62e0b7c9d9fadccd425",
+              "visible_to_generator": false
+            }
+          ]
+        }
+      ],
+      "notes": "拿到stop_before_delay源码后主公式方向正确，但仍错误理解睡眠后何时重新检查停止，未读到调度主链。该错误不是把12秒处不再睡理解为不再执行的评审添加，原文明说不会再进入下一次重试循环。 原匿名判断先保存并校验，再揭盲；Blinker/Tenacity分由独立子agent来源复核，非人审。",
+      "key_points": null,
+      "candidate_sha256": "5bdca8683b1a5f72a631790885ee5b3014e33a5bc63e78ebd0bad0b11e6ff981",
+      "reviewer": "Codex (current session)",
+      "review_type": "model_assisted_nonblind_development_review",
+      "human_approved": false,
+      "training_eligible": false,
+      "result_sha256": "af671e91c45830c7a10b48bd6de96e4106d70c6432fcf76fd88ca939593da566"
+    },
+    "improvement-confirm-blinker-01--bm25_code": {
+      "candidate_id": "improvement-confirm-blinker-01--bm25_code",
+      "correctness": "partially_correct",
+      "citation_support": "partial",
+      "completeness": "partial",
+      "abstention": "not_applicable",
+      "entry_scope": "correct",
+      "consistency": "consistent",
+      "claims": [
+        {
+          "claim": "本题默认注册不会一直强引用局部回调，无其他强引用时回调可被回收。",
+          "status": "supported",
+          "rationale": "默认weak=True，保存弱引用并在回收后断开；test_has_receivers中的删除和收集也支持接收器消失。",
+          "evidence": [
+            {
+              "path": "src/blinker/base.py",
+              "start_line": 91,
+              "end_line": 115
+            },
+            {
+              "path": "tests/test_signals.py",
+              "start_line": 417,
+              "end_line": 443
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "src/blinker/base.py",
+              "start_line": 91,
+              "end_line": 115,
+              "content": "    def connect(self, receiver: F, sender: t.Any = ANY, weak: bool = True) -> F:\n        \"\"\"Connect ``receiver`` to be called when the signal is sent by\n        ``sender``.\n\n        :param receiver: The callable to call when :meth:`send` is called with\n            the given ``sender``, passing ``sender`` as a positional argument\n            along with any extra keyword arguments.\n        :param sender: Any object or :data:`ANY`. ``receiver`` will only be\n            called when :meth:`send` is called with this sender. If ``ANY``, the\n            receiver will be called for any sender. A receiver may be connected\n            to multiple senders by calling :meth:`connect` multiple times.\n        :param weak: Track the receiver with a :mod:`weakref`. The receiver will\n            be automatically disconnected when it is garbage collected. When\n            connecting a receiver defined within a function, set to ``False``,\n            otherwise it will be disconnected when the function scope ends.\n        \"\"\"\n        receiver_id = make_id(receiver)\n        sender_id = ANY_ID if sender is ANY else make_id(sender)\n\n        if weak:\n            self.receivers[receiver_id] = make_ref(\n                receiver, self._make_cleanup_receiver(receiver_id)\n            )\n        else:\n            self.receivers[receiver_id] = receiver",
+              "content_sha256": "d6bcfb6d4ee0c0bb2eacc5487c8a78d79ff314325d1d245e553b4845a872b248",
+              "visible_to_generator": false
+            },
+            {
+              "path": "tests/test_signals.py",
+              "start_line": 417,
+              "end_line": 443,
+              "content": "def test_has_receivers() -> None:\n    def received(_: t.Any) -> None:\n        return None\n\n    sig = blinker.Signal()\n    assert not sig.has_receivers_for(None)\n    assert not sig.has_receivers_for(blinker.ANY)\n\n    sig.connect(received, \"xyz\")\n    assert not sig.has_receivers_for(None)\n    assert not sig.has_receivers_for(blinker.ANY)\n    assert sig.has_receivers_for(\"xyz\")\n\n    class Object:\n        pass\n\n    o = Object()\n\n    sig.connect(received, o)\n    assert sig.has_receivers_for(o)\n\n    del received\n    collect_acyclic_refs()\n\n    assert not sig.has_receivers_for(\"xyz\")\n    assert list(sig.receivers_for(\"xyz\")) == []\n    assert list(sig.receivers_for(o)) == []",
+              "content_sha256": "a53833d3984f774e0eee2f90a11fc619732c1b91999b581dcd86ac50bf22e697",
+              "visible_to_generator": true
+            }
+          ]
+        },
+        {
+          "claim": "因使用弱引用便不会导致内存泄漏。",
+          "status": "unsupported",
+          "rationale": "弱引用避免这一条所有权保活，不足以保证不存在任何内存泄漏；所引测试也没有测量或证明该全局保证。",
+          "evidence": [],
+          "verified_evidence": []
+        },
+        {
+          "claim": "回调闭包会强引用其捕获的外部对象，但信号不会强引用默认弱注册的回调对象。",
+          "status": "unverifiable",
+          "rationale": "后半的默认弱注册可由实现核验；闭包所有权是额外的Python语义论断，所引测试未验证此断言，不能用弱sender清理替代证明。",
+          "evidence": [],
+          "verified_evidence": []
+        }
+      ],
+      "notes": "主要弱引用方向正确，但没有给出weak=False或业务持有强引用的修正，也没有解释弱/强接收器删除收集后的对照。123–158测的是sender回收，161–201测空桶；417–450提供部分弱接收器证据。附加“不会内存泄漏”的保证缺乏支持，不能按全事实正确评分。 原匿名判断先保存并校验，再揭盲；Blinker/Tenacity分由独立子agent来源复核，非人审。",
+      "key_points": null,
+      "candidate_sha256": "856a5bf5c8b8afff7c2b299df37be4d7932778394b5d8ea55d1abbab3f666963",
+      "reviewer": "Codex (current session)",
+      "review_type": "model_assisted_nonblind_development_review",
+      "human_approved": false,
+      "training_eligible": false,
+      "result_sha256": "9c54dc43cb0b3abba0039f522f28e3158a007e57f94c5bac9457c1348ae380e2"
+    },
+    "improvement-confirm-blinker-02--bm25_code--repeat": {
+      "candidate_id": "improvement-confirm-blinker-02--bm25_code--repeat",
+      "correctness": "correct",
+      "citation_support": "partial",
+      "completeness": "partial",
+      "abstention": "not_applicable",
+      "entry_scope": "correct",
+      "consistency": "consistent",
+      "claims": [
+        {
+          "claim": "同一回调同时连接ANY和123时，send(123)只调用一次。",
+          "status": "supported",
+          "rationale": "测试先send()使sentinel为[None]，再send(123)断言[None,123]。",
+          "evidence": [
+            {
+              "path": "tests/test_signals.py",
+              "start_line": 397,
+              "end_line": 414
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "tests/test_signals.py",
+              "start_line": 397,
+              "end_line": 414,
+              "content": "def test_no_double_send() -> None:\n    sentinel = []\n\n    def received(sender: t.Any) -> None:\n        sentinel.append(sender)\n\n    sig = blinker.Signal()\n\n    sig.connect(received, 123)\n    sig.connect(received)\n\n    assert not sentinel\n    sig.send()\n    assert sentinel == [None]\n    sig.send(123)\n    assert sentinel == [None, 123]\n    sig.send()\n    assert sentinel == [None, 123, None]",
+              "content_sha256": "4353e18c11322c495e1fdbb3a93dce8268bf596ea5f68492bcf670f6ff205e47",
+              "visible_to_generator": true
+            }
+          ]
+        },
+        {
+          "claim": "connect对同一接收器的存储和相同关联使用标识与集合去重。",
+          "status": "supported",
+          "rationale": "receiver_id作为接收器字典键，_by_sender和_by_receiver保存集合；这只是部分机制，发送时还依赖集合并集。",
+          "evidence": [
+            {
+              "path": "src/blinker/base.py",
+              "start_line": 107,
+              "end_line": 118
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "src/blinker/base.py",
+              "start_line": 107,
+              "end_line": 118,
+              "content": "        receiver_id = make_id(receiver)\n        sender_id = ANY_ID if sender is ANY else make_id(sender)\n\n        if weak:\n            self.receivers[receiver_id] = make_ref(\n                receiver, self._make_cleanup_receiver(receiver_id)\n            )\n        else:\n            self.receivers[receiver_id] = receiver\n\n        self._by_sender[sender_id].add(receiver_id)\n        self._by_receiver[receiver_id].add(sender_id)",
+              "content_sha256": "948264abac47a2e73bf86b5bc06fdfd71c9858980d76524f7b908963919879f8",
+              "visible_to_generator": false
+            }
+          ]
+        }
+      ],
+      "notes": "结论正确，connect的唯一接收器存储/重复相同关联可由真实实现核验；未把这部分概括当成否认多sender关联。但没有说明receivers_for合并ANY与123的接收器ID集合，也没解释题目要求的sentinel关键断言。唯一正式引文是测试，只支持发送结果，不足以支持所述connect内部机制；该实现也未出现在模型可见来源中。 原匿名判断先保存并校验，再揭盲；Blinker/Tenacity分由独立子agent来源复核，非人审。",
+      "key_points": null,
+      "candidate_sha256": "a785899198ec57d0b9e5714f7efc41f7af4e6225ecf8c73920b4f224f4bfb86f",
+      "reviewer": "Codex (current session)",
+      "review_type": "model_assisted_nonblind_development_review",
+      "human_approved": false,
+      "training_eligible": false,
+      "result_sha256": "b1cb874026a2264a326453a1ff2f3dbb6420d8ac9dbcbc8ffca3d66c3b1fb127"
+    },
+    "improvement-confirm-blinker-03--agentic_no_tools": {
+      "candidate_id": "improvement-confirm-blinker-03--agentic_no_tools",
+      "correctness": "correct",
+      "citation_support": "unsupported",
+      "completeness": "partial",
+      "abstention": "not_applicable",
+      "entry_scope": "correct",
+      "consistency": "consistent",
+      "claims": [
+        {
+          "claim": "connected_to在退出时清理临时连接，BaseException也不会使接收器遗留。",
+          "status": "supported",
+          "rationale": "contextmanager内yield由try/finally包围，finally执行disconnect；异常测试参数化Exception和BaseException，最后断言not sig.receivers。",
+          "evidence": [
+            {
+              "path": "src/blinker/base.py",
+              "start_line": 167,
+              "end_line": 189
+            },
+            {
+              "path": "tests/test_context.py",
+              "start_line": 43,
+              "end_line": 68
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "src/blinker/base.py",
+              "start_line": 167,
+              "end_line": 189,
+              "content": "    @contextmanager\n    def connected_to(\n        self, receiver: c.Callable[..., t.Any], sender: t.Any = ANY\n    ) -> c.Generator[None, None, None]:\n        \"\"\"A context manager that temporarily connects ``receiver`` to the\n        signal while a ``with`` block executes. When the block exits, the\n        receiver is disconnected. Useful for tests.\n\n        :param receiver: The callable to call when :meth:`send` is called with\n            the given ``sender``, passing ``sender`` as a positional argument\n            along with any extra keyword arguments.\n        :param sender: Any object or :data:`ANY`. ``receiver`` will only be\n            called when :meth:`send` is called with this sender. If ``ANY``, the\n            receiver will be called for any sender.\n\n        .. versionadded:: 1.1\n        \"\"\"\n        self.connect(receiver, sender=sender, weak=False)\n\n        try:\n            yield None\n        finally:\n            self.disconnect(receiver)",
+              "content_sha256": "b2f37b095c222dfe4a710319ff0d423fd22ab9f5959e96139c8f7ecae3450e28",
+              "visible_to_generator": false
+            },
+            {
+              "path": "tests/test_context.py",
+              "start_line": 43,
+              "end_line": 68,
+              "content": "class Failure(Exception):\n    pass\n\n\nclass BaseFailure(BaseException):\n    pass\n\n\n@pytest.mark.parametrize(\"exc_type\", [Failure, BaseFailure])\ndef test_temp_connection_failure(exc_type: type[BaseException]) -> None:\n    sig = Signal()\n\n    canary = []\n\n    def receiver(sender: t.Any) -> None:\n        canary.append(sender)\n\n    with pytest.raises(exc_type):\n        sig.send(1)\n        with sig.connected_to(receiver):\n            sig.send(2)\n            raise exc_type\n        sig.send(3)\n\n    assert canary == [2]\n    assert not sig.receivers",
+              "content_sha256": "eae5a5abfef6536fe60cee49db82fc78ae393398b5a3d38729f280b39cc39bcd",
+              "visible_to_generator": false
+            }
+          ]
+        }
+      ],
+      "notes": "以生成器上下文管理器的__exit__描述退出清理在语义上成立，不仅因其没说finally就判事实错误。但正式引文tests/test_signals.py:380–382是connect_via装饰器，与connected_to异常清理无关；真正实现和异常断言均未进入可见输入。未说明清理实现及对应参数化测试，完整性不通过。 原匿名判断先保存并校验，再揭盲；Blinker/Tenacity分由独立子agent来源复核，非人审。",
+      "key_points": null,
+      "candidate_sha256": "eb4fb7321d6234fece0453e2ee9e57ce69f26d5e1a1a6c1aea8fcf4dd5d76dd2",
+      "reviewer": "Codex (current session)",
+      "review_type": "model_assisted_nonblind_development_review",
+      "human_approved": false,
+      "training_eligible": false,
+      "result_sha256": "baf03d3a940007eb67206eb4da1b2a61ea0aa615f150f57383f351a00420c977"
+    },
+    "improvement-confirm-tenacity-01--bm25_code": {
+      "candidate_id": "improvement-confirm-tenacity-01--bm25_code",
+      "correctness": "correct",
+      "citation_support": "supported",
+      "completeness": "partial",
+      "abstention": "not_applicable",
+      "entry_scope": "correct",
+      "consistency": "consistent",
+      "claims": [
+        {
+          "claim": "stop_after_delay不能保证9秒失败后不再睡到12秒",
+          "status": "supported",
+          "rationale": "100-117明确只比较已用时间，说明max_delay可能被最后等待超过。",
+          "evidence": [
+            {
+              "path": "tenacity/stop.py",
+              "start_line": 100,
+              "end_line": 117
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "tenacity/stop.py",
+              "start_line": 100,
+              "end_line": 117,
+              "content": "class stop_after_delay(stop_base):\n    \"\"\"\n    Stop when the time from the first attempt >= limit.\n\n    Note: `max_delay` will be exceeded, so when used with a `wait`, the actual total delay will be greater\n    than `max_delay` by some of the final sleep period before `max_delay` is exceeded.\n\n    If you need stricter timing with waits, consider `stop_before_delay` instead.\n    \"\"\"\n\n    def __init__(self, max_delay: _utils.time_unit_type) -> None:\n        self.max_delay = _utils.to_seconds(max_delay)\n\n    @override\n    def __call__(self, retry_state: \"RetryCallState\") -> bool:\n        if retry_state.seconds_since_start is None:\n            raise RuntimeError(\"__call__() called but seconds_since_start is not set\")\n        return retry_state.seconds_since_start >= self.max_delay",
+              "content_sha256": "8bbfc79cff11c4df0bcd8d54d8685bc55f260d405fccf99ad103fe29f382a3f3",
+              "visible_to_generator": true
+            }
+          ]
+        },
+        {
+          "claim": "若把下一等待计入限制应改用stop_before_delay",
+          "status": "supported",
+          "rationale": "文档130-138明确给出提前一次停止的替代策略，可作有效替代证据。",
+          "evidence": [
+            {
+              "path": "doc/source/index.rst",
+              "start_line": 130,
+              "end_line": 138
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "doc/source/index.rst",
+              "start_line": 130,
+              "end_line": 138,
+              "content": "If you're on a tight deadline, and exceeding your delay time isn't ok,\nthen you can give up on retries one attempt before you would exceed the delay.\n\n.. testcode::\n\n    @retry(stop=stop_before_delay(10))\n    def stop_before_10_s():\n        print(\"Stopping 1 attempt before 10 seconds\")\n        raise Exception",
+              "content_sha256": "df8a02fc05d0ad615f7485f729295f9c48f96dc8e3699cbe9a32c2025ac6b396",
+              "visible_to_generator": true
+            }
+          ]
+        },
+        {
+          "claim": "没有解释等待计算与停止判断顺序",
+          "status": "unverifiable",
+          "rationale": "正文未给9+3的比较，也没有说明_run_wait先计算upcoming_sleep，再_run_stop，再决定DoSleep。",
+          "evidence": [
+            {
+              "path": "tenacity/__init__.py",
+              "start_line": 429,
+              "end_line": 434
+            },
+            {
+              "path": "tenacity/__init__.py",
+              "start_line": 460,
+              "end_line": 500
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "tenacity/__init__.py",
+              "start_line": 429,
+              "end_line": 434,
+              "content": "    def _run_wait(self, retry_state: \"RetryCallState\") -> None:\n        retry_state.upcoming_sleep = self.wait(retry_state)\n\n    def _run_stop(self, retry_state: \"RetryCallState\") -> None:\n        self.statistics[\"delay_since_first_attempt\"] = retry_state.seconds_since_start\n        self.iter_state.stop_run_result = self.stop(retry_state)",
+              "content_sha256": "b9a52d49eafde6dbe9dd39bf3d6685a1729abd662f172299b157bf6d6e8d7357",
+              "visible_to_generator": false
+            },
+            {
+              "path": "tenacity/__init__.py",
+              "start_line": 460,
+              "end_line": 500,
+              "content": "    def _post_retry_check_actions(self, retry_state: \"RetryCallState\") -> None:\n        if not (self.iter_state.is_explicit_retry or self.iter_state.retry_run_result):\n            self._add_action_func(lambda rs: rs.outcome.result())\n            return\n\n        if self.after is not None:\n            self._add_action_func(self.after)\n\n        self._add_action_func(self._run_wait)\n        self._add_action_func(self._run_stop)\n        self._add_action_func(self._post_stop_check_actions)\n\n    def _post_stop_check_actions(self, retry_state: \"RetryCallState\") -> None:\n        if self.iter_state.stop_run_result:\n            if self.retry_error_callback:\n                self._add_action_func(self.retry_error_callback)\n                return\n\n            def exc_check(rs: \"RetryCallState\") -> None:\n                fut = t.cast(\"Future\", rs.outcome)\n                retry_exc = self.retry_error_cls(fut)\n                if self.reraise:\n                    retry_exc.reraise()\n                raise retry_exc from fut.exception()\n\n            self._add_action_func(exc_check)\n            return\n\n        def next_action(rs: \"RetryCallState\") -> None:\n            sleep = rs.upcoming_sleep\n            rs.next_action = RetryAction(sleep)\n            rs.idle_for += sleep\n            self.statistics[\"idle_for\"] += sleep\n            self.statistics[\"attempt_number\"] += 1\n\n        self._add_action_func(next_action)\n\n        if self.before_sleep is not None:\n            self._add_action_func(self.before_sleep)\n\n        self._add_action_func(lambda rs: DoSleep(rs.upcoming_sleep))",
+              "content_sha256": "367460bfa9128d9fa5a8011ccfe24290748b882b45f94ed25e96398fc860276c",
+              "visible_to_generator": false
+            }
+          ]
+        }
+      ],
+      "notes": "两个直接结论正确并有可见文档支持。将严格停止解释为本题限制等待的语境，不扩展为抢占网络请求的硬超时；题目明确要求的顺序未回答。 原匿名判断先保存并校验，再揭盲；Blinker/Tenacity分由独立子agent来源复核，非人审。",
+      "key_points": null,
+      "candidate_sha256": "574e24430429bb412d77a03649df5e9560a5a1de377757d7bec6f8080ead87fd",
+      "reviewer": "Codex (current session)",
+      "review_type": "model_assisted_nonblind_development_review",
+      "human_approved": false,
+      "training_eligible": false,
+      "result_sha256": "1fe8f1b88924ef1fe84417470130fe8efcfe24594460e2e19da5b50c9f5b4a2d"
+    },
+    "improvement-confirm-blinker-02--bm25_code": {
+      "candidate_id": "improvement-confirm-blinker-02--bm25_code",
+      "correctness": "correct",
+      "citation_support": "partial",
+      "completeness": "partial",
+      "abstention": "not_applicable",
+      "entry_scope": "correct",
+      "consistency": "consistent",
+      "claims": [
+        {
+          "claim": "同一回调同时连接ANY和123时，send(123)只调用一次。",
+          "status": "supported",
+          "rationale": "测试先send()使sentinel为[None]，再send(123)断言[None,123]。",
+          "evidence": [
+            {
+              "path": "tests/test_signals.py",
+              "start_line": 397,
+              "end_line": 414
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "tests/test_signals.py",
+              "start_line": 397,
+              "end_line": 414,
+              "content": "def test_no_double_send() -> None:\n    sentinel = []\n\n    def received(sender: t.Any) -> None:\n        sentinel.append(sender)\n\n    sig = blinker.Signal()\n\n    sig.connect(received, 123)\n    sig.connect(received)\n\n    assert not sentinel\n    sig.send()\n    assert sentinel == [None]\n    sig.send(123)\n    assert sentinel == [None, 123]\n    sig.send()\n    assert sentinel == [None, 123, None]",
+              "content_sha256": "4353e18c11322c495e1fdbb3a93dce8268bf596ea5f68492bcf670f6ff205e47",
+              "visible_to_generator": true
+            }
+          ]
+        },
+        {
+          "claim": "connect对同一接收器的存储和相同关联使用标识与集合去重。",
+          "status": "supported",
+          "rationale": "receiver_id作为接收器字典键，_by_sender和_by_receiver保存集合；这只是部分机制，发送时还依赖集合并集。",
+          "evidence": [
+            {
+              "path": "src/blinker/base.py",
+              "start_line": 107,
+              "end_line": 118
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "src/blinker/base.py",
+              "start_line": 107,
+              "end_line": 118,
+              "content": "        receiver_id = make_id(receiver)\n        sender_id = ANY_ID if sender is ANY else make_id(sender)\n\n        if weak:\n            self.receivers[receiver_id] = make_ref(\n                receiver, self._make_cleanup_receiver(receiver_id)\n            )\n        else:\n            self.receivers[receiver_id] = receiver\n\n        self._by_sender[sender_id].add(receiver_id)\n        self._by_receiver[receiver_id].add(sender_id)",
+              "content_sha256": "948264abac47a2e73bf86b5bc06fdfd71c9858980d76524f7b908963919879f8",
+              "visible_to_generator": false
+            }
+          ]
+        }
+      ],
+      "notes": "结论正确，connect的唯一接收器存储/重复相同关联可由真实实现核验；未把这部分概括当成否认多sender关联。但没有说明receivers_for合并ANY与123的接收器ID集合，也没解释题目要求的sentinel关键断言。唯一正式引文是测试，只支持发送结果，不足以支持所述connect内部机制；该实现也未出现在模型可见来源中。 原匿名判断先保存并校验，再揭盲；Blinker/Tenacity分由独立子agent来源复核，非人审。",
+      "key_points": null,
+      "candidate_sha256": "ad36e4c5ee40e16866ff43dd5a2fa8e683dcbc466048178bc521ed990e50cefe",
+      "reviewer": "Codex (current session)",
+      "review_type": "model_assisted_nonblind_development_review",
+      "human_approved": false,
+      "training_eligible": false,
+      "result_sha256": "5e2053d8715a89274b868bc906053d00fa46b23aa972c3dd3bb74553d3d86e72"
+    },
+    "improvement-confirm-blinker-04--agentic": {
+      "candidate_id": "improvement-confirm-blinker-04--agentic",
+      "correctness": "correct",
+      "citation_support": "supported",
+      "completeness": "partial",
+      "abstention": "not_applicable",
+      "entry_scope": "correct",
+      "consistency": "consistent",
+      "claims": [
+        {
+          "claim": "直接sig.send()不会自动await异步接收器，存在异步接收器时会抛RuntimeError。",
+          "status": "supported",
+          "rationale": "按题中不传wrapper的直接调用理解；测试注册同步与异步回调后sig.send()触发RuntimeError。",
+          "evidence": [
+            {
+              "path": "tests/test_signals.py",
+              "start_line": 274,
+              "end_line": 283
+            },
+            {
+              "path": "src/blinker/base.py",
+              "start_line": 242,
+              "end_line": 249
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "tests/test_signals.py",
+              "start_line": 274,
+              "end_line": 283,
+              "content": "\n    sig = blinker.Signal()\n    sig.connect(received)\n    sig.connect(received_async)\n\n    await sig.send_async(_sync_wrapper=wrapper)  # type: ignore[arg-type]\n    assert len(sentinel) == 2\n\n    with pytest.raises(RuntimeError):\n        sig.send()",
+              "content_sha256": "efe2a4dae35607217eb813290aef5c39134d85c9b61bd23b2822ffa5da61a385",
+              "visible_to_generator": true
+            },
+            {
+              "path": "src/blinker/base.py",
+              "start_line": 242,
+              "end_line": 249,
+              "content": "        for receiver in self.receivers_for(sender):\n            if iscoroutinefunction(receiver):\n                if _async_wrapper is None:\n                    raise RuntimeError(\"Cannot send to a coroutine function.\")\n\n                result = _async_wrapper(receiver)(sender, **kwargs)\n            else:\n                result = receiver(sender, **kwargs)",
+              "content_sha256": "f002a9e305297def4b3e9c82db0aa19b97b36f3504042234eae269fa8ff36056",
+              "visible_to_generator": false
+            }
+          ]
+        },
+        {
+          "claim": "在send_async中混合同步回调，需要_sync_wrapper把它变为awaitable。",
+          "status": "supported",
+          "rationale": "文档说明_sync_wrapper并给出async inner调用普通func的示例，测试await send_async后len(sentinel)==2。",
+          "evidence": [
+            {
+              "path": "docs/index.rst",
+              "start_line": 290,
+              "end_line": 312
+            },
+            {
+              "path": "tests/test_signals.py",
+              "start_line": 260,
+              "end_line": 280
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "docs/index.rst",
+              "start_line": 290,
+              "end_line": 312,
+              "content": "This however requires that all receivers are awaitable which then\nprecludes the usage of :meth:`~Signal.send`. To mix and match the\n:meth:`~Signal.send_async` method takes a ``_sync_wrapper`` argument\nsuch as:\n\n.. code-block:: python\n\n   sig = blinker.Signal()\n\n   def receiver():\n       ...\n\n   sig.connect(receiver)\n\n   def wrapper(func):\n\n       async def inner(*args, **kwargs):\n           func(*args, **kwargs)\n\n       return inner\n\n   await sig.send_async(_sync_wrapper=wrapper)\n",
+              "content_sha256": "fb4a95b1e1c448b19800070316255844afcb34f322e450b1a465dd380e63c8bb",
+              "visible_to_generator": true
+            },
+            {
+              "path": "tests/test_signals.py",
+              "start_line": 260,
+              "end_line": 280,
+              "content": "async def test_async_receiver() -> None:\n    sentinel = []\n\n    async def received_async(sender: t.Any) -> None:\n        sentinel.append(sender)\n\n    def received(sender: t.Any) -> None:\n        sentinel.append(sender)\n\n    def wrapper(func: c.Callable[..., t.Any]) -> c.Callable[..., None]:\n        async def inner(*args: t.Any, **kwargs: t.Any) -> None:\n            func(*args, **kwargs)\n\n        return inner  # type: ignore[return-value]\n\n    sig = blinker.Signal()\n    sig.connect(received)\n    sig.connect(received_async)\n\n    await sig.send_async(_sync_wrapper=wrapper)  # type: ignore[arg-type]\n    assert len(sentinel) == 2",
+              "content_sha256": "5af1c0934f7aa58f94a0caf6e90b1a4ab3541856ae65884e35a2d32ded9466d4",
+              "visible_to_generator": true
+            }
+          ]
+        }
+      ],
+      "notes": "两个当前入口的主要结论正确，引文支持已答内容，也没有沿用历史全同步前提。遗漏同步send可通过_async_wrapper适配异步回调的实际条件；send_async对异步回调直接await的路径没有展开。必要条件未完整，不算fully_resolved。 原匿名判断先保存并校验，再揭盲；Blinker/Tenacity分由独立子agent来源复核，非人审。",
+      "key_points": null,
+      "candidate_sha256": "bfbe13849775a839f627620f509b005beaa0e5e4c558c1ea56e2322a8b4bc4bb",
+      "reviewer": "Codex (current session)",
+      "review_type": "model_assisted_nonblind_development_review",
+      "human_approved": false,
+      "training_eligible": false,
+      "result_sha256": "bc9f6e11584576a30a7a269a9419b290818858229695e22ef2ffe615517f83b3"
+    },
+    "improvement-confirm-tenacity-02--bm25_code": {
+      "candidate_id": "improvement-confirm-tenacity-02--bm25_code",
+      "correctness": "incorrect",
+      "citation_support": "unsupported",
+      "completeness": "partial",
+      "abstention": "not_applicable",
+      "entry_scope": "correct",
+      "consistency": "consistent",
+      "claims": [
+        {
+          "claim": "首次成功也after，前两次失败第三次成功记录3",
+          "status": "contradicted",
+          "rationale": "460-466明确成功跳过；test_after_attempts断言记录2。",
+          "evidence": [
+            {
+              "path": "tenacity/__init__.py",
+              "start_line": 460,
+              "end_line": 466
+            },
+            {
+              "path": "tests/test_tenacity.py",
+              "start_line": 1853,
+              "end_line": 1870
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "tenacity/__init__.py",
+              "start_line": 460,
+              "end_line": 466,
+              "content": "    def _post_retry_check_actions(self, retry_state: \"RetryCallState\") -> None:\n        if not (self.iter_state.is_explicit_retry or self.iter_state.retry_run_result):\n            self._add_action_func(lambda rs: rs.outcome.result())\n            return\n\n        if self.after is not None:\n            self._add_action_func(self.after)",
+              "content_sha256": "ed98cb68710d5153075623d1b5d46f0946b3a12ebdb32ae76395ede8c3ebf1d0",
+              "visible_to_generator": false
+            },
+            {
+              "path": "tests/test_tenacity.py",
+              "start_line": 1853,
+              "end_line": 1870,
+              "content": "    def test_after_attempts(self) -> None:\n        TestBeforeAfterAttempts._attempt_number = 0\n\n        def _after(retry_state: RetryCallState) -> None:\n            TestBeforeAfterAttempts._attempt_number = retry_state.attempt_number\n\n        @retry(\n            wait=tenacity.wait_fixed(0.1),\n            stop=tenacity.stop_after_attempt(3),\n            after=_after,\n        )\n        def _test_after() -> None:\n            if TestBeforeAfterAttempts._attempt_number < 2:\n                raise Exception(\"testing after_attempts handler\")\n\n        _test_after()\n\n        self.assertTrue(TestBeforeAfterAttempts._attempt_number == 2)",
+              "content_sha256": "a1325d17a55b7019d349cfaf8c5c45a3b194635dac22914f8632662e8d599a2b",
+              "visible_to_generator": false
+            }
+          ]
+        },
+        {
+          "claim": "所引测试支持成功后执行after",
+          "status": "unsupported",
+          "rationale": "242-246仅测试stop_after_attempt的布尔值；asyncio177-178仅定义回调，二者都没有证明成功触发。",
+          "evidence": [
+            {
+              "path": "tests/test_tenacity.py",
+              "start_line": 242,
+              "end_line": 246
+            },
+            {
+              "path": "tests/test_asyncio.py",
+              "start_line": 177,
+              "end_line": 178
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "tests/test_tenacity.py",
+              "start_line": 242,
+              "end_line": 246,
+              "content": "    def test_stop_after_attempt(self) -> None:\n        r = Retrying(stop=tenacity.stop_after_attempt(3))\n        self.assertFalse(r.stop(make_retry_state(2, 6546)))\n        self.assertTrue(r.stop(make_retry_state(3, 6546)))\n        self.assertTrue(r.stop(make_retry_state(4, 6546)))",
+              "content_sha256": "20db3d49d29ab4ae91057848a9ad771d3b51578015ef336bfa79b79ebcd0d5b4",
+              "visible_to_generator": true
+            },
+            {
+              "path": "tests/test_asyncio.py",
+              "start_line": 177,
+              "end_line": 178,
+              "content": "        def after(retry_state: RetryCallState) -> None:\n            attempts.append((retry_state.args[0], retry_state.attempt_number))",
+              "content_sha256": "64ae2592001efb2bb7caf9354abe3f1d7f85a896bd3273cae0446efd0dd91ead",
+              "visible_to_generator": true
+            }
+          ]
+        }
+      ],
+      "notes": "必要结论错误，且没有题目要求的真实控制分支和整合测试说明。 原匿名判断先保存并校验，再揭盲；Blinker/Tenacity分由独立子agent来源复核，非人审。",
+      "key_points": null,
+      "candidate_sha256": "f6f0111ef5a389179722f03a2b76fecd62688113769e632410c62bd35bad5901",
+      "reviewer": "Codex (current session)",
+      "review_type": "model_assisted_nonblind_development_review",
+      "human_approved": false,
+      "training_eligible": false,
+      "result_sha256": "c9b5133f3a2dd371911935b5fc3a87986108801c7e6077927fc9baf17e660eb2"
+    },
+    "improvement-confirm-tenacity-03--agentic_no_tools": {
+      "candidate_id": "improvement-confirm-tenacity-03--agentic_no_tools",
+      "correctness": "correct",
+      "citation_support": "partial",
+      "completeness": "adequate",
+      "abstention": "not_applicable",
+      "entry_scope": "correct",
+      "consistency": "consistent",
+      "claims": [
+        {
+          "claim": "回调正常返回fallback时会返回该值而不重抛ValueError",
+          "status": "supported",
+          "rationale": "文档395-413说明所有重试失败后可用回调返回普通值而不抛异常，且本题正常返回字符串。",
+          "evidence": [
+            {
+              "path": "doc/source/index.rst",
+              "start_line": 395,
+              "end_line": 413
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "doc/source/index.rst",
+              "start_line": 395,
+              "end_line": 413,
+              "content": "For example, you can call a custom callback function after all retries failed,\nwithout raising an exception (or you can re-raise or do anything really)\n\n.. testcode::\n\n    def return_last_value(retry_state):\n        \"\"\"return the result of the last call attempt\"\"\"\n        return retry_state.outcome.result()\n\n    def is_false(value):\n        \"\"\"Return True if value is False\"\"\"\n        return value is False\n\n    # will return False after trying 3 times to get a different result\n    @retry(stop=stop_after_attempt(3),\n           retry_error_callback=return_last_value,\n           retry=retry_if_result(is_false))\n    def eventually_return_false():\n        return False",
+              "content_sha256": "032c4cead4bb5f3848fa1a1eabd08b9c7aff455535b43ace120b0a36f659b2be",
+              "visible_to_generator": true
+            }
+          ]
+        },
+        {
+          "claim": "该回调分支优先于reraise并跳过其重抛逻辑",
+          "status": "supported",
+          "rationale": "真实472-486分支证实此事实，但该关键窗口未在本候选实际可见来源中，也未被正式引用；206-217只定义reraise方法本身，测试2091-2100无回调。",
+          "evidence": [
+            {
+              "path": "tenacity/__init__.py",
+              "start_line": 472,
+              "end_line": 486
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "tenacity/__init__.py",
+              "start_line": 472,
+              "end_line": 486,
+              "content": "    def _post_stop_check_actions(self, retry_state: \"RetryCallState\") -> None:\n        if self.iter_state.stop_run_result:\n            if self.retry_error_callback:\n                self._add_action_func(self.retry_error_callback)\n                return\n\n            def exc_check(rs: \"RetryCallState\") -> None:\n                fut = t.cast(\"Future\", rs.outcome)\n                retry_exc = self.retry_error_cls(fut)\n                if self.reraise:\n                    retry_exc.reraise()\n                raise retry_exc from fut.exception()\n\n            self._add_action_func(exc_check)\n            return",
+              "content_sha256": "27f56f54b49fe5b9ece029c0e019a73c8bd869a2f30fdd2abdadb0fc604e0f5c",
+              "visible_to_generator": false
+            }
+          ]
+        }
+      ],
+      "notes": "本题具体结论和配置优先关系正确；不额外强制回答iter内部方法名。但正式引用与可见来源未提供两配置同时出现时的关键控制分支，故支持partial、核心有据档不通过；未用评审后补读源码填洞。 原匿名判断先保存并校验，再揭盲；Blinker/Tenacity分由独立子agent来源复核，非人审。",
+      "key_points": null,
+      "candidate_sha256": "408972119e1fd3b07f46b1b099c56735ce1ad5c0d5078128dc7783abf8cd2f45",
+      "reviewer": "Codex (current session)",
+      "review_type": "model_assisted_nonblind_development_review",
+      "human_approved": false,
+      "training_eligible": false,
+      "result_sha256": "73a0df77566beb107ecb80318fc3ff1638c0c97c7d8bce22c3a15d97a7c84842"
+    }
+  },
+  "groups": {
+    "all/agentic_no_tools": {
+      "records": 12,
+      "success": 11,
+      "model_requests": 24,
+      "tool_calls": 0,
+      "episodes_using_tools": 0,
+      "citation_ranges_valid": 11,
+      "initial_reference_complete": 0,
+      "final_reference_complete": 0,
+      "initial_nonblank_reference_complete": 0,
+      "final_nonblank_reference_complete": 0,
+      "requests_without_usage": 0,
+      "requests_without_elapsed": 0,
+      "prompt_tokens": 77046,
+      "completion_tokens": 10704,
+      "generator_seconds": 448.7650000000001,
+      "reviewed": 12,
+      "factually_correct": 7,
+      "core_supported": 5,
+      "fully_resolved": 2,
+      "failed": 1,
+      "insufficiency_flag_true": 2,
+      "insufficiency_flag_false": 0
+    },
+    "new-repository-confirmation/agentic_no_tools": {
+      "records": 12,
+      "success": 11,
+      "model_requests": 24,
+      "tool_calls": 0,
+      "episodes_using_tools": 0,
+      "citation_ranges_valid": 11,
+      "initial_reference_complete": 0,
+      "final_reference_complete": 0,
+      "initial_nonblank_reference_complete": 0,
+      "final_nonblank_reference_complete": 0,
+      "requests_without_usage": 0,
+      "requests_without_elapsed": 0,
+      "prompt_tokens": 77046,
+      "completion_tokens": 10704,
+      "generator_seconds": 448.7650000000001,
+      "reviewed": 12,
+      "factually_correct": 7,
+      "core_supported": 5,
+      "fully_resolved": 2,
+      "failed": 1,
+      "insufficiency_flag_true": 2,
+      "insufficiency_flag_false": 0
+    },
+    "main/agentic_no_tools": {
+      "records": 10,
+      "success": 9,
+      "model_requests": 20,
+      "tool_calls": 0,
+      "episodes_using_tools": 0,
+      "citation_ranges_valid": 9,
+      "initial_reference_complete": 0,
+      "final_reference_complete": 0,
+      "initial_nonblank_reference_complete": 0,
+      "final_nonblank_reference_complete": 0,
+      "requests_without_usage": 0,
+      "requests_without_elapsed": 0,
+      "prompt_tokens": 63540,
+      "completion_tokens": 8205,
+      "generator_seconds": 350.90600000000006,
+      "reviewed": 10,
+      "factually_correct": 6,
+      "core_supported": 4,
+      "fully_resolved": 2,
+      "failed": 1,
+      "insufficiency_flag_true": 2,
+      "insufficiency_flag_false": 0
+    },
+    "answerable/agentic_no_tools": {
+      "records": 10,
+      "success": 9,
+      "model_requests": 20,
+      "tool_calls": 0,
+      "episodes_using_tools": 0,
+      "citation_ranges_valid": 9,
+      "initial_reference_complete": 0,
+      "final_reference_complete": 0,
+      "initial_nonblank_reference_complete": 0,
+      "final_nonblank_reference_complete": 0,
+      "requests_without_usage": 0,
+      "requests_without_elapsed": 0,
+      "prompt_tokens": 67631,
+      "completion_tokens": 10099,
+      "generator_seconds": 420.3430000000001,
+      "reviewed": 10,
+      "factually_correct": 5,
+      "core_supported": 3,
+      "fully_resolved": 0,
+      "failed": 1
+    },
+    "all/agentic": {
+      "records": 12,
+      "success": 12,
+      "model_requests": 30,
+      "tool_calls": 12,
+      "episodes_using_tools": 6,
+      "citation_ranges_valid": 12,
+      "initial_reference_complete": 0,
+      "final_reference_complete": 0,
+      "initial_nonblank_reference_complete": 0,
+      "final_nonblank_reference_complete": 0,
+      "requests_without_usage": 0,
+      "requests_without_elapsed": 0,
+      "prompt_tokens": 118166,
+      "completion_tokens": 8000,
+      "generator_seconds": 365.8430000000001,
+      "reviewed": 12,
+      "factually_correct": 4,
+      "core_supported": 3,
+      "fully_resolved": 1,
+      "insufficiency_flag_true": 2,
+      "insufficiency_flag_false": 0
+    },
+    "new-repository-confirmation/agentic": {
+      "records": 12,
+      "success": 12,
+      "model_requests": 30,
+      "tool_calls": 12,
+      "episodes_using_tools": 6,
+      "citation_ranges_valid": 12,
+      "initial_reference_complete": 0,
+      "final_reference_complete": 0,
+      "initial_nonblank_reference_complete": 0,
+      "final_nonblank_reference_complete": 0,
+      "requests_without_usage": 0,
+      "requests_without_elapsed": 0,
+      "prompt_tokens": 118166,
+      "completion_tokens": 8000,
+      "generator_seconds": 365.8430000000001,
+      "reviewed": 12,
+      "factually_correct": 4,
+      "core_supported": 3,
+      "fully_resolved": 1,
+      "insufficiency_flag_true": 2,
+      "insufficiency_flag_false": 0
+    },
+    "main/agentic": {
+      "records": 10,
+      "success": 10,
+      "model_requests": 25,
+      "tool_calls": 10,
+      "episodes_using_tools": 5,
+      "citation_ranges_valid": 10,
+      "initial_reference_complete": 0,
+      "final_reference_complete": 0,
+      "initial_nonblank_reference_complete": 0,
+      "final_nonblank_reference_complete": 0,
+      "requests_without_usage": 0,
+      "requests_without_elapsed": 0,
+      "prompt_tokens": 99881,
+      "completion_tokens": 5913,
+      "generator_seconds": 279.60800000000006,
+      "reviewed": 10,
+      "factually_correct": 4,
+      "core_supported": 3,
+      "fully_resolved": 1,
+      "insufficiency_flag_true": 2,
+      "insufficiency_flag_false": 0
+    },
+    "answerable/agentic": {
+      "records": 10,
+      "success": 10,
+      "model_requests": 26,
+      "tool_calls": 12,
+      "episodes_using_tools": 6,
+      "citation_ranges_valid": 10,
+      "initial_reference_complete": 0,
+      "final_reference_complete": 0,
+      "initial_nonblank_reference_complete": 0,
+      "final_nonblank_reference_complete": 0,
+      "requests_without_usage": 0,
+      "requests_without_elapsed": 0,
+      "prompt_tokens": 106678,
+      "completion_tokens": 7132,
+      "generator_seconds": 325.843,
+      "reviewed": 10,
+      "factually_correct": 3,
+      "core_supported": 2,
+      "fully_resolved": 0
+    },
+    "all/bm25_code": {
+      "records": 12,
+      "success": 12,
+      "model_requests": 12,
+      "tool_calls": 0,
+      "episodes_using_tools": 0,
+      "citation_ranges_valid": 12,
+      "initial_reference_complete": 0,
+      "final_reference_complete": 0,
+      "initial_nonblank_reference_complete": 0,
+      "final_nonblank_reference_complete": 0,
+      "requests_without_usage": 0,
+      "requests_without_elapsed": 0,
+      "prompt_tokens": 22806,
+      "completion_tokens": 2248,
+      "generator_seconds": 99.53099999999999,
+      "reviewed": 12,
+      "factually_correct": 6,
+      "core_supported": 3,
+      "fully_resolved": 1,
+      "insufficiency_flag_true": 2,
+      "insufficiency_flag_false": 0
+    },
+    "new-repository-confirmation/bm25_code": {
+      "records": 12,
+      "success": 12,
+      "model_requests": 12,
+      "tool_calls": 0,
+      "episodes_using_tools": 0,
+      "citation_ranges_valid": 12,
+      "initial_reference_complete": 0,
+      "final_reference_complete": 0,
+      "initial_nonblank_reference_complete": 0,
+      "final_nonblank_reference_complete": 0,
+      "requests_without_usage": 0,
+      "requests_without_elapsed": 0,
+      "prompt_tokens": 22806,
+      "completion_tokens": 2248,
+      "generator_seconds": 99.53099999999999,
+      "reviewed": 12,
+      "factually_correct": 6,
+      "core_supported": 3,
+      "fully_resolved": 1,
+      "insufficiency_flag_true": 2,
+      "insufficiency_flag_false": 0
+    },
+    "repeat-stability/bm25_code": {
+      "records": 2,
+      "success": 2,
+      "model_requests": 2,
+      "tool_calls": 0,
+      "episodes_using_tools": 0,
+      "citation_ranges_valid": 2,
+      "initial_reference_complete": 0,
+      "final_reference_complete": 0,
+      "initial_nonblank_reference_complete": 0,
+      "final_nonblank_reference_complete": 0,
+      "requests_without_usage": 0,
+      "requests_without_elapsed": 0,
+      "prompt_tokens": 4056,
+      "completion_tokens": 283,
+      "generator_seconds": 13.796,
+      "reviewed": 2,
+      "factually_correct": 2,
+      "core_supported": 1,
+      "fully_resolved": 0
+    },
+    "answerable/bm25_code": {
+      "records": 10,
+      "success": 10,
+      "model_requests": 10,
+      "tool_calls": 0,
+      "episodes_using_tools": 0,
+      "citation_ranges_valid": 10,
+      "initial_reference_complete": 0,
+      "final_reference_complete": 0,
+      "initial_nonblank_reference_complete": 0,
+      "final_nonblank_reference_complete": 0,
+      "requests_without_usage": 0,
+      "requests_without_elapsed": 0,
+      "prompt_tokens": 19767,
+      "completion_tokens": 1833,
+      "generator_seconds": 81.625,
+      "reviewed": 10,
+      "factually_correct": 5,
+      "core_supported": 2,
+      "fully_resolved": 0
+    },
+    "unanswerable/agentic": {
+      "records": 2,
+      "success": 2,
+      "model_requests": 4,
+      "tool_calls": 0,
+      "episodes_using_tools": 0,
+      "citation_ranges_valid": 2,
+      "insufficiency_flag_true": 2,
+      "insufficiency_flag_false": 0,
+      "requests_without_usage": 0,
+      "requests_without_elapsed": 0,
+      "prompt_tokens": 11488,
+      "completion_tokens": 868,
+      "generator_seconds": 40.0,
+      "reviewed": 2,
+      "factually_correct": 1,
+      "core_supported": 1,
+      "fully_resolved": 1
+    },
+    "main/bm25_code": {
+      "records": 10,
+      "success": 10,
+      "model_requests": 10,
+      "tool_calls": 0,
+      "episodes_using_tools": 0,
+      "citation_ranges_valid": 10,
+      "insufficiency_flag_true": 2,
+      "insufficiency_flag_false": 0,
+      "requests_without_usage": 0,
+      "requests_without_elapsed": 0,
+      "prompt_tokens": 18750,
+      "completion_tokens": 1965,
+      "generator_seconds": 85.735,
+      "reviewed": 10,
+      "factually_correct": 4,
+      "core_supported": 2,
+      "fully_resolved": 1,
+      "initial_reference_complete": 0,
+      "final_reference_complete": 0,
+      "initial_nonblank_reference_complete": 0,
+      "final_nonblank_reference_complete": 0
+    },
+    "unanswerable/bm25_code": {
+      "records": 2,
+      "success": 2,
+      "model_requests": 2,
+      "tool_calls": 0,
+      "episodes_using_tools": 0,
+      "citation_ranges_valid": 2,
+      "insufficiency_flag_true": 2,
+      "insufficiency_flag_false": 0,
+      "requests_without_usage": 0,
+      "requests_without_elapsed": 0,
+      "prompt_tokens": 3039,
+      "completion_tokens": 415,
+      "generator_seconds": 17.906,
+      "reviewed": 2,
+      "factually_correct": 1,
+      "core_supported": 1,
+      "fully_resolved": 1
+    },
+    "unanswerable/agentic_no_tools": {
+      "records": 2,
+      "success": 2,
+      "model_requests": 4,
+      "tool_calls": 0,
+      "episodes_using_tools": 0,
+      "citation_ranges_valid": 2,
+      "insufficiency_flag_true": 2,
+      "insufficiency_flag_false": 0,
+      "requests_without_usage": 0,
+      "requests_without_elapsed": 0,
+      "prompt_tokens": 9415,
+      "completion_tokens": 605,
+      "generator_seconds": 28.422,
+      "reviewed": 2,
+      "factually_correct": 2,
+      "core_supported": 2,
+      "fully_resolved": 2
+    },
+    "repeat-stability/agentic_no_tools": {
+      "records": 2,
+      "success": 2,
+      "model_requests": 4,
+      "tool_calls": 0,
+      "episodes_using_tools": 0,
+      "citation_ranges_valid": 2,
+      "initial_reference_complete": 0,
+      "final_reference_complete": 0,
+      "initial_nonblank_reference_complete": 0,
+      "final_nonblank_reference_complete": 0,
+      "requests_without_usage": 0,
+      "requests_without_elapsed": 0,
+      "prompt_tokens": 13506,
+      "completion_tokens": 2499,
+      "generator_seconds": 97.859,
+      "reviewed": 2,
+      "factually_correct": 1,
+      "core_supported": 1,
+      "fully_resolved": 0
+    },
+    "repeat-stability/agentic": {
+      "records": 2,
+      "success": 2,
+      "model_requests": 5,
+      "tool_calls": 2,
+      "episodes_using_tools": 1,
+      "citation_ranges_valid": 2,
+      "initial_reference_complete": 0,
+      "final_reference_complete": 0,
+      "initial_nonblank_reference_complete": 0,
+      "final_nonblank_reference_complete": 0,
+      "requests_without_usage": 0,
+      "requests_without_elapsed": 0,
+      "prompt_tokens": 18285,
+      "completion_tokens": 2087,
+      "generator_seconds": 86.23499999999999,
+      "reviewed": 2,
+      "factually_correct": 0,
+      "core_supported": 0,
+      "fully_resolved": 0
+    }
+  },
+  "retrieval": {
+    "shared_initial": {
+      "answerable": 8,
+      "reference_complete": 0,
+      "nonblank_reference_complete": 0
+    }
+  },
+  "new_requests": 66,
+  "combined_requests": 1228,
+  "paid_requests": 0,
+  "human_approved": false,
+  "training_eligible": false,
+  "reporting_implementation": "4a2deef5c57f58a4b0ad375dd41e7d0559b597e2657ecb043969a165ceea26c0",
+  "usage_observation_note": "Token/time sums include observed values only. Missing usage and elapsed time remain unknown in raw records; reservations still count every sent or ambiguous request.",
+  "checks": {
+    "offline_pytest": {
+      "passed": 303,
+      "deselected": 1,
+      "seconds": 124.09
+    },
+    "ruff": "passed",
+    "offline_verified_records": 36,
+    "requests_retried": 0,
+    "permission_and_repeated_input_checks": {
+      "paired_sdk_first_requests": [
+        {
+          "task_id": "improvement-confirm-blinker-03",
+          "replicate": 0,
+          "nonpermission_fields_equal": true,
+          "messages_byte_equal": true
+        },
+        {
+          "task_id": "improvement-confirm-blinker-05",
+          "replicate": 0,
+          "nonpermission_fields_equal": true,
+          "messages_byte_equal": true
+        },
+        {
+          "task_id": "improvement-confirm-blinker-01",
+          "replicate": 0,
+          "nonpermission_fields_equal": true,
+          "messages_byte_equal": true
+        },
+        {
+          "task_id": "improvement-confirm-blinker-02",
+          "replicate": 0,
+          "nonpermission_fields_equal": true,
+          "messages_byte_equal": true
+        },
+        {
+          "task_id": "improvement-confirm-tenacity-03",
+          "replicate": 0,
+          "nonpermission_fields_equal": true,
+          "messages_byte_equal": true
+        },
+        {
+          "task_id": "improvement-confirm-tenacity-05",
+          "replicate": 0,
+          "nonpermission_fields_equal": true,
+          "messages_byte_equal": true
+        },
+        {
+          "task_id": "improvement-confirm-tenacity-02",
+          "replicate": 0,
+          "nonpermission_fields_equal": true,
+          "messages_byte_equal": true
+        },
+        {
+          "task_id": "improvement-confirm-blinker-02",
+          "replicate": 1,
+          "nonpermission_fields_equal": true,
+          "messages_byte_equal": true
+        },
+        {
+          "task_id": "improvement-confirm-tenacity-01",
+          "replicate": 0,
+          "nonpermission_fields_equal": true,
+          "messages_byte_equal": true
+        },
+        {
+          "task_id": "improvement-confirm-tenacity-04",
+          "replicate": 0,
+          "nonpermission_fields_equal": true,
+          "messages_byte_equal": true
+        },
+        {
+          "task_id": "improvement-confirm-tenacity-01",
+          "replicate": 1,
+          "nonpermission_fields_equal": true,
+          "messages_byte_equal": true
+        },
+        {
+          "task_id": "improvement-confirm-blinker-04",
+          "replicate": 0,
+          "nonpermission_fields_equal": true,
+          "messages_byte_equal": true
+        }
+      ],
+      "permission_protocol_fields": [
+        "parallel_tool_calls",
+        "tool_choice",
+        "tools"
+      ],
+      "note": "SDK includes parallel_tool_calls=false only when tools exist; no parallel repository actions are permitted in either arm.",
+      "repeats": [
+        {
+          "task_id": "improvement-confirm-tenacity-01",
+          "condition": "bm25_code",
+          "first_sdk_wire_equal": null,
+          "public_answer_equal": true,
+          "repeat_cache_hit": false,
+          "original_preserved": true
+        },
+        {
+          "task_id": "improvement-confirm-blinker-02",
+          "condition": "agentic_no_tools",
+          "first_sdk_wire_equal": true,
+          "public_answer_equal": true,
+          "repeat_cache_hit": false,
+          "original_preserved": true
+        },
+        {
+          "task_id": "improvement-confirm-tenacity-01",
+          "condition": "agentic_no_tools",
+          "first_sdk_wire_equal": true,
+          "public_answer_equal": true,
+          "repeat_cache_hit": false,
+          "original_preserved": true
+        },
+        {
+          "task_id": "improvement-confirm-blinker-02",
+          "condition": "agentic",
+          "first_sdk_wire_equal": true,
+          "public_answer_equal": true,
+          "repeat_cache_hit": false,
+          "original_preserved": true
+        },
+        {
+          "task_id": "improvement-confirm-tenacity-01",
+          "condition": "agentic",
+          "first_sdk_wire_equal": true,
+          "public_answer_equal": true,
+          "repeat_cache_hit": false,
+          "original_preserved": true
+        },
+        {
+          "task_id": "improvement-confirm-blinker-02",
+          "condition": "bm25_code",
+          "first_sdk_wire_equal": null,
+          "public_answer_equal": true,
+          "repeat_cache_hit": false,
+          "original_preserved": true
+        }
+      ],
+      "new_model_requests": 66,
+      "results_sha256": "5e77de8d75eb22def39b13274669147ff427426d60b2bae20a848fab71595b5d",
+      "no_answer_cache_hits": true,
+      "real_model_requests_in_this_check": 0
+    },
+    "independent_agent_review": {
+      "packet_sha256": "2424bc96b009b5e651aa936a01dfe579bcde10027979b9aff4a728446e02e1a1",
+      "reviewers": {
+        "blinker": "bf54cdd0399b4fe6e5770b617d839f07be7fd6f859db1718c378c630b8307167",
+        "tenacity": "4c0c806f39544bea6b92ad09b76af1a801a79541279f6c060c70e61b7c82725e"
+      },
+      "review_receipt_sha256": "e38ee0956731c49241ceb8b4c6381d9516d0b48a348cb8c124f9cf3e0066b280",
+      "judgments_saved_before_unblinding": true,
+      "human_participants": 0
+    },
+    "source_archive": "2cce7df3f313023e715bd692cab3be64ebbc297a65c73157f2bbcf6588560fca",
+    "runtime_conditions": {
+      "cpu": "AMD Ryzen 7 7840H w/Radeon 780M Graphics",
+      "gpu": "NVIDIA GeForce RTX 4060 Laptop GPU",
+      "vram_mib": 8188,
+      "generator_gpu_offload": "Observed 29/33 layers (28 repeating layers plus output); context slot 16384. These are this-run observations, not guaranteed settings for other hosts.",
+      "driver_version": "581.94",
+      "generator": "Project-managed portable Ollama 0.34.3, loopback 127.0.0.1:11435, Qwen3.5-9B Q4_K_M, 16K context, one concurrent request",
+      "development_warmup": "No extra warmup generation. First development request includes cold model load; subsequent requests may reuse loaded weights.",
+      "confirmation_warmup": "Same service continued after 12 development calls; no explicit reload or warmup generation. Per-request raw times retained; keep_alive and OS state are not controlled.",
+      "index_cache": "Preparation builds CPU indexes before generation. Run constructs an index object for each new snapshot/policy using the existing disk cache, then reuses objects within the run. Preparation cost is not included in per-case time.",
+      "answer_cache": "Independent per-case cache directories, including repeat cases. No result cache hits intended; recorded cache_hit checked separately.",
+      "timing": "evaluation_elapsed_seconds uses monotonic time around model/index acquisition and the entire answer call for every condition. It excludes offline preparation, prior cases, agent review and human reading. Existing elapsed_seconds fields have different scopes and are not used for end-to-end comparison.",
+      "other_gpu_work": "This task started no other GPU workload; operating-system/display/background utilization was not isolated.",
+      "observed_after_development": {
+        "used_vram_mib": 7119,
+        "gpu_utilization_percent": 14
+      },
+      "human_participants": 0
+    },
+    "finalization_gate": {
+      "schema": "repomentor.quality-gate.v1",
+      "decision_date": "2026-10-23",
+      "promoted": false,
+      "candidate": "sectioned finalizer schema, no prompt/source/model change",
+      "decision": "Reject candidate and retain the existing production schema for new confirmation.",
+      "blocking_criterion": "The private-information protection case acquired new incorrect library claims; both flags remain false.",
+      "source_verified_regressions": [
+        "Candidate describes load_dotenv() as returning a process environment dictionary; frozen main.py returns bool through set_as_environment_variables.",
+        "Candidate denies any mechanism returning/caching dotenv values, contradicted by DotEnv.dict() and get().",
+        "Candidate describes DotEnv.dict() as the process environment dictionary rather than parsed/interpolated dotenv values."
+      ],
+      "evidence": [
+        {
+          "path": "src/dotenv/main.py",
+          "start_line": 79,
+          "end_line": 93
+        },
+        {
+          "path": "src/dotenv/main.py",
+          "start_line": 101,
+          "end_line": 121
+        },
+        {
+          "path": "src/dotenv/main.py",
+          "start_line": 431,
+          "end_line": 479
+        }
+      ],
+      "review": "Implementer source inspection plus a separate source-first subagent judgment, conditions anonymized; complete per-answer reviews are preserved separately.",
+      "requests_completed": 12,
+      "requests_retried": 0,
+      "human_approved": false,
+      "training_eligible": false,
+      "note": "Explanatory gains on other questions cannot override this protected factual regression. No second schema/prompt adjustment on these questions."
+    },
+    "generation_services": "Project-owned Ollama and runner stopped after all 36 records. No training, no paid API, no further calls.",
+    "round_request_accounting": {
+      "start_actual": 1150,
+      "development_actual": 12,
+      "confirmation_actual": 66,
+      "round_authorized": 96,
+      "round_actual": 78,
+      "combined_actual": 1228,
+      "combined_limit": 1246,
+      "unused": 18,
+      "paid": 0
+    },
+    "post_generation_changes": "Only offline CLI replay preflight and question-bank separation of diagnostics from main evaluation; generator implementation and frozen wire inputs remain unchanged."
+  },
+  "scope": "Ten author-selected questions in two newly added public Python repositories; eight answerable and two private-state questions. Same BM25 code-aware initial sources. Tools on/off use the same stage policy and 3-decision limit; actual paths may end early. Two preselected questions have separate-cache repeats at identical seed, reported separately. No final-test opening, no training, no human participants. Candidate schema rejected by the prespecified development gate, so the existing production schema is retained."
+}

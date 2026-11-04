@@ -1,0 +1,250 @@
+{
+  "task_id": "sweqa-requests-002",
+  "repository": "psf/requests",
+  "split": "external-development",
+  "index_id": "5ac1cfbab0b0f92eccc539c7",
+  "base_index_id": "593221d7f723c72e7a0eb743",
+  "chunk_ids_sha256": "d6becfd1f3b759edd263e0c478f9cbf7c152f85ffae16076ed228a9e4b800e2e",
+  "retriever": "hybrid-rerank",
+  "metrics": {
+    "recall_at_6": 0.5,
+    "recall_at_20": 0.5,
+    "mrr": 1.0,
+    "target_overlap_recall_at_6": 1.0,
+    "target_overlap_recall_at_20": 1.0,
+    "line_coverage_at_6": 0.7647058823529411
+  },
+  "first_query_seconds": 0.4009363999998641,
+  "warm_query_seconds": 0.009949700000106532,
+  "index_open_build_seconds": 0.29882339999994656,
+  "chunks": 1274,
+  "candidates": [
+    {
+      "snapshot_id": "e82fdc78cb700c628d4286d6",
+      "chunk_id": "c39d89a9ce5996bb58846d15",
+      "path": "src/requests/utils.py",
+      "start_line": 479,
+      "end_line": 496,
+      "content_hash": "e292b4ca2233f3c5a73e53cfc8b79e36adbb09de01fa856bd9ba5e1583cfafaf",
+      "content": "def get_encodings_from_content(content):\n    \"\"\"Returns encodings from given content string.\n\n    :param content: bytestring to extract encodings from.\n    \"\"\"\n    warnings.warn(\n        (\n            \"In requests 3.0, get_encodings_from_content will be removed. For \"\n            \"more information, please see the discussion on issue #2266. (This\"\n            \" warning should only appear once.)\"\n        ),\n        DeprecationWarning,\n    )\n\n    charset_re = re.compile(r'<meta.*?charset=[\"\\']*(.+?)[\"\\'>]', flags=re.I)\n    pragma_re = re.compile(r'<meta.*?content=[\"\\']*;?charset=(.+?)[\"\\'>]', flags=re.I)\n    xml_re = re.compile(r'^<\\?xml.*?encoding=[\"\\']*(.+?)[\"\\'>]')\n",
+      "symbol": "get_encodings_from_content",
+      "truncated": false
+    },
+    {
+      "snapshot_id": "e82fdc78cb700c628d4286d6",
+      "chunk_id": "23167b78dc2780e918ecc53a",
+      "path": "tests/test_utils.py",
+      "start_line": 368,
+      "end_line": 384,
+      "content_hash": "99ba5700acb03caa6a16e7b6882c82e3ee7f3a41e2959e36b09ab31ba77ae39f",
+      "content": "    @pytest.mark.parametrize(\n        \"content\",\n        (\n            # HTML5 meta charset attribute\n            '<meta charset=\"UTF-8\">',\n            # HTML4 pragma directive\n            '<meta http-equiv=\"Content-type\" content=\"text/html;charset=UTF-8\">',\n            # XHTML 1.x served with text/html MIME type\n            '<meta http-equiv=\"Content-type\" content=\"text/html;charset=UTF-8\" />',\n            # XHTML 1.x served as XML\n            '<?xml version=\"1.0\" encoding=\"UTF-8\"?>',\n        ),\n    )\n    def test_pragmas(self, content):\n        encodings = get_encodings_from_content(content)\n        assert len(encodings) == 1\n        assert encodings[0] == \"UTF-8\"",
+      "symbol": "TestContentEncodingDetection.test_pragmas",
+      "truncated": false
+    },
+    {
+      "snapshot_id": "e82fdc78cb700c628d4286d6",
+      "chunk_id": "e4d2a1a029f2f25cb141bb5d",
+      "path": "src/requests/models.py",
+      "start_line": 890,
+      "end_line": 907,
+      "content_hash": "27c981c53a378436ee87c417a11dab7a18bbce285460839aba51467b7d6a5cd4",
+      "content": "    @property\n    def content(self):\n        \"\"\"Content of the response, in bytes.\"\"\"\n\n        if self._content is False:\n            # Read the contents.\n            if self._content_consumed:\n                raise RuntimeError(\"The content for this response was already consumed\")\n\n            if self.status_code == 0 or self.raw is None:\n                self._content = None\n            else:\n                self._content = b\"\".join(self.iter_content(CONTENT_CHUNK_SIZE)) or b\"\"\n\n        self._content_consumed = True\n        # don't need to release the connection; that's been handled by urllib3\n        # since we exhausted the data.\n        return self._content",
+      "symbol": "Response.content",
+      "truncated": false
+    },
+    {
+      "snapshot_id": "e82fdc78cb700c628d4286d6",
+      "chunk_id": "c61e1ad580d57be67e28bab6",
+      "path": "src/requests/utils.py",
+      "start_line": 497,
+      "end_line": 501,
+      "content_hash": "58c145605331302367907f7a088ece5796d9a6f0d4f9e5dcc6d70c09021ea6c7",
+      "content": "    return (\n        charset_re.findall(content)\n        + pragma_re.findall(content)\n        + xml_re.findall(content)\n    )",
+      "symbol": "get_encodings_from_content",
+      "truncated": false
+    },
+    {
+      "snapshot_id": "e82fdc78cb700c628d4286d6",
+      "chunk_id": "aa1f43673a3e8bd3e8f5448e",
+      "path": "src/requests/utils.py",
+      "start_line": 529,
+      "end_line": 551,
+      "content_hash": "53f783fa3bcddc44f6eb272117fb069c724207b6431bd1ae9dababfcd9cd11d2",
+      "content": "def get_encoding_from_headers(headers):\n    \"\"\"Returns encodings from given HTTP Header Dict.\n\n    :param headers: dictionary to extract encoding from.\n    :rtype: str\n    \"\"\"\n\n    content_type = headers.get(\"content-type\")\n\n    if not content_type:\n        return None\n\n    content_type, params = _parse_content_type_header(content_type)\n\n    if \"charset\" in params:\n        return params[\"charset\"].strip(\"'\\\"\")\n\n    if \"text\" in content_type:\n        return \"ISO-8859-1\"\n\n    if \"application/json\" in content_type:\n        # Assume UTF-8 based on RFC 4627: https://www.ietf.org/rfc/rfc4627.txt since the charset was unset\n        return \"utf-8\"",
+      "symbol": "get_encoding_from_headers",
+      "truncated": false
+    },
+    {
+      "snapshot_id": "e82fdc78cb700c628d4286d6",
+      "chunk_id": "ddbf08d98640098aad9c224b",
+      "path": "src/requests/utils.py",
+      "start_line": 581,
+      "end_line": 606,
+      "content_hash": "306e140268eb3431eaed1bffc46678494af4c8e25f76a3398ee5c1f9fe66f396",
+      "content": "def get_unicode_from_response(r):\n    \"\"\"Returns the requested content back in unicode.\n\n    :param r: Response object to get unicode content from.\n\n    Tried:\n\n    1. charset from content-type\n    2. fall back and replace all unicode characters\n\n    :rtype: str\n    \"\"\"\n    warnings.warn(\n        (\n            \"In requests 3.0, get_unicode_from_response will be removed. For \"\n            \"more information, please see the discussion on issue #2266. (This\"\n            \" warning should only appear once.)\"\n        ),\n        DeprecationWarning,\n    )\n\n    tried_encodings = []\n\n    # Try charset from content-type\n    encoding = get_encoding_from_headers(r.headers)\n",
+      "symbol": "get_unicode_from_response",
+      "truncated": false
+    },
+    {
+      "snapshot_id": "e82fdc78cb700c628d4286d6",
+      "chunk_id": "27316de45b885512f4b424b9",
+      "path": "tests/test_utils.py",
+      "start_line": 1,
+      "end_line": 32,
+      "content_hash": "375c3241b0bd7d8e240640f6042ef9f87e2eed24bd0d1db53d631d0e30f7cda8",
+      "content": "import copy\nimport filecmp\nimport os\nimport tarfile\nimport zipfile\nfrom collections import deque\nfrom io import BytesIO\nfrom unittest import mock\n\nimport pytest\n\nfrom requests import compat\nfrom requests._internal_utils import unicode_is_ascii\nfrom requests.cookies import RequestsCookieJar\nfrom requests.structures import CaseInsensitiveDict\nfrom requests.utils import (\n    _parse_content_type_header,\n    add_dict_to_cookiejar,\n    address_in_network,\n    dotted_netmask,\n    extract_zipped_paths,\n    get_auth_from_url,\n    get_encoding_from_headers,\n    get_encodings_from_content,\n    get_environ_proxies,\n    get_netrc_auth,\n    guess_filename,\n    guess_json_utf,\n    is_ipv4_address,\n    is_valid_cidr,\n    iter_slices,\n    parse_dict_header,",
+      "symbol": null,
+      "truncated": false
+    },
+    {
+      "snapshot_id": "e82fdc78cb700c628d4286d6",
+      "chunk_id": "94753158034161e42daaf80b",
+      "path": "src/requests/models.py",
+      "start_line": 84,
+      "end_line": 84,
+      "content_hash": "1954af60c8fd9e43560aaf37866c9efcbeade1b09f6c90839ac0a948c5db783a",
+      "content": "class RequestEncodingMixin:",
+      "symbol": "RequestEncodingMixin",
+      "truncated": false
+    },
+    {
+      "snapshot_id": "e82fdc78cb700c628d4286d6",
+      "chunk_id": "c8cf34358ad2b828bc249eee",
+      "path": "tests/test_utils.py",
+      "start_line": 386,
+      "end_line": 392,
+      "content_hash": "809961ad0602d5a852a83a602f382131d922c2c92223f5048f2077b94f4e6cef",
+      "content": "    def test_precedence(self):\n        content = \"\"\"\n        <?xml version=\"1.0\" encoding=\"XML\"?>\n        <meta charset=\"HTML5\">\n        <meta http-equiv=\"Content-type\" content=\"text/html;charset=HTML4\" />\n        \"\"\".strip()\n        assert get_encodings_from_content(content) == [\"HTML5\", \"HTML4\", \"XML\"]",
+      "symbol": "TestContentEncodingDetection.test_precedence",
+      "truncated": false
+    },
+    {
+      "snapshot_id": "e82fdc78cb700c628d4286d6",
+      "chunk_id": "3df46f8ec4c585179a00872a",
+      "path": "tests/test_utils.py",
+      "start_line": 364,
+      "end_line": 366,
+      "content_hash": "36f84dcc0afaf0b6585025c4ff5c83ad5448e34f1fc8dff522a8559d290cf9dc",
+      "content": "    def test_none(self):\n        encodings = get_encodings_from_content(\"\")\n        assert not len(encodings)",
+      "symbol": "TestContentEncodingDetection.test_none",
+      "truncated": false
+    },
+    {
+      "snapshot_id": "e82fdc78cb700c628d4286d6",
+      "chunk_id": "daf3f8b972cf02538bf088ff",
+      "path": "tests/test_utils.py",
+      "start_line": 363,
+      "end_line": 363,
+      "content_hash": "97ff104f997484b5078d9b3f736be7af38d6c77e75a71a650aec2ccb26fa2932",
+      "content": "class TestContentEncodingDetection:",
+      "symbol": "TestContentEncodingDetection",
+      "truncated": false
+    },
+    {
+      "snapshot_id": "e82fdc78cb700c628d4286d6",
+      "chunk_id": "b9b1cec21e49b437e67b074e",
+      "path": "docs/user/quickstart.rst",
+      "start_line": 99,
+      "end_line": 107,
+      "content_hash": "d588ccf09071953e96c70d6be977ee4f4d3b95f36b6de314ec32bde4622f0352",
+      "content": "When you make a request, Requests makes educated guesses about the encoding of\nthe response based on the HTTP headers. The text encoding guessed by Requests\nis used when you access ``r.text``. You can find out what encoding Requests is\nusing, and change it, using the ``r.encoding`` property::\n\n    >>> r.encoding\n    'utf-8'\n    >>> r.encoding = 'ISO-8859-1'\n",
+      "symbol": null,
+      "truncated": false
+    },
+    {
+      "snapshot_id": "e82fdc78cb700c628d4286d6",
+      "chunk_id": "03dacdc964c1a98e87507b76",
+      "path": "src/requests/utils.py",
+      "start_line": 1024,
+      "end_line": 1032,
+      "content_hash": "ac8f9cf37753e34d0c257b99c9d059f175556f5d60306cdea3ea4c7498c2560c",
+      "content": "def check_header_validity(header):\n    \"\"\"Verifies that header parts don't contain leading whitespace\n    reserved characters, or return characters.\n\n    :param header: tuple, in the format (name, value).\n    \"\"\"\n    name, value = header\n    _validate_header_part(header, name, 0)\n    _validate_header_part(header, value, 1)",
+      "symbol": "check_header_validity",
+      "truncated": false
+    },
+    {
+      "snapshot_id": "e82fdc78cb700c628d4286d6",
+      "chunk_id": "0a46ac1250a9688e73dd8696",
+      "path": "src/requests/models.py",
+      "start_line": 658,
+      "end_line": 675,
+      "content_hash": "72994fe69c2d9b635e1c3709fa951d663a0652a60ac7d2ee707f5d73dd036acb",
+      "content": "    def __init__(self):\n        self._content = False\n        self._content_consumed = False\n        self._next = None\n\n        #: Integer Code of responded HTTP Status, e.g. 404 or 200.\n        self.status_code = None\n\n        #: Case-insensitive Dictionary of Response Headers.\n        #: For example, ``headers['content-encoding']`` will return the\n        #: value of a ``'Content-Encoding'`` response header.\n        self.headers = CaseInsensitiveDict()\n\n        #: File-like object representation of response (for advanced usage).\n        #: Use of ``raw`` requires that ``stream=True`` be set on the request.\n        #: This requirement does not apply for use internally to Requests.\n        self.raw = None\n",
+      "symbol": "Response.__init__",
+      "truncated": false
+    },
+    {
+      "snapshot_id": "e82fdc78cb700c628d4286d6",
+      "chunk_id": "c60b5a0a311b49d0f0f01d93",
+      "path": "docs/user/quickstart.rst",
+      "start_line": 108,
+      "end_line": 120,
+      "content_hash": "f178101aedca390c74914a8ab518d180e42d5b176fa23902c4b9d5df29c64e54",
+      "content": "If you change the encoding, Requests will use the new value of ``r.encoding``\nwhenever you call ``r.text``. You might want to do this in any situation where\nyou can apply special logic to work out what the encoding of the content will\nbe. For example, HTML and XML have the ability to specify their encoding in\ntheir body. In situations like this, you should use ``r.content`` to find the\nencoding, and then set ``r.encoding``. This will let you use ``r.text`` with\nthe correct encoding.\n\nRequests will also use custom encodings in the event that you need them. If\nyou have created your own encoding and registered it with the ``codecs``\nmodule, you can simply use the codec name as the value of ``r.encoding`` and\nRequests will handle the decoding for you.\n",
+      "symbol": null,
+      "truncated": false
+    },
+    {
+      "snapshot_id": "e82fdc78cb700c628d4286d6",
+      "chunk_id": "924c7bba8adc425e8e718918",
+      "path": "docs/community/faq.rst",
+      "start_line": 1,
+      "end_line": 26,
+      "content_hash": "b6fcdfa16d24488c489fe4cd3f72732ff35faa3c7a2be31bee70c650e1703b82",
+      "content": ".. _faq:\n\nFrequently Asked Questions\n==========================\n\nThis part of the documentation answers common questions about Requests.\n\nEncoded Data?\n-------------\n\nRequests automatically decompresses gzip-encoded responses, and does\nits best to decode response content to unicode when possible.\n\nWhen either the `brotli <https://pypi.org/project/Brotli/>`_ or `brotlicffi <https://pypi.org/project/brotlicffi/>`_\npackage is installed, requests also decodes Brotli-encoded responses.\n\nYou can get direct access to the raw response (and even the socket),\nif needed as well.\n\n\nCustom User-Agents?\n-------------------\n\nRequests allows you to easily override User-Agent strings, along with\nany other HTTP Header. See :ref:`documentation about headers <custom-headers>`.\n",
+      "symbol": null,
+      "truncated": false
+    },
+    {
+      "snapshot_id": "e82fdc78cb700c628d4286d6",
+      "chunk_id": "b6004a5dae3e421029476e6f",
+      "path": "docs/api.rst",
+      "start_line": 252,
+      "end_line": 260,
+      "content_hash": "f051afb6f2aa76e6aa82c81b28baafb2418a285ce71677e336c3dca6826ef8a3",
+      "content": "* Keys in the ``headers`` dictionary are now native strings on all Python\n  versions, i.e. bytestrings on Python 2 and unicode on Python 3. If the\n  keys are not native strings (unicode on Python 2 or bytestrings on Python 3)\n  they will be converted to the native string type assuming UTF-8 encoding.\n\n* Values in the ``headers`` dictionary should always be strings. This has\n  been the project's position since before 1.0 but a recent change\n  (since version 2.11.0) enforces this more strictly. It's advised to avoid\n  passing header values as unicode when possible.",
+      "symbol": null,
+      "truncated": false
+    },
+    {
+      "snapshot_id": "e82fdc78cb700c628d4286d6",
+      "chunk_id": "74c12847764b58cc0660ad03",
+      "path": "docs/user/quickstart.rst",
+      "start_line": 197,
+      "end_line": 218,
+      "content_hash": "b26799cc7d39d1b7c025a6b6310faf4bfcbf3b45afe01aee862dd91d8c5b084d",
+      "content": "   An important note about using ``Response.iter_content`` versus ``Response.raw``.\n   ``Response.iter_content`` will automatically decode the ``gzip`` and ``deflate``\n   transfer-encodings.  ``Response.raw`` is a raw stream of bytes -- it does not\n   transform the response content.  If you really need access to the bytes as they\n   were returned, use ``Response.raw``.\n\n\n.. _custom-headers:\n\nCustom Headers\n--------------\n\nIf you'd like to add HTTP headers to a request, simply pass in a ``dict`` to the\n``headers`` parameter.\n\nFor example, we didn't specify our user-agent in the previous example::\n\n    >>> url = 'https://api.github.com/some/endpoint'\n    >>> headers = {'user-agent': 'my-app/0.0.1'}\n\n    >>> r = requests.get(url, headers=headers)\n",
+      "symbol": null,
+      "truncated": false
+    },
+    {
+      "snapshot_id": "e82fdc78cb700c628d4286d6",
+      "chunk_id": "82d2dd8537d45c975f2682da",
+      "path": "tests/test_requests.py",
+      "start_line": 1595,
+      "end_line": 1604,
+      "content_hash": "95a7beed5cc700cfb41931a217dd2dba2b22c07ee0f245d5f1291a457d4d9af6",
+      "content": "    def test_fixes_1329(self, httpbin):\n        \"\"\"Ensure that header updates are done case-insensitively.\"\"\"\n        s = requests.Session()\n        s.headers.update({\"ACCEPT\": \"BOGUS\"})\n        s.headers.update({\"accept\": \"application/json\"})\n        r = s.get(httpbin(\"get\"))\n        headers = r.request.headers\n        assert headers[\"accept\"] == \"application/json\"\n        assert headers[\"Accept\"] == \"application/json\"\n        assert headers[\"ACCEPT\"] == \"application/json\"",
+      "symbol": "TestRequests.test_fixes_1329",
+      "truncated": false
+    },
+    {
+      "snapshot_id": "e82fdc78cb700c628d4286d6",
+      "chunk_id": "65f116c71cf9fd63ba47076a",
+      "path": "docs/user/advanced.rst",
+      "start_line": 694,
+      "end_line": 708,
+      "content_hash": "1ebba92bdb6350089f9e308781e6b51b3c6f580136a1195da9c07f1ddbab0600",
+      "content": "Using the scheme ``socks5`` causes the DNS resolution to happen on the client, rather than on the proxy server. This is in line with curl, which uses the scheme to decide whether to do the DNS resolution on the client or proxy. If you want to resolve the domains on the proxy server, use ``socks5h`` as the scheme.\n\n.. _compliance:\n\nCompliance\n----------\n\nRequests is intended to be compliant with all relevant specifications and\nRFCs where that compliance will not cause difficulties for users. This\nattention to the specification can lead to some behaviour that may seem\nunusual to those not familiar with the relevant specification.\n\nEncodings\n^^^^^^^^^\n",
+      "symbol": null,
+      "truncated": false
+    }
+  ],
+  "neural_work": {
+    "embedding_hits": 2,
+    "embedding_new": 0,
+    "rerank_hits": 0,
+    "rerank_new": 40
+  },
+  "generation_requests": 0
+}

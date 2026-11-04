@@ -1,0 +1,433 @@
+{
+  "questions": 2,
+  "planned_answers": 2,
+  "records": 2,
+  "reviews": {
+    "new-confirm-schedule-random-03--companion-control": {
+      "candidate_id": "new-confirm-schedule-random-03--companion-control",
+      "correctness": "correct",
+      "citation_support": "partial",
+      "completeness": "partial",
+      "abstention": "not_applicable",
+      "entry_scope": "correct",
+      "consistency": "consistent",
+      "claims": [
+        {
+          "claim": "to(10)不会当场抽样或把抽样结果固定成后续永久周期；随机抽样在_schedule_next_run调用中发生。",
+          "status": "supported",
+          "rationale": "to方法只赋self.latest并返回self；helper在latest不为空时每次执行random.randint，未写回self.interval。两处真实源码均已交付。",
+          "evidence": [
+            {
+              "path": "schedule/__init__.py",
+              "start_line": 561,
+              "end_line": 574
+            },
+            {
+              "path": "schedule/__init__.py",
+              "start_line": 709,
+              "end_line": 714
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "schedule/__init__.py",
+              "start_line": 561,
+              "end_line": 574,
+              "content": "    def to(self, latest: int):\n        \"\"\"\n        Schedule the job to run at an irregular (randomized) interval.\n\n        The job's interval will randomly vary from the value given\n        to  `every` to `latest`. The range defined is inclusive on\n        both ends. For example, `every(A).to(B).seconds` executes\n        the job function every N seconds such that A <= N <= B.\n\n        :param latest: Maximum interval between randomized job runs\n        :return: The invoked job instance\n        \"\"\"\n        self.latest = latest\n        return self",
+              "content_sha256": "547f063ca889f5f3a919eda417190ca2a0ab4e67d966ce727181f6262c257ed0",
+              "visible_to_generator": true
+            },
+            {
+              "path": "schedule/__init__.py",
+              "start_line": 709,
+              "end_line": 714,
+              "content": "        if self.latest is not None:\n            if not (self.latest >= self.interval):\n                raise ScheduleError(\"`latest` is greater than `interval`\")\n            interval = random.randint(self.interval, self.latest)\n        else:\n            interval = self.interval",
+              "content_sha256": "67533d598bc01c0ed3e3eba80e51deb637ff7ec82b3a421bea59ade0f5059920",
+              "visible_to_generator": true
+            }
+          ]
+        },
+        {
+          "claim": "首次下一次运行时间在do()调用时通过_schedule_next_run()建立。",
+          "status": "supported",
+          "rationale": "do在设置job_func后于657行调用helper；真实源码已交付，但正式citations没有列644–664，所以总体引用仍不齐全。答案未展开now加period的细节。",
+          "evidence": [
+            {
+              "path": "schedule/__init__.py",
+              "start_line": 644,
+              "end_line": 664
+            },
+            {
+              "path": "schedule/__init__.py",
+              "start_line": 717,
+              "end_line": 734
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "schedule/__init__.py",
+              "start_line": 644,
+              "end_line": 664,
+              "content": "    def do(self, job_func: Callable, *args, **kwargs):\n        \"\"\"\n        Specifies the job_func that should be called every time the\n        job runs.\n\n        Any additional arguments are passed on to job_func when\n        the job runs.\n\n        :param job_func: The function to be scheduled\n        :return: The invoked job instance\n        \"\"\"\n        self.job_func = functools.partial(job_func, *args, **kwargs)\n        functools.update_wrapper(self.job_func, job_func)\n        self._schedule_next_run()\n        if self.scheduler is None:\n            raise ScheduleError(\n                \"Unable to a add job to schedule. \"\n                \"Job is not associated with an scheduler\"\n            )\n        self.scheduler.jobs.append(self)\n        return self",
+              "content_sha256": "29650fd7a5e028bcd3178da29d9b0b5c8f5e2896e67e38f88c1186d68c48ba18",
+              "visible_to_generator": true
+            },
+            {
+              "path": "schedule/__init__.py",
+              "start_line": 717,
+              "end_line": 734,
+              "content": "        now = datetime.datetime.now(self.at_time_zone)\n\n        next_run = now\n\n        if self.start_day is not None:\n            if self.unit != \"weeks\":\n                raise ScheduleValueError(\"`unit` should be 'weeks'\")\n            next_run = _move_to_next_weekday(next_run, self.start_day)\n\n        if self.at_time is not None:\n            next_run = self._move_to_at_time(next_run)\n\n        period = datetime.timedelta(**{self.unit: interval})\n        if interval != 1:\n            next_run += period\n\n        while next_run <= now:\n            next_run += period",
+              "content_sha256": "75d93412d04a8c04149dd2665a79bcc08405437aebecfdeb810e720afcca4548",
+              "visible_to_generator": true
+            }
+          ]
+        },
+        {
+          "claim": "poll成功返回后会重新抽样来计算下一次运行时间，不永久沿用首次抽样。",
+          "status": "partial",
+          "rationale": "固定快照确认结论为真：Job.run691–693在job_func成功返回后更新last_run并调用helper。但两组均未获取Job.run，已交付helper只说明每次被调用如何采样，不能证明poll返回触发它。691–693是评审者补读，visible_to_generator=false，不能倒灌为模型的调用链证据。未把“重新抽取”解释为必然抽到不同数值。",
+          "evidence": [
+            {
+              "path": "schedule/__init__.py",
+              "start_line": 691,
+              "end_line": 693
+            },
+            {
+              "path": "schedule/__init__.py",
+              "start_line": 709,
+              "end_line": 714
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "schedule/__init__.py",
+              "start_line": 691,
+              "end_line": 693,
+              "content": "        ret = self.job_func()\n        self.last_run = datetime.datetime.now()\n        self._schedule_next_run()",
+              "content_sha256": "63b92c0b4961187be6c074119d44bbdb27c722f9572853709c6ec47ee40ed1d7",
+              "visible_to_generator": false
+            },
+            {
+              "path": "schedule/__init__.py",
+              "start_line": 709,
+              "end_line": 714,
+              "content": "        if self.latest is not None:\n            if not (self.latest >= self.interval):\n                raise ScheduleError(\"`latest` is greater than `interval`\")\n            interval = random.randint(self.interval, self.latest)\n        else:\n            interval = self.interval",
+              "content_sha256": "67533d598bc01c0ed3e3eba80e51deb637ff7ec82b3a421bea59ade0f5059920",
+              "visible_to_generator": true
+            }
+          ]
+        },
+        {
+          "claim": "5和10两个端点均可取到。",
+          "status": "supported",
+          "rationale": "to的566–568行明确inclusive on both ends；helper使用random.randint(self.interval,self.latest)，与闭区间结论一致。",
+          "evidence": [
+            {
+              "path": "schedule/__init__.py",
+              "start_line": 565,
+              "end_line": 568
+            },
+            {
+              "path": "schedule/__init__.py",
+              "start_line": 709,
+              "end_line": 714
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "schedule/__init__.py",
+              "start_line": 565,
+              "end_line": 568,
+              "content": "        The job's interval will randomly vary from the value given\n        to  `every` to `latest`. The range defined is inclusive on\n        both ends. For example, `every(A).to(B).seconds` executes\n        the job function every N seconds such that A <= N <= B.",
+              "content_sha256": "9af61928cc7607e4e6d63bb5d78cb393b56f28ec39793a265c7c42ec8e804bbc",
+              "visible_to_generator": true
+            },
+            {
+              "path": "schedule/__init__.py",
+              "start_line": 709,
+              "end_line": 714,
+              "content": "        if self.latest is not None:\n            if not (self.latest >= self.interval):\n                raise ScheduleError(\"`latest` is greater than `interval`\")\n            interval = random.randint(self.interval, self.latest)\n        else:\n            interval = self.interval",
+              "content_sha256": "67533d598bc01c0ed3e3eba80e51deb637ff7ec82b3a421bea59ade0f5059920",
+              "visible_to_generator": true
+            }
+          ]
+        }
+      ],
+      "notes": "整答事实正确，未声称重新抽取必然取到不同数。缺失poll成功→Job.run→helper的实际调用链证据与说明，故core/full=false。静态related_callers不是源码；合法JSON、工具调用、now公式不能替代此门槛。不额外要求题面排除的at/until、测试或生产调度SLO。",
+      "key_points": null,
+      "candidate_sha256": "ab6bfd6c5490bb15562e30c73f057856d614008a3a0798bbc4e5ad7a74513c63",
+      "reviewer": "Codex (current session)",
+      "review_type": "model_assisted_nonblind_development_review",
+      "human_approved": false,
+      "training_eligible": false,
+      "result_sha256": "d7986627087343818896c9e75eb5323b3e19e75eb89dede366e03017e2e7c991"
+    },
+    "improvement-confirm-blinker-02--companion-control": {
+      "candidate_id": "improvement-confirm-blinker-02--companion-control",
+      "correctness": "correct",
+      "citation_support": "supported",
+      "completeness": "adequate",
+      "abstention": "not_applicable",
+      "entry_scope": "correct",
+      "consistency": "consistent",
+      "claims": [
+        {
+          "claim": "同一个回调同时注册ANY和发送者123时，一次sig.send(123)仅调用它一次。",
+          "status": "supported",
+          "rationale": "receivers_for对ANY和特定sender的接收器ID集合取并集，再逐ID产出回调；send遍历这些回调。测试中send(123)只追加一次123。",
+          "evidence": [
+            {
+              "path": "src/blinker/base.py",
+              "start_line": 342,
+              "end_line": 348
+            },
+            {
+              "path": "src/blinker/base.py",
+              "start_line": 242,
+              "end_line": 253
+            },
+            {
+              "path": "tests/test_signals.py",
+              "start_line": 405,
+              "end_line": 412
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "src/blinker/base.py",
+              "start_line": 342,
+              "end_line": 348,
+              "content": "        if sender_id in self._by_sender:\n            ids = self._by_sender[ANY_ID] | self._by_sender[sender_id]\n        else:\n            ids = self._by_sender[ANY_ID].copy()\n\n        for receiver_id in ids:\n            receiver = self.receivers.get(receiver_id)",
+              "content_sha256": "09c1ad00932f7d6bb3edfa34f676c5b2eb772af00aa8ff5ed3838f2201cef428",
+              "visible_to_generator": true
+            },
+            {
+              "path": "src/blinker/base.py",
+              "start_line": 242,
+              "end_line": 253,
+              "content": "        for receiver in self.receivers_for(sender):\n            if iscoroutinefunction(receiver):\n                if _async_wrapper is None:\n                    raise RuntimeError(\"Cannot send to a coroutine function.\")\n\n                result = _async_wrapper(receiver)(sender, **kwargs)\n            else:\n                result = receiver(sender, **kwargs)\n\n            results.append((receiver, result))\n\n        return results",
+              "content_sha256": "ba6fb51391cd8c030ba403ea3b897e69b1c41e61500521902a33e29c5a1305c5",
+              "visible_to_generator": true
+            },
+            {
+              "path": "tests/test_signals.py",
+              "start_line": 405,
+              "end_line": 412,
+              "content": "    sig.connect(received, 123)\n    sig.connect(received)\n\n    assert not sentinel\n    sig.send()\n    assert sentinel == [None]\n    sig.send(123)\n    assert sentinel == [None, 123]",
+              "content_sha256": "533ac701c707fd4a865f8e23537bd1598e2f86c48589ed64fcf9900039f5ac7b",
+              "visible_to_generator": true
+            }
+          ]
+        },
+        {
+          "claim": "去重来自ANY与具体sender的接收器ID集合并集，重复ID只保留一次。",
+          "status": "supported",
+          "rationale": "343行的|集合并集和347行逐ID遍历直接支持机制。connect107–118为评审者补读确认注册保存receiver_id，而非生成阶段交付来源；主机制已由交付并集及遍历支持。候选对_by_sender使用“集合”一词指其各sender对应的集合，正式代码表达式正确，未把集合成员当作不同回调。",
+          "evidence": [
+            {
+              "path": "src/blinker/base.py",
+              "start_line": 342,
+              "end_line": 348
+            },
+            {
+              "path": "src/blinker/base.py",
+              "start_line": 107,
+              "end_line": 118
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "src/blinker/base.py",
+              "start_line": 342,
+              "end_line": 348,
+              "content": "        if sender_id in self._by_sender:\n            ids = self._by_sender[ANY_ID] | self._by_sender[sender_id]\n        else:\n            ids = self._by_sender[ANY_ID].copy()\n\n        for receiver_id in ids:\n            receiver = self.receivers.get(receiver_id)",
+              "content_sha256": "09c1ad00932f7d6bb3edfa34f676c5b2eb772af00aa8ff5ed3838f2201cef428",
+              "visible_to_generator": true
+            },
+            {
+              "path": "src/blinker/base.py",
+              "start_line": 107,
+              "end_line": 118,
+              "content": "        receiver_id = make_id(receiver)\n        sender_id = ANY_ID if sender is ANY else make_id(sender)\n\n        if weak:\n            self.receivers[receiver_id] = make_ref(\n                receiver, self._make_cleanup_receiver(receiver_id)\n            )\n        else:\n            self.receivers[receiver_id] = receiver\n\n        self._by_sender[sender_id].add(receiver_id)\n        self._by_receiver[receiver_id].add(sender_id)",
+              "content_sha256": "948264abac47a2e73bf86b5bc06fdfd71c9858980d76524f7b908963919879f8",
+              "visible_to_generator": false
+            }
+          ]
+        },
+        {
+          "claim": "test_no_double_send先将同一received连接到123和ANY，先前send()得到[None]，后一次send(123)后sentinel为[None,123]，验证没有重复123。",
+          "status": "supported",
+          "rationale": "405–406双连接，409–410先send()追加None，411实际send(123)，412断言[None,123]。答案没有把累计两个记录误说为该次send(123)调用两次，也没有混用send_async。",
+          "evidence": [
+            {
+              "path": "tests/test_signals.py",
+              "start_line": 397,
+              "end_line": 414
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "tests/test_signals.py",
+              "start_line": 397,
+              "end_line": 414,
+              "content": "def test_no_double_send() -> None:\n    sentinel = []\n\n    def received(sender: t.Any) -> None:\n        sentinel.append(sender)\n\n    sig = blinker.Signal()\n\n    sig.connect(received, 123)\n    sig.connect(received)\n\n    assert not sentinel\n    sig.send()\n    assert sentinel == [None]\n    sig.send(123)\n    assert sentinel == [None, 123]\n    sig.send()\n    assert sentinel == [None, 123, None]",
+              "content_sha256": "4353e18c11322c495e1fdbb3a93dce8268bf596ea5f68492bcf670f6ff205e47",
+              "visible_to_generator": true
+            }
+          ]
+        }
+      ],
+      "notes": "正式答案完整回答去重及测试。研究笔记另有“同一sender重复连接会累积”的错误推断，最终答案已移除；它不作为源码或正式交付结论，也不倒灌进最终答案评分。source107–118只用于评审核对，明确非生成者可见。",
+      "key_points": null,
+      "candidate_sha256": "f458f7691c79235f2d9f6c1ac0caf707d030276330a6815503f72c8d4f8f6160",
+      "reviewer": "Codex (current session)",
+      "review_type": "model_assisted_nonblind_development_review",
+      "human_approved": false,
+      "training_eligible": false,
+      "result_sha256": "328a8471dc5c6bc7dc339a1854fc9a78cd62f11854004581b47d0dd376b6041c"
+    }
+  },
+  "groups": {
+    "all/agentic": {
+      "records": 2,
+      "success": 2,
+      "model_requests": 5,
+      "tool_calls": 1,
+      "episodes_using_tools": 1,
+      "citation_ranges_valid": 2,
+      "initial_reference_complete": 0,
+      "final_reference_complete": 0,
+      "initial_nonblank_reference_complete": 0,
+      "final_nonblank_reference_complete": 0,
+      "requests_without_usage": 0,
+      "requests_without_elapsed": 0,
+      "prompt_tokens": 31514,
+      "completion_tokens": 1597,
+      "generator_seconds": 86.436,
+      "reviewed": 2,
+      "factually_correct": 2,
+      "core_supported": 1,
+      "fully_resolved": 1
+    },
+    "new-question-confirmation/agentic": {
+      "records": 1,
+      "success": 1,
+      "model_requests": 3,
+      "tool_calls": 1,
+      "episodes_using_tools": 1,
+      "citation_ranges_valid": 1,
+      "initial_reference_complete": 0,
+      "final_reference_complete": 0,
+      "initial_nonblank_reference_complete": 0,
+      "final_nonblank_reference_complete": 0,
+      "requests_without_usage": 0,
+      "requests_without_elapsed": 0,
+      "prompt_tokens": 21998,
+      "completion_tokens": 740,
+      "generator_seconds": 48.53,
+      "reviewed": 1,
+      "factually_correct": 1,
+      "core_supported": 0,
+      "fully_resolved": 0
+    },
+    "matched-navigation-ablation/agentic": {
+      "records": 2,
+      "success": 2,
+      "model_requests": 5,
+      "tool_calls": 1,
+      "episodes_using_tools": 1,
+      "citation_ranges_valid": 2,
+      "initial_reference_complete": 0,
+      "final_reference_complete": 0,
+      "initial_nonblank_reference_complete": 0,
+      "final_nonblank_reference_complete": 0,
+      "requests_without_usage": 0,
+      "requests_without_elapsed": 0,
+      "prompt_tokens": 31514,
+      "completion_tokens": 1597,
+      "generator_seconds": 86.436,
+      "reviewed": 2,
+      "factually_correct": 2,
+      "core_supported": 1,
+      "fully_resolved": 1
+    },
+    "answerable/agentic": {
+      "records": 2,
+      "success": 2,
+      "model_requests": 5,
+      "tool_calls": 1,
+      "episodes_using_tools": 1,
+      "citation_ranges_valid": 2,
+      "initial_reference_complete": 0,
+      "final_reference_complete": 0,
+      "initial_nonblank_reference_complete": 0,
+      "final_nonblank_reference_complete": 0,
+      "requests_without_usage": 0,
+      "requests_without_elapsed": 0,
+      "prompt_tokens": 31514,
+      "completion_tokens": 1597,
+      "generator_seconds": 86.436,
+      "reviewed": 2,
+      "factually_correct": 2,
+      "core_supported": 1,
+      "fully_resolved": 1
+    },
+    "revealed-confirmation-development/agentic": {
+      "records": 1,
+      "success": 1,
+      "model_requests": 2,
+      "tool_calls": 0,
+      "episodes_using_tools": 0,
+      "citation_ranges_valid": 1,
+      "initial_reference_complete": 0,
+      "final_reference_complete": 0,
+      "initial_nonblank_reference_complete": 0,
+      "final_nonblank_reference_complete": 0,
+      "requests_without_usage": 0,
+      "requests_without_elapsed": 0,
+      "prompt_tokens": 9516,
+      "completion_tokens": 857,
+      "generator_seconds": 37.906,
+      "reviewed": 1,
+      "factually_correct": 1,
+      "core_supported": 1,
+      "fully_resolved": 1
+    }
+  },
+  "retrieval": {
+    "shared_initial": {
+      "answerable": 2,
+      "reference_complete": 0,
+      "nonblank_reference_complete": 0
+    }
+  },
+  "new_requests": 5,
+  "combined_requests": 1394,
+  "paid_requests": 0,
+  "human_approved": false,
+  "training_eligible": false,
+  "reporting_implementation": "4432a399824bc989792b734caf26caf8da5ada5fef0941d184fd5a00d4ae2e6b",
+  "usage_observation_note": "Token/time sums include observed values only. Missing usage and elapsed time remain unknown in raw records; reservations still count every sent or ambiguous request.",
+  "checks": {
+    "candidate_accepted": false,
+    "new_full_answers": 0,
+    "actual_Job_run_source_acquired": false,
+    "gate_frozen_before_all_four_answers": true,
+    "matched_control_batch": "experiments/companion-navigation-control",
+    "candidate_batch": "experiments/companion-navigation-candidate",
+    "intervention": "Only navigation method switches on the same current structural index. Control compiles the exact before.zip method SHA from the declared plan; candidate uses current method. Both use normal SDK Runner. No hidden model/prompt/source/tool variation.",
+    "input_proof": "Independent review compared identity.input and actual first-dispatch messages after deleting only symbol_navigation.related_callers: UTF-8 identical, same symbol IDs. All other actual first-dispatch body fields, instructions, limits, config, runtime, schema, tools, collaboration and shared sources match. Not a historical raw-dispatch match.",
+    "offline": {
+      "questions": 77,
+      "fixed_rag_inputs_unchanged": 77,
+      "sdk_navigation_changed": 5,
+      "instructions_unchanged": true,
+      "initial_sources_unchanged": true,
+      "source_loss": false,
+      "compacted": 0,
+      "boundary_checks": 21
+    },
+    "scope": "Two known questions, one target and one preselected changed protection. Both groups fact2/core1/full1. Candidate still reads only Job.to, not Job.run; adding static metadata did not solve stopping. Reject/remove companion code and its fixtures; preserve raw failed candidate, original control and source snapshot. Do not add forced-tool or termination reminders."
+  },
+  "scope": "Two known questions, same current structural index (thus identical symbol IDs), daily Q4, prompt, tools, initial source, four-request ceilings and source/output limits. Only SymbolIndex.navigation switches: exact old method extracted from the frozen before.zip versus current companion candidate. Existing SDK Runner and normal benchmark engines execute both arms; no new model/sampling/reasoning/prompt or tool changes. This is an explicit in-memory navigation-method intervention, not a hidden runtime version or historical raw-body match."
+}

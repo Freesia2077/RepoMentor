@@ -1,0 +1,1265 @@
+{
+  "questions": 3,
+  "planned_answers": 4,
+  "records": 4,
+  "reviews": {
+    "business-blinker-namespace-03--bound-method-sdk": {
+      "candidate_id": "business-blinker-namespace-03--bound-method-sdk",
+      "correctness": "partially_correct",
+      "citation_support": "partial",
+      "completeness": "partial",
+      "abstention": "not_applicable",
+      "entry_scope": "mixed",
+      "consistency": "consistent",
+      "claims": [
+        {
+          "claim": "Namespace.signal是实例方法。",
+          "status": "supported",
+          "rationale": "方法带self并在self字典内查找缓存；该事实不能推出不同导入者自动有不同实例。",
+          "evidence": [
+            {
+              "path": "src/blinker/base.py",
+              "start_line": 483,
+              "end_line": 496
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "src/blinker/base.py",
+              "start_line": 483,
+              "end_line": 496,
+              "content": "class Namespace(dict[str, NamedSignal]):\n    \"\"\"A dict mapping names to signals.\"\"\"\n\n    def signal(self, name: str, doc: str | None = None) -> NamedSignal:\n        \"\"\"Return the :class:`NamedSignal` for the given ``name``, creating it\n        if required. Repeated calls with the same name return the same signal.\n\n        :param name: The name of the signal.\n        :param doc: The docstring of the signal.\n        \"\"\"\n        if name not in self:\n            self[name] = NamedSignal(name, doc)\n\n        return self[name]",
+              "content_sha256": "9519fa03e8c70e59be95fd56b50cfd52d41fae2a045580b8e246f59311927667",
+              "visible_to_generator": true
+            }
+          ]
+        },
+        {
+          "claim": "题设插件A和B各自持有独立Namespace实例。",
+          "status": "contradicted",
+          "rationale": "公开signal绑定在唯一default_namespace.signal上；这段绑定503–508已经实际交付，仍被误读为每个调用方各有实例。",
+          "evidence": [
+            {
+              "path": "src/blinker/base.py",
+              "start_line": 503,
+              "end_line": 508
+            },
+            {
+              "path": "src/blinker/__init__.py",
+              "start_line": 3,
+              "end_line": 8
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "src/blinker/base.py",
+              "start_line": 503,
+              "end_line": 508,
+              "content": "default_namespace: Namespace = Namespace()\n\"\"\"A default :class:`Namespace` for creating named signals. :func:`signal`\ncreates a :class:`NamedSignal` in this namespace.\n\"\"\"\n\nsignal: _PNamespaceSignal = default_namespace.signal",
+              "content_sha256": "fe063bb8cc7d3ccea321d5cc88076409bc6e4938c93e9c4971daa5ff96c274ea",
+              "visible_to_generator": true
+            },
+            {
+              "path": "src/blinker/__init__.py",
+              "start_line": 3,
+              "end_line": 8,
+              "content": "from .base import ANY\nfrom .base import default_namespace\nfrom .base import NamedSignal\nfrom .base import Namespace\nfrom .base import Signal\nfrom .base import signal",
+              "content_sha256": "e1c7afd8c29dd6241de0923f840a786bb24b7daa2ef7ceeb27468341adac3ebe",
+              "visible_to_generator": false
+            }
+          ]
+        },
+        {
+          "claim": "题设两次signal同名调用返回不同NamedSignal对象。",
+          "status": "contradicted",
+          "rationale": "同一default_namespace对同名缓存，故a is b。",
+          "evidence": [
+            {
+              "path": "src/blinker/base.py",
+              "start_line": 483,
+              "end_line": 496
+            },
+            {
+              "path": "src/blinker/base.py",
+              "start_line": 503,
+              "end_line": 508
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "src/blinker/base.py",
+              "start_line": 483,
+              "end_line": 496,
+              "content": "class Namespace(dict[str, NamedSignal]):\n    \"\"\"A dict mapping names to signals.\"\"\"\n\n    def signal(self, name: str, doc: str | None = None) -> NamedSignal:\n        \"\"\"Return the :class:`NamedSignal` for the given ``name``, creating it\n        if required. Repeated calls with the same name return the same signal.\n\n        :param name: The name of the signal.\n        :param doc: The docstring of the signal.\n        \"\"\"\n        if name not in self:\n            self[name] = NamedSignal(name, doc)\n\n        return self[name]",
+              "content_sha256": "9519fa03e8c70e59be95fd56b50cfd52d41fae2a045580b8e246f59311927667",
+              "visible_to_generator": true
+            },
+            {
+              "path": "src/blinker/base.py",
+              "start_line": 503,
+              "end_line": 508,
+              "content": "default_namespace: Namespace = Namespace()\n\"\"\"A default :class:`Namespace` for creating named signals. :func:`signal`\ncreates a :class:`NamedSignal` in this namespace.\n\"\"\"\n\nsignal: _PNamespaceSignal = default_namespace.signal",
+              "content_sha256": "fe063bb8cc7d3ccea321d5cc88076409bc6e4938c93e9c4971daa5ff96c274ea",
+              "visible_to_generator": true
+            }
+          ]
+        },
+        {
+          "claim": "send只遍历当前Signal对象的接收器。",
+          "status": "supported",
+          "rationale": "send确实对self.receivers_for(sender)返回的接收器调用；题设两个变量指向同一个self。",
+          "evidence": [
+            {
+              "path": "src/blinker/base.py",
+              "start_line": 242,
+              "end_line": 253
+            },
+            {
+              "path": "src/blinker/base.py",
+              "start_line": 326,
+              "end_line": 362
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "src/blinker/base.py",
+              "start_line": 242,
+              "end_line": 253,
+              "content": "        for receiver in self.receivers_for(sender):\n            if iscoroutinefunction(receiver):\n                if _async_wrapper is None:\n                    raise RuntimeError(\"Cannot send to a coroutine function.\")\n\n                result = _async_wrapper(receiver)(sender, **kwargs)\n            else:\n                result = receiver(sender, **kwargs)\n\n            results.append((receiver, result))\n\n        return results",
+              "content_sha256": "ba6fb51391cd8c030ba403ea3b897e69b1c41e61500521902a33e29c5a1305c5",
+              "visible_to_generator": true
+            },
+            {
+              "path": "src/blinker/base.py",
+              "start_line": 326,
+              "end_line": 362,
+              "content": "    def receivers_for(\n        self, sender: t.Any\n    ) -> c.Generator[c.Callable[..., t.Any], None, None]:\n        \"\"\"Yield each receiver to be called for ``sender``, in addition to those\n        to be called for :data:`ANY`. Weakly referenced receivers that are not\n        live will be disconnected and skipped.\n\n        :param sender: Yield receivers connected to this sender, in addition\n            to those connected to :data:`ANY`.\n        \"\"\"\n        # TODO: test receivers_for(ANY)\n        if not self.receivers:\n            return\n\n        sender_id = make_id(sender)\n\n        if sender_id in self._by_sender:\n            ids = self._by_sender[ANY_ID] | self._by_sender[sender_id]\n        else:\n            ids = self._by_sender[ANY_ID].copy()\n\n        for receiver_id in ids:\n            receiver = self.receivers.get(receiver_id)\n\n            if receiver is None:\n                continue\n\n            if isinstance(receiver, weakref.ref):\n                strong = receiver()\n\n                if strong is None:\n                    self._disconnect(receiver_id, ANY_ID)\n                    continue\n\n                yield strong\n            else:\n                yield receiver",
+              "content_sha256": "e5b7eb9c4ccecf3ab9ef882d46a8de3c61b0e940d00c543ec8490d645f2077aa",
+              "visible_to_generator": true
+            }
+          ]
+        },
+        {
+          "claim": "a.send(order-A)只触发audit_a而不触发audit_b。",
+          "status": "contradicted",
+          "rationale": "同一对象中两个不同回调都以默认ANY强引用注册；发送会遍历并各调用一次。",
+          "evidence": [
+            {
+              "path": "src/blinker/base.py",
+              "start_line": 91,
+              "end_line": 118
+            },
+            {
+              "path": "src/blinker/base.py",
+              "start_line": 242,
+              "end_line": 253
+            },
+            {
+              "path": "src/blinker/base.py",
+              "start_line": 340,
+              "end_line": 362
+            },
+            {
+              "path": "src/blinker/base.py",
+              "start_line": 503,
+              "end_line": 508
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "src/blinker/base.py",
+              "start_line": 91,
+              "end_line": 118,
+              "content": "    def connect(self, receiver: F, sender: t.Any = ANY, weak: bool = True) -> F:\n        \"\"\"Connect ``receiver`` to be called when the signal is sent by\n        ``sender``.\n\n        :param receiver: The callable to call when :meth:`send` is called with\n            the given ``sender``, passing ``sender`` as a positional argument\n            along with any extra keyword arguments.\n        :param sender: Any object or :data:`ANY`. ``receiver`` will only be\n            called when :meth:`send` is called with this sender. If ``ANY``, the\n            receiver will be called for any sender. A receiver may be connected\n            to multiple senders by calling :meth:`connect` multiple times.\n        :param weak: Track the receiver with a :mod:`weakref`. The receiver will\n            be automatically disconnected when it is garbage collected. When\n            connecting a receiver defined within a function, set to ``False``,\n            otherwise it will be disconnected when the function scope ends.\n        \"\"\"\n        receiver_id = make_id(receiver)\n        sender_id = ANY_ID if sender is ANY else make_id(sender)\n\n        if weak:\n            self.receivers[receiver_id] = make_ref(\n                receiver, self._make_cleanup_receiver(receiver_id)\n            )\n        else:\n            self.receivers[receiver_id] = receiver\n\n        self._by_sender[sender_id].add(receiver_id)\n        self._by_receiver[receiver_id].add(sender_id)",
+              "content_sha256": "1c852afdeb9e7b0b2aa8dd2a8f72b3ff0760618d9b7950e28e5b956ce41e2f66",
+              "visible_to_generator": true
+            },
+            {
+              "path": "src/blinker/base.py",
+              "start_line": 242,
+              "end_line": 253,
+              "content": "        for receiver in self.receivers_for(sender):\n            if iscoroutinefunction(receiver):\n                if _async_wrapper is None:\n                    raise RuntimeError(\"Cannot send to a coroutine function.\")\n\n                result = _async_wrapper(receiver)(sender, **kwargs)\n            else:\n                result = receiver(sender, **kwargs)\n\n            results.append((receiver, result))\n\n        return results",
+              "content_sha256": "ba6fb51391cd8c030ba403ea3b897e69b1c41e61500521902a33e29c5a1305c5",
+              "visible_to_generator": true
+            },
+            {
+              "path": "src/blinker/base.py",
+              "start_line": 340,
+              "end_line": 362,
+              "content": "        sender_id = make_id(sender)\n\n        if sender_id in self._by_sender:\n            ids = self._by_sender[ANY_ID] | self._by_sender[sender_id]\n        else:\n            ids = self._by_sender[ANY_ID].copy()\n\n        for receiver_id in ids:\n            receiver = self.receivers.get(receiver_id)\n\n            if receiver is None:\n                continue\n\n            if isinstance(receiver, weakref.ref):\n                strong = receiver()\n\n                if strong is None:\n                    self._disconnect(receiver_id, ANY_ID)\n                    continue\n\n                yield strong\n            else:\n                yield receiver",
+              "content_sha256": "e7bfc3684a142d2cc38133afd10357de22f2e483ca8814185295aac55cb6f424",
+              "visible_to_generator": true
+            },
+            {
+              "path": "src/blinker/base.py",
+              "start_line": 503,
+              "end_line": 508,
+              "content": "default_namespace: Namespace = Namespace()\n\"\"\"A default :class:`Namespace` for creating named signals. :func:`signal`\ncreates a :class:`NamedSignal` in this namespace.\n\"\"\"\n\nsignal: _PNamespaceSignal = default_namespace.signal",
+              "content_sha256": "fe063bb8cc7d3ccea321d5cc88076409bc6e4938c93e9c4971daa5ff96c274ea",
+              "visible_to_generator": true
+            }
+          ]
+        },
+        {
+          "claim": "不同插件各用独立Namespace实例可隔离同名事件。",
+          "status": "supported",
+          "rationale": "各实例拥有自己的self字典和NamedSignal缓存。",
+          "evidence": [
+            {
+              "path": "src/blinker/base.py",
+              "start_line": 483,
+              "end_line": 496
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "src/blinker/base.py",
+              "start_line": 483,
+              "end_line": 496,
+              "content": "class Namespace(dict[str, NamedSignal]):\n    \"\"\"A dict mapping names to signals.\"\"\"\n\n    def signal(self, name: str, doc: str | None = None) -> NamedSignal:\n        \"\"\"Return the :class:`NamedSignal` for the given ``name``, creating it\n        if required. Repeated calls with the same name return the same signal.\n\n        :param name: The name of the signal.\n        :param doc: The docstring of the signal.\n        \"\"\"\n        if name not in self:\n            self[name] = NamedSignal(name, doc)\n\n        return self[name]",
+              "content_sha256": "9519fa03e8c70e59be95fd56b50cfd52d41fae2a045580b8e246f59311927667",
+              "visible_to_generator": true
+            }
+          ]
+        },
+        {
+          "claim": "同一插件多个模块共享同一个Namespace实例可复用同名信号。",
+          "status": "supported",
+          "rationale": "同一self中对同名signal查询返回self[name]。",
+          "evidence": [
+            {
+              "path": "src/blinker/base.py",
+              "start_line": 483,
+              "end_line": 496
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "src/blinker/base.py",
+              "start_line": 483,
+              "end_line": 496,
+              "content": "class Namespace(dict[str, NamedSignal]):\n    \"\"\"A dict mapping names to signals.\"\"\"\n\n    def signal(self, name: str, doc: str | None = None) -> NamedSignal:\n        \"\"\"Return the :class:`NamedSignal` for the given ``name``, creating it\n        if required. Repeated calls with the same name return the same signal.\n\n        :param name: The name of the signal.\n        :param doc: The docstring of the signal.\n        \"\"\"\n        if name not in self:\n            self[name] = NamedSignal(name, doc)\n\n        return self[name]",
+              "content_sha256": "9519fa03e8c70e59be95fd56b50cfd52d41fae2a045580b8e246f59311927667",
+              "visible_to_generator": true
+            }
+          ]
+        }
+      ],
+      "notes": "现状判断仍错误，尾部的隔离组织方案正确并不能抵消错误诊断。与先前缺绑定原文的候选不同，本包已含完整的实例初始化和绑定语句503–508，失败原因应归为充分原文误读。正式引用没有绑定行且不能支持当前隔离的结论。 本次为已揭盲开发回归的独立模型辅助复核，不是完全盲审、真人批准或总体准确率估计；条件与成本未提供。workflow success不替代整答事实正确。",
+      "key_points": null,
+      "candidate_sha256": "7edbdfb782abb0508cfd5dbcaf3265c36d4fc2cdd43fcd9e930663ff854f752d",
+      "reviewer": "Codex (current session)",
+      "review_type": "model_assisted_nonblind_development_review",
+      "human_approved": false,
+      "training_eligible": false,
+      "result_sha256": "9ae2dcb556bea0b4a413978ee34b22e42fc32c731338ec2165a17b580edc089f"
+    },
+    "business-blinker-namespace-03--bound-method-fixed": {
+      "candidate_id": "business-blinker-namespace-03--bound-method-fixed",
+      "correctness": "partially_correct",
+      "citation_support": "partial",
+      "completeness": "partial",
+      "abstention": "not_applicable",
+      "entry_scope": "correct",
+      "consistency": "contradictory",
+      "claims": [
+        {
+          "claim": "首句称a.send(order-A)只会触发audit_a。",
+          "status": "contradicted",
+          "rationale": "题设两变量共享default_namespace中的同名Signal，两个ANY回调都会运行；不能因后文改口便忽略直接回答中的错误。",
+          "evidence": [
+            {
+              "path": "src/blinker/base.py",
+              "start_line": 91,
+              "end_line": 118
+            },
+            {
+              "path": "src/blinker/base.py",
+              "start_line": 242,
+              "end_line": 253
+            },
+            {
+              "path": "src/blinker/base.py",
+              "start_line": 340,
+              "end_line": 362
+            },
+            {
+              "path": "src/blinker/base.py",
+              "start_line": 483,
+              "end_line": 508
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "src/blinker/base.py",
+              "start_line": 91,
+              "end_line": 118,
+              "content": "    def connect(self, receiver: F, sender: t.Any = ANY, weak: bool = True) -> F:\n        \"\"\"Connect ``receiver`` to be called when the signal is sent by\n        ``sender``.\n\n        :param receiver: The callable to call when :meth:`send` is called with\n            the given ``sender``, passing ``sender`` as a positional argument\n            along with any extra keyword arguments.\n        :param sender: Any object or :data:`ANY`. ``receiver`` will only be\n            called when :meth:`send` is called with this sender. If ``ANY``, the\n            receiver will be called for any sender. A receiver may be connected\n            to multiple senders by calling :meth:`connect` multiple times.\n        :param weak: Track the receiver with a :mod:`weakref`. The receiver will\n            be automatically disconnected when it is garbage collected. When\n            connecting a receiver defined within a function, set to ``False``,\n            otherwise it will be disconnected when the function scope ends.\n        \"\"\"\n        receiver_id = make_id(receiver)\n        sender_id = ANY_ID if sender is ANY else make_id(sender)\n\n        if weak:\n            self.receivers[receiver_id] = make_ref(\n                receiver, self._make_cleanup_receiver(receiver_id)\n            )\n        else:\n            self.receivers[receiver_id] = receiver\n\n        self._by_sender[sender_id].add(receiver_id)\n        self._by_receiver[receiver_id].add(sender_id)",
+              "content_sha256": "1c852afdeb9e7b0b2aa8dd2a8f72b3ff0760618d9b7950e28e5b956ce41e2f66",
+              "visible_to_generator": true
+            },
+            {
+              "path": "src/blinker/base.py",
+              "start_line": 242,
+              "end_line": 253,
+              "content": "        for receiver in self.receivers_for(sender):\n            if iscoroutinefunction(receiver):\n                if _async_wrapper is None:\n                    raise RuntimeError(\"Cannot send to a coroutine function.\")\n\n                result = _async_wrapper(receiver)(sender, **kwargs)\n            else:\n                result = receiver(sender, **kwargs)\n\n            results.append((receiver, result))\n\n        return results",
+              "content_sha256": "ba6fb51391cd8c030ba403ea3b897e69b1c41e61500521902a33e29c5a1305c5",
+              "visible_to_generator": true
+            },
+            {
+              "path": "src/blinker/base.py",
+              "start_line": 340,
+              "end_line": 362,
+              "content": "        sender_id = make_id(sender)\n\n        if sender_id in self._by_sender:\n            ids = self._by_sender[ANY_ID] | self._by_sender[sender_id]\n        else:\n            ids = self._by_sender[ANY_ID].copy()\n\n        for receiver_id in ids:\n            receiver = self.receivers.get(receiver_id)\n\n            if receiver is None:\n                continue\n\n            if isinstance(receiver, weakref.ref):\n                strong = receiver()\n\n                if strong is None:\n                    self._disconnect(receiver_id, ANY_ID)\n                    continue\n\n                yield strong\n            else:\n                yield receiver",
+              "content_sha256": "e7bfc3684a142d2cc38133afd10357de22f2e483ca8814185295aac55cb6f424",
+              "visible_to_generator": true
+            },
+            {
+              "path": "src/blinker/base.py",
+              "start_line": 483,
+              "end_line": 508,
+              "content": "class Namespace(dict[str, NamedSignal]):\n    \"\"\"A dict mapping names to signals.\"\"\"\n\n    def signal(self, name: str, doc: str | None = None) -> NamedSignal:\n        \"\"\"Return the :class:`NamedSignal` for the given ``name``, creating it\n        if required. Repeated calls with the same name return the same signal.\n\n        :param name: The name of the signal.\n        :param doc: The docstring of the signal.\n        \"\"\"\n        if name not in self:\n            self[name] = NamedSignal(name, doc)\n\n        return self[name]\n\n\nclass _PNamespaceSignal(t.Protocol):\n    def __call__(self, name: str, doc: str | None = None) -> NamedSignal: ...\n\n\ndefault_namespace: Namespace = Namespace()\n\"\"\"A default :class:`Namespace` for creating named signals. :func:`signal`\ncreates a :class:`NamedSignal` in this namespace.\n\"\"\"\n\nsignal: _PNamespaceSignal = default_namespace.signal",
+              "content_sha256": "e63c62765a7d165fcc0283fe92237fbb272cb61d038bac1b80902e394132d92f",
+              "visible_to_generator": false
+            }
+          ]
+        },
+        {
+          "claim": "同一个Namespace中第二次同名signal调用返回首次创建的同一NamedSignal。",
+          "status": "supported",
+          "rationale": "类方法按self[name]缓存与返回。",
+          "evidence": [
+            {
+              "path": "src/blinker/base.py",
+              "start_line": 483,
+              "end_line": 496
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "src/blinker/base.py",
+              "start_line": 483,
+              "end_line": 496,
+              "content": "class Namespace(dict[str, NamedSignal]):\n    \"\"\"A dict mapping names to signals.\"\"\"\n\n    def signal(self, name: str, doc: str | None = None) -> NamedSignal:\n        \"\"\"Return the :class:`NamedSignal` for the given ``name``, creating it\n        if required. Repeated calls with the same name return the same signal.\n\n        :param name: The name of the signal.\n        :param doc: The docstring of the signal.\n        \"\"\"\n        if name not in self:\n            self[name] = NamedSignal(name, doc)\n\n        return self[name]",
+              "content_sha256": "9519fa03e8c70e59be95fd56b50cfd52d41fae2a045580b8e246f59311927667",
+              "visible_to_generator": true
+            }
+          ]
+        },
+        {
+          "claim": "本题A和B的接收器实际注册在同一个Signal并共享接收器集合。",
+          "status": "supported",
+          "rationale": "公开signal绑定唯一default_namespace.signal，而connect写到该对象的receivers与_by_sender；绑定原文已实际可见但未正式引用。",
+          "evidence": [
+            {
+              "path": "src/blinker/base.py",
+              "start_line": 503,
+              "end_line": 508
+            },
+            {
+              "path": "src/blinker/base.py",
+              "start_line": 483,
+              "end_line": 496
+            },
+            {
+              "path": "src/blinker/base.py",
+              "start_line": 107,
+              "end_line": 118
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "src/blinker/base.py",
+              "start_line": 503,
+              "end_line": 508,
+              "content": "default_namespace: Namespace = Namespace()\n\"\"\"A default :class:`Namespace` for creating named signals. :func:`signal`\ncreates a :class:`NamedSignal` in this namespace.\n\"\"\"\n\nsignal: _PNamespaceSignal = default_namespace.signal",
+              "content_sha256": "fe063bb8cc7d3ccea321d5cc88076409bc6e4938c93e9c4971daa5ff96c274ea",
+              "visible_to_generator": true
+            },
+            {
+              "path": "src/blinker/base.py",
+              "start_line": 483,
+              "end_line": 496,
+              "content": "class Namespace(dict[str, NamedSignal]):\n    \"\"\"A dict mapping names to signals.\"\"\"\n\n    def signal(self, name: str, doc: str | None = None) -> NamedSignal:\n        \"\"\"Return the :class:`NamedSignal` for the given ``name``, creating it\n        if required. Repeated calls with the same name return the same signal.\n\n        :param name: The name of the signal.\n        :param doc: The docstring of the signal.\n        \"\"\"\n        if name not in self:\n            self[name] = NamedSignal(name, doc)\n\n        return self[name]",
+              "content_sha256": "9519fa03e8c70e59be95fd56b50cfd52d41fae2a045580b8e246f59311927667",
+              "visible_to_generator": true
+            },
+            {
+              "path": "src/blinker/base.py",
+              "start_line": 107,
+              "end_line": 118,
+              "content": "        receiver_id = make_id(receiver)\n        sender_id = ANY_ID if sender is ANY else make_id(sender)\n\n        if weak:\n            self.receivers[receiver_id] = make_ref(\n                receiver, self._make_cleanup_receiver(receiver_id)\n            )\n        else:\n            self.receivers[receiver_id] = receiver\n\n        self._by_sender[sender_id].add(receiver_id)\n        self._by_receiver[receiver_id].add(sender_id)",
+              "content_sha256": "948264abac47a2e73bf86b5bc06fdfd71c9858980d76524f7b908963919879f8",
+              "visible_to_generator": true
+            }
+          ]
+        },
+        {
+          "claim": "正文称A的一次send会同时触发audit_a与audit_b。",
+          "status": "supported",
+          "rationale": "两个不同ANY回调在同一对象集合中，receivers_for均会yield且send分别调用。正文结论正确，与首句直接冲突。",
+          "evidence": [
+            {
+              "path": "src/blinker/base.py",
+              "start_line": 91,
+              "end_line": 118
+            },
+            {
+              "path": "src/blinker/base.py",
+              "start_line": 242,
+              "end_line": 253
+            },
+            {
+              "path": "src/blinker/base.py",
+              "start_line": 340,
+              "end_line": 362
+            },
+            {
+              "path": "src/blinker/base.py",
+              "start_line": 503,
+              "end_line": 508
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "src/blinker/base.py",
+              "start_line": 91,
+              "end_line": 118,
+              "content": "    def connect(self, receiver: F, sender: t.Any = ANY, weak: bool = True) -> F:\n        \"\"\"Connect ``receiver`` to be called when the signal is sent by\n        ``sender``.\n\n        :param receiver: The callable to call when :meth:`send` is called with\n            the given ``sender``, passing ``sender`` as a positional argument\n            along with any extra keyword arguments.\n        :param sender: Any object or :data:`ANY`. ``receiver`` will only be\n            called when :meth:`send` is called with this sender. If ``ANY``, the\n            receiver will be called for any sender. A receiver may be connected\n            to multiple senders by calling :meth:`connect` multiple times.\n        :param weak: Track the receiver with a :mod:`weakref`. The receiver will\n            be automatically disconnected when it is garbage collected. When\n            connecting a receiver defined within a function, set to ``False``,\n            otherwise it will be disconnected when the function scope ends.\n        \"\"\"\n        receiver_id = make_id(receiver)\n        sender_id = ANY_ID if sender is ANY else make_id(sender)\n\n        if weak:\n            self.receivers[receiver_id] = make_ref(\n                receiver, self._make_cleanup_receiver(receiver_id)\n            )\n        else:\n            self.receivers[receiver_id] = receiver\n\n        self._by_sender[sender_id].add(receiver_id)\n        self._by_receiver[receiver_id].add(sender_id)",
+              "content_sha256": "1c852afdeb9e7b0b2aa8dd2a8f72b3ff0760618d9b7950e28e5b956ce41e2f66",
+              "visible_to_generator": true
+            },
+            {
+              "path": "src/blinker/base.py",
+              "start_line": 242,
+              "end_line": 253,
+              "content": "        for receiver in self.receivers_for(sender):\n            if iscoroutinefunction(receiver):\n                if _async_wrapper is None:\n                    raise RuntimeError(\"Cannot send to a coroutine function.\")\n\n                result = _async_wrapper(receiver)(sender, **kwargs)\n            else:\n                result = receiver(sender, **kwargs)\n\n            results.append((receiver, result))\n\n        return results",
+              "content_sha256": "ba6fb51391cd8c030ba403ea3b897e69b1c41e61500521902a33e29c5a1305c5",
+              "visible_to_generator": true
+            },
+            {
+              "path": "src/blinker/base.py",
+              "start_line": 340,
+              "end_line": 362,
+              "content": "        sender_id = make_id(sender)\n\n        if sender_id in self._by_sender:\n            ids = self._by_sender[ANY_ID] | self._by_sender[sender_id]\n        else:\n            ids = self._by_sender[ANY_ID].copy()\n\n        for receiver_id in ids:\n            receiver = self.receivers.get(receiver_id)\n\n            if receiver is None:\n                continue\n\n            if isinstance(receiver, weakref.ref):\n                strong = receiver()\n\n                if strong is None:\n                    self._disconnect(receiver_id, ANY_ID)\n                    continue\n\n                yield strong\n            else:\n                yield receiver",
+              "content_sha256": "e7bfc3684a142d2cc38133afd10357de22f2e483ca8814185295aac55cb6f424",
+              "visible_to_generator": true
+            },
+            {
+              "path": "src/blinker/base.py",
+              "start_line": 503,
+              "end_line": 508,
+              "content": "default_namespace: Namespace = Namespace()\n\"\"\"A default :class:`Namespace` for creating named signals. :func:`signal`\ncreates a :class:`NamedSignal` in this namespace.\n\"\"\"\n\nsignal: _PNamespaceSignal = default_namespace.signal",
+              "content_sha256": "fe063bb8cc7d3ccea321d5cc88076409bc6e4938c93e9c4971daa5ff96c274ea",
+              "visible_to_generator": true
+            }
+          ]
+        },
+        {
+          "claim": "plugin_a_ns和plugin_b_ns各创建并持有独立Namespace可隔离同名order.confirmed。",
+          "status": "supported",
+          "rationale": "Namespace是独立的dict实例，各自的signal方法只查询本实例缓存。",
+          "evidence": [
+            {
+              "path": "src/blinker/base.py",
+              "start_line": 483,
+              "end_line": 496
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "src/blinker/base.py",
+              "start_line": 483,
+              "end_line": 496,
+              "content": "class Namespace(dict[str, NamedSignal]):\n    \"\"\"A dict mapping names to signals.\"\"\"\n\n    def signal(self, name: str, doc: str | None = None) -> NamedSignal:\n        \"\"\"Return the :class:`NamedSignal` for the given ``name``, creating it\n        if required. Repeated calls with the same name return the same signal.\n\n        :param name: The name of the signal.\n        :param doc: The docstring of the signal.\n        \"\"\"\n        if name not in self:\n            self[name] = NamedSignal(name, doc)\n\n        return self[name]",
+              "content_sha256": "9519fa03e8c70e59be95fd56b50cfd52d41fae2a045580b8e246f59311927667",
+              "visible_to_generator": true
+            }
+          ]
+        },
+        {
+          "claim": "同一插件多个模块复用该插件Namespace，则同名查询仍返回同一对象。",
+          "status": "supported",
+          "rationale": "答案明确在该Namespace内共享；缓存语义可实现插件内共享。",
+          "evidence": [
+            {
+              "path": "src/blinker/base.py",
+              "start_line": 483,
+              "end_line": 496
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "src/blinker/base.py",
+              "start_line": 483,
+              "end_line": 496,
+              "content": "class Namespace(dict[str, NamedSignal]):\n    \"\"\"A dict mapping names to signals.\"\"\"\n\n    def signal(self, name: str, doc: str | None = None) -> NamedSignal:\n        \"\"\"Return the :class:`NamedSignal` for the given ``name``, creating it\n        if required. Repeated calls with the same name return the same signal.\n\n        :param name: The name of the signal.\n        :param doc: The docstring of the signal.\n        \"\"\"\n        if name not in self:\n            self[name] = NamedSignal(name, doc)\n\n        return self[name]",
+              "content_sha256": "9519fa03e8c70e59be95fd56b50cfd52d41fae2a045580b8e246f59311927667",
+              "visible_to_generator": true
+            }
+          ]
+        }
+      ],
+      "notes": "正文对共享身份、两回调触发及隔离方案已有实质正确内容，但首句“只会触发audit_a”仍是错误的必要业务结论。整答必须同时审首句和后文，故一致性contradictory、business_decision_correct=false，不能升级为完整通过。正式引用遗漏已经实际可见的503–508绑定。 本次为已揭盲开发回归的独立模型辅助复核，不是完全盲审、真人批准或总体准确率估计；条件与成本未提供。workflow success不替代整答事实正确。",
+      "key_points": null,
+      "candidate_sha256": "5e478bbc39c2d3f064288f3486b3302fe0afab48441f9d8340da062146740e3a",
+      "reviewer": "Codex (current session)",
+      "review_type": "model_assisted_nonblind_development_review",
+      "human_approved": false,
+      "training_eligible": false,
+      "result_sha256": "a095dc3407809e154f6ee024f243ca3be2bde015c36038a517f6a19965e4574f"
+    },
+    "improvement-confirm-blinker-02--protection-sdk": {
+      "candidate_id": "improvement-confirm-blinker-02--protection-sdk",
+      "correctness": "correct",
+      "citation_support": "supported",
+      "completeness": "adequate",
+      "abstention": "not_applicable",
+      "entry_scope": "correct",
+      "consistency": "consistent",
+      "claims": [
+        {
+          "claim": "同一个回调同时注册ANY和123时，sig.send(123)只调用一次。",
+          "status": "supported",
+          "rationale": "receivers_for对两个接收器ID集合做并集；固定测试给同一回调两次连接后，send(123)只追加一个123。",
+          "evidence": [
+            {
+              "path": "src/blinker/base.py",
+              "start_line": 340,
+              "end_line": 347
+            },
+            {
+              "path": "tests/test_signals.py",
+              "start_line": 397,
+              "end_line": 412
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "src/blinker/base.py",
+              "start_line": 340,
+              "end_line": 347,
+              "content": "        sender_id = make_id(sender)\n\n        if sender_id in self._by_sender:\n            ids = self._by_sender[ANY_ID] | self._by_sender[sender_id]\n        else:\n            ids = self._by_sender[ANY_ID].copy()\n\n        for receiver_id in ids:",
+              "content_sha256": "ac9ed16505525af36d0a7ef863f7248ff054355628ef4a935ba9d46ec0b1197c",
+              "visible_to_generator": true
+            },
+            {
+              "path": "tests/test_signals.py",
+              "start_line": 397,
+              "end_line": 412,
+              "content": "def test_no_double_send() -> None:\n    sentinel = []\n\n    def received(sender: t.Any) -> None:\n        sentinel.append(sender)\n\n    sig = blinker.Signal()\n\n    sig.connect(received, 123)\n    sig.connect(received)\n\n    assert not sentinel\n    sig.send()\n    assert sentinel == [None]\n    sig.send(123)\n    assert sentinel == [None, 123]",
+              "content_sha256": "6accf550f36430eaaf576fc5f84efd578a92d85690d0982fc4ad47f624522a50",
+              "visible_to_generator": true
+            }
+          ]
+        },
+        {
+          "claim": "去重由ANY与特定sender的接收器ID集合并集完成。",
+          "status": "supported",
+          "rationale": "343行用|取集合并，347行按唯一ID遍历；文中的ID列表按上下文是集合中的ID，不是声称Python list支持|。",
+          "evidence": [
+            {
+              "path": "src/blinker/base.py",
+              "start_line": 340,
+              "end_line": 347
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "src/blinker/base.py",
+              "start_line": 340,
+              "end_line": 347,
+              "content": "        sender_id = make_id(sender)\n\n        if sender_id in self._by_sender:\n            ids = self._by_sender[ANY_ID] | self._by_sender[sender_id]\n        else:\n            ids = self._by_sender[ANY_ID].copy()\n\n        for receiver_id in ids:",
+              "content_sha256": "ac9ed16505525af36d0a7ef863f7248ff054355628ef4a935ba9d46ec0b1197c",
+              "visible_to_generator": true
+            }
+          ]
+        },
+        {
+          "claim": "每个合并后的receiver_id只被遍历并yield一次。",
+          "status": "supported",
+          "rationale": "集合元素唯一，347行循环一次取一个ID，对存活回调按单一分支yield。",
+          "evidence": [
+            {
+              "path": "src/blinker/base.py",
+              "start_line": 343,
+              "end_line": 362
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "src/blinker/base.py",
+              "start_line": 343,
+              "end_line": 362,
+              "content": "            ids = self._by_sender[ANY_ID] | self._by_sender[sender_id]\n        else:\n            ids = self._by_sender[ANY_ID].copy()\n\n        for receiver_id in ids:\n            receiver = self.receivers.get(receiver_id)\n\n            if receiver is None:\n                continue\n\n            if isinstance(receiver, weakref.ref):\n                strong = receiver()\n\n                if strong is None:\n                    self._disconnect(receiver_id, ANY_ID)\n                    continue\n\n                yield strong\n            else:\n                yield receiver",
+              "content_sha256": "e17c38314f5ef8fd24b01009813375065728c1eaeedeb1fa7676b4fa067d7d31",
+              "visible_to_generator": true
+            }
+          ]
+        },
+        {
+          "claim": "验证该场景的测试为tests/test_signals.py:397–414的test_no_double_send。",
+          "status": "supported",
+          "rationale": "函数名及范围准确，测试确实同时连接received到123和默认ANY。",
+          "evidence": [
+            {
+              "path": "tests/test_signals.py",
+              "start_line": 397,
+              "end_line": 414
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "tests/test_signals.py",
+              "start_line": 397,
+              "end_line": 414,
+              "content": "def test_no_double_send() -> None:\n    sentinel = []\n\n    def received(sender: t.Any) -> None:\n        sentinel.append(sender)\n\n    sig = blinker.Signal()\n\n    sig.connect(received, 123)\n    sig.connect(received)\n\n    assert not sentinel\n    sig.send()\n    assert sentinel == [None]\n    sig.send(123)\n    assert sentinel == [None, 123]\n    sig.send()\n    assert sentinel == [None, 123, None]",
+              "content_sha256": "4353e18c11322c495e1fdbb3a93dce8268bf596ea5f68492bcf670f6ff205e47",
+              "visible_to_generator": true
+            }
+          ]
+        },
+        {
+          "claim": "send(123)后的sentinel==[None,123]证明本次只调用了一次。",
+          "status": "supported",
+          "rationale": "此前send()使sentinel为[None]，411–412的目标发送仅新增一个123；回答未误把此前None算作本次额外调用。",
+          "evidence": [
+            {
+              "path": "tests/test_signals.py",
+              "start_line": 405,
+              "end_line": 412
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "tests/test_signals.py",
+              "start_line": 405,
+              "end_line": 412,
+              "content": "    sig.connect(received, 123)\n    sig.connect(received)\n\n    assert not sentinel\n    sig.send()\n    assert sentinel == [None]\n    sig.send(123)\n    assert sentinel == [None, 123]",
+              "content_sha256": "533ac701c707fd4a865f8e23537bd1598e2f86c48589ed64fcf9900039f5ac7b",
+              "visible_to_generator": true
+            }
+          ]
+        },
+        {
+          "claim": "随后send()后的sentinel==[None,123,None]也只再追加一个回调结果。",
+          "status": "supported",
+          "rationale": "413–414确有这次发送与关键断言，属于准确的附加描述。",
+          "evidence": [
+            {
+              "path": "tests/test_signals.py",
+              "start_line": 413,
+              "end_line": 414
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "tests/test_signals.py",
+              "start_line": 413,
+              "end_line": 414,
+              "content": "    sig.send()\n    assert sentinel == [None, 123, None]",
+              "content_sha256": "e10b93983232ea9caa1fc379b04d04a4598d72776ec9abc13bb6686da641f6c9",
+              "visible_to_generator": true
+            }
+          ]
+        }
+      ],
+      "notes": "保护题事实、去重机制、测试位置和关键断言均准确，未发现新增错误。已解释接收器ID集合并这一必要机制，不要求额外展开make_id内部或运行测试。正式引用覆盖集合并与完整测试。 本次为已揭盲开发回归的独立模型辅助复核，不是完全盲审、真人批准或总体准确率估计；条件与成本未提供。workflow success不替代整答事实正确。",
+      "key_points": null,
+      "candidate_sha256": "6033d7606308eabb964d5af508b6b8e319595e908863ef6327dace9b473d928a",
+      "reviewer": "Codex (current session)",
+      "review_type": "model_assisted_nonblind_development_review",
+      "human_approved": false,
+      "training_eligible": false,
+      "result_sha256": "ff25d2bdbdb75ab3317eab10eb2ef4589f28f4e7ba302ce8f2ed805cfe322247"
+    },
+    "business-dotenv-discovery-01--protection-sdk": {
+      "candidate_id": "business-dotenv-discovery-01--protection-sdk",
+      "correctness": "correct",
+      "citation_support": "partial",
+      "completeness": "adequate",
+      "abstention": "not_applicable",
+      "entry_scope": "correct",
+      "consistency": "consistent",
+      "claims": [
+        {
+          "claim": "普通脚本默认find_dotenv从worker.py所在/srv/app/jobs起查，选中/srv/app/.env。",
+          "status": "supported",
+          "rationale": "跳过库自身及不存在的调用帧后取worker文件目录，再由_walk_to_root逐级向上，题设最先命中app配置。",
+          "evidence": [
+            {
+              "path": "src/dotenv/main.py",
+              "start_line": 404,
+              "end_line": 423
+            },
+            {
+              "path": "src/dotenv/main.py",
+              "start_line": 358,
+              "end_line": 373
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "src/dotenv/main.py",
+              "start_line": 404,
+              "end_line": 423,
+              "content": "    if usecwd or _is_interactive() or _is_debugger() or getattr(sys, \"frozen\", False):\n        # Should work without __file__, e.g. in REPL or IPython notebook.\n        path = os.getcwd()\n    else:\n        # will work for .py files\n        frame = sys._getframe()\n        current_file = __file__\n\n        while frame.f_code.co_filename == current_file or not os.path.exists(\n            frame.f_code.co_filename\n        ):\n            assert frame.f_back is not None\n            frame = frame.f_back\n        frame_filename = frame.f_code.co_filename\n        path = os.path.dirname(os.path.abspath(frame_filename))\n\n    for dirname in _walk_to_root(path):\n        check_path = os.path.join(dirname, filename)\n        if _is_file_or_fifo(check_path):\n            return check_path",
+              "content_sha256": "a5dbc89f3d576591b01b645a0790fcf5f1129c90825dd501e499d40a439399dd",
+              "visible_to_generator": true
+            },
+            {
+              "path": "src/dotenv/main.py",
+              "start_line": 358,
+              "end_line": 373,
+              "content": "def _walk_to_root(path: str) -> Iterator[str]:\n    \"\"\"\n    Yield directories starting from the given directory up to the root\n    \"\"\"\n    if not os.path.exists(path):\n        raise IOError(\"Starting path not found\")\n\n    if os.path.isfile(path):\n        path = os.path.dirname(path)\n\n    last_dir = None\n    current_dir = os.path.abspath(path)\n    while last_dir != current_dir:\n        yield current_dir\n        parent_dir = os.path.abspath(os.path.join(current_dir, os.path.pardir))\n        last_dir, current_dir = current_dir, parent_dir",
+              "content_sha256": "96f6d3830335ac22a10e707e4e012b4317bff0cd9232fe9206c7040985cf9255",
+              "visible_to_generator": true
+            }
+          ]
+        },
+        {
+          "claim": "usecwd=True从/srv/runner起查，选中/srv/runner/.env。",
+          "status": "supported",
+          "rationale": "usecwd分支直接取os.getcwd，当前目录文件优先命中。",
+          "evidence": [
+            {
+              "path": "src/dotenv/main.py",
+              "start_line": 404,
+              "end_line": 406
+            },
+            {
+              "path": "src/dotenv/main.py",
+              "start_line": 420,
+              "end_line": 423
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "src/dotenv/main.py",
+              "start_line": 404,
+              "end_line": 406,
+              "content": "    if usecwd or _is_interactive() or _is_debugger() or getattr(sys, \"frozen\", False):\n        # Should work without __file__, e.g. in REPL or IPython notebook.\n        path = os.getcwd()",
+              "content_sha256": "38144251c148731a48d80712dab90f15a50785fd5a1296bbd79262977f1f28e7",
+              "visible_to_generator": true
+            },
+            {
+              "path": "src/dotenv/main.py",
+              "start_line": 420,
+              "end_line": 423,
+              "content": "    for dirname in _walk_to_root(path):\n        check_path = os.path.join(dirname, filename)\n        if _is_file_or_fifo(check_path):\n            return check_path",
+              "content_sha256": "4f30e8d169a8c1d4d61e19d01a587c93a1774c5d4a5e5b5ae161a47f0375fcee",
+              "visible_to_generator": true
+            }
+          ]
+        },
+        {
+          "claim": "在该脚本使用filename=/srv/app/.env、usecwd=False、raise_error_if_not_found=True可固定应用配置并在缺失时失败。",
+          "status": "supported",
+          "rationale": "find_dotenv支持绝对filename；os.path.join对绝对后项保持该路径，不会退回runner的.env；始终未找到则抛IOError。",
+          "evidence": [
+            {
+              "path": "src/dotenv/main.py",
+              "start_line": 376,
+              "end_line": 389
+            },
+            {
+              "path": "src/dotenv/main.py",
+              "start_line": 420,
+              "end_line": 428
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "src/dotenv/main.py",
+              "start_line": 376,
+              "end_line": 389,
+              "content": "def find_dotenv(\n    filename: str = \".env\",\n    raise_error_if_not_found: bool = False,\n    usecwd: bool = False,\n) -> str:\n    \"\"\"\n    Search in increasingly higher folders for the given file\n\n    A leading `~` in `filename` is expanded to the user's home directory, and\n    an absolute `filename` is returned as is if it exists.\n\n    Returns path to the file if found, or an empty string otherwise\n    \"\"\"\n    filename = os.path.expanduser(filename)",
+              "content_sha256": "01b979ff16293ef946f8d7fdd639da959901e4ec02693c8ab74cd35987b69cba",
+              "visible_to_generator": true
+            },
+            {
+              "path": "src/dotenv/main.py",
+              "start_line": 420,
+              "end_line": 428,
+              "content": "    for dirname in _walk_to_root(path):\n        check_path = os.path.join(dirname, filename)\n        if _is_file_or_fifo(check_path):\n            return check_path\n\n    if raise_error_if_not_found:\n        raise IOError(\"File not found\")\n\n    return \"\"",
+              "content_sha256": "bb93707142e6d2378ce035a465f6dda58a381858002ede39a13976ea2f9d3a3d",
+              "visible_to_generator": true
+            }
+          ]
+        },
+        {
+          "claim": "该应用文件不存在时上述调用抛IOError(File not found)，存在则返回它的路径。",
+          "status": "supported",
+          "rationale": "文件/FIFO判断通过即返回check_path，否则结束搜索后425–426抛错；题设文件是普通.env。",
+          "evidence": [
+            {
+              "path": "src/dotenv/main.py",
+              "start_line": 420,
+              "end_line": 428
+            },
+            {
+              "path": "src/dotenv/main.py",
+              "start_line": 520,
+              "end_line": 532
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "src/dotenv/main.py",
+              "start_line": 420,
+              "end_line": 428,
+              "content": "    for dirname in _walk_to_root(path):\n        check_path = os.path.join(dirname, filename)\n        if _is_file_or_fifo(check_path):\n            return check_path\n\n    if raise_error_if_not_found:\n        raise IOError(\"File not found\")\n\n    return \"\"",
+              "content_sha256": "bb93707142e6d2378ce035a465f6dda58a381858002ede39a13976ea2f9d3a3d",
+              "visible_to_generator": true
+            },
+            {
+              "path": "src/dotenv/main.py",
+              "start_line": 520,
+              "end_line": 532,
+              "content": "def _is_file_or_fifo(path: StrPath) -> bool:\n    \"\"\"\n    Return True if `path` exists and is either a regular file or a FIFO.\n    \"\"\"\n    if os.path.isfile(path):\n        return True\n\n    try:\n        st = os.stat(path)\n    except (FileNotFoundError, OSError):\n        return False\n\n    return stat.S_ISFIFO(st.st_mode)",
+              "content_sha256": "4fb8ed8d45012ea1621fb5ed32a7929650cad1182afc586febf09be4208c12a5",
+              "visible_to_generator": true
+            }
+          ]
+        },
+        {
+          "claim": "显式检查os.path.isfile(/srv/app/.env)，缺失即手动抛异常是等价的路径校验策略。",
+          "status": "supported",
+          "rationale": "业务只需固定应用路径并拒绝缺失；_is_file_or_fifo也直接使用os.path.isfile检查，题设为普通文件，手动raise可落实失败策略。",
+          "evidence": [
+            {
+              "path": "src/dotenv/main.py",
+              "start_line": 420,
+              "end_line": 426
+            },
+            {
+              "path": "src/dotenv/main.py",
+              "start_line": 520,
+              "end_line": 530
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "src/dotenv/main.py",
+              "start_line": 420,
+              "end_line": 426,
+              "content": "    for dirname in _walk_to_root(path):\n        check_path = os.path.join(dirname, filename)\n        if _is_file_or_fifo(check_path):\n            return check_path\n\n    if raise_error_if_not_found:\n        raise IOError(\"File not found\")",
+              "content_sha256": "906d12831a02b9a088534b7e6d1669055d9f81465192f0abf04247f01250ca6c",
+              "visible_to_generator": true
+            },
+            {
+              "path": "src/dotenv/main.py",
+              "start_line": 520,
+              "end_line": 530,
+              "content": "def _is_file_or_fifo(path: StrPath) -> bool:\n    \"\"\"\n    Return True if `path` exists and is either a regular file or a FIFO.\n    \"\"\"\n    if os.path.isfile(path):\n        return True\n\n    try:\n        st = os.stat(path)\n    except (FileNotFoundError, OSError):\n        return False",
+              "content_sha256": "b2c200b8ae7048977edb67d10422595374572158ae27872ec86dfa125513b487",
+              "visible_to_generator": true
+            }
+          ]
+        },
+        {
+          "claim": "校验后load_dotenv(dotenv_path=/srv/app/.env)可从明确指定的应用文件加载。",
+          "status": "supported",
+          "rationale": "load_dotenv接收显式dotenv_path并传给DotEnv；仅在未传路径且无stream时才自动find。原文431–479实际可见，但本答正式引用没有加载API这一段。",
+          "evidence": [
+            {
+              "path": "src/dotenv/main.py",
+              "start_line": 431,
+              "end_line": 457
+            },
+            {
+              "path": "src/dotenv/main.py",
+              "start_line": 468,
+              "end_line": 479
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "src/dotenv/main.py",
+              "start_line": 431,
+              "end_line": 457,
+              "content": "def load_dotenv(\n    dotenv_path: Optional[StrPath] = None,\n    stream: Optional[IO[str]] = None,\n    verbose: bool = False,\n    override: bool = False,\n    interpolate: bool = True,\n    encoding: Optional[str] = \"utf-8\",\n) -> bool:\n    \"\"\"Parse a .env file and then load all the variables found as environment variables.\n\n    Parameters:\n        dotenv_path: Absolute or relative path to .env file. A leading `~` is\n            expanded to the user's home directory.\n        stream: Text stream (such as `io.StringIO`) with .env content, used if\n            `dotenv_path` is `None`.\n        verbose: Whether to output a warning the .env file is missing.\n        override: Whether to override the system environment variables with the variables\n            from the `.env` file.\n        interpolate: Whether to interpolate variables using POSIX variable expansion.\n        encoding: Encoding to be used to read the file.\n    Returns:\n        Bool: True if at least one environment variable is set else False\n\n    If both `dotenv_path` and `stream` are `None`, `find_dotenv()` is used to find the\n    .env file with its default parameters. If you need to change the default parameters\n    of `find_dotenv()`, you can explicitly call `find_dotenv()` and pass the result\n    to this function as `dotenv_path`.",
+              "content_sha256": "9e2d7eb546f492bfce3e92b842771b0287576bdf474b361d4b434136f7de4a75",
+              "visible_to_generator": true
+            },
+            {
+              "path": "src/dotenv/main.py",
+              "start_line": 468,
+              "end_line": 479,
+              "content": "    if dotenv_path is None and stream is None:\n        dotenv_path = find_dotenv()\n\n    dotenv = DotEnv(\n        dotenv_path=dotenv_path,\n        stream=stream,\n        verbose=verbose,\n        interpolate=interpolate,\n        override=override,\n        encoding=encoding,\n    )\n    return dotenv.set_as_environment_variables()",
+              "content_sha256": "8cfdb507f9f807a8c390cb539e555d00b23df8fe49889aececf9692495580d14",
+              "visible_to_generator": true
+            }
+          ]
+        },
+        {
+          "claim": "默认未找到时返回空字符串，显式raise_error_if_not_found=True时抛异常。",
+          "status": "supported",
+          "rationale": "默认参数False，425–428分别实现抛错和空字符串返回。此处按题设正常存在的脚本及起始目录条件判断，不扩展为所有异常均受该选项控制。",
+          "evidence": [
+            {
+              "path": "src/dotenv/main.py",
+              "start_line": 376,
+              "end_line": 380
+            },
+            {
+              "path": "src/dotenv/main.py",
+              "start_line": 425,
+              "end_line": 428
+            }
+          ],
+          "verified_evidence": [
+            {
+              "path": "src/dotenv/main.py",
+              "start_line": 376,
+              "end_line": 380,
+              "content": "def find_dotenv(\n    filename: str = \".env\",\n    raise_error_if_not_found: bool = False,\n    usecwd: bool = False,\n) -> str:",
+              "content_sha256": "6c563e288e726c178c9d600b77c7b8ff68828ffb38e71fbf4861f26f6fa9c48c",
+              "visible_to_generator": true
+            },
+            {
+              "path": "src/dotenv/main.py",
+              "start_line": 425,
+              "end_line": 428,
+              "content": "    if raise_error_if_not_found:\n        raise IOError(\"File not found\")\n\n    return \"\"",
+              "content_sha256": "ef55e8b16779e6c3ce792fcb30e6ed73f2495fc1f6c487b3cf96221076e7cc24",
+              "visible_to_generator": true
+            }
+          ]
+        }
+      ],
+      "notes": "保护题未出现新增事实或必要业务决定错误；绝对filename方案有效且更明确限定应用文件。查找与缺失失败的正式引用完整；补充的load_dotenv调用依赖实际已见但未正式引用的431–479，按与此前symlink相同的严格引用标准记partial。 本次为已揭盲开发回归的独立模型辅助复核，不是完全盲审、真人批准或总体准确率估计；条件与成本未提供。workflow success不替代整答事实正确。",
+      "key_points": null,
+      "candidate_sha256": "1174414fa75f8dee62d354e9ea81a58736db2215ff69f476b781330fce330e46",
+      "reviewer": "Codex (current session)",
+      "review_type": "model_assisted_nonblind_development_review",
+      "human_approved": false,
+      "training_eligible": false,
+      "result_sha256": "f2ba68fc1b53691275a02a0c2ba9dbedf5191d84a0b52cb82a54cfc428d248ea"
+    }
+  },
+  "groups": {
+    "all/agentic": {
+      "records": 3,
+      "success": 3,
+      "model_requests": 6,
+      "tool_calls": 0,
+      "episodes_using_tools": 0,
+      "citation_ranges_valid": 3,
+      "initial_reference_complete": 1,
+      "final_reference_complete": 1,
+      "initial_nonblank_reference_complete": 1,
+      "final_nonblank_reference_complete": 1,
+      "requests_without_usage": 0,
+      "requests_without_elapsed": 0,
+      "prompt_tokens": 36594,
+      "completion_tokens": 3020,
+      "generator_seconds": 150.251,
+      "reviewed": 3,
+      "factually_correct": 2,
+      "core_supported": 2,
+      "fully_resolved": 1
+    },
+    "business-value-first-confirmation/agentic": {
+      "records": 2,
+      "success": 2,
+      "model_requests": 4,
+      "tool_calls": 0,
+      "episodes_using_tools": 0,
+      "citation_ranges_valid": 2,
+      "initial_reference_complete": 1,
+      "final_reference_complete": 1,
+      "initial_nonblank_reference_complete": 1,
+      "final_nonblank_reference_complete": 1,
+      "requests_without_usage": 0,
+      "requests_without_elapsed": 0,
+      "prompt_tokens": 27209,
+      "completion_tokens": 2195,
+      "generator_seconds": 113.844,
+      "reviewed": 2,
+      "factually_correct": 1,
+      "core_supported": 1,
+      "fully_resolved": 0
+    },
+    "known-business-repair/agentic": {
+      "records": 1,
+      "success": 1,
+      "model_requests": 2,
+      "tool_calls": 0,
+      "episodes_using_tools": 0,
+      "citation_ranges_valid": 1,
+      "initial_reference_complete": 0,
+      "final_reference_complete": 0,
+      "initial_nonblank_reference_complete": 0,
+      "final_nonblank_reference_complete": 0,
+      "requests_without_usage": 0,
+      "requests_without_elapsed": 0,
+      "prompt_tokens": 14002,
+      "completion_tokens": 770,
+      "generator_seconds": 48.625,
+      "reviewed": 1,
+      "factually_correct": 0,
+      "core_supported": 0,
+      "fully_resolved": 0
+    },
+    "answerable/agentic": {
+      "records": 3,
+      "success": 3,
+      "model_requests": 6,
+      "tool_calls": 0,
+      "episodes_using_tools": 0,
+      "citation_ranges_valid": 3,
+      "initial_reference_complete": 1,
+      "final_reference_complete": 1,
+      "initial_nonblank_reference_complete": 1,
+      "final_nonblank_reference_complete": 1,
+      "requests_without_usage": 0,
+      "requests_without_elapsed": 0,
+      "prompt_tokens": 36594,
+      "completion_tokens": 3020,
+      "generator_seconds": 150.251,
+      "reviewed": 3,
+      "factually_correct": 2,
+      "core_supported": 2,
+      "fully_resolved": 1
+    },
+    "all/bm25_code": {
+      "records": 1,
+      "success": 1,
+      "model_requests": 1,
+      "tool_calls": 0,
+      "episodes_using_tools": 0,
+      "citation_ranges_valid": 1,
+      "initial_reference_complete": 0,
+      "final_reference_complete": 0,
+      "initial_nonblank_reference_complete": 0,
+      "final_nonblank_reference_complete": 0,
+      "requests_without_usage": 0,
+      "requests_without_elapsed": 0,
+      "prompt_tokens": 3628,
+      "completion_tokens": 409,
+      "generator_seconds": 17.234,
+      "reviewed": 1,
+      "factually_correct": 0,
+      "core_supported": 0,
+      "fully_resolved": 0
+    },
+    "business-value-first-confirmation/bm25_code": {
+      "records": 1,
+      "success": 1,
+      "model_requests": 1,
+      "tool_calls": 0,
+      "episodes_using_tools": 0,
+      "citation_ranges_valid": 1,
+      "initial_reference_complete": 0,
+      "final_reference_complete": 0,
+      "initial_nonblank_reference_complete": 0,
+      "final_nonblank_reference_complete": 0,
+      "requests_without_usage": 0,
+      "requests_without_elapsed": 0,
+      "prompt_tokens": 3628,
+      "completion_tokens": 409,
+      "generator_seconds": 17.234,
+      "reviewed": 1,
+      "factually_correct": 0,
+      "core_supported": 0,
+      "fully_resolved": 0
+    },
+    "shared-retrieval-repair/bm25_code": {
+      "records": 1,
+      "success": 1,
+      "model_requests": 1,
+      "tool_calls": 0,
+      "episodes_using_tools": 0,
+      "citation_ranges_valid": 1,
+      "initial_reference_complete": 0,
+      "final_reference_complete": 0,
+      "initial_nonblank_reference_complete": 0,
+      "final_nonblank_reference_complete": 0,
+      "requests_without_usage": 0,
+      "requests_without_elapsed": 0,
+      "prompt_tokens": 3628,
+      "completion_tokens": 409,
+      "generator_seconds": 17.234,
+      "reviewed": 1,
+      "factually_correct": 0,
+      "core_supported": 0,
+      "fully_resolved": 0
+    },
+    "answerable/bm25_code": {
+      "records": 1,
+      "success": 1,
+      "model_requests": 1,
+      "tool_calls": 0,
+      "episodes_using_tools": 0,
+      "citation_ranges_valid": 1,
+      "initial_reference_complete": 0,
+      "final_reference_complete": 0,
+      "initial_nonblank_reference_complete": 0,
+      "final_nonblank_reference_complete": 0,
+      "requests_without_usage": 0,
+      "requests_without_elapsed": 0,
+      "prompt_tokens": 3628,
+      "completion_tokens": 409,
+      "generator_seconds": 17.234,
+      "reviewed": 1,
+      "factually_correct": 0,
+      "core_supported": 0,
+      "fully_resolved": 0
+    },
+    "revealed-confirmation-development/agentic": {
+      "records": 1,
+      "success": 1,
+      "model_requests": 2,
+      "tool_calls": 0,
+      "episodes_using_tools": 0,
+      "citation_ranges_valid": 1,
+      "initial_reference_complete": 0,
+      "final_reference_complete": 0,
+      "initial_nonblank_reference_complete": 0,
+      "final_nonblank_reference_complete": 0,
+      "requests_without_usage": 0,
+      "requests_without_elapsed": 0,
+      "prompt_tokens": 9385,
+      "completion_tokens": 825,
+      "generator_seconds": 36.407000000000004,
+      "reviewed": 1,
+      "factually_correct": 1,
+      "core_supported": 1,
+      "fully_resolved": 1
+    },
+    "protection/agentic": {
+      "records": 2,
+      "success": 2,
+      "model_requests": 4,
+      "tool_calls": 0,
+      "episodes_using_tools": 0,
+      "citation_ranges_valid": 2,
+      "initial_reference_complete": 1,
+      "final_reference_complete": 1,
+      "initial_nonblank_reference_complete": 1,
+      "final_nonblank_reference_complete": 1,
+      "requests_without_usage": 0,
+      "requests_without_elapsed": 0,
+      "prompt_tokens": 22592,
+      "completion_tokens": 2250,
+      "generator_seconds": 101.626,
+      "reviewed": 2,
+      "factually_correct": 2,
+      "core_supported": 2,
+      "fully_resolved": 1
+    }
+  },
+  "retrieval": {
+    "shared_initial": {
+      "answerable": 3,
+      "reference_complete": 1,
+      "nonblank_reference_complete": 1
+    }
+  },
+  "new_requests": 7,
+  "combined_requests": 1458,
+  "paid_requests": 0,
+  "human_approved": false,
+  "training_eligible": false,
+  "reporting_implementation": "f292195c1352a369880456fcb58fe853361002c5a3ba69bfdf55fa49072117ea",
+  "usage_observation_note": "Token/time sums include observed values only. Missing usage and elapsed time remain unknown in raw records; reservations still count every sent or ambiguous request.",
+  "checks": {
+    "adoption": {
+      "accepted": false,
+      "reason": "Both namespace outputs remain factually wrong or self-contradictory after binding source is actually visible. Dotenv protection has partial citations. No complete business-resolution gain; candidate code and five tests reverted.",
+      "business_by_case": {
+        "business-blinker-namespace-03--bound-method-sdk": {
+          "business_decision_correct": false,
+          "severe_wrong_advice": true,
+          "missing_requirements": [
+            "明确当前a is b，A发送会触发两个接收器各一次，而不是已经按插件隔离。"
+          ],
+          "failure_cause": {
+            "primary": "sufficient_binding_source_misread",
+            "detail": "实际已见default_namespace=Namespace()及signal=default_namespace.signal，仍将类实例方法误推为每个插件自动拥有不同实例。未形成可据以判断当前跨插件事件泄漏的正确回答。",
+            "missing_source": [],
+            "sufficient_source_misread": [
+              {
+                "path": "src/blinker/base.py",
+                "start_line": 483,
+                "end_line": 496
+              },
+              {
+                "path": "src/blinker/base.py",
+                "start_line": 503,
+                "end_line": 508
+              }
+            ],
+            "tool_use": "anonymous_packets_do_not_expose_tool_calls; cannot_determine_no_tool_use_from_source_visibility"
+          }
+        },
+        "business-blinker-namespace-03--bound-method-fixed": {
+          "business_decision_correct": false,
+          "severe_wrong_advice": true,
+          "missing_requirements": [
+            "消除首句只触发audit_a的错误，给出不自相矛盾的当前行为结论：audit_a与audit_b各触发一次。"
+          ],
+          "failure_cause": {
+            "primary": "sufficient_source_used_but_unresolved_answer_contradiction",
+            "detail": "实际context已补绑定，正文据此得出共享对象及两个回调的正确结论；首句却保留相反结论，足以让集成者误判跨插件事件隔离。因此存在正文事实改善，但不存在整答或业务验收净通过。",
+            "missing_source": [],
+            "sufficient_source_misread": [
+              {
+                "path": "src/blinker/base.py",
+                "start_line": 91,
+                "end_line": 118
+              },
+              {
+                "path": "src/blinker/base.py",
+                "start_line": 340,
+                "end_line": 362
+              },
+              {
+                "path": "src/blinker/base.py",
+                "start_line": 483,
+                "end_line": 508
+              }
+            ],
+            "tool_use": "anonymous_packets_do_not_expose_tool_calls; cannot_determine_no_tool_use_from_source_visibility"
+          }
+        },
+        "improvement-confirm-blinker-02--protection-sdk": {
+          "business_decision_correct": true,
+          "severe_wrong_advice": false,
+          "missing_requirements": [],
+          "failure_cause": {
+            "primary": "none",
+            "detail": "同一回调只发送一次的结论与具体去重及测试证据均正确，保护题保持可用。",
+            "missing_source": [],
+            "sufficient_source_misread": [],
+            "tool_use": "anonymous_packets_do_not_expose_tool_calls; cannot_determine_no_tool_use_from_source_visibility"
+          }
+        },
+        "business-dotenv-discovery-01--protection-sdk": {
+          "business_decision_correct": true,
+          "severe_wrong_advice": false,
+          "missing_requirements": [],
+          "failure_cause": {
+            "primary": "citation_omission_with_sufficient_visible_source",
+            "detail": "所有必要业务决定正确，保护保持；仅补充加载API的正式引用缺失。不能将这一引用不足算作配置选择错误。",
+            "missing_source": [],
+            "sufficient_source_misread": [],
+            "tool_use": "anonymous_packets_do_not_expose_tool_calls; cannot_determine_no_tool_use_from_source_visibility"
+          }
+        }
+      },
+      "review_file_sha256": {
+        "candidate-4c9ae55fc7": "164826900c3462f056876fe8af1bd51d82851e20b003322bf43c085dcc4cb703",
+        "candidate-522ee1f7be": "f87e80d27c39b9d71e8598d3e96415eb7ecce0229f040199e57f73e67c67cdd7",
+        "candidate-85da1fc7f6": "5b6df4006b36c982b6f96aa0df8d314f174cb71a412056787e2cffd6a63990c9",
+        "candidate-0750d36b25": "b97454849040cb4d74cb3d2649f6bee43894c52803837f8b862493ce159fe561"
+      },
+      "source_archive_sha256": "ca2a9b7e5b3c4952cbf45a0cd48d671409da2fd433f8f430a8c90527cbe0cf12",
+      "offline_85_sha256": "d972dc32616aa6e8979b69075e15f07a395bb6c1658d863ecd032108a25dfd61",
+      "production_modules_added": 0,
+      "new_requests": 7
+    }
+  },
+  "scope": "One general source-provenance repair only: selected Python method exported as module-level instance.method gets complete nearby raw instance initialization + binding when simple unrebound names fit spare source bytes. Same daily model/16K/prompt/tools/budgets/ranking. Revealed development repair, not unseen test. Offline85:84 byte-identical fixed inputs, only namespace task gains binding source. Adopt only if namespace SDK and fixed both fact/core/full pass, dotenv and same-Signal dedup SDK protections remain fully correct, no severe wrong advice; otherwise revert repair. No retries or further hypotheses this acceptance."
+}

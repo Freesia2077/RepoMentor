@@ -1,0 +1,1047 @@
+[
+  {
+    "candidate_id": "development/history-dev-04--sdk/answer",
+    "correctness": "correct",
+    "citation_support": "supported",
+    "completeness": "partial",
+    "abstention": "not_applicable",
+    "entry_scope": "correct",
+    "consistency": "consistent",
+    "claims": [
+      {
+        "claim": "on 不做事件名小写转换，直接使用传入 type 作为 Map 键。",
+        "status": "supported",
+        "rationale": "on 只执行 get/push/set，没有大小写转换。",
+        "evidence": [
+          {
+            "path": "src/index.ts",
+            "start_line": 66,
+            "end_line": 73
+          }
+        ]
+      }
+    ],
+    "notes": "明确要求结合 should NOT normalize case 测试；最终只解释实现，未说明 FOO/foo 等输入及断言。完整测试解释已在 research_notes 和最终源码中，但 finish=stop 的最终回答仍遗漏，不能归为输出额度不足。"
+  },
+  {
+    "candidate_id": "development/sweqa-flask-002--sdk/answer",
+    "correctness": "partially_correct",
+    "citation_support": "partial",
+    "completeness": "adequate",
+    "abstention": "not_applicable",
+    "entry_scope": "correct",
+    "consistency": "consistent",
+    "claims": [
+      {
+        "claim": "_got_registered_once 配合 _check_setup_finished 阻止注册后的设置。",
+        "status": "supported",
+        "rationale": "标志、赋值和 AssertionError 分支可由实际原文核对。",
+        "evidence": [
+          {
+            "path": "src/flask/sansio/blueprints.py",
+            "start_line": 172,
+            "end_line": 172
+          },
+          {
+            "path": "src/flask/sansio/blueprints.py",
+            "start_line": 213,
+            "end_line": 221
+          },
+          {
+            "path": "src/flask/sansio/blueprints.py",
+            "start_line": 316,
+            "end_line": 335
+          }
+        ]
+      },
+      {
+        "claim": "标志在蓝图写入 app.blueprints 后才设置。",
+        "status": "contradicted",
+        "rationale": "register 中先设置标志，随后才写入应用的字典，答案颠倒顺序。",
+        "evidence": [
+          {
+            "path": "src/flask/sansio/blueprints.py",
+            "start_line": 316,
+            "end_line": 335
+          }
+        ]
+      }
+    ],
+    "notes": "此次读取包含真实标志，解决了原先的信息缺失；仍新增了注册顺序错误，故不是严格解决。"
+  },
+  {
+    "candidate_id": "development/sweqa-requests-001--sdk/answer",
+    "correctness": "correct",
+    "citation_support": "supported",
+    "completeness": "adequate",
+    "abstention": "not_applicable",
+    "entry_scope": "correct",
+    "consistency": "consistent",
+    "claims": [
+      {
+        "claim": "显式 no_proxy 在非 None 时优先于环境变量。",
+        "status": "supported",
+        "rationale": "仅 no_proxy is None 时才从环境读取。",
+        "evidence": [
+          {
+            "path": "src/requests/utils.py",
+            "start_line": 769,
+            "end_line": 771
+          }
+        ]
+      },
+      {
+        "claim": "非空返回来自未绕过时的 getproxies() 配置。",
+        "status": "supported",
+        "rationale": "822–825 在绕过时直接返回空字典，否则返回配置；非空确实排除了 no_proxy 命中，答案没有宣称反向充分条件。",
+        "evidence": [
+          {
+            "path": "src/requests/utils.py",
+            "start_line": 816,
+            "end_line": 825
+          }
+        ]
+      }
+    ],
+    "notes": "回答的是非空字典的含义，不能把先前空字典 iff no_proxy 的错误直接套用。本次未声称网络请求实际成功使用代理。"
+  },
+  {
+    "candidate_id": "confirmation/reliability-confirm-01--fixed/answer",
+    "correctness": "correct",
+    "citation_support": "supported",
+    "completeness": "partial",
+    "abstention": "not_applicable",
+    "entry_scope": "correct",
+    "consistency": "consistent",
+    "claims": [
+      {
+        "claim": "在普通 handler 内新增的同类型 handler 不在当前 emit 执行。",
+        "status": "supported",
+        "rationale": "emit 对当前 handlers 使用 slice 快照。",
+        "evidence": [
+          {
+            "path": "src/index.ts",
+            "start_line": 66,
+            "end_line": 73
+          },
+          {
+            "path": "src/index.ts",
+            "start_line": 103,
+            "end_line": 110
+          }
+        ]
+      }
+    ],
+    "notes": "答案仅为“不会执行”，虽结论正确且引用支持，未按问题解释 on 修改原数组和 emit 使用快照的机制。"
+  },
+  {
+    "candidate_id": "confirmation/reliability-confirm-01--sdk/answer",
+    "correctness": "correct",
+    "citation_support": "supported",
+    "completeness": "partial",
+    "abstention": "not_applicable",
+    "entry_scope": "correct",
+    "consistency": "consistent",
+    "claims": [
+      {
+        "claim": "在普通 handler 内新增的同类型 handler 不在当前 emit 执行。",
+        "status": "supported",
+        "rationale": "emit 对当前 handlers 使用 slice 快照。",
+        "evidence": [
+          {
+            "path": "src/index.ts",
+            "start_line": 66,
+            "end_line": 73
+          },
+          {
+            "path": "src/index.ts",
+            "start_line": 103,
+            "end_line": 110
+          }
+        ]
+      }
+    ],
+    "notes": "答案仅为“不会执行”，虽结论正确且引用支持，未按问题解释 on 修改原数组和 emit 使用快照的机制。"
+  },
+  {
+    "candidate_id": "confirmation/reliability-confirm-02--fixed/answer",
+    "correctness": "correct",
+    "citation_support": "supported",
+    "completeness": "partial",
+    "abstention": "not_applicable",
+    "entry_scope": "correct",
+    "consistency": "consistent",
+    "claims": [
+      {
+        "claim": "on 支持 Symbol，直接保留 Map 键，符号测试核对了此行为。",
+        "status": "supported",
+        "rationale": "实现原样使用 type；测试使用 eventType 并断言得到 [foo]。",
+        "evidence": [
+          {
+            "path": "src/index.ts",
+            "start_line": 66,
+            "end_line": 73
+          },
+          {
+            "path": "test/index_test.ts",
+            "start_line": 26,
+            "end_line": 26
+          },
+          {
+            "path": "test/index_test.ts",
+            "start_line": 92,
+            "end_line": 96
+          }
+        ]
+      }
+    ],
+    "notes": "提到了测试名称，但未解释输入和实际断言结果；要求说明对应测试如何验证，不能只给测试标题。"
+  },
+  {
+    "candidate_id": "confirmation/reliability-confirm-02--sdk/answer",
+    "correctness": "correct",
+    "citation_support": "supported",
+    "completeness": "adequate",
+    "abstention": "not_applicable",
+    "entry_scope": "correct",
+    "consistency": "consistent",
+    "claims": [
+      {
+        "claim": "on 支持 Symbol，直接保留 Map 键，符号测试核对了此行为。",
+        "status": "supported",
+        "rationale": "实现原样使用 type；测试使用 eventType 并断言得到 [foo]。",
+        "evidence": [
+          {
+            "path": "src/index.ts",
+            "start_line": 66,
+            "end_line": 73
+          },
+          {
+            "path": "test/index_test.ts",
+            "start_line": 26,
+            "end_line": 26
+          },
+          {
+            "path": "test/index_test.ts",
+            "start_line": 92,
+            "end_line": 96
+          }
+        ]
+      }
+    ],
+    "notes": "解释了测试使用 Symbol 对象作为同一 Map 键进行存取来验证原样保留，属于有效的测试机制说明；不机械要求抄写 expect、foo 或数组字面量。"
+  },
+  {
+    "candidate_id": "confirmation/reliability-confirm-03--fixed/answer",
+    "correctness": "partially_correct",
+    "citation_support": "partial",
+    "completeness": "adequate",
+    "claims": [
+      {
+        "claim": "长度2使用mask=1，255映射索引1。",
+        "status": "supported",
+        "rationale": "40–59支持这个分支。",
+        "evidence": [
+          {
+            "path": "index.js",
+            "start_line": 40,
+            "end_line": 59
+          }
+        ]
+      },
+      {
+        "claim": "长度3也会进入cutoff=256分支，且255先映射到索引0。",
+        "status": "contradicted",
+        "rationale": "长度3 cutoff=255，拒绝255；正文多处说法与最终结论冲突，且119属于customAlphabet而非customRandom。",
+        "evidence": [
+          {
+            "path": "index.js",
+            "start_line": 40,
+            "end_line": 44
+          },
+          {
+            "path": "index.js",
+            "start_line": 70,
+            "end_line": 82
+          }
+        ]
+      }
+    ],
+    "notes": "最后一句写对拒绝255，不能抵消前文错误计算、错误映射和相互矛盾。",
+    "abstention": "not_applicable",
+    "entry_scope": "correct",
+    "consistency": "contradictory"
+  },
+  {
+    "candidate_id": "confirmation/reliability-confirm-03--sdk/answer",
+    "correctness": "correct",
+    "citation_support": "supported",
+    "completeness": "partial",
+    "claims": [
+      {
+        "claim": "长度2的cutoff=256、mask映射255到第二字符；长度3 cutoff=255拒绝255。",
+        "status": "supported",
+        "rationale": "原代码分别走位掩码及阈值拒绝分支。",
+        "evidence": [
+          {
+            "path": "index.js",
+            "start_line": 40,
+            "end_line": 59
+          },
+          {
+            "path": "index.js",
+            "start_line": 70,
+            "end_line": 82
+          }
+        ]
+      }
+    ],
+    "notes": "正确说明两分支和255处理，但题目还要求随机字节到字符的映射；没有解释长度3对合格字节使用%3，完整性不足。",
+    "abstention": "not_applicable",
+    "entry_scope": "correct",
+    "consistency": "consistent"
+  },
+  {
+    "candidate_id": "confirmation/reliability-confirm-04--fixed/answer",
+    "correctness": "correct",
+    "citation_support": "partial",
+    "completeness": "partial",
+    "claims": [
+      {
+        "claim": "默认长度4、显式2返回2、显式0返回空串。",
+        "status": "supported",
+        "rationale": "完整实现支持这些结果；已引用范围只含默认参数和零返回，缺少实际substring返回路径。",
+        "evidence": [
+          {
+            "path": "index.js",
+            "start_line": 96,
+            "end_line": 110
+          },
+          {
+            "path": "index.js",
+            "start_line": 133,
+            "end_line": 175
+          }
+        ]
+      }
+    ],
+    "notes": "要求沿参数与截取路径解释，正文仅列结果；实际上下文止于145，没有169–173的截取实现，不能视为引用充分。",
+    "abstention": "not_applicable",
+    "entry_scope": "correct",
+    "consistency": "consistent"
+  },
+  {
+    "candidate_id": "confirmation/reliability-confirm-04--sdk/answer",
+    "correctness": "correct",
+    "citation_support": "supported",
+    "completeness": "partial",
+    "claims": [
+      {
+        "claim": "默认长度4，显式2保留2，0返回空串。",
+        "status": "supported",
+        "rationale": "SDK补读96–175，引用包含默认参数、零分支和substring。",
+        "evidence": [
+          {
+            "path": "index.js",
+            "start_line": 133,
+            "end_line": 175
+          }
+        ]
+      }
+    ],
+    "notes": "工具已取回固定版缺少的截取路径，但最终只重复长度结果，没有解释默认参数和poolOffset/substring如何决定长度。",
+    "abstention": "not_applicable",
+    "entry_scope": "correct",
+    "consistency": "consistent"
+  },
+  {
+    "candidate_id": "confirmation/reliability-confirm-05--fixed/answer",
+    "correctness": "correct",
+    "citation_support": "partial",
+    "completeness": "adequate",
+    "claims": [
+      {
+        "claim": "无标签匹配返回None，成功匹配后取最早next_run。",
+        "status": "supported",
+        "rationale": "get_jobs按tag筛选，get_next_run空结果返回None，否则min(filtered).next_run。",
+        "evidence": [
+          {
+            "path": "schedule/__init__.py",
+            "start_line": 122,
+            "end_line": 133
+          },
+          {
+            "path": "schedule/__init__.py",
+            "start_line": 188,
+            "end_line": 193
+          }
+        ]
+      }
+    ],
+    "notes": "内容覆盖过滤、空结果和min选择；引用188–192停在返回None，没有包含支撑min声明的193，故引用支持不完整。",
+    "abstention": "not_applicable",
+    "entry_scope": "correct",
+    "consistency": "consistent"
+  },
+  {
+    "candidate_id": "confirmation/reliability-confirm-05--sdk/answer",
+    "correctness": "correct",
+    "citation_support": "supported",
+    "completeness": "partial",
+    "claims": [
+      {
+        "claim": "无匹配返回None，有匹配选择next_run最小时间。",
+        "status": "supported",
+        "rationale": "191–193支持两个返回分支。",
+        "evidence": [
+          {
+            "path": "schedule/__init__.py",
+            "start_line": 188,
+            "end_line": 193
+          }
+        ]
+      }
+    ],
+    "notes": "未回答如何调用get_jobs(tag)获得匹配任务，虽然源码190行已进入最终上下文；跨函数关联解释遗漏。",
+    "abstention": "not_applicable",
+    "entry_scope": "correct",
+    "consistency": "consistent"
+  },
+  {
+    "candidate_id": "confirmation/reliability-confirm-06--fixed/answer",
+    "correctness": "partially_correct",
+    "citation_support": "partial",
+    "completeness": "partial",
+    "claims": [
+      {
+        "claim": "every只构造并返回未配置Job。",
+        "status": "supported",
+        "rationale": "162–170明确构造后返回，不追加jobs。",
+        "evidence": [
+          {
+            "path": "schedule/__init__.py",
+            "start_line": 162,
+            "end_line": 170
+          }
+        ]
+      },
+      {
+        "claim": "do调用self.scheduler.add_job(self)登记。",
+        "status": "contradicted",
+        "rationale": "do实际直接self.scheduler.jobs.append(self)，未调用该虚构方法。",
+        "evidence": [
+          {
+            "path": "schedule/__init__.py",
+            "start_line": 644,
+            "end_line": 664
+          }
+        ]
+      }
+    ],
+    "notes": "还漏掉functools.partial绑定回调/参数及计算next_run；引用Job类声明不能支持do机制。",
+    "abstention": "not_applicable",
+    "entry_scope": "correct",
+    "consistency": "consistent"
+  },
+  {
+    "candidate_id": "confirmation/reliability-confirm-06--sdk/answer",
+    "correctness": "correct",
+    "citation_support": "supported",
+    "completeness": "partial",
+    "claims": [
+      {
+        "claim": "every本身不登记，关联Scheduler的Job在do中加入列表。",
+        "status": "supported",
+        "rationale": "162–170与644–664支持这个生命周期区别。",
+        "evidence": [
+          {
+            "path": "schedule/__init__.py",
+            "start_line": 162,
+            "end_line": 170
+          },
+          {
+            "path": "schedule/__init__.py",
+            "start_line": 644,
+            "end_line": 664
+          }
+        ]
+      }
+    ],
+    "notes": "补查找到了do，避免虚构add_job；但没有回答如何保存回调与参数、实际追加方式及返回self，未完成题目要点。",
+    "abstention": "not_applicable",
+    "entry_scope": "correct",
+    "consistency": "consistent"
+  },
+  {
+    "candidate_id": "confirmation/reliability-confirm-07--fixed/answer",
+    "correctness": "incorrect",
+    "citation_support": "unsupported",
+    "completeness": "partial",
+    "claims": [
+      {
+        "claim": "默认pred=None时0是真值，first_true返回0。",
+        "status": "contradicted",
+        "rationale": "filter(None,...)按真值筛选；0和False均假，首个保留项是2。源码示例range(10)也返回1而非0。",
+        "evidence": [
+          {
+            "path": "more_itertools/recipes.py",
+            "start_line": 571,
+            "end_line": 588
+          }
+        ]
+      }
+    ],
+    "notes": "基本布尔语义与返回值均错，也没有解释显式谓词为何能够保留0。",
+    "abstention": "not_applicable",
+    "entry_scope": "correct",
+    "consistency": "consistent"
+  },
+  {
+    "candidate_id": "confirmation/reliability-confirm-07--sdk/answer",
+    "correctness": "correct",
+    "citation_support": "supported",
+    "completeness": "partial",
+    "claims": [
+      {
+        "claim": "默认得到2，显式x==0得到0且不丢弃。",
+        "status": "supported",
+        "rationale": "next(filter(pred, iterable), default)支持这两个结果。",
+        "evidence": [
+          {
+            "path": "more_itertools/recipes.py",
+            "start_line": 571,
+            "end_line": 588
+          }
+        ]
+      }
+    ],
+    "notes": "值与条件区别正确；问题要求结合实现解释，未说明filter依据谓词结果保留原元素、不会再次对0作真值过滤。",
+    "abstention": "not_applicable",
+    "entry_scope": "correct",
+    "consistency": "consistent"
+  },
+  {
+    "candidate_id": "confirmation/reliability-confirm-08--fixed/answer",
+    "correctness": "correct",
+    "citation_support": "supported",
+    "completeness": "adequate",
+    "claims": [
+      {
+        "claim": "空输入和按casefold后全相等输入均True，不先排序而用groupby。",
+        "status": "supported",
+        "rationale": "237–242按相邻分组，第二组才False，空输入落到末尾True。",
+        "evidence": [
+          {
+            "path": "more_itertools/recipes.py",
+            "start_line": 219,
+            "end_line": 242
+          }
+        ]
+      }
+    ],
+    "notes": "两个结果和无排序机制均覆盖；不要求逐字抄写所有循环语句。",
+    "abstention": "not_applicable",
+    "entry_scope": "correct",
+    "consistency": "consistent"
+  },
+  {
+    "candidate_id": "confirmation/reliability-confirm-08--sdk/answer",
+    "correctness": "correct",
+    "citation_support": "supported",
+    "completeness": "adequate",
+    "claims": [
+      {
+        "claim": "空输入和按casefold后全相等输入均True，不先排序而用groupby。",
+        "status": "supported",
+        "rationale": "237–242按相邻分组，第二组才False，空输入落到末尾True。",
+        "evidence": [
+          {
+            "path": "more_itertools/recipes.py",
+            "start_line": 219,
+            "end_line": 242
+          }
+        ]
+      }
+    ],
+    "notes": "两个结果和无排序机制均覆盖；不要求逐字抄写所有循环语句。",
+    "abstention": "not_applicable",
+    "entry_scope": "correct",
+    "consistency": "consistent"
+  },
+  {
+    "candidate_id": "confirmation/reliability-confirm-09--fixed/answer",
+    "correctness": "partially_correct",
+    "citation_support": "partial",
+    "completeness": "adequate",
+    "claims": [
+      {
+        "claim": "Decimal/UUID转str，未知普通对象抛TypeError。",
+        "status": "supported",
+        "rationale": "112–121支持返回与兜底异常。",
+        "evidence": [
+          {
+            "path": "src/flask/json/provider.py",
+            "start_line": 108,
+            "end_line": 121
+          }
+        ]
+      },
+      {
+        "claim": "自动转null违背Flask设计原则，作者设计为明确报错。",
+        "status": "unsupported",
+        "rationale": "代码能证明会抛错，不能独立证明额外陈述的设计原则或作者意图。",
+        "evidence": [
+          {
+            "path": "src/flask/json/provider.py",
+            "start_line": 108,
+            "end_line": 141
+          }
+        ]
+      }
+    ],
+    "notes": "也未实际获取138行default=staticmethod(_default)绑定；关联断言的来源不完整。",
+    "abstention": "not_applicable",
+    "entry_scope": "correct",
+    "consistency": "consistent"
+  },
+  {
+    "candidate_id": "confirmation/reliability-confirm-09--sdk/answer",
+    "correctness": "correct",
+    "citation_support": "partial",
+    "completeness": "adequate",
+    "claims": [
+      {
+        "claim": "默认逻辑把Decimal/UUID转str、未知对象抛TypeError。",
+        "status": "supported",
+        "rationale": "112–121支持具体类型行为。",
+        "evidence": [
+          {
+            "path": "src/flask/json/provider.py",
+            "start_line": 108,
+            "end_line": 121
+          }
+        ]
+      },
+      {
+        "claim": "default的默认实现对应_default；自定义处理器可在兜底时调用基类default。",
+        "status": "partial",
+        "rationale": "测试228–232确有自定义处理器回退基类的示例；但绑定关系在138，未进入模型上下文和引用。",
+        "evidence": [
+          {
+            "path": "src/flask/json/provider.py",
+            "start_line": 138,
+            "end_line": 141
+          },
+          {
+            "path": "tests/test_json.py",
+            "start_line": 228,
+            "end_line": 232
+          }
+        ]
+      }
+    ],
+    "notes": "将静默null的后果视为一般解释，不当作作者意图；主要事实成立，但缺少default/_default绑定的直接引用支持。",
+    "abstention": "not_applicable",
+    "entry_scope": "correct",
+    "consistency": "consistent"
+  },
+  {
+    "candidate_id": "confirmation/reliability-confirm-10--fixed/answer",
+    "correctness": "correct",
+    "citation_support": "supported",
+    "completeness": "adequate",
+    "claims": [
+      {
+        "claim": "record_once登记延迟包装器，record负责追加，wrapper按first_registration决定是否调用func(state)。",
+        "status": "supported",
+        "rationale": "record追加传入函数，record_once用wrapper包原func再登记；True执行、False跳过。",
+        "evidence": [
+          {
+            "path": "src/flask/sansio/blueprints.py",
+            "start_line": 223,
+            "end_line": 244
+          }
+        ]
+      }
+    ],
+    "notes": "未把record参数名func机械误判为直接登记未包装的原函数；结合整体答案和引用，解释与实现一致。",
+    "abstention": "not_applicable",
+    "entry_scope": "correct",
+    "consistency": "consistent"
+  },
+  {
+    "candidate_id": "confirmation/reliability-confirm-10--sdk/answer",
+    "correctness": "correct",
+    "citation_support": "supported",
+    "completeness": "adequate",
+    "claims": [
+      {
+        "claim": "record_once登记延迟包装器，record负责追加，wrapper按first_registration决定是否调用func(state)。",
+        "status": "supported",
+        "rationale": "record追加传入函数，record_once用wrapper包原func再登记；True执行、False跳过。",
+        "evidence": [
+          {
+            "path": "src/flask/sansio/blueprints.py",
+            "start_line": 223,
+            "end_line": 244
+          }
+        ]
+      }
+    ],
+    "notes": "未把record参数名func机械误判为直接登记未包装的原函数；结合整体答案和引用，解释与实现一致。",
+    "abstention": "not_applicable",
+    "entry_scope": "correct",
+    "consistency": "consistent"
+  },
+  {
+    "candidate_id": "confirmation/reliability-confirm-11--fixed/answer",
+    "correctness": "correct",
+    "citation_support": "supported",
+    "completeness": "adequate",
+    "claims": [
+      {
+        "claim": "按scheme+host、scheme、all+host、all查找；首个键即便值None也停止。",
+        "status": "supported",
+        "rationale": "839–849根据键是否存在取值并break。",
+        "evidence": [
+          {
+            "path": "src/requests/utils.py",
+            "start_line": 839,
+            "end_line": 849
+          }
+        ]
+      }
+    ],
+    "notes": "优先级和None阻止继续回退两个要点均完整。",
+    "abstention": "not_applicable",
+    "entry_scope": "correct",
+    "consistency": "consistent"
+  },
+  {
+    "candidate_id": "confirmation/reliability-confirm-11--sdk/answer",
+    "correctness": "correct",
+    "citation_support": "supported",
+    "completeness": "adequate",
+    "claims": [
+      {
+        "claim": "按scheme+host、scheme、all+host、all查找；首个键即便值None也停止。",
+        "status": "supported",
+        "rationale": "839–849根据键是否存在取值并break。",
+        "evidence": [
+          {
+            "path": "src/requests/utils.py",
+            "start_line": 839,
+            "end_line": 849
+          }
+        ]
+      }
+    ],
+    "notes": "优先级和None阻止继续回退两个要点均完整。",
+    "abstention": "not_applicable",
+    "entry_scope": "correct",
+    "consistency": "consistent"
+  },
+  {
+    "candidate_id": "confirmation/reliability-confirm-12--fixed/answer",
+    "correctness": "partially_correct",
+    "citation_support": "partial",
+    "completeness": "adequate",
+    "claims": [
+      {
+        "claim": "trust_env=False不查环境并返回副本，环境只用setdefault补缺、不覆盖已有scheme。",
+        "status": "supported",
+        "rationale": "869、871、877支持题目核心问题。",
+        "evidence": [
+          {
+            "path": "src/requests/utils.py",
+            "start_line": 854,
+            "end_line": 878
+          }
+        ]
+      },
+      {
+        "claim": "只要有环境代理且URL未命中no_proxy就一定补全。",
+        "status": "unsupported",
+        "rationale": "实际还必须should_bypass_proxies为False；该函数还有proxy_bypass等其他绕过途径，未命中列表不足以推出不会绕过。",
+        "evidence": [
+          {
+            "path": "src/requests/utils.py",
+            "start_line": 755,
+            "end_line": 815
+          },
+          {
+            "path": "src/requests/utils.py",
+            "start_line": 869,
+            "end_line": 878
+          }
+        ]
+      }
+    ],
+    "notes": "核心答案正确，但额外添加的充分条件过强；答案实际引用的755–805也遗漏了后续其他绕过分支。",
+    "abstention": "not_applicable",
+    "entry_scope": "correct",
+    "consistency": "consistent"
+  },
+  {
+    "candidate_id": "confirmation/reliability-confirm-12--sdk/answer",
+    "correctness": "correct",
+    "citation_support": "supported",
+    "completeness": "adequate",
+    "claims": [
+      {
+        "claim": "trust_env=False不查环境、返回副本；True时只以setdefault补缺，不覆盖已有scheme。",
+        "status": "supported",
+        "rationale": "869复制、871短路、877setdefault与回答逐项对应。",
+        "evidence": [
+          {
+            "path": "src/requests/utils.py",
+            "start_line": 869,
+            "end_line": 878
+          }
+        ]
+      }
+    ],
+    "notes": "未声称trust_env=True必定添加环境代理，也没有把未命中no_proxy说成不绕过的充分条件。",
+    "abstention": "not_applicable",
+    "entry_scope": "correct",
+    "consistency": "consistent"
+  },
+  {
+    "candidate_id": "dialogue/mitt-turn-1/answer",
+    "correctness": "correct",
+    "citation_support": "supported",
+    "completeness": "partial",
+    "claims": [
+      {
+        "claim": "on不将事件名转成小写。",
+        "status": "supported",
+        "rationale": "实现直接按type使用Map键，测试也保留大小写。",
+        "evidence": [
+          {
+            "path": "src/index.ts",
+            "start_line": 66,
+            "end_line": 73
+          },
+          {
+            "path": "test/index_test.ts",
+            "start_line": 79,
+            "end_line": 90
+          }
+        ]
+      }
+    ],
+    "notes": "明确要求具体测试输入和断言，仍只有结论；测试原文与研究笔记已提供。",
+    "abstention": "not_applicable",
+    "entry_scope": "correct",
+    "consistency": "consistent"
+  },
+  {
+    "candidate_id": "dialogue/mitt-turn-2/answer",
+    "correctness": "incorrect",
+    "citation_support": "supported",
+    "completeness": "insufficient",
+    "claims": [
+      {
+        "claim": "on保留事件名大小写。",
+        "status": "supported",
+        "rationale": "这句话本身有测试支持，却不是本轮off问题的答案。",
+        "evidence": [
+          {
+            "path": "test/index_test.ts",
+            "start_line": 79,
+            "end_line": 90
+          }
+        ]
+      }
+    ],
+    "notes": "本轮问off不传handler，回答却重复上一轮on。最终输入把带旧问题的resolved_query当作question；研究笔记已正确解释off，但最终目标串用。",
+    "abstention": "not_applicable",
+    "entry_scope": "mixed",
+    "consistency": "consistent"
+  },
+  {
+    "candidate_id": "dialogue/mitt-turn-3/answer",
+    "correctness": "correct",
+    "citation_support": "supported",
+    "completeness": "adequate",
+    "claims": [
+      {
+        "claim": "普通handler接收evt，通配符接收type和evt，普通在先。",
+        "status": "supported",
+        "rationale": "顺序执行普通handlers映射，再执行通配符映射，参数与所引行一致。",
+        "evidence": [
+          {
+            "path": "src/index.ts",
+            "start_line": 103,
+            "end_line": 120
+          }
+        ]
+      }
+    ],
+    "notes": "已按新目标解释emit，没有沿用on/off事实作为证据。",
+    "abstention": "not_applicable",
+    "entry_scope": "correct",
+    "consistency": "consistent"
+  },
+  {
+    "candidate_id": "dialogue/mitt-turn-4/answer",
+    "correctness": "correct",
+    "citation_support": "not_applicable",
+    "completeness": "partial",
+    "claims": [
+      {
+        "claim": "现有源代码不能证明用户今天已经执行测试成功。",
+        "status": "unverifiable",
+        "rationale": "这是适当的证据边界，不是断言用户实际未运行；工作区没有用户当日执行日志。",
+        "evidence": []
+      }
+    ],
+    "notes": "拒答方向正确，但没有回答还缺什么（本机实际执行命令、时间与结果/日志）。",
+    "abstention": "appropriate",
+    "entry_scope": "correct",
+    "consistency": "consistent"
+  },
+  {
+    "candidate_id": "reports/mitt/explorer",
+    "correctness": "correct",
+    "citation_support": "supported",
+    "completeness": "adequate",
+    "claims": [
+      {
+        "claim": "README声明体积约200b、IE9+与无运行时依赖，包配置指向三种模块产物。",
+        "status": "supported",
+        "rationale": "按项目文档与声明核对，不冒充本次实测包大小。",
+        "evidence": [
+          {
+            "path": "README.md",
+            "start_line": 11,
+            "end_line": 19
+          },
+          {
+            "path": "package.json",
+            "start_line": 4,
+            "end_line": 16
+          }
+        ]
+      },
+      {
+        "claim": "源码提供泛型mitt工厂及Emitter接口。",
+        "status": "supported",
+        "rationale": "所引46–123包括导出工厂的Events泛型和Emitter<Events>返回签名，可支持提供泛型接口的概览；不机械要求引用接口完整声明。",
+        "evidence": [
+          {
+            "path": "src/index.ts",
+            "start_line": 23,
+            "end_line": 39
+          },
+          {
+            "path": "src/index.ts",
+            "start_line": 46,
+            "end_line": 58
+          }
+        ]
+      }
+    ],
+    "notes": "概览覆盖入口、模块和构建产物；接受泛型工厂返回签名作为接口概览的有效引用，不机械要求引用接口全部声明。",
+    "abstention": "not_applicable",
+    "entry_scope": "correct",
+    "consistency": "consistent"
+  },
+  {
+    "candidate_id": "reports/mitt/mentor",
+    "correctness": "partially_correct",
+    "citation_support": "partial",
+    "completeness": "adequate",
+    "claims": [
+      {
+        "claim": "核心为Map工厂，按普通后通配符顺序派发，提供泛型事件接口。",
+        "status": "supported",
+        "rationale": "工厂状态、声明和emit方法支持主要架构解释。",
+        "evidence": [
+          {
+            "path": "src/index.ts",
+            "start_line": 23,
+            "end_line": 39
+          },
+          {
+            "path": "src/index.ts",
+            "start_line": 46,
+            "end_line": 73
+          },
+          {
+            "path": "src/index.ts",
+            "start_line": 103,
+            "end_line": 121
+          }
+        ]
+      },
+      {
+        "claim": "代码约定使用非严格相等，!断言Map获取结果非空。",
+        "status": "contradicted",
+        "rationale": "相关行是all!.get(type)，!作用于Map变量all，返回的handlers仍允许undefined并受if检查；并无所称松散相等逻辑。",
+        "evidence": [
+          {
+            "path": "src/index.ts",
+            "start_line": 66,
+            "end_line": 91
+          },
+          {
+            "path": "src/index.ts",
+            "start_line": 103,
+            "end_line": 120
+          }
+        ]
+      }
+    ],
+    "notes": "主要架构正确，但不能用路径合法掩盖类型断言对象误读；报告基类claims还延续接口声明引用缺口。",
+    "abstention": "not_applicable",
+    "entry_scope": "correct",
+    "consistency": "consistent"
+  },
+  {
+    "candidate_id": "reports/mitt/contributor",
+    "correctness": "correct",
+    "citation_support": "supported",
+    "completeness": "adequate",
+    "claims": [
+      {
+        "claim": "构建/测试/lint命令是仓库脚本声明，贡献建议是文档扩展而非已存在issue。",
+        "status": "supported",
+        "rationale": "package脚本支持这些命令；建议没有宣称已执行测试。",
+        "evidence": [
+          {
+            "path": "package.json",
+            "start_line": 18,
+            "end_line": 27
+          },
+          {
+            "path": "README.md",
+            "start_line": 11,
+            "end_line": 19
+          }
+        ]
+      },
+      {
+        "claim": "概览中的Emitter接口与泛型工厂。",
+        "status": "supported",
+        "rationale": "46–123所引工厂签名明确包含Events泛型和Emitter<Events>返回类型，可支持提供泛型接口的概览。",
+        "evidence": [
+          {
+            "path": "src/index.ts",
+            "start_line": 23,
+            "end_line": 39
+          },
+          {
+            "path": "src/index.ts",
+            "start_line": 46,
+            "end_line": 58
+          }
+        ]
+      }
+    ],
+    "notes": "命令有package脚本支持，建议没有冒充真实issue或已执行测试；接口概览可由所引工厂签名支持，发布约束也保留了不可核验命令的缺口。",
+    "abstention": "not_applicable",
+    "entry_scope": "correct",
+    "consistency": "consistent"
+  }
+]
