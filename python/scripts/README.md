@@ -16,7 +16,7 @@
 | `rag_interview.py`、`rag_interview_delivery.py`、`rag_unified.py` | 旧评测的取证与请求账本实现；现有回归测试仍检查其边界行为 |
 | `ts_parity.mjs` | 显式启用的历史TS对照测试入口 |
 
-早期`p63*`、`run_p*`、`audit_p*`及一次性诊断、整理脚本已从工作树移除，原实现可通过Git历史查阅。实验数据、保存答案和归档保持原位；新实验使用统一CLI。
+早期`p63*`、`run_p*`、`audit_p*`及一次性诊断、整理脚本已从工作树移除，原实现可通过Git历史查阅。保留的评测与兼容数据见[实验目录](../experiments/README.md)，其余历史原件已本地封存；新实验使用统一CLI。
 
 从Python项目根目录运行离线检查：
 

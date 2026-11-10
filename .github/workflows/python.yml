@@ -19,6 +19,8 @@ jobs:
         working-directory: python
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
@@ -28,8 +30,34 @@ jobs:
         run: |
           python -s -m pip check
           python -s -m ruff check src scripts tests
-          python -s -m ruff format --check src scripts tests
+      # Frozen RAG records bind source bytes. Format edits without rewriting the
+      # entire frozen implementation; lint and test the complete Python core.
+      - name: Check formatting of changed Python files
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
+        run: |
+          python -s - <<'PY'
+          import os
+          import subprocess
+          import sys
+          from pathlib import Path
+
+          base = os.environ.get("BASE_SHA", "")
+          if not base or not base.strip("0"):
+              base = "HEAD^"
+          changed = subprocess.check_output([
+              "git", "diff", "--relative", "--name-only", "--diff-filter=ACMR", "-z",
+              base, "HEAD", "--", "src", "scripts", "tests",
+          ], text=True).split("\0")
+          files = [name for name in changed if name.endswith(".py") and Path(name).is_file()]
+          if files:
+              subprocess.run([sys.executable, "-s", "-m", "ruff", "format", "--check", *files], check=True)
+          else:
+              print("No changed Python source files to format-check")
+          PY
       - name: Run offline tests (no model credentials)
         run: python -s -m pytest -q
       - name: Verify recorded reports without API calls
-        run: python -s scripts/verify_recorded_results.py
+        run: |
+          python -s scripts/verify_archives.py
+          python -s -m repomentor.cli questions verify
