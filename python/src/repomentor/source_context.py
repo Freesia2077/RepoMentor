@@ -37,10 +37,16 @@ def pack_observed_context(context, question, fits):
                 partitioned.append(span)
                 continue
             for offset in range(0, len(lines), 40):
-                content = "\n".join(lines[offset:offset + 40])
-                partitioned.append({**span, "content": content, "start_line": span["start_line"] + offset,
-                    "end_line": span["start_line"] + offset + len(lines[offset:offset + 40]) - 1,
-                    "content_sha256": hashlib.sha256(content.encode()).hexdigest()})
+                content = "\n".join(lines[offset : offset + 40])
+                partitioned.append(
+                    {
+                        **span,
+                        "content": content,
+                        "start_line": span["start_line"] + offset,
+                        "end_line": span["start_line"] + offset + len(lines[offset : offset + 40]) - 1,
+                        "content_sha256": hashlib.sha256(content.encode()).hexdigest(),
+                    }
+                )
         context = partitioned
     ranked = sorted(enumerate(context), key=lambda pair: (-relevance(pair[1]), pair[0]))
     chosen, omitted = [], []

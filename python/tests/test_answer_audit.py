@@ -18,9 +18,13 @@ def reader(files):
 
 
 def span(path, content, start=1):
-    return {"path": path, "content": content, "start_line": start,
-            "end_line": start + len(content.splitlines()) - 1,
-            "content_sha256": hashlib.sha256(content.encode()).hexdigest()}
+    return {
+        "path": path,
+        "content": content,
+        "start_line": start,
+        "end_line": start + len(content.splitlines()) - 1,
+        "content_sha256": hashlib.sha256(content.encode()).hexdigest(),
+    }
 
 
 @pytest.mark.parametrize("text", ["runs 19 tests", "L9 explains 10", "L0", "L9-L2", "", "L2, bad"])
@@ -40,8 +44,10 @@ def test_citation_union_gap_and_snapshot_bounds_are_distinct():
 def test_valid_citation_does_not_score_false_answer_and_tampering_fails_closed():
     repo = reader({"a.ts": "throw Error('negative')"})
     source = span("a.ts", "throw Error('negative')")
-    answer = {"answer": "Negative sizes return empty strings.",
-              "citations": [{"path": "a.ts", "start_line": 1, "end_line": 1}]}
+    answer = {
+        "answer": "Negative sizes return empty strings.",
+        "citations": [{"path": "a.ts", "start_line": 1, "end_line": 1}],
+    }
     audit = audit_answer(repo, answer, [source])
     assert audit["claims"][0]["references"][0]["status"] == "visible_range"
     assert audit["claims"][0]["support"] == "needs_review"
@@ -81,12 +87,14 @@ def test_script_declaration_visibility_is_separate_from_execution_and_shell_pars
     assert all(r["execution"] == "not_run" and not r["source_visible_to_model"] for r in rows)
     line = rows[0]["start_line"]
     observed = [span("package.json", package.splitlines()[line - 1], line)]
-    rows = command_audit(repo, observed, {"build": "npm run build", "test": "npm test", "lint": "cd sub && npm run lint"})
+    rows = command_audit(
+        repo, observed, {"build": "npm run build", "test": "npm test", "lint": "cd sub && npm run lint"}
+    )
     assert rows[0]["source_visible_to_model"] and not rows[1]["source_visible_to_model"]
     assert rows[2]["status"] == "unknown"
 
 
-@pytest.mark.parametrize("package", ['{"scripts":{"build":"a","build":"b"}}', '{"scripts":[]}', 'null'])
+@pytest.mark.parametrize("package", ['{"scripts":{"build":"a","build":"b"}}', '{"scripts":[]}', "null"])
 def test_malformed_or_duplicate_package_scripts_stay_unknown(package):
     rows = command_audit(reader({"package.json": package}), [], {"build": "npm run build"})
     assert rows[0]["status"] == "unknown"

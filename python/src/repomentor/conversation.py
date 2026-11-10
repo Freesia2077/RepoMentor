@@ -59,8 +59,14 @@ class ConversationStore:
             "current_symbol": None,
             "turns": [],
             "pending": None,
-            "task_state": {"goal": goal, "entry": None, "current_symbol": None,
-                           "unresolved_questions": [], "source_refs": [], "source_facts": False},
+            "task_state": {
+                "goal": goal,
+                "entry": None,
+                "current_symbol": None,
+                "unresolved_questions": [],
+                "source_refs": [],
+                "source_facts": False,
+            },
         }
         self.save(state)
         return state
@@ -157,9 +163,11 @@ class ConversationStore:
                 options["task_context"] = navigation
                 if state["turns"] and re.search(FOLLOWUP + r"|切换|换到|switch", question, re.I):
                     previous_result = state["turns"][-1]["result"]
-                    options["shared_context"] = {"snapshot_id": state["snapshot_id"],
+                    options["shared_context"] = {
+                        "snapshot_id": state["snapshot_id"],
                         "spans": previous_result.get("final_context", previous_result.get("context", [])),
-                        "preferred_ranges": previous_result.get("answer", {}).get("citations", [])}
+                        "preferred_ranges": previous_result.get("answer", {}).get("citations", []),
+                    }
             result = await engine.answer(
                 question,
                 history=history,
@@ -185,11 +193,14 @@ class ConversationStore:
                 resolved_symbol = result.get("symbol_navigation", {}).get("current_symbol")
                 state["current_symbol"] = resolved_symbol
                 state["task_state"] = {
-                    "goal": state["goal"], "entry": result.get("entry_focus", {}).get("label"),
+                    "goal": state["goal"],
+                    "entry": result.get("entry_focus", {}).get("label"),
                     "current_symbol": state["current_symbol"],
                     "unresolved_questions": [question] if result["answer"]["insufficient_evidence"] else [],
-                    "source_refs": [{k: s[k] for k in ("path", "start_line", "end_line", "content_sha256")}
-                                    for s in result.get("final_context", [])[:8]],
+                    "source_refs": [
+                        {k: s[k] for k in ("path", "start_line", "end_line", "content_sha256")}
+                        for s in result.get("final_context", [])[:8]
+                    ],
                     "source_facts": False,
                 }
             state["pending"] = None

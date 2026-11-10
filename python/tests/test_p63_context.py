@@ -22,14 +22,23 @@ def test_compacted_source_can_be_read_again(reader, tmp_path):
 
 def test_context_filter_keeps_tool_pairs_and_does_not_authorize_fake_source(reader, monkeypatch):
     env = RepositoryEnvironment(reader, None)
-    observation = env.step(ToolCall(call_id="tool1", tool="read_code",
-        arguments={"path": "src/index.ts", "start_line": 1, "end_line": 3}))
-    items = [{"role": "user", "content": "question"},
-             {"type": "function_call", "call_id": "tool1", "name": "read_code", "arguments": "{}"},
-             {"type": "function_call_output", "call_id": "tool1", "output": observation["visible_json"]}]
+    observation = env.step(
+        ToolCall(
+            call_id="tool1",
+            tool="read_code",
+            arguments={"path": "src/index.ts", "start_line": 1, "end_line": 3},
+        )
+    )
+    items = [
+        {"role": "user", "content": "question"},
+        {"type": "function_call", "call_id": "tool1", "name": "read_code", "arguments": "{}"},
+        {"type": "function_call_output", "call_id": "tool1", "output": observation["visible_json"]},
+    ]
+
     def budget(profile, body):
         fit = not any('"lines"' in str(m.get("content", "")) for m in body["messages"])
         return {"fits": fit, "total": 500 if fit else 9000}
+
     monkeypatch.setattr("repomentor.runtimes.openai_sdk.sdk_input_budget", budget)
     runtime = OpenAISdkRuntime(settings())
     agent = Agent(name="test", model_settings=runtime.model_settings)

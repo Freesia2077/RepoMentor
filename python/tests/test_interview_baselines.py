@@ -38,12 +38,14 @@ def test_model_input_contains_only_task_contract_and_observed_source(reader, tmp
     prepared = prepare_input(settings(context_window=32768), "helper", selection, "code_rag")
     payload = json.loads(prepared["input_messages"][-1]["content"])
     from repomentor.contracts import ANSWER_SCHEMA
+
     assert set(payload) == {"question", "context", "response_schema"}
     assert payload["response_schema"] == ANSWER_SCHEMA
     adapter = FrozenSourcesIndex("immutable", selection)
     assert adapter.initial_sources("helper") == selection
     if selection["sources"]:
         import pytest
+
         with pytest.raises(ValueError, match="entry scope"):
             adapter.initial_sources("helper", excluded=[selection["sources"][0]["path"]])
 
@@ -57,7 +59,9 @@ def test_latency_percentiles_do_not_invent_an_empty_cohort():
 def test_literal_baseline_can_match_source_budget_without_changing_legacy_defaults():
     from types import SimpleNamespace
 
-    files = {f"module{i}.py": "def helper():\n    # " + "padding " * 60 + "\n    return 1\n" for i in range(8)}
+    files = {
+        f"module{i}.py": "def helper():\n    # " + "padding " * 60 + "\n    return 1\n" for i in range(8)
+    }
     reader = SimpleNamespace(paths=list(files), read=lambda path, maximum: (files[path], False))
     index = SimpleNamespace(chunks=[SimpleNamespace(path=path) for path in files])
     legacy = select_sources(reader, index, "helper", "grep_read")
@@ -67,4 +71,5 @@ def test_literal_baseline_can_match_source_budget_without_changing_legacy_defaul
     assert len(matched["sources"]) == 6
     assert sum(len(s["content"].encode()) for s in bounded["sources"]) <= 1000
     assert sum(len(s["content"].encode()) for s in bounded["sources"]) < sum(
-        len(s["content"].encode()) for s in matched["sources"])
+        len(s["content"].encode()) for s in matched["sources"]
+    )

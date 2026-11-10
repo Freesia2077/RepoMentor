@@ -78,7 +78,9 @@ def test_search_directory_mistake_is_scoped_and_recorded(env, directory):
     assert corrected["observation"]["search_scope"] == canonical["observation"]["search_scope"]
     assert corrected["action"]["arguments"]["path"] == directory
     assert corrected["observation"]["scope_correction"] == {
-        "supplied_path": directory, "used_path_prefix": "src/utils"}
+        "supplied_path": directory,
+        "used_path_prefix": "src/utils",
+    }
     assert all(s["path"].startswith("src/utils/") for s in corrected["source_spans"])
     env.reset({"question": "excluded"})
     env.excluded_paths = ["src/utils/helper.ts"]

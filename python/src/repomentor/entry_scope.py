@@ -37,7 +37,11 @@ def entry_catalog(reader):
         return None
 
     exports = manifest.get("exports", {})
-    root = exports.get(".", {}) if isinstance(exports, dict) and any(k.startswith(".") for k in exports) else exports
+    root = (
+        exports.get(".", {})
+        if isinstance(exports, dict) and any(k.startswith(".") for k in exports)
+        else exports
+    )
     for label in ("node", "browser"):
         source = root
         if label == "browser" and not (isinstance(root, dict) and "browser" in root):
@@ -55,8 +59,13 @@ def entry_catalog(reader):
         paths = sorted({p for value in bins.values() if (p := target(value, "node"))})
         if paths:
             entries["cli"] = paths
-    provenance.append({"path": "package.json", "content_sha256": hashlib.sha256(text.encode()).hexdigest(),
-                       "basis": "bounded static package exports/main/browser/bin; not full runtime resolution"})
+    provenance.append(
+        {
+            "path": "package.json",
+            "content_sha256": hashlib.sha256(text.encode()).hexdigest(),
+            "basis": "bounded static package exports/main/browser/bin; not full runtime resolution",
+        }
+    )
     return entries, provenance
 
 
@@ -69,11 +78,14 @@ def resolve_entry(reader, question, previous=None):
         affirmed = False
         for match in re.finditer(aliases, question, re.I):
             # A warning such as "不要套用 Node" does not select the Node entry.
-            prefix = re.split(r"[，,。；;!?！？\n]|而是|而应|\bbut\b", question[:match.start()], flags=re.I)[-1]
+            prefix = re.split(r"[，,。；;!?！？\n]|而是|而应|\bbut\b", question[: match.start()], flags=re.I)[
+                -1
+            ]
             negated = re.search(
                 r"(?:不要|不应|不能|别|勿|并非|而非|不是|不使用|不采用)[^，,。；;!?！？\n]{0,32}$"
                 r"|\b(?:not|without|rather than|instead of|do not|don't)\s+(?:use\s+|the\s+|apply\s+)*$",
-                prefix, re.I,
+                prefix,
+                re.I,
             )
             if not negated:
                 affirmed = True
@@ -102,7 +114,14 @@ def resolve_entry(reader, question, previous=None):
             # Respect tests explicitly named by the user; this is not a gold-driven filter.
             excluded.update(p for p in reader.paths if is_test(p) and p not in explicit_tests)
             tests = explicit_tests
-    return {"label": label, "entry_paths": entries.get(label, []), "related_test_candidates": tests[:12],
-            "explicit_test_paths": explicit_tests,
-            "excluded_paths": sorted(excluded), "catalog": entries, "provenance": provenance,
-            "source_facts": False, "policy": "static-entry-scope-v2"}
+    return {
+        "label": label,
+        "entry_paths": entries.get(label, []),
+        "related_test_candidates": tests[:12],
+        "explicit_test_paths": explicit_tests,
+        "excluded_paths": sorted(excluded),
+        "catalog": entries,
+        "provenance": provenance,
+        "source_facts": False,
+        "policy": "static-entry-scope-v2",
+    }

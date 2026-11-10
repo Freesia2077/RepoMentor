@@ -4,9 +4,14 @@ import hashlib
 
 
 def source_span(path, lines, start, end):
-    content = "\n".join(lines[start - 1:end])
-    return {"path": path, "start_line": start, "end_line": end, "content": content,
-            "content_sha256": hashlib.sha256(content.encode()).hexdigest()}
+    content = "\n".join(lines[start - 1 : end])
+    return {
+        "path": path,
+        "start_line": start,
+        "end_line": end,
+        "content": content,
+        "content_sha256": hashlib.sha256(content.encode()).hexdigest(),
+    }
 
 
 def uncovered(start, end, spans):

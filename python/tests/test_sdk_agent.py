@@ -18,13 +18,16 @@ from repomentor.runtimes.openai_sdk import OpenAISdkRuntime
 from repomentor.sdk_agent import SdkAgentEngine
 
 ANSWER = {
-    "answer": "入口见已读取的源码。", "insufficient_evidence": False,
+    "answer": "入口见已读取的源码。",
+    "insufficient_evidence": False,
     "citations": [{"path": "src/index.ts", "start_line": 1, "end_line": 2}],
 }
 
 
 def read_step():
-    return [function_call("read_code", {"path": "src/index.ts", "start_line": 1, "end_line": 4}, call_id="r1")]
+    return [
+        function_call("read_code", {"path": "src/index.ts", "start_line": 1, "end_line": 4}, call_id="r1")
+    ]
 
 
 def final_step(answer=ANSWER):
@@ -35,7 +38,11 @@ def build(reader, tmp_path, steps, **limits):
     model = ScriptedModel(steps)
     runtime = OpenAISdkRuntime(settings(context_window=32768), scripted_model=model)
     return SdkAgentEngine(
-        reader, BM25Index.build(reader, tmp_path / "index"), runtime, tmp_path / "cache", AgentLimits(**limits),
+        reader,
+        BM25Index.build(reader, tmp_path / "index"),
+        runtime,
+        tmp_path / "cache",
+        AgentLimits(**limits),
     ), model
 
 
@@ -103,9 +110,11 @@ async def test_sdk_cancel_in_flight_and_timeout(reader, tmp_path):
 
     engine, _ = build(reader, tmp_path, [ModelStep.respond(wait)])
     token = CancellationToken()
+
     async def cancel():
         await asyncio.sleep(0.2)
         token.cancel()
+
     timer = asyncio.create_task(cancel())
     row = await engine.answer("入口？", token=token)
     await timer
@@ -128,19 +137,33 @@ async def test_sdk_conversation_request_replay_and_history(reader, tmp_path):
 
 
 def response(message=None, finish="stop", status=200):
-    return httpx2.Response(status, json={
-        "id": "fixture", "object": "chat.completion", "created": 1, "model": "fixture",
-        "choices": [{"index": 0, "message": message or {"role": "assistant", "content": json.dumps(ANSWER)},
-                     "finish_reason": finish}],
-        "usage": {"prompt_tokens": 100, "completion_tokens": 10, "total_tokens": 110},
-    })
+    return httpx2.Response(
+        status,
+        json={
+            "id": "fixture",
+            "object": "chat.completion",
+            "created": 1,
+            "model": "fixture",
+            "choices": [
+                {
+                    "index": 0,
+                    "message": message or {"role": "assistant", "content": json.dumps(ANSWER)},
+                    "finish_reason": finish,
+                }
+            ],
+            "usage": {"prompt_tokens": 100, "completion_tokens": 10, "total_tokens": 110},
+        },
+    )
 
 
 async def http_engine(reader, tmp_path, handler, **changes):
     async def verified():
         return {"verification": "mock-http"}
+
     runtime = OpenAISdkRuntime(
-        settings(**{"context_window": 32768, **changes}), transport=httpx2.MockTransport(handler), verifier=verified
+        settings(**{"context_window": 32768, **changes}),
+        transport=httpx2.MockTransport(handler),
+        verifier=verified,
     )
     return SdkAgentEngine(reader, BM25Index.build(reader, tmp_path / "idx"), runtime, tmp_path / "cache")
 
@@ -148,6 +171,7 @@ async def http_engine(reader, tmp_path, handler, **changes):
 @pytest.mark.parametrize("backend", ["generic", "ollama"])
 async def test_research_tools_then_typed_finalizer_protocol(reader, tmp_path, backend):
     calls = []
+
     def handler(request):
         body = json.loads(request.content)
         calls.append(body)
@@ -155,13 +179,30 @@ async def test_research_tools_then_typed_finalizer_protocol(reader, tmp_path, ba
         assert ("response_format" in body) == (len(calls) == 3)
         assert bool(body.get("tools")) == (len(calls) < 3)
         if len(calls) == 1:
-            return response({"role": "assistant", "content": None, "tool_calls": [{
-                "id": "read-native", "type": "function", "function": {"name": "read_code", "arguments": json.dumps({
-                    "path": "src/index.ts", "start_line": 1, "end_line": 4})}}]}, finish="tool_calls")
+            return response(
+                {
+                    "role": "assistant",
+                    "content": None,
+                    "tool_calls": [
+                        {
+                            "id": "read-native",
+                            "type": "function",
+                            "function": {
+                                "name": "read_code",
+                                "arguments": json.dumps(
+                                    {"path": "src/index.ts", "start_line": 1, "end_line": 4}
+                                ),
+                            },
+                        }
+                    ],
+                },
+                finish="tool_calls",
+            )
         if len(calls) == 2:
             assert any(m.get("role") == "tool" for m in body["messages"])
             return response({"role": "assistant", "content": "入口已核验，整理时仍需对照源码。"})
         return response()
+
     engine = await http_engine(reader, tmp_path, handler, backend=backend, presence_penalty=1.5)
     row = await engine.answer("入口在哪里？解释其行为。")
     assert row["completion"]["status"] == "success", row["stop_reason"]
@@ -179,13 +220,23 @@ async def test_sdk_prefetch_uses_delivered_fixed_context_after_overlap_dedup(rea
     from repomentor.retrieval import RetrievalSettings
 
     text, _ = reader.read("src/index.ts", 500000)
+
     def span(a, b):
-        content = "\n".join(text.splitlines()[a-1:b])
-        return dict(path="src/index.ts", start_line=a, end_line=b, content=content,
-                    content_sha256=hashlib.sha256(content.encode()).hexdigest())
+        content = "\n".join(text.splitlines()[a - 1 : b])
+        return dict(
+            path="src/index.ts",
+            start_line=a,
+            end_line=b,
+            content=content,
+            content_sha256=hashlib.sha256(content.encode()).hexdigest(),
+        )
+
     sources = [span(1, 3), span(2, 3)]
-    index = SimpleNamespace(index_id="overlap", settings=RetrievalSettings(),
-        initial_sources=lambda *a, **kw: {"sources": sources, "retrieval": {"candidates": []}, "hits": []})
+    index = SimpleNamespace(
+        index_id="overlap",
+        settings=RetrievalSettings(),
+        initial_sources=lambda *a, **kw: {"sources": sources, "retrieval": {"candidates": []}, "hits": []},
+    )
     model = ScriptedModel([final_step()])
     runtime = OpenAISdkRuntime(settings(context_window=32768), scripted_model=model)
     row = await SdkAgentEngine(reader, index, runtime, tmp_path / "sdk").answer("入口？")
@@ -198,6 +249,7 @@ async def test_sdk_prefetch_uses_delivered_fixed_context_after_overlap_dedup(rea
 @pytest.mark.parametrize("backend", ["generic", "ollama"])
 async def test_sdk_wire_protocol_usage_and_no_remote_traces(reader, tmp_path, backend):
     calls = []
+
     def handler(request):
         assert request.url.host == "127.0.0.1"
         body = json.loads(request.content)
@@ -206,14 +258,29 @@ async def test_sdk_wire_protocol_usage_and_no_remote_traces(reader, tmp_path, ba
         assert body["seed"] == 42 and body["reasoning_effort"] == "none"
         assert "response_format" not in body
         if len(calls) == 1:
-            return response({"role": "assistant", "content": None, "tool_calls": [{
-                "id": "real-call", "type": "function", "function": {
-                    "name": "read_code", "arguments": json.dumps({"path": "src/index.ts", "start_line": 1, "end_line": 4})
+            return response(
+                {
+                    "role": "assistant",
+                    "content": None,
+                    "tool_calls": [
+                        {
+                            "id": "real-call",
+                            "type": "function",
+                            "function": {
+                                "name": "read_code",
+                                "arguments": json.dumps(
+                                    {"path": "src/index.ts", "start_line": 1, "end_line": 4}
+                                ),
+                            },
+                        }
+                    ],
                 },
-            }]}, "tool_calls")
+                "tool_calls",
+            )
         assert calls[1]["messages"][-1]["role"] == "tool"
         assert calls[1]["messages"][-1]["tool_call_id"] == "real-call"
         return response()
+
     engine = await http_engine(reader, tmp_path, handler, backend=backend)
     row = await engine.answer("入口？")
     assert row["completion"]["status"] == "success", row["decisions"]
@@ -223,6 +290,7 @@ async def test_sdk_wire_protocol_usage_and_no_remote_traces(reader, tmp_path, ba
 @pytest.mark.parametrize("failure", ["oversize", "http500", "truncated", "bad_json"])
 async def test_sdk_wire_failures_do_not_retry(reader, tmp_path, failure):
     calls = []
+
     def handler(request):
         calls.append(request)
         if failure == "http500":
@@ -230,6 +298,7 @@ async def test_sdk_wire_failures_do_not_retry(reader, tmp_path, failure):
         if failure == "truncated":
             return response(finish="length")
         return response({"role": "assistant", "content": "not JSON"})
+
     engine = await http_engine(reader, tmp_path, handler)
     row = await engine.answer("入口？" + ("x" * 40000 if failure == "oversize" else ""))
     assert row["completion"]["status"] != "success"
@@ -246,18 +315,34 @@ async def test_sdk_wire_failures_do_not_retry(reader, tmp_path, failure):
 
 async def test_sdk_disabled_tools_keep_observations_for_final_answer(reader, tmp_path):
     seen = []
+
     def handler(request):
         body = json.loads(request.content)
         seen.append(body)
         if len(seen) == 1:
-            return response({"role": "assistant", "content": None, "tool_calls": [{
-                "id": "last-tool", "type": "function", "function": {
-                    "name": "read_code", "arguments": json.dumps({"path": "src/index.ts", "start_line": 1, "end_line": 3})
+            return response(
+                {
+                    "role": "assistant",
+                    "content": None,
+                    "tool_calls": [
+                        {
+                            "id": "last-tool",
+                            "type": "function",
+                            "function": {
+                                "name": "read_code",
+                                "arguments": json.dumps(
+                                    {"path": "src/index.ts", "start_line": 1, "end_line": 3}
+                                ),
+                            },
+                        }
+                    ],
                 },
-            }]}, "tool_calls")
+                "tool_calls",
+            )
         assert body.get("tool_choice") == "none"
         assert body["messages"][-1]["role"] == "user" and "response_format" in body
         return response()
+
     engine = await http_engine(reader, tmp_path, handler, backend="ollama")
     engine.limits = AgentLimits(max_decisions=2)
     row = await engine.answer("入口？")
@@ -267,20 +352,37 @@ async def test_sdk_disabled_tools_keep_observations_for_final_answer(reader, tmp
 
 async def test_sdk_truncated_research_uses_reserved_finalizer_without_partial_draft(reader, tmp_path):
     seen = []
+
     def handler(request):
         body = json.loads(request.content)
         seen.append(body)
         if len(seen) == 1:
-            return response({"role": "assistant", "content": None, "tool_calls": [{
-                "id": "source", "type": "function", "function": {
-                    "name": "read_code", "arguments": json.dumps({"path": "src/index.ts", "start_line": 1, "end_line": 4})}
-            }]}, "tool_calls")
+            return response(
+                {
+                    "role": "assistant",
+                    "content": None,
+                    "tool_calls": [
+                        {
+                            "id": "source",
+                            "type": "function",
+                            "function": {
+                                "name": "read_code",
+                                "arguments": json.dumps(
+                                    {"path": "src/index.ts", "start_line": 1, "end_line": 4}
+                                ),
+                            },
+                        }
+                    ],
+                },
+                "tool_calls",
+            )
         if len(seen) == 2:
             return response({"role": "assistant", "content": "UNTRUSTED_PARTIAL_DRAFT"}, "length")
         assert "UNTRUSTED_PARTIAL_DRAFT" not in json.dumps(body)
         assert "response_format" in body and body.get("tool_choice") == "none"
         assert body["max_tokens"] == 1536
         return response()
+
     engine = await http_engine(reader, tmp_path, handler, max_tokens=1536)
     row = await engine.answer("入口？")
     assert row["completion"]["status"] == "success"
@@ -301,9 +403,13 @@ async def test_sdk_report_roles_share_tools_pass_summaries_and_replay(reader, tm
     steps = []
     for stage in ("explorer", "mentor", "contributor"):
         value = stub.outputs[stage]
-        value["evidenceClaims"] = [{"claim": "fixture", "confidence": "low", "evidence": [
-            {"path": "src/index.ts", "supports": "fixture source"}
-        ]}]
+        value["evidenceClaims"] = [
+            {
+                "claim": "fixture",
+                "confidence": "low",
+                "evidence": [{"path": "src/index.ts", "supports": "fixture source"}],
+            }
+        ]
         # This SDK fixture reads one file per role; the separate stub report reads more.
         value["evidenceCoverage"]["examinedFiles"] = ["src/index.ts"]
         for field in ("entryPoints", "moduleMap", "readingPath", "entryFiles"):
@@ -333,8 +439,13 @@ async def test_sdk_report_blocks_explicit_out_of_bounds_evidence_and_keeps_raw_a
     value = (await run_report(reader, StubRuntime())).outputs["explorer"]
     value["entryPoints"], value["moduleMap"] = [], []
     value["evidenceCoverage"] = {"examinedFiles": ["src/index.ts"], "gaps": []}
-    value["evidenceClaims"] = [{"claim": "bad range", "confidence": "low", "evidence": [
-        {"path": "src/index.ts", "supports": "L999-L1000"}]}]
+    value["evidenceClaims"] = [
+        {
+            "claim": "bad range",
+            "confidence": "low",
+            "evidence": [{"path": "src/index.ts", "supports": "L999-L1000"}],
+        }
+    ]
     engine, model = build(reader, tmp_path, [read_step(), final_step(value)])
     row = await engine.answer("介绍仓库", output_type=ExplorerOutput)
     assert row["completion"]["status"] == "failed" and row["stop_reason"] == "report_grounding"
@@ -346,8 +457,16 @@ async def test_sdk_report_blocks_explicit_out_of_bounds_evidence_and_keeps_raw_a
 
 
 async def test_sdk_draft_and_finalizer_resume_without_repeating_research(reader, tmp_path):
-    engine, model = build(reader, tmp_path, [read_step(), [assistant_message("查到入口，待整理。")],
-                                           ConnectionError("format transport"), final_step()])
+    engine, model = build(
+        reader,
+        tmp_path,
+        [
+            read_step(),
+            [assistant_message("查到入口，待整理。")],
+            ConnectionError("format transport"),
+            final_step(),
+        ],
+    )
     failed = await engine.answer("入口？")
     assert failed["checkpoint"]["phase"] == "finalize" and failed["new_model_requests"] == 3
     recovered = await engine.answer("入口？", refresh=True)
@@ -357,6 +476,7 @@ async def test_sdk_draft_and_finalizer_resume_without_repeating_research(reader,
 
 def test_sdk_cli_defaults_and_removed_engine():
     from repomentor.cli import parser
+
     assert parser().parse_args(["report", "--repository", "developit/mitt"]).runtime == "sdk"
     with pytest.raises(SystemExit):
         parser().parse_args(["ask", "--repository", "developit/mitt", "--question", "q", "--engine", "agent"])
@@ -375,8 +495,10 @@ async def test_sdk_normalizes_default_limits_for_cache(reader, tmp_path):
 
 async def test_sdk_finalizer_keeps_followup_referent(reader, tmp_path):
     engine, model = build(reader, tmp_path, [read_step(), final_step()], max_decisions=2)
-    history = [{"role": "user", "content": "src/index.ts 是入口吗？"},
-               {"role": "assistant", "content": "需要核对源码。"}]
+    history = [
+        {"role": "user", "content": "src/index.ts 是入口吗？"},
+        {"role": "assistant", "content": "需要核对源码。"},
+    ]
     row = await engine.answer("那么它呢？", history=history, query="那么它呢？\n追问对象：src/index.ts")
     assert row["completion"]["status"] == "success"
     assert model.calls[-1].input[:2] == history
@@ -395,8 +517,9 @@ async def test_sdk_old_session_rejected_before_loading_models(tmp_path, monkeypa
     store.save(state)
     before = store.path(state["session_id"]).read_bytes()
     monkeypatch.setattr(cli, "open_reader", lambda *a: pytest.fail("must reject before loading repository"))
-    args = cli.parser().parse_args(["--data-dir", str(tmp_path), "chat", "--session", state["session_id"],
-                                   "--message", "next"])
+    args = cli.parser().parse_args(
+        ["--data-dir", str(tmp_path), "chat", "--session", state["session_id"], "--message", "next"]
+    )
     with pytest.raises(ConfigurationError, match="removed engine"):
         await cli.rag_command(args)
     assert store.path(state["session_id"]).read_bytes() == before
@@ -413,9 +536,20 @@ async def test_sdk_cli_pins_model_limits_and_reuses_batch_cache(reader, tmp_path
     monkeypatch.setattr(cli, "load_chat_settings", lambda *a: engine.runtime.settings)
     monkeypatch.setattr(retrieval_factory, "build_index", lambda *a, **kw: engine.index)
     monkeypatch.setattr(openai_sdk, "OpenAISdkRuntime", lambda *a: engine.runtime)
-    args = cli.parser().parse_args(["--data-dir", str(tmp_path), "chat", "--snapshot-id",
-                                   reader.snapshot.snapshot_id, "--message", "请解释", "--request-id", "first",
-                                   *engine_args])
+    args = cli.parser().parse_args(
+        [
+            "--data-dir",
+            str(tmp_path),
+            "chat",
+            "--snapshot-id",
+            reader.snapshot.snapshot_id,
+            "--message",
+            "请解释",
+            "--request-id",
+            "first",
+            *engine_args,
+        ]
+    )
     assert await cli.rag_command(args) == 0
     state = json.loads(next((tmp_path / "conversations").glob("*.json")).read_text(encoding="utf-8"))
     assert state["engine"] == "sdk" and type(state["agent_limits"]["timeout_seconds"]) is float
@@ -426,16 +560,31 @@ async def test_sdk_cli_pins_model_limits_and_reuses_batch_cache(reader, tmp_path
     initial_task_context = json.loads(state["turns"][0]["result"]["input"][-1]["content"])["task_context"]
     replay = await batch.answer("请解释", task_context=initial_task_context)
     assert replay["new_model_requests"] == 0 and replay["cache_hit"]
-    for extra, match in ((["--engine", "rag"], "engine"), (["--agent-max-tools", "3"], "limits"),
-                         (["--retriever", "vector"], "retrieval")):
-        parsed = cli.parser().parse_args(["--data-dir", str(tmp_path), "chat", "--session", state["session_id"],
-                                         "--message", "next", *extra])
+    for extra, match in (
+        (["--engine", "rag"], "engine"),
+        (["--agent-max-tools", "3"], "limits"),
+        (["--retriever", "vector"], "retrieval"),
+    ):
+        parsed = cli.parser().parse_args(
+            [
+                "--data-dir",
+                str(tmp_path),
+                "chat",
+                "--session",
+                state["session_id"],
+                "--message",
+                "next",
+                *extra,
+            ]
+        )
         with pytest.raises(ValueError, match=match):
             await cli.rag_command(parsed)
     model.assert_complete()
 
 
-async def test_cli_explicit_fixed_rag_and_legacy_session_keep_shared_lexical_policy(reader, tmp_path, monkeypatch):
+async def test_cli_explicit_fixed_rag_and_legacy_session_keep_shared_lexical_policy(
+    reader, tmp_path, monkeypatch
+):
     from test_rag import FakeChat
 
     from repomentor import cli, retrieval_factory
@@ -443,32 +592,50 @@ async def test_cli_explicit_fixed_rag_and_legacy_session_keep_shared_lexical_pol
 
     runtime, selected = FakeChat(), []
     index = BM25Index.build(reader, tmp_path / "idx")
+
     def build_index(*a, **kw):
         selected.append(kw)
         return index
+
     monkeypatch.setattr(cli, "open_reader", lambda *a: reader)
     monkeypatch.setattr(cli, "load_chat_settings", lambda *a: runtime.settings)
     monkeypatch.setattr(retrieval_factory, "build_index", build_index)
     monkeypatch.setattr(chat, "ChatCompletionsRuntime", lambda *a: runtime)
-    monkeypatch.setattr(openai_sdk, "OpenAISdkRuntime", lambda *a: pytest.fail("fixed session must not start SDK"))
-    args = cli.parser().parse_args(["--data-dir", str(tmp_path), "chat", "--snapshot-id",
-                                   reader.snapshot.snapshot_id, "--message", "helper如何实现？", "--engine", "rag"])
+    monkeypatch.setattr(
+        openai_sdk, "OpenAISdkRuntime", lambda *a: pytest.fail("fixed session must not start SDK")
+    )
+    args = cli.parser().parse_args(
+        [
+            "--data-dir",
+            str(tmp_path),
+            "chat",
+            "--snapshot-id",
+            reader.snapshot.snapshot_id,
+            "--message",
+            "helper如何实现？",
+            "--engine",
+            "rag",
+        ]
+    )
     assert await cli.rag_command(args) == 0
     state = json.loads(next((tmp_path / "conversations").glob("*.json")).read_text(encoding="utf-8"))
     assert state.get("engine", "rag") == "rag" and runtime.calls == 1
     assert state["turns"][0]["result"]["mode"] == "bm25"
     assert selected[0]["retriever"] == state["retrieval_config"]["retriever"] == "bm25"
     assert selected[0]["device"] == "cpu"
-    resumed = cli.parser().parse_args(["--data-dir", str(tmp_path), "chat", "--session", state["session_id"],
-                                      "--message", "再解释helper"])
+    resumed = cli.parser().parse_args(
+        ["--data-dir", str(tmp_path), "chat", "--session", state["session_id"], "--message", "再解释helper"]
+    )
     assert await cli.rag_command(resumed) == 0
     assert runtime.calls == 2
 
 
 async def test_sdk_backend_failure_and_precancel_send_nothing(reader, tmp_path):
     engine, model = build(reader, tmp_path, [])
+
     async def fail():
         raise ValueError("revision drift")
+
     engine.runtime.verify_backend = fail
     row = await engine.answer("version")
     assert row["completion"]["status"] == "failed" and row["new_model_requests"] == 0
@@ -481,30 +648,51 @@ async def test_sdk_backend_failure_and_precancel_send_nothing(reader, tmp_path):
 
 def test_sdk_merge_does_not_fill_unread_gaps():
     from repomentor.sdk_agent import merged_context
-    spans = [{"path": "x", "start_line": 1, "content": "a\nb"},
-             {"path": "x", "start_line": 2, "content": "b\nc"},
-             {"path": "x", "start_line": 5, "content": "e"}]
+
+    spans = [
+        {"path": "x", "start_line": 1, "content": "a\nb"},
+        {"path": "x", "start_line": 2, "content": "b\nc"},
+        {"path": "x", "start_line": 5, "content": "e"},
+    ]
     result = merged_context(spans)
     assert [(r["start_line"], r["end_line"]) for r in result] == [(1, 3), (5, 5)]
 
 
 def seeded(reader):
     content = "\n".join(reader.read("src/index.ts", 500000)[0].splitlines()[:2])
-    span = {"path": "src/index.ts", "start_line": 1, "end_line": 2, "content": content,
-            "content_sha256": hashlib.sha256(content.encode()).hexdigest()}
+    span = {
+        "path": "src/index.ts",
+        "start_line": 1,
+        "end_line": 2,
+        "content": content,
+        "content_sha256": hashlib.sha256(content.encode()).hexdigest(),
+    }
     return FrozenSourcesIndex("frozen", {"sources": [span], "retrieval": {"candidates": []}, "hits": []})
 
 
 async def test_permission_control_preserves_research_and_finalization(reader, tmp_path):
-    answer = {"answer": "入口由源码支持。", "citations": [{"path": "src/index.ts", "start_line": 1, "end_line": 2}],
-              "insufficient_evidence": False}
+    answer = {
+        "answer": "入口由源码支持。",
+        "citations": [{"path": "src/index.ts", "start_line": 1, "end_line": 2}],
+        "insufficient_evidence": False,
+    }
     rows, models = [], []
     for permission in (True, False):
-        model = ScriptedModel([[assistant_message("已读取入口声明；整理时仍需核对源码。")],
-                               [assistant_message(json.dumps(answer))]])
+        model = ScriptedModel(
+            [
+                [assistant_message("已读取入口声明；整理时仍需核对源码。")],
+                [assistant_message(json.dumps(answer))],
+            ]
+        )
         runtime = OpenAISdkRuntime(settings(context_window=32768), scripted_model=model)
-        row = await SdkAgentEngine(reader, seeded(reader), runtime, tmp_path / "same-cache",
-            AgentLimits(max_decisions=3), tools_enabled=permission).answer("入口在哪里？")
+        row = await SdkAgentEngine(
+            reader,
+            seeded(reader),
+            runtime,
+            tmp_path / "same-cache",
+            AgentLimits(max_decisions=3),
+            tools_enabled=permission,
+        ).answer("入口在哪里？")
         rows.append(row)
         models.append(model)
         assert row["completion"]["status"] == "success", row["stop_reason"]
@@ -536,31 +724,48 @@ async def test_sdk_native_answer_submission_finishes_without_format_call(reader,
 
 async def test_submission_recovery_requires_model_to_see_read_result(reader, tmp_path):
     value = {**ANSWER, "citations": [{"path": "src/index.ts", "start_line": 1, "end_line": 3}]}
-    model = ScriptedModel([
-        [function_call("submit_answer", value, call_id="unseen")],
-        [function_call("read_code", {"path": "src/index.ts", "start_line": 3, "end_line": 3}, call_id="read"),
-         function_call("submit_answer", value, call_id="same-batch")],
-        [function_call("submit_answer", value, call_id="seen")],
-    ])
+    model = ScriptedModel(
+        [
+            [function_call("submit_answer", value, call_id="unseen")],
+            [
+                function_call(
+                    "read_code", {"path": "src/index.ts", "start_line": 3, "end_line": 3}, call_id="read"
+                ),
+                function_call("submit_answer", value, call_id="same-batch"),
+            ],
+            [function_call("submit_answer", value, call_id="seen")],
+        ]
+    )
     runtime = OpenAISdkRuntime(settings(context_window=32768), scripted_model=model)
     row = await SdkAgentEngine(reader, seeded(reader), runtime, tmp_path / "cache").answer("入口？")
     assert row["completion"]["status"] == "success", row["stop_reason"]
     assert row["new_model_requests"] == 3 and row["tool_calls"] == 1 and row["answer"] == value
     rejected = [e for e in row["local_trace"] if e["event"] == "answer_submission_rejected"]
     assert len(rejected) == 2
-    assert all(e["missing_ranges"] == [{"path": "src/index.ts", "start_line": 3, "end_line": 3}] for e in rejected)
-    feedback = [json.loads(item["output"]) for item in model.calls[1].input
-                if item.get("type") == "function_call_output"]
+    assert all(
+        e["missing_ranges"] == [{"path": "src/index.ts", "start_line": 3, "end_line": 3}] for e in rejected
+    )
+    feedback = [
+        json.loads(item["output"])
+        for item in model.calls[1].input
+        if item.get("type") == "function_call_output"
+    ]
     assert feedback[0]["accepted"] is False and feedback[0]["error"] == "invalid_citations"
     model.assert_complete()
 
 
 async def test_invalid_submissions_cannot_exceed_global_model_budget(reader, tmp_path):
     fallback = {"answer": "缺少实现，无法判断。", "citations": [], "insufficient_evidence": True}
-    engine, model = build(reader, tmp_path, [
-        [function_call("submit_answer", ANSWER, call_id="bad1")],
-        [function_call("submit_answer", ANSWER, call_id="bad2")], final_step(fallback),
-    ], max_decisions=3)
+    engine, model = build(
+        reader,
+        tmp_path,
+        [
+            [function_call("submit_answer", ANSWER, call_id="bad1")],
+            [function_call("submit_answer", ANSWER, call_id="bad2")],
+            final_step(fallback),
+        ],
+        max_decisions=3,
+    )
     row = await engine.answer("入口？")
     assert row["completion"]["status"] == "success" and row["answer"] == fallback
     assert row["new_model_requests"] == 3 and row["tool_calls"] == 0

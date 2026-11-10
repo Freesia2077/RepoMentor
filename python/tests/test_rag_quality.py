@@ -21,8 +21,17 @@ def lexical_fixture():
     for i in range(26):
         path = f"src/file{i}.py" if i < 24 else "docs/guide.md" if i == 24 else "docs-other/guide.md"
         content = "needle " * 20 if i < 24 else "needle " + "irrelevant " * 80
-        chunks.append(CodeChunk(snapshot_id="s", chunk_id=str(i), path=path, start_line=1, end_line=1,
-                                content=content, content_hash=hashlib.sha256(content.encode()).hexdigest()).model_dump())
+        chunks.append(
+            CodeChunk(
+                snapshot_id="s",
+                chunk_id=str(i),
+                path=path,
+                start_line=1,
+                end_line=1,
+                content=content,
+                content_hash=hashlib.sha256(content.encode()).hexdigest(),
+            ).model_dump()
+        )
     return BM25Index({"index_id": "fixture", "chunks": chunks}, RetrievalSettings())
 
 
@@ -79,11 +88,21 @@ def test_symbol_expansion_selects_nested_unit_and_decorators():
 
 
 def test_expanded_reads_and_search_preserve_source_and_explicit_truncation(tmp_path):
-    source = "def needle():\n" + "\n".join(f"    value_{i} = {i}" for i in range(80)) + "\n    return value_79"
-    reader = SimpleNamespace(snapshot=SimpleNamespace(snapshot_id="s"), paths=["a.py"],
-                             read=lambda path, size: (source, False))
-    chunk = CodeChunk(snapshot_id="s", chunk_id="a", path="a.py", start_line=1, end_line=82,
-                      content=source, content_hash=hashlib.sha256(source.encode()).hexdigest())
+    source = (
+        "def needle():\n" + "\n".join(f"    value_{i} = {i}" for i in range(80)) + "\n    return value_79"
+    )
+    reader = SimpleNamespace(
+        snapshot=SimpleNamespace(snapshot_id="s"), paths=["a.py"], read=lambda path, size: (source, False)
+    )
+    chunk = CodeChunk(
+        snapshot_id="s",
+        chunk_id="a",
+        path="a.py",
+        start_line=1,
+        end_line=82,
+        content=source,
+        content_hash=hashlib.sha256(source.encode()).hexdigest(),
+    )
     index = BM25Index({"index_id": "i", "chunks": [chunk.model_dump()]}, RetrievalSettings())
     env = RepositoryEnvironment(reader, index, AgentLimits(max_observation_bytes=1200))
     result = env.step({"call_id": "s", "tool": "search_code", "arguments": {"query": "needle"}})
@@ -91,29 +110,50 @@ def test_expanded_reads_and_search_preserve_source_and_explicit_truncation(tmp_p
     hit, span = result["observation"]["hits"][0], result["source_spans"][0]
     assert hit["truncated"] and hit["next_line"] == span["end_line"] + 1
     assert hit["unit"]["end_line"] == 82 and len(result["visible_json"].encode()) <= 1200
-    assert span["content"] == "\n".join(source.splitlines()[:span["end_line"]])
+    assert span["content"] == "\n".join(source.splitlines()[: span["end_line"]])
     env.reset({"question": "needle"})
-    read = env.step({"call_id": "r", "tool": "read_code", "arguments": {
-        "path": "a.py", "start_line": 5, "end_line": 5, "expand": "symbol"}})
+    read = env.step(
+        {
+            "call_id": "r",
+            "tool": "read_code",
+            "arguments": {"path": "a.py", "start_line": 5, "end_line": 5, "expand": "symbol"},
+        }
+    )
     assert read["source_spans"][0]["start_line"] == 1
     assert read["observation"]["truncated"] and read["observation"]["unit"]["end_line"] == 82
 
 
 def test_packing_keeps_earlier_relevant_span_and_never_fills_unread_gaps():
-    context = [{"path": "a.py", "start_line": i, "end_line": i, "content": text,
-                "content_sha256": hashlib.sha256(text.encode()).hexdigest()}
-               for i, text in ((1, "needle handler"), (5, "unrelated stuff"))]
+    context = [
+        {
+            "path": "a.py",
+            "start_line": i,
+            "end_line": i,
+            "content": text,
+            "content_sha256": hashlib.sha256(text.encode()).hexdigest(),
+        }
+        for i, text in ((1, "needle handler"), (5, "unrelated stuff"))
+    ]
     selected, omitted = pack_observed_context(context, "needle", lambda spans: len(spans) <= 1)
     assert selected == context[:1] and omitted[0]["start_line"] == 5
     assert "content" not in omitted[0]
 
 
 def mentor(paths=()):
-    return {"architectureOverview": "信息不足，尚未核验。", "dependencyGraph": {},
-            "readingPath": [{"step": i, "file": p, "why": "阅读"} for i, p in enumerate(paths, 1)],
-            "keyPatterns": [], "codeConventions": [], "evidenceClaims": [],
-            "evidenceCoverage": {"examinedFiles": [], "gaps": [{"kind": "missing_evidence",
-                "subject": "实现", "summary": "尚未核验", "severity": "medium"}]}}
+    return {
+        "architectureOverview": "信息不足，尚未核验。",
+        "dependencyGraph": {},
+        "readingPath": [{"step": i, "file": p, "why": "阅读"} for i, p in enumerate(paths, 1)],
+        "keyPatterns": [],
+        "codeConventions": [],
+        "evidenceClaims": [],
+        "evidenceCoverage": {
+            "examinedFiles": [],
+            "gaps": [
+                {"kind": "missing_evidence", "subject": "实现", "summary": "尚未核验", "severity": "medium"}
+            ],
+        },
+    }
 
 
 @pytest.mark.parametrize("path,reason", [("fake.py", "not_in_snapshot"), ("README.md", "not_observed")])

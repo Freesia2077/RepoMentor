@@ -43,36 +43,61 @@ def parser():
     report.add_argument("--output", type=Path)
     report.add_argument("--refresh", action="store_true", help="explicitly rerun cached local report stages")
     report.add_argument("--agent-max-tools", type=int, help="SDK tool budget per report role (default: 6)")
-    report.add_argument("--agent-max-decisions", type=int, help="SDK model decision budget per report role (default: 6)")
-    report.add_argument("--agent-timeout", type=float, help="SDK deadline per report role in seconds (default: 300)")
+    report.add_argument(
+        "--agent-max-decisions", type=int, help="SDK model decision budget per report role (default: 6)"
+    )
+    report.add_argument(
+        "--agent-timeout", type=float, help="SDK deadline per report role in seconds (default: 300)"
+    )
     export = commands.add_parser("export", help="export a previously saved run, without re-execution")
     export.add_argument("run_id")
     export.add_argument("--output", type=Path, required=True)
-    inspect = commands.add_parser("inspect-run", help="render a saved answer and source/trace as Markdown (offline)")
+    inspect = commands.add_parser(
+        "inspect-run", help="render a saved answer and source/trace as Markdown (offline)"
+    )
     inspect.add_argument("record", type=Path)
     inspect.add_argument("--case-id", help="select a saved case from benchmark JSONL")
     inspect.add_argument("--output", type=Path, help="write Markdown to a file; default: stdout")
     questions = commands.add_parser("questions", help="inspect the unified question catalog offline")
-    questions.add_argument("action", nargs="?", choices=("stats", "list", "show", "verify", "rebuild"), default="stats")
+    questions.add_argument(
+        "action", nargs="?", choices=("stats", "list", "show", "verify", "rebuild"), default="stats"
+    )
     questions.add_argument("question_id", nargs="?")
     questions.add_argument("--scope", choices=("current", "all"), default="current")
     questions.add_argument("--repository", help="repository owner/name, e.g. pallets-eco/blinker")
     questions.add_argument("--status", choices=("reviewed", "generated", "retrieval_only", "registered_only"))
     questions.add_argument("--root", type=Path, default=python_home())
     questions.add_argument("--catalog", type=Path, default=python_home() / "experiments/question-bank.json")
-    benchmark = commands.add_parser("benchmark", help="compare existing fixed RAG and SDK engines on the same public questions")
+    benchmark = commands.add_parser(
+        "benchmark", help="compare existing fixed RAG and SDK engines on the same public questions"
+    )
     benchmark.add_argument("action", choices=("prepare", "run", "summary", "review", "verify", "finalize"))
     benchmark.add_argument("--output", type=Path, required=True, help="explicit comparison directory")
-    benchmark.add_argument("--conditions", nargs="+", default=["none", "bm25", "bm25_code", "hybrid_rerank", "agentic"])
-    benchmark.add_argument("--oracle-count", type=int, default=12, help="source-sufficient diagnostics on development questions only")
+    benchmark.add_argument(
+        "--conditions", nargs="+", default=["none", "bm25", "bm25_code", "hybrid_rerank", "agentic"]
+    )
+    benchmark.add_argument(
+        "--oracle-count",
+        type=int,
+        default=12,
+        help="source-sufficient diagnostics on development questions only",
+    )
     benchmark.add_argument("--agent-max-decisions", type=int, default=6)
     benchmark.add_argument("--retrieval-device", choices=("cpu", "cuda"), default="cuda")
     benchmark.add_argument("--top-k", type=int, default=6)
     benchmark.add_argument("--candidate-k", type=int, default=20)
     benchmark.add_argument("--chunk-size", type=int, default=768)
     benchmark.add_argument("--source-bytes", type=int, default=8000)
-    benchmark.add_argument("--plan", type=Path, help="freeze an explicit bounded follow-up plan; embeds it in the same four-file suite")
-    benchmark.add_argument("--authorized-new-requests", type=int, help="explicitly owner-authorized cap; prepare never generates answers")
+    benchmark.add_argument(
+        "--plan",
+        type=Path,
+        help="freeze an explicit bounded follow-up plan; embeds it in the same four-file suite",
+    )
+    benchmark.add_argument(
+        "--authorized-new-requests",
+        type=int,
+        help="explicitly owner-authorized cap; prepare never generates answers",
+    )
     evaluation = commands.add_parser(
         "eval", help="sequential fixed-input JSONL evaluation with checkpoint cache"
     )
@@ -105,12 +130,18 @@ def parser():
         )
         command.add_argument("--retrieval-settings", type=Path)
         command.add_argument("--retrieval-device", choices=("cuda", "cpu"), default=None)
-        command.add_argument("--code-aware", action=argparse.BooleanOptionalAction, default=None,
-                             help="enable symbol and static-call retrieval augmentation")
+        command.add_argument(
+            "--code-aware",
+            action=argparse.BooleanOptionalAction,
+            default=None,
+            help="enable symbol and static-call retrieval augmentation",
+        )
         command.add_argument("--top-k", type=int, help="maximum initial source units (1-30)")
         command.add_argument("--candidate-k", type=int, help="retrieval candidate limit, at least top-k")
         command.add_argument("--chunk-size", type=int, help="syntax chunk limit in UTF-8 bytes (128-2048)")
-        command.add_argument("--source-bytes", type=int, help="initial source byte allowance; total model window still applies")
+        command.add_argument(
+            "--source-bytes", type=int, help="initial source byte allowance; total model window still applies"
+        )
         command.add_argument("--max-lines", type=int, help="line chunker maximum lines")
         command.add_argument("--overlap-lines", type=int, help="line chunker overlap, smaller than max-lines")
         command.add_argument(
@@ -120,11 +151,19 @@ def parser():
             help="disable recorded bilingual query expansion",
         )
         if name != "index":
-            command.add_argument("--engine", choices=("sdk", "rag"), default=None,
-                                 help="sdk (default tool-assisted research), rag (fixed retrieval comparison)")
+            command.add_argument(
+                "--engine",
+                choices=("sdk", "rag"),
+                default=None,
+                help="sdk (default tool-assisted research), rag (fixed retrieval comparison)",
+            )
             command.add_argument("--agent-max-tools", type=int, default=None)
-            command.add_argument("--agent-specialists", choices=("off", "auto"), default=None,
-                                 help="SDK experts share the same episode budget; off is the baseline")
+            command.add_argument(
+                "--agent-specialists",
+                choices=("off", "auto"),
+                default=None,
+                help="SDK experts share the same episode budget; off is the baseline",
+            )
             command.add_argument("--agent-max-decisions", type=int, default=None)
             command.add_argument("--agent-timeout", type=float, default=None)
             command.add_argument(
@@ -133,7 +172,11 @@ def parser():
                 help="explicit Chat Completions profile; overrides REPOMENTOR_PY_* and the default file",
             )
             command.add_argument("--output", type=Path)
-            command.add_argument("--answer-max-tokens", type=int, help="override final answer allowance within the configured context")
+            command.add_argument(
+                "--answer-max-tokens",
+                type=int,
+                help="override final answer allowance within the configured context",
+            )
         if name == "ask":
             command.add_argument("--question", required=True)
             command.add_argument("--mode", choices=("bm25", "none"), default="bm25")
@@ -185,7 +228,9 @@ async def rag_command(args):
     store = ConversationStore(args.data_dir / "conversations") if args.command == "chat" else None
     state = store.load(args.session) if store and args.session else None
     if state and state.get("engine") not in (None, "sdk", "rag"):
-        raise ConfigurationError("This session uses a removed engine; preserve it and create a new SDK session.")
+        raise ConfigurationError(
+            "This session uses a removed engine; preserve it and create a new SDK session."
+        )
     engine_name = getattr(args, "engine", None) or (state.get("engine", "rag") if state else "sdk")
     if state and engine_name != state.get("engine", "rag"):
         raise ValueError("session engine is pinned; create a new session to switch")
@@ -195,14 +240,25 @@ async def rag_command(args):
         raise ValueError("provide a repository or an existing session")
     reader = open_reader(args, state["snapshot_id"] if state else None)
     from .retrieval_policy import DEFAULT_RETRIEVAL, RetrievalPolicy
+
     defaults = (RetrievalPolicy() if args.command == "index" else DEFAULT_RETRIEVAL).model_dump()
     selected = {
         "chunker": args.chunker,
         "retriever": args.retriever,
         "device": args.retrieval_device,
         "query_expansion": not args.literal_query if args.literal_query is not None else None,
-        **{name: getattr(args, name, None) for name in
-           ("code_aware", "top_k", "candidate_k", "chunk_size", "source_bytes", "max_lines", "overlap_lines")},
+        **{
+            name: getattr(args, name, None)
+            for name in (
+                "code_aware",
+                "top_k",
+                "candidate_k",
+                "chunk_size",
+                "source_bytes",
+                "max_lines",
+                "overlap_lines",
+            )
+        },
     }
     pinned = {**defaults, **((state or {}).get("retrieval_config") or {})}
     if state and any(value is not None and value != pinned[key] for key, value in selected.items()):
@@ -218,11 +274,14 @@ async def rag_command(args):
         raise ValueError("session memory/rewrite policy is pinned")
     profile_path = getattr(args, "settings", None)
     needs_profile = args.command != "index" or (
-        selected["retriever"] != "bm25" and selected["device"] == "cuda" and (profile_path or model_settings_path()).exists()
+        selected["retriever"] != "bm25"
+        and selected["device"] == "cuda"
+        and (profile_path or model_settings_path()).exists()
     )
     profile = load_chat_settings(profile_path) if needs_profile else None
     if profile and getattr(args, "answer_max_tokens", None) is not None:
         from .runtimes.chat import ChatSettings
+
         profile = ChatSettings.model_validate({**profile.model_dump(), "max_tokens": args.answer_max_tokens})
     index = build_index(
         reader, storage=args.data_dir, retrieval_settings=args.retrieval_settings, profile=profile, **selected
@@ -269,10 +328,19 @@ async def rag_command(args):
         mode = args.agent_specialists or (state or {}).get("collaboration_mode", "off")
         if state and mode != state.get("collaboration_mode", "off"):
             raise ValueError("session collaboration policy is pinned; create a new session")
-        engine = SdkAgentEngine(reader, index, OpenAISdkRuntime(profile), args.data_dir / "sdk/cache", limits,
-                                collaboration=CollaborationSettings(mode=mode))
-        identity = {"config_id": engine.runtime.settings.config_id, "index_id": index.index_id,
-                    "runtime": sdk_version()}
+        engine = SdkAgentEngine(
+            reader,
+            index,
+            OpenAISdkRuntime(profile),
+            args.data_dir / "sdk/cache",
+            limits,
+            collaboration=CollaborationSettings(mode=mode),
+        )
+        identity = {
+            "config_id": engine.runtime.settings.config_id,
+            "index_id": index.index_id,
+            "runtime": sdk_version(),
+        }
         if state and state.get("agent_identity") != identity:
             raise ValueError("session agent model/index identity changed; create a new session")
     else:
@@ -364,11 +432,18 @@ async def async_main(args):
     if args.command == "inspect-run":
         from .presentation import render_run
         from .records import atomic_write
+
         raw = args.record.read_text(encoding="utf-8")
-        rows = [json.loads(s) for s in raw.splitlines() if s.strip()] if args.record.suffix == ".jsonl" else [json.loads(raw)]
+        rows = (
+            [json.loads(s) for s in raw.splitlines() if s.strip()]
+            if args.record.suffix == ".jsonl"
+            else [json.loads(raw)]
+        )
         matches = [r for r in rows if not args.case_id or r.get("case_id") == args.case_id]
         if len(matches) != 1:
-            raise ConfigurationError("select exactly one saved case with --case-id; use questions show to find case IDs")
+            raise ConfigurationError(
+                "select exactly one saved case with --case-id; use questions show to find case IDs"
+            )
         rendered = render_run(matches[0])
         if args.output:
             atomic_write(args.output, rendered)
@@ -443,9 +518,14 @@ async def async_main(args):
     if args.command == "report":
         if args.timeout <= 0 or (args.call_timeout is not None and args.call_timeout <= 0):
             raise ValueError("timeouts must be positive")
-        if args.runtime != "sdk" and any(v is not None for v in (
-            args.agent_max_tools, args.agent_max_decisions, args.agent_timeout,
-        )):
+        if args.runtime != "sdk" and any(
+            v is not None
+            for v in (
+                args.agent_max_tools,
+                args.agent_max_decisions,
+                args.agent_timeout,
+            )
+        ):
             raise ValueError("agent budgets apply only to the SDK report runtime")
         if args.runtime == "sdk":
             from .agent_tools import AgentLimits
@@ -464,8 +544,10 @@ async def async_main(args):
             settings = load_chat_settings(args.settings)
             # Reports need more output than short QA; budget and configuration ID remain explicit.
             from .runtimes.chat import ChatSettings
-            settings = ChatSettings.model_validate({**settings.model_dump(),
-                "max_tokens": args.answer_max_tokens or 2048})
+
+            settings = ChatSettings.model_validate(
+                {**settings.model_dump(), "max_tokens": args.answer_max_tokens or 2048}
+            )
             if args.call_timeout is not None:
                 settings.timeout_seconds = args.call_timeout
     snapshots = SnapshotStore(args.data_dir / "snapshots")
@@ -490,8 +572,14 @@ async def async_main(args):
             from .sdk_report import SdkReport
 
             index = build_index(reader, storage=args.data_dir, profile=settings, token=token)
-            runtime = SdkReport(reader, index, OpenAISdkRuntime(settings),
-                                args.data_dir / "sdk/cache", refresh=args.refresh, limits=report_limits)
+            runtime = SdkReport(
+                reader,
+                index,
+                OpenAISdkRuntime(settings),
+                args.data_dir / "sdk/cache",
+                refresh=args.refresh,
+                limits=report_limits,
+            )
         elif args.runtime == "local":
             from .retrieval import BM25Index
             from .runtimes.chat import ChatCompletionsRuntime
@@ -512,7 +600,9 @@ async def async_main(args):
         from .report import run_report
 
         if args.runtime == "sdk":
-            result = await runtime.run(emit=store.emit, token=token, run_id=run_id, total_timeout=args.timeout)
+            result = await runtime.run(
+                emit=store.emit, token=token, run_id=run_id, total_timeout=args.timeout
+            )
         else:
             result = await run_report(
                 reader, runtime, emit=store.emit, token=token, run_id=run_id, total_timeout=args.timeout

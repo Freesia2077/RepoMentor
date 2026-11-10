@@ -57,17 +57,28 @@ def select_sources(reader, index, question, condition, *, source_bytes=SOURCE_BY
         path = locations[0]["path"]
         text, truncated = reader.read(path, 500_000)
         if truncated:
-            return {"sources": [], "retrieval": {"candidates": []}, "hits": locations[:1],
-                    "infeasible": "whole_file_reader_limit"}
+            return {
+                "sources": [],
+                "retrieval": {"candidates": []},
+                "hits": locations[:1],
+                "infeasible": "whole_file_reader_limit",
+            }
         spans = [source_span(path, text.splitlines(), 1, len(text.splitlines()))]
     else:
         spans, remaining = [], source_bytes
         for hit in locations:
-            if any(s["path"] == hit["path"] and s["start_line"] <= hit["line"] <= s["end_line"] for s in spans):
+            if any(
+                s["path"] == hit["path"] and s["start_line"] <= hit["line"] <= s["end_line"] for s in spans
+            ):
                 continue
             lines = reader.read(hit["path"], 500_000)[0].splitlines()
-            window = anchored_window(lines, max(1, hit["line"] - 20), min(len(lines), hit["line"] + 20),
-                                     hit["line"], min(1600, remaining))
+            window = anchored_window(
+                lines,
+                max(1, hit["line"] - 20),
+                min(len(lines), hit["line"] + 20),
+                hit["line"],
+                min(1600, remaining),
+            )
             if window:
                 span = source_span(hit["path"], lines, *window)
                 spans.append(span)
@@ -85,12 +96,22 @@ def prepare_input(settings, question, selection, condition):
         messages = messages_for(question, [], selection["sources"])
         budget = input_budget(settings, messages, response_schema=ANSWER_SCHEMA)
         # A full-file baseline is never silently shortened into another retrieval baseline.
-        return {"feasible": budget["fits"], "reason": None if budget["fits"] else "whole_file_context_limit",
-                "context": selection["sources"], "input_messages": messages, "omissions": [], "budget": budget}
+        return {
+            "feasible": budget["fits"],
+            "reason": None if budget["fits"] else "whole_file_context_limit",
+            "context": selection["sources"],
+            "input_messages": messages,
+            "omissions": [],
+            "budget": budget,
+        }
     assembled = assemble_context(settings, question, [], selection["sources"], top_k=None)
     budget = input_budget(settings, assembled["input_messages"], response_schema=ANSWER_SCHEMA)
-    return {**assembled, "feasible": budget["fits"], "reason": None if budget["fits"] else "context_limit",
-            "budget": budget}
+    return {
+        **assembled,
+        "feasible": budget["fits"],
+        "reason": None if budget["fits"] else "context_limit",
+        "budget": budget,
+    }
 
 
 class FrozenSourcesIndex:

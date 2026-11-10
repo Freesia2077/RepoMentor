@@ -19,9 +19,14 @@ def nav_reader(files):
 
 
 def test_factory_navigation_resolves_exact_export_not_similar_helper():
-    reader = nav_reader({"index.js": "export function random(n) { throw Error(); }\n"
-        "export function factory(n) { return size => { if (size < 0) throw Error(); return n; }; }\n"
-        "export const generate = factory(21);", "browser.js": "export function generate() { return ''; }"})
+    reader = nav_reader(
+        {
+            "index.js": "export function random(n) { throw Error(); }\n"
+            "export function factory(n) { return size => { if (size < 0) throw Error(); return n; }; }\n"
+            "export const generate = factory(21);",
+            "browser.js": "export function generate() { return ''; }",
+        }
+    )
     focus = {"entry_paths": ["index.js"], "excluded_paths": ["browser.js"]}
     result = symbol_navigation(reader, "Node generate(-10) 的行为？", focus)
     assert result["current_symbol"] == "generate" and not result["source_facts"]
@@ -34,18 +39,21 @@ def test_factory_navigation_resolves_exact_export_not_similar_helper():
 
 
 def test_ast_binding_navigation_ignores_comments_strings_and_nested_variables():
-    text = "const documentation = `\nexport const fake = factory();\n`;\n" \
-           "function outer() { const inner = factory(); }\n" \
-           "// export const commented = factory();\n" \
-           "export const real =\n factory(1);"
+    text = (
+        "const documentation = `\nexport const fake = factory();\n`;\n"
+        "function outer() { const inner = factory(); }\n"
+        "// export const commented = factory();\n"
+        "export const real =\n factory(1);"
+    )
     rows = declarations(text, "module.js")
     assert {r["symbol"] for r in rows} == {"outer", "real"}
     assert next(r for r in rows if r["symbol"] == "real")["end_line"] == 7
 
 
 def test_symbol_navigation_keeps_ambiguity_and_bounded_scan():
-    reader = nav_reader({"a.py": "class A:\n def run(self): return 1",
-                         "b.py": "class B:\n def run(self): return 2"})
+    reader = nav_reader(
+        {"a.py": "class A:\n def run(self): return 1", "b.py": "class B:\n def run(self): return 2"}
+    )
     result = symbol_navigation(reader, "run 如何实现？", {})
     assert result["current_symbol"] is None and len(result["targets"]) == 2
     limited = symbol_navigation(reader, "run 如何实现？", {}, max_files=1)
@@ -56,10 +64,16 @@ def test_symbol_navigation_keeps_ambiguity_and_bounded_scan():
 def test_observed_partition_preserves_relevant_tail_without_fabricating_lines():
     lines = ["irrelevant"] * 45 + ["needle target assertion"] * 15
     text = "\n".join(lines)
-    span = {"path": "a.py", "start_line": 10, "end_line": 69, "content": text,
-            "content_sha256": hashlib.sha256(text.encode()).hexdigest()}
-    chosen, omitted = pack_observed_context([span], "needle", lambda rows: sum(
-        len(s["content"].encode()) for s in rows) < 450)
+    span = {
+        "path": "a.py",
+        "start_line": 10,
+        "end_line": 69,
+        "content": text,
+        "content_sha256": hashlib.sha256(text.encode()).hexdigest(),
+    }
+    chosen, omitted = pack_observed_context(
+        [span], "needle", lambda rows: sum(len(s["content"].encode()) for s in rows) < 450
+    )
     assert len(chosen) == 1 and chosen[0]["start_line"] == 50
     assert chosen[0]["content"] == "\n".join(lines[40:])
     assert omitted[0]["start_line"] == 10 and omitted[0]["end_line"] == 49
@@ -72,7 +86,9 @@ async def test_navigation_alone_never_authorizes_citations(reader, tmp_path):
     assert result["stop_reason"] == "invalid_citations" and not result["context"]
 
 
-async def test_wire_context_limit_preserves_rejection_and_uses_one_sdk_finalizer(reader, tmp_path, monkeypatch):
+async def test_wire_context_limit_preserves_rejection_and_uses_one_sdk_finalizer(
+    reader, tmp_path, monkeypatch
+):
     import repomentor.runtimes.openai_sdk as transport
 
     original = transport.sdk_input_budget
@@ -90,10 +106,25 @@ async def test_wire_context_limit_preserves_rejection_and_uses_one_sdk_finalizer
         body = json.loads(request.content)
         sent.append(body)
         if len(sent) == 1:
-            return response({"role": "assistant", "content": None, "tool_calls": [{
-                "id": "read", "type": "function", "function": {"name": "read_code",
-                "arguments": json.dumps({"path": "src/index.ts", "start_line": 1, "end_line": 4})}
-            }]}, "tool_calls")
+            return response(
+                {
+                    "role": "assistant",
+                    "content": None,
+                    "tool_calls": [
+                        {
+                            "id": "read",
+                            "type": "function",
+                            "function": {
+                                "name": "read_code",
+                                "arguments": json.dumps(
+                                    {"path": "src/index.ts", "start_line": 1, "end_line": 4}
+                                ),
+                            },
+                        }
+                    ],
+                },
+                "tool_calls",
+            )
         assert "response_format" in body and body["messages"][-1]["role"] == "user"
         return response()
 
@@ -112,10 +143,18 @@ def test_previous_citation_source_survives_budget_without_importing_past_claims(
     text = "\n".join(["needle header"] * 45 + ["if size < 0: raise ValueError()"] * 15)
     reader = nav_reader({"a.py": text})
     reader.snapshot = SimpleNamespace(snapshot_id="s")
-    span = {"path": "a.py", "start_line": 1, "end_line": 60, "content": text,
-            "content_sha256": hashlib.sha256(text.encode()).hexdigest()}
-    envelope = {"snapshot_id": "s", "spans": [span],
-                "preferred_ranges": [{"path": "a.py", "start_line": 50, "end_line": 51}]}
+    span = {
+        "path": "a.py",
+        "start_line": 1,
+        "end_line": 60,
+        "content": text,
+        "content_sha256": hashlib.sha256(text.encode()).hexdigest(),
+    }
+    envelope = {
+        "snapshot_id": "s",
+        "spans": [span],
+        "preferred_ranges": [{"path": "a.py", "start_line": 50, "end_line": 51}],
+    }
     chosen = select_sources(reader, envelope, "needle", max_bytes=450)
     assert any(s["start_line"] <= 50 <= 51 <= s["end_line"] for s in chosen)
     assert sum(len(s["content"].encode()) for s in chosen) <= 450
@@ -150,10 +189,25 @@ async def test_actual_sdk_transmits_observed_path_schema_to_formatter(reader, tm
         body = json.loads(request.content)
         requests.append(body)
         if len(requests) == 1:
-            return response({"role": "assistant", "content": None, "tool_calls": [{
-                "id": "read", "type": "function", "function": {"name": "read_code",
-                "arguments": json.dumps({"path": "src/index.ts", "start_line": 1, "end_line": 4})}
-            }]}, "tool_calls")
+            return response(
+                {
+                    "role": "assistant",
+                    "content": None,
+                    "tool_calls": [
+                        {
+                            "id": "read",
+                            "type": "function",
+                            "function": {
+                                "name": "read_code",
+                                "arguments": json.dumps(
+                                    {"path": "src/index.ts", "start_line": 1, "end_line": 4}
+                                ),
+                            },
+                        }
+                    ],
+                },
+                "tool_calls",
+            )
         schema = body["response_format"]["json_schema"]["schema"]
         assert schema["$defs"]["ReadingStep"]["properties"]["file"]["enum"] == ["src/index.ts"]
         assert not schema["properties"]["dependencyGraph"]["additionalProperties"]

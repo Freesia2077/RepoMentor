@@ -22,20 +22,30 @@ def test_stop_response_with_dangling_value_is_reviewed_without_rewriting():
         assert {i["code"] for i in quality["issues"]} == {"possibly_incomplete_text"}
         assert answer == original and quality["semantic_correctness"] == "not_scored"
     for text in ("返回类型是字符串。", "`0` 是结果。", "```python\nx = '`'\n```\n以上是示例。"):
-        quality = inspect_answer({"answer": text, "citations": [], "insufficient_evidence": True}, [], "success")
+        quality = inspect_answer(
+            {"answer": text, "citations": [], "insufficient_evidence": True}, [], "success"
+        )
         assert quality["issues"] == []
 
 
 def environment(lines=220, **limits):
     source = "\n".join(f"value_{i} = 'source padding for an exact bounded read'" for i in range(1, lines + 1))
-    reader = SimpleNamespace(snapshot=SimpleNamespace(snapshot_id="fixture"), paths=["main.py"],
-                             read=lambda path, maximum: (source, False))
+    reader = SimpleNamespace(
+        snapshot=SimpleNamespace(snapshot_id="fixture"),
+        paths=["main.py"],
+        read=lambda path, maximum: (source, False),
+    )
     return RepositoryEnvironment(reader, None, AgentLimits(**limits))
 
 
 def read(env, start, end, call_id):
-    return env.step(ToolCall(call_id=call_id, tool="read_code", arguments={
-        "path": "main.py", "start_line": start, "end_line": end}))
+    return env.step(
+        ToolCall(
+            call_id=call_id,
+            tool="read_code",
+            arguments={"path": "main.py", "start_line": start, "end_line": end},
+        )
+    )
 
 
 def test_larger_read_budget_reaches_line_172_and_does_not_overread():
@@ -58,8 +68,11 @@ def test_continuation_fills_unread_gaps_without_repeating_visible_islands():
     restored = environment(max_read_lines=10)
     restored.restore(copy.deepcopy(env.state))
     assert restored.pending_reads() == env.pending_reads()
-    final = env.step(ToolCall(call_id="last", tool="read_code",
-        arguments=second["observation"]["continuation"]["arguments"]))
+    final = env.step(
+        ToolCall(
+            call_id="last", tool="read_code", arguments=second["observation"]["continuation"]["arguments"]
+        )
+    )
     assert final["observation"]["continuation"] is None and not env.pending_reads()
 
 
@@ -69,7 +82,11 @@ def test_wire_trim_updates_exact_continuation_instead_of_skipping_omitted_lines(
     assert row["observation"]["status"] == "ok", row["observation"]
     last = row["source_spans"][0]["end_line"]
     assert row["observation"]["continuation"]["arguments"] == {
-        "path": "main.py", "start_line": last + 1, "end_line": 40, "expand": "none"}
+        "path": "main.py",
+        "start_line": last + 1,
+        "end_line": 40,
+        "expand": "none",
+    }
     assert len(row["visible_json"].encode()) <= 1400
 
 
@@ -91,7 +108,9 @@ async def test_finalizer_receives_completed_notes_and_raw_source_as_separate_inp
 
 async def test_research_notes_cannot_authorize_citing_an_unread_file(reader, tmp_path):
     bad = {**ANSWER, "citations": [{"path": "unread.ts", "start_line": 1, "end_line": 2}]}
-    engine, model = build(reader, tmp_path, [read_step(), [assistant_message("unread.ts:1-2 提供支持")], final_step(bad)])
+    engine, model = build(
+        reader, tmp_path, [read_step(), [assistant_message("unread.ts:1-2 提供支持")], final_step(bad)]
+    )
     row = await engine.answer("入口？")
     assert row["completion"]["status"] != "success" and row["stop_reason"] == "invalid_citations"
     model.assert_complete()
@@ -112,12 +131,19 @@ def test_sdk_filter_exposes_read_progress_without_authorizing_unread_lines(reade
     from repomentor.sdk_context import ContextFilter, source_items
 
     env = RepositoryEnvironment(reader, None, AgentLimits(max_read_lines=1))
-    row = env.step(ToolCall(call_id="read", tool="read_code", arguments={
-        "path": "src/index.ts", "start_line": 1, "end_line": 4}))
+    row = env.step(
+        ToolCall(
+            call_id="read",
+            tool="read_code",
+            arguments={"path": "src/index.ts", "start_line": 1, "end_line": 4},
+        )
+    )
     runtime = OpenAISdkRuntime(settings(context_window=32768))
-    items = [{"role": "user", "content": "入口？"},
-             {"type": "function_call", "name": "read_code", "call_id": "read", "arguments": "{}"},
-             {"type": "function_call_output", "call_id": "read", "output": row["visible_json"]}]
+    items = [
+        {"role": "user", "content": "入口？"},
+        {"type": "function_call", "name": "read_code", "call_id": "read", "arguments": "{}"},
+        {"type": "function_call_output", "call_id": "read", "output": row["visible_json"]},
+    ]
     agent = Agent(name="progress", model_settings=runtime.model_settings)
     data = SimpleNamespace(agent=agent, model_data=ModelInputData(input=items, instructions="read source"))
     result = ContextFilter(env, runtime, "入口？", [])(data)
@@ -135,7 +161,9 @@ def test_explicit_new_call_does_not_inherit_the_old_question():
 
 
 async def test_finalizer_current_question_stays_separate_from_retrieval_navigation(reader, tmp_path):
-    engine, model = build(reader, tmp_path, [read_step(), [assistant_message("当前应解释 off。")], final_step()])
+    engine, model = build(
+        reader, tmp_path, [read_step(), [assistant_message("当前应解释 off。")], final_step()]
+    )
     question = "那么 off('FOO') 呢？"
     query = question + "\n追问对象：on 是否转换大小写？"
     result = await engine.answer(question, query=query)
@@ -153,14 +181,22 @@ def test_blank_last_source_line_survives_render_merge_share_and_wire_recovery():
     from repomentor.source_windows import source_span
 
     text = "def f():\n    return 1\n\n"
-    reader = SimpleNamespace(snapshot=SimpleNamespace(snapshot_id="fixture"), paths=["main.py"],
-                             read=lambda *args: (text, False))
+    reader = SimpleNamespace(
+        snapshot=SimpleNamespace(snapshot_id="fixture"), paths=["main.py"], read=lambda *args: (text, False)
+    )
     span = source_span("main.py", text.splitlines(), 1, 3)
     assert render_sources([span])[0]["content"].endswith("L3: ")
     assert source_items(render_sources([span])) == [span]
     assert merged_context([span]) == [span]
-    selected = select_sources(reader, {"snapshot_id": "fixture", "spans": [span],
-        "preferred_ranges": [{"path": "main.py", "start_line": 3, "end_line": 3}]}, "f")
+    selected = select_sources(
+        reader,
+        {
+            "snapshot_id": "fixture",
+            "spans": [span],
+            "preferred_ranges": [{"path": "main.py", "start_line": 3, "end_line": 3}],
+        },
+        "f",
+    )
     assert selected == [span]
     env = RepositoryEnvironment(reader, None)
     row = read(env, 1, 3, "blank")

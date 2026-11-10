@@ -32,7 +32,9 @@ def prepare(*, download=False, transport=None):
         if source["source_model"] not in models:
             if not download:
                 raise ValueError("9B weights missing; use --download for a new installation")
-            with client.stream("POST", "/api/pull", json={"model": source["source_model"], "stream": True}) as response:
+            with client.stream(
+                "POST", "/api/pull", json={"model": source["source_model"], "stream": True}
+            ) as response:
                 response.raise_for_status()
                 for line in response.iter_lines():
                     event = json.loads(line)
@@ -42,8 +44,15 @@ def prepare(*, download=False, transport=None):
         if models[source["source_model"]]["digest"] != source["source_digest"]:
             raise ValueError("source tag changed; do not silently change model identity")
         if profile.model not in models:
-            client.post("/api/create", json={"model": profile.model, "from": source["source_model"],
-                "parameters": source["parameters"], "stream": False}).raise_for_status()
+            client.post(
+                "/api/create",
+                json={
+                    "model": profile.model,
+                    "from": source["source_model"],
+                    "parameters": source["parameters"],
+                    "stream": False,
+                },
+            ).raise_for_status()
             models = tags()
         if models[profile.model]["digest"] != profile.model_revision:
             raise ValueError("9B alias digest differs from pinned configuration")
@@ -57,16 +66,24 @@ def prepare(*, download=False, transport=None):
             content = client.get(record["url"]).raise_for_status().content
     else:
         raise ValueError("9B tokenizer missing; use --download for a new installation")
-    if hashlib.sha256(content).hexdigest() != record["sha256"] or record["sha256"] != profile.tokenizer_sha256:
+    if (
+        hashlib.sha256(content).hexdigest() != record["sha256"]
+        or record["sha256"] != profile.tokenizer_sha256
+    ):
         raise ValueError("9B tokenizer hash mismatch")
     if not tokenizer.exists():
         tokenizer.parent.mkdir(parents=True, exist_ok=True)
         tokenizer.write_bytes(content)
     if not destination.exists():
         write_json(destination, {**profile.public(), "apiKey": ""})
-    deployment = {"model": profile.model, "config_id": profile.config_id,
-        "source_digest": source["source_digest"], "configuration": profile.public(),
-        "generation_requests": 0, "paid_requests": 0}
+    deployment = {
+        "model": profile.model,
+        "config_id": profile.config_id,
+        "source_digest": source["source_digest"],
+        "configuration": profile.public(),
+        "generation_requests": 0,
+        "paid_requests": 0,
+    }
     write_json(data_root() / "deployment/qwen9b.json", deployment)
     print(json.dumps(deployment, ensure_ascii=False))
     return deployment

@@ -45,9 +45,9 @@ async def test_stream_unicode_and_usage_only_final_chunk():
             ),
         )
 
-    result = await ChatCompletionsRuntime(settings(presence_penalty=1.5), transport=httpx.MockTransport(handler)).complete(
-        [{"role": "user", "content": "问题"}], on_text=observed.append
-    )
+    result = await ChatCompletionsRuntime(
+        settings(presence_penalty=1.5), transport=httpx.MockTransport(handler)
+    ).complete([{"role": "user", "content": "问题"}], on_text=observed.append)
     assert result.status == "success" and result.content == "仓库学习"
     assert observed == ["仓库", "学习"]
     assert result.usage["total_tokens"] == 16 and result.request_sent

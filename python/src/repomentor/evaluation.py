@@ -24,6 +24,7 @@ SYSTEM_PROMPT = (
     "输出符合给定 schema 的 JSON，不要输出 Markdown 或额外说明。"
 )
 
+
 class HistoryMessage(Contract):
     role: Literal["user", "assistant"]
     content: str
@@ -118,12 +119,20 @@ def verify_task_context(task, snapshots: SnapshotStore):
 
 def implementation_hash():
     root = Path(__file__).resolve().parent
-    files = [root / name for name in ("evaluation.py", "runtimes/chat.py", "config.py",
-                                    "contracts.py", "records.py", "execution.py")]
+    files = [
+        root / name
+        for name in (
+            "evaluation.py",
+            "runtimes/chat.py",
+            "config.py",
+            "contracts.py",
+            "records.py",
+            "execution.py",
+        )
+    ]
     return fingerprint(
         {p.name: hashlib.sha256(p.read_bytes().replace(b"\r\n", b"\n")).hexdigest() for p in files}
     )
-
 
 
 def citation_check(task, result):

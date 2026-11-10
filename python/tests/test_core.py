@@ -342,15 +342,28 @@ def test_bundled_asset_provenance_survives_platform_line_endings():
         assert hashlib.sha256(content).hexdigest() == expected, source
 
 
-@pytest.mark.parametrize("status,error,reason,hint", [
-    ("truncated", "output_limit", "length", "不要补齐 JSON"),
-    ("context_limit", "context_window", None, "缩小相关源码范围"),
-])
+@pytest.mark.parametrize(
+    "status,error,reason,hint",
+    [
+        ("truncated", "output_limit", "length", "不要补齐 JSON"),
+        ("context_limit", "context_window", None, "缩小相关源码范围"),
+    ],
+)
 def test_failed_run_export_displays_failure_without_publishing_partial_draft(status, error, reason, hint):
     from repomentor.presentation import render_run
 
-    record = {"result": {"question": "Question?", "answer": None, "completion": {
-        "status": status, "error_code": error, "finish_reason": reason, "content": '{"answer":"unfinished'}}}
+    record = {
+        "result": {
+            "question": "Question?",
+            "answer": None,
+            "completion": {
+                "status": status,
+                "error_code": error,
+                "finish_reason": reason,
+                "content": '{"answer":"unfinished',
+            },
+        }
+    }
     original = json.dumps(record)
     rendered = render_run(record)
     assert error in rendered and hint in rendered and "未发布有效答案" in rendered

@@ -24,13 +24,21 @@ def sdk_input_budget(settings, body):
         return input_budget(settings, body["messages"], body.get("tools"), body.get("response_format"))
     if (settings.backend, settings.server_version, settings.reasoning_effort) != ("ollama", "0.34.3", "none"):
         raise ValueError("SDK tokenizer calibration requires pinned Ollama/Qwen with thinking off")
-    wire = json.dumps([body["messages"], body.get("tools", []), body.get("response_format")], ensure_ascii=False)
+    wire = json.dumps(
+        [body["messages"], body.get("tools", []), body.get("response_format")], ensure_ascii=False
+    )
     count = len(load_tokenizer(settings.tokenizer_sha256).encode(wire, add_special_tokens=False).ids)
     count += 768 + 64 * len(body["messages"])
     total = count + settings.max_tokens + settings.template_reserve
-    return {"mode": "qwen35_ollama_sdk_padded_v2", "input_tokens": count,
-            "output_allowance": settings.max_tokens, "reserve": settings.template_reserve,
-            "total": total, "context_window": settings.context_window, "fits": total <= settings.context_window}
+    return {
+        "mode": "qwen35_ollama_sdk_padded_v2",
+        "input_tokens": count,
+        "output_allowance": settings.max_tokens,
+        "reserve": settings.template_reserve,
+        "total": total,
+        "context_window": settings.context_window,
+        "fits": total <= settings.context_window,
+    }
 
 
 class ObservedModel(Model):
@@ -42,13 +50,16 @@ class ObservedModel(Model):
 
     async def get_response(self, **kwargs):
         # A typed agent can still use tools. A schema alone must not disable its tool loop.
-        phase = "finalize" if kwargs.get("output_schema") is not None and not kwargs.get("tools") else "research"
+        phase = (
+            "finalize" if kwargs.get("output_schema") is not None and not kwargs.get("tools") else "research"
+        )
         finalizing = self.before_model(copy.deepcopy(kwargs["input"]), phase)
         entry = {
             "actor": ACTOR.get(),
             "input": copy.deepcopy(kwargs["input"]),
             "system_instructions": kwargs["system_instructions"],
-            "status": "pending", "request_sent": False,
+            "status": "pending",
+            "request_sent": False,
         }
         self.runtime.calls.append(entry)
         self.runtime.active = entry
@@ -65,13 +76,19 @@ class ObservedModel(Model):
                 entry["finalizing"] = True
             response = await self.delegate.get_response(**kwargs)
             entry.update(
-                status="success", output=[v.model_dump(mode="json") for v in response.output],
-                sdk_usage={name: getattr(response.usage, name) for name in (
-                    "requests", "input_tokens", "output_tokens", "total_tokens"
-                )},
+                status="success",
+                output=[v.model_dump(mode="json") for v in response.output],
+                sdk_usage={
+                    name: getattr(response.usage, name)
+                    for name in ("requests", "input_tokens", "output_tokens", "total_tokens")
+                },
             )
-            if (finalizing or phase == "finalize") and any(v.type == "function_call" for v in response.output):
-                raise HarnessError("tool_choice_ignored", "provider emitted repository tools during final-answer turn")
+            if (finalizing or phase == "finalize") and any(
+                v.type == "function_call" for v in response.output
+            ):
+                raise HarnessError(
+                    "tool_choice_ignored", "provider emitted repository tools during final-answer turn"
+                )
             self.runtime.model_completed()
             return response
         except BaseException as exc:
@@ -97,9 +114,11 @@ class OpenAISdkRuntime:
     @property
     def model_settings(self):
         return ModelSettings(
-            temperature=self.settings.temperature, top_p=self.settings.top_p,
+            temperature=self.settings.temperature,
+            top_p=self.settings.top_p,
             presence_penalty=self.settings.presence_penalty,
-            max_tokens=min(1536, self.settings.max_tokens), parallel_tool_calls=False,
+            max_tokens=min(1536, self.settings.max_tokens),
+            parallel_tool_calls=False,
             extra_body={"seed": self.settings.seed, "reasoning_effort": self.settings.reasoning_effort},
             retry=ModelRetrySettings(max_retries=0),
         )
@@ -125,17 +144,22 @@ class OpenAISdkRuntime:
             delegate = self.scripted_model
         else:
             http_client = httpx2.AsyncClient(
-                transport=self.transport, trust_env=False, follow_redirects=False,
+                transport=self.transport,
+                trust_env=False,
+                follow_redirects=False,
                 timeout=self.settings.timeout_seconds,
                 event_hooks={"request": [self._request], "response": [self._response]},
             )
             self.client = AsyncOpenAI(
                 base_url=self.settings.baseUrl,
                 api_key=self.settings.apiKey.get_secret_value() if self.settings.apiKey else "local-only",
-                max_retries=0, timeout=self.settings.timeout_seconds, http_client=http_client,
+                max_retries=0,
+                timeout=self.settings.timeout_seconds,
+                http_client=http_client,
             )
             delegate = OpenAIChatCompletionsModel(
-                model=self.settings.model, openai_client=self.client,
+                model=self.settings.model,
+                openai_client=self.client,
                 should_replay_reasoning_content=False,
             )
         return ObservedModel(delegate, self, before_model, persist)

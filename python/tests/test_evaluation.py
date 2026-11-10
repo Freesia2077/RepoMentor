@@ -111,7 +111,10 @@ async def test_failed_records_persist_until_explicit_retry(tasks, tmp_path):
     retried = await run_evaluation(tasks[:1], runtime, retry_failed=True, **kwargs)
     assert retried["statuses"] == {"success": 1} and runtime.calls == 2
     attempts = list((tmp_path / "cache" / runtime.settings.config_id / "attempts").glob("*.json"))
-    assert {json.loads(path.read_text(encoding="utf-8"))["result"]["status"] for path in attempts} == {"truncated", "success"}
+    assert {json.loads(path.read_text(encoding="utf-8"))["result"]["status"] for path in attempts} == {
+        "truncated",
+        "success",
+    }
 
 
 async def test_modified_question_and_model_config_invalidate_cache(tasks, tmp_path):
@@ -160,12 +163,20 @@ async def test_context_tampering_rejected_before_model(tasks, tmp_path):
 def test_question_catalog_merges_aliases_without_merging_versions_or_histories(tmp_path):
     from repomentor.question_bank import build_bank, question_id
 
-    task = {"task_id": "legacy", "repository": "owner/repo", "snapshot_id": "snap-a",
-            "commit_sha": "commit-a", "split": "development", "input": {"question": "f('a  b')?"}}
+    task = {
+        "task_id": "legacy",
+        "repository": "owner/repo",
+        "snapshot_id": "snap-a",
+        "commit_sha": "commit-a",
+        "split": "development",
+        "input": {"question": "f('a  b')?"},
+    }
     sources = {
         "p6/tasks.json": [task],
         "rag-interview/development/tasks.json": [{**task, "task_id": "recent"}],
-        "p63/development.json": [{**task, "task_id": "new-version", "snapshot_id": "snap-b", "commit_sha": "commit-b"}],
+        "p63/development.json": [
+            {**task, "task_id": "new-version", "snapshot_id": "snap-b", "commit_sha": "commit-b"}
+        ],
     }
     for name, value in sources.items():
         path = tmp_path / "experiments" / name
@@ -173,8 +184,12 @@ def test_question_catalog_merges_aliases_without_merging_versions_or_histories(t
         path.write_text(json.dumps(value), encoding="utf-8")
     cases = tmp_path / "experiments/p6/cases"
     cases.mkdir()
-    (cases / "changed.json").write_text(json.dumps({"task": {**task, "input": {"question": "Different?"}},
-                                                   "result": {"answer": {"answer": "saved"}}}), encoding="utf-8")
+    (cases / "changed.json").write_text(
+        json.dumps(
+            {"task": {**task, "input": {"question": "Different?"}}, "result": {"answer": {"answer": "saved"}}}
+        ),
+        encoding="utf-8",
+    )
     bank = build_bank(tmp_path)
     assert bank["summary"]["all"]["unique_questions"] == 3
     current = next(q for q in bank["questions"] if q["current"])
@@ -187,20 +202,47 @@ def test_question_catalog_merges_aliases_without_merging_versions_or_histories(t
     assert base != question_id("owner/repo", "commit-a", "f('a  b')?", partition="training")
 
 
-async def test_question_catalog_separates_retrieval_from_generation_and_verifies_offline(tmp_path, capsys, monkeypatch):
+async def test_question_catalog_separates_retrieval_from_generation_and_verifies_offline(
+    tmp_path, capsys, monkeypatch
+):
     from repomentor import cli
     from repomentor.question_bank import build_bank
 
-    task = {"task_id": "confirmed", "repository": "owner/repo", "snapshot_id": "snap",
-            "commit_sha": "commit", "split": "confirmation", "input": {"question": "First?"}}
+    task = {
+        "task_id": "confirmed",
+        "repository": "owner/repo",
+        "snapshot_id": "snap",
+        "commit_sha": "commit",
+        "split": "confirmation",
+        "input": {"question": "First?"},
+    }
     second = {**task, "task_id": "retrieval", "split": "development", "input": {"question": "Second?"}}
     folder = tmp_path / "experiments/rag-expansion"
     folder.mkdir(parents=True)
-    (folder / "dataset.json").write_text(json.dumps({"repositories": [], "tasks": [task, second],
-        "retrieval": [{"task_id": "confirmed"}, {"task_id": "retrieval"}]}), encoding="utf-8")
-    (folder / "results.jsonl").write_text(json.dumps({"case_id": "confirm/confirmed/bm25", "task_id": "confirmed",
-        "result": {"completion": {"status": "truncated", "request_sent": True}}}) + "\n", encoding="utf-8")
-    (folder / "summary.json").write_text(json.dumps({"reviews": {"confirm/confirmed/bm25": {"solved": False}}}), encoding="utf-8")
+    (folder / "dataset.json").write_text(
+        json.dumps(
+            {
+                "repositories": [],
+                "tasks": [task, second],
+                "retrieval": [{"task_id": "confirmed"}, {"task_id": "retrieval"}],
+            }
+        ),
+        encoding="utf-8",
+    )
+    (folder / "results.jsonl").write_text(
+        json.dumps(
+            {
+                "case_id": "confirm/confirmed/bm25",
+                "task_id": "confirmed",
+                "result": {"completion": {"status": "truncated", "request_sent": True}},
+            }
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    (folder / "summary.json").write_text(
+        json.dumps({"reviews": {"confirm/confirmed/bm25": {"solved": False}}}), encoding="utf-8"
+    )
     bank = build_bank(tmp_path)
     assert bank["summary"]["current"]["coverage"] == {"retrieval_only": 1, "reviewed": 1}
     failed = next(q for q in bank["questions"] if q["coverage"] == "reviewed")
@@ -208,7 +250,9 @@ async def test_question_catalog_separates_retrieval_from_generation_and_verifies
     assert not failed["training_eligible"]
     catalog = tmp_path / "experiments/question-bank.json"
     catalog.write_text(json.dumps(bank), encoding="utf-8")
-    monkeypatch.setattr(cli, "load_chat_settings", lambda *a, **kw: pytest.fail("offline command loaded model configuration"))
+    monkeypatch.setattr(
+        cli, "load_chat_settings", lambda *a, **kw: pytest.fail("offline command loaded model configuration")
+    )
     before = set(tmp_path.rglob("*"))
     options = ["--root", str(tmp_path), "--catalog", str(catalog)]
     assert await cli.async_main(cli.parser().parse_args(["questions", "verify", *options])) == 0
@@ -232,16 +276,30 @@ def test_question_catalog_rejects_sealed_test_import(tmp_path):
 def test_new_comparison_reuses_question_and_does_not_claim_pending_answers(tmp_path):
     from repomentor.question_bank import build_bank
 
-    task = {"task_id": "same", "repository": "owner/repo", "snapshot_id": "snap", "commit_sha": "commit",
-            "split": "development", "input": {"question": "Implementation?"}}
+    task = {
+        "task_id": "same",
+        "repository": "owner/repo",
+        "snapshot_id": "snap",
+        "commit_sha": "commit",
+        "split": "development",
+        "input": {"question": "Implementation?"},
+    }
     old = tmp_path / "experiments/p6/tasks.json"
     old.parent.mkdir(parents=True)
     old.write_text(json.dumps([task]), encoding="utf-8")
     new = tmp_path / "experiments/rag-system/dataset.json"
     new.parent.mkdir()
-    new.write_text(json.dumps({"schema": "repomentor.benchmark.v1", "tasks": [task],
-        "retrieval_checks": [{"task_id": "same", "variant": "bm25"}],
-        "cases": [{"task_id": "same", "condition": c} for c in ("none", "bm25", "agentic")]}), encoding="utf-8")
+    new.write_text(
+        json.dumps(
+            {
+                "schema": "repomentor.benchmark.v1",
+                "tasks": [task],
+                "retrieval_checks": [{"task_id": "same", "variant": "bm25"}],
+                "cases": [{"task_id": "same", "condition": c} for c in ("none", "bm25", "agentic")],
+            }
+        ),
+        encoding="utf-8",
+    )
     bank = build_bank(tmp_path)
     assert bank["summary"]["all"]["unique_questions"] == 1
     assert bank["summary"]["latest_evaluation"]["planned_records"] == 3
@@ -255,14 +313,29 @@ def test_new_comparison_reuses_question_and_does_not_claim_pending_answers(tmp_p
 def test_finalizer_diagnostics_do_not_replace_latest_main_comparison(tmp_path):
     from repomentor.question_bank import build_bank
 
-    task = {"task_id": "same", "repository": "owner/repo", "snapshot_id": "snap", "commit_sha": "commit",
-            "split": "confirmation", "input": {"question": "Implementation?"}}
+    task = {
+        "task_id": "same",
+        "repository": "owner/repo",
+        "snapshot_id": "snap",
+        "commit_sha": "commit",
+        "split": "confirmation",
+        "input": {"question": "Implementation?"},
+    }
     for name, kind in (("a-main", "main"), ("z-finalizer", "known-question-finalizer-diagnostic")):
         target = tmp_path / "experiments" / name / "dataset.json"
         target.parent.mkdir(parents=True)
-        target.write_text(json.dumps({"schema": "repomentor.benchmark.v1", "tasks": [task],
-            "protocol": {"evaluation_date": "2026-10-23"}, "retrieval_checks": [],
-            "cases": [{"task_id": "same", "condition": name, "kind": kind}]}), encoding="utf-8")
+        target.write_text(
+            json.dumps(
+                {
+                    "schema": "repomentor.benchmark.v1",
+                    "tasks": [task],
+                    "protocol": {"evaluation_date": "2026-10-23"},
+                    "retrieval_checks": [],
+                    "cases": [{"task_id": "same", "condition": name, "kind": kind}],
+                }
+            ),
+            encoding="utf-8",
+        )
     bank = build_bank(tmp_path)
     assert bank["summary"]["all"]["unique_questions"] == 1
     assert bank["summary"]["latest_evaluation"]["file"] == "experiments/a-main/dataset.json"
@@ -274,19 +347,47 @@ def test_finalizer_diagnostics_do_not_replace_latest_main_comparison(tmp_path):
 def test_comparison_followup_uses_declared_history_for_record_identity(tmp_path):
     from repomentor.question_bank import build_bank, digest
 
-    history = [{"role": "user", "content": "Earlier condition?"},
-               {"role": "assistant", "content": "Please describe the change."}]
-    task = {"task_id": "followup", "repository": "owner/repo", "snapshot_id": "snap", "commit_sha": "commit",
-            "split": "confirmation", "input": {"question": "Now what?", "history": history}}
+    history = [
+        {"role": "user", "content": "Earlier condition?"},
+        {"role": "assistant", "content": "Please describe the change."},
+    ]
+    task = {
+        "task_id": "followup",
+        "repository": "owner/repo",
+        "snapshot_id": "snap",
+        "commit_sha": "commit",
+        "split": "confirmation",
+        "input": {"question": "Now what?", "history": history},
+    }
     folder = tmp_path / "experiments/new-confirmation"
     folder.mkdir(parents=True)
-    (folder / "dataset.json").write_text(json.dumps({"schema": "repomentor.benchmark.v1", "tasks": [task],
-        "retrieval_checks": [], "cases": [{"task_id": "followup", "condition": "agentic"}]}), encoding="utf-8")
-    rows = [{"task_id": "followup", "case_id": f"answer-{i}", "condition": "agentic", "result": {
-        "answer": {"answer": "saved"}, "input_messages": [*history, {"role": "user", "content": "Now what?"}]}}
-        for i in range(2)]
+    (folder / "dataset.json").write_text(
+        json.dumps(
+            {
+                "schema": "repomentor.benchmark.v1",
+                "tasks": [task],
+                "retrieval_checks": [],
+                "cases": [{"task_id": "followup", "condition": "agentic"}],
+            }
+        ),
+        encoding="utf-8",
+    )
+    rows = [
+        {
+            "task_id": "followup",
+            "case_id": f"answer-{i}",
+            "condition": "agentic",
+            "result": {
+                "answer": {"answer": "saved"},
+                "input_messages": [*history, {"role": "user", "content": "Now what?"}],
+            },
+        }
+        for i in range(2)
+    ]
     (folder / "results.jsonl").write_text("".join(json.dumps(row) + "\n" for row in rows), encoding="utf-8")
-    (folder / "summary.json").write_text(json.dumps({"reviews": {row["case_id"]: {} for row in rows}}), encoding="utf-8")
+    (folder / "summary.json").write_text(
+        json.dumps({"reviews": {row["case_id"]: {} for row in rows}}), encoding="utf-8"
+    )
     bank = build_bank(tmp_path)
     assert bank["summary"]["all"]["unique_questions"] == 1
     assert bank["unresolved_observations"] == []

@@ -45,29 +45,57 @@ def build_index(
 ):
     storage = storage or runtime_dir()
     from .retrieval_policy import RetrievalPolicy
-    policy = RetrievalPolicy(chunker=chunker, retriever=retriever, device=device, query_expansion=query_expansion,
-        code_aware=code_aware, top_k=top_k, candidate_k=candidate_k, chunk_size=chunk_size, source_bytes=source_bytes,
-        max_lines=max_lines, overlap_lines=overlap_lines)
-    settings = RetrievalSettings(query_expansion=query_expansion, top_k=policy.top_k, candidate_k=policy.candidate_k,
-        initial_source_bytes=policy.source_bytes, max_lines=policy.max_lines, overlap_lines=policy.overlap_lines)
+
+    policy = RetrievalPolicy(
+        chunker=chunker,
+        retriever=retriever,
+        device=device,
+        query_expansion=query_expansion,
+        code_aware=code_aware,
+        top_k=top_k,
+        candidate_k=candidate_k,
+        chunk_size=chunk_size,
+        source_bytes=source_bytes,
+        max_lines=max_lines,
+        overlap_lines=overlap_lines,
+    )
+    settings = RetrievalSettings(
+        query_expansion=query_expansion,
+        top_k=policy.top_k,
+        candidate_k=policy.candidate_k,
+        initial_source_bytes=policy.source_bytes,
+        max_lines=policy.max_lines,
+        overlap_lines=policy.overlap_lines,
+    )
+
     def wrap(base):
         from .code_retrieval import CodeRetrievalIndex
+
         return CodeRetrievalIndex(reader, base, storage / "symbol-indexes", code_aware=code_aware)
 
     if chunker == "line" and retriever == "bm25":
         return wrap(BM25Index.build(reader, storage / "indexes", settings, token=token))
     from .chunking import ChunkSettings, build_structural_index
+
     # All new retrieval conditions use identical source chunks. Byte counting is a
     # conservative source bound, not an LLM token estimate, and needs no ML weights.
     class ByteTokenizer:
         def encode(self, text, **kwargs):
             return text.encode("utf-8")
 
-    lexical = (build_structural_index(reader, storage / "syntax-indexes", ByteTokenizer(),
-               {"tokenizer": "utf8-byte-bound-v1"}, chunks=ChunkSettings(max_tokens=policy.chunk_size,
-                   min_split_tokens=min(256, policy.chunk_size)), retrieval=settings, token=token)
-               if chunker == "syntax" else
-               BM25Index.build(reader, storage / "indexes", settings, token=token))
+    lexical = (
+        build_structural_index(
+            reader,
+            storage / "syntax-indexes",
+            ByteTokenizer(),
+            {"tokenizer": "utf8-byte-bound-v1"},
+            chunks=ChunkSettings(max_tokens=policy.chunk_size, min_split_tokens=min(256, policy.chunk_size)),
+            retrieval=settings,
+            token=token,
+        )
+        if chunker == "syntax"
+        else BM25Index.build(reader, storage / "indexes", settings, token=token)
+    )
     if retriever == "bm25":
         return wrap(lexical)
     from .hybrid_retrieval import HybridIndex

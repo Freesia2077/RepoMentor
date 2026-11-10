@@ -15,24 +15,39 @@ def grounded_report_schema(schema, context):
     definitions = schema.get("$defs", {})
     if not files:
         # Keep an explicit gap-only response representable without an invalid empty enum.
-        for name in ("entryPoints", "moduleMap", "readingPath", "entryFiles", "evidenceClaims",
-                     "keyPatterns", "codeConventions", "goodFirstIssues"):
+        for name in (
+            "entryPoints",
+            "moduleMap",
+            "readingPath",
+            "entryFiles",
+            "evidenceClaims",
+            "keyPatterns",
+            "codeConventions",
+            "goodFirstIssues",
+        ):
             if name in schema["properties"]:
                 schema["properties"][name]["maxItems"] = 0
         if "Coverage" in definitions:
             definitions["Coverage"]["properties"]["examinedFiles"]["maxItems"] = 0
     else:
-        for name, field, allowed in (("EntryPoint", "file", files), ("ReadingStep", "file", files),
-                                     ("EntryFile", "file", files), ("EvidenceReference", "path", files),
-                                     ("ModuleInfo", "path", modules)):
+        for name, field, allowed in (
+            ("EntryPoint", "file", files),
+            ("ReadingStep", "file", files),
+            ("EntryFile", "file", files),
+            ("EvidenceReference", "path", files),
+            ("ModuleInfo", "path", modules),
+        ):
             if name in definitions:
                 definitions[name]["properties"][field]["enum"] = allowed
         definitions["Coverage"]["properties"]["examinedFiles"]["items"]["enum"] = files
     if "dependencyGraph" in schema["properties"]:
         # Enumerated optional keys permit {}, without depending on provider propertyNames support.
         schema["properties"]["dependencyGraph"] = {
-            "type": "object", "properties": {p: {"type": "array", "items": {"type": "string", "enum": modules}}
-                                              for p in modules}, "additionalProperties": False,
+            "type": "object",
+            "properties": {
+                p: {"type": "array", "items": {"type": "string", "enum": modules}} for p in modules
+            },
+            "additionalProperties": False,
         }
     return schema
 

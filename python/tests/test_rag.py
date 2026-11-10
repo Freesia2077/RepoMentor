@@ -47,6 +47,7 @@ async def test_rag_caches_with_trace_and_no_gold_input(engine):
     assert first["context"] and first["citation_ranges_valid"]
     assert "L1:" in str(first["input_messages"]) and "gold" not in str(first["input_messages"])
     from repomentor.contracts import ANSWER_SCHEMA, RepositoryAnswer
+
     visible = json.loads(first["input_messages"][-1]["content"])["response_schema"]
     assert visible == ANSWER_SCHEMA == RepositoryAnswer.model_json_schema()
     assert "完整回答" in visible["properties"]["answer"]["description"]

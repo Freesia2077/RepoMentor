@@ -28,9 +28,12 @@ def nonblank_reference_complete(references, spans):
     """Complement strict range coverage: omitted blank lines are not missing source facts."""
     if not references:
         return None
-    return all(any(s["path"] == ref["path"] and s["start_line"] <= number <= s["end_line"] for s in spans)
-               for ref in references
-               for number, line in enumerate(ref["content"].split("\n"), ref["start_line"]) if line.strip())
+    return all(
+        any(s["path"] == ref["path"] and s["start_line"] <= number <= s["end_line"] for s in spans)
+        for ref in references
+        for number, line in enumerate(ref["content"].split("\n"), ref["start_line"])
+        if line.strip()
+    )
 
 
 def retrieval_metrics(gold, result):
