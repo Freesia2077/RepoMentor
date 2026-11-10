@@ -3,7 +3,7 @@ import json
 import posixpath
 import re
 
-from core import digest
+from .core import digest
 
 _CITATION = re.compile(r"(?P<path>(?:/repo/)?[\w./-]+\.(?:py|js|ts|tsx|jsx|md|json|yaml|yml|toml|cfg|ini))"
                        r"(?::|#)L?(?P<start>\d+)(?:[-–](?:L)?(?P<end>\d+))?")

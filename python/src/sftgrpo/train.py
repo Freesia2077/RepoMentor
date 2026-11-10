@@ -11,7 +11,18 @@ import time
 from contextlib import nullcontext
 from pathlib import Path
 
-from core import ROOT, data_path, digest, load_json, read_rows, report_path, save_json, supervision_labels
+from .core import (
+    PROJECT_ROOT,
+    ROOT,
+    SOURCE_ROOT,
+    data_path,
+    digest,
+    load_json,
+    read_rows,
+    report_path,
+    save_json,
+    supervision_labels,
+)
 
 if os.name == "posix":
     os.environ.setdefault("PYTORCH_CUDA_ALLOC_CONF", "expandable_segments:True")
@@ -218,12 +229,14 @@ def configs(output, max_length=32768, smoke=False, cpu=False):
 
 def preflight(gpu=False, tools=False, requested_attention=None, online_split=None):
     import torch
-    from runtime import RepoEnvironment, _judge_class
+
+    from .runtime import RepoEnvironment, _judge_class
     if report_path("bundle-manifest.json").exists():
         for entry in load_json(report_path("bundle-manifest.json")):
             if Path(entry["path"]).name in {"cpu-preflight.json", "gpu-preflight.json"}:
                 continue  # Environment reports change on a new machine; data and code remain frozen.
-            if hashlib.sha256((ROOT / entry["path"]).read_bytes()).hexdigest() != entry["sha256"]:
+            path = (PROJECT_ROOT / entry["path"]).resolve()
+            if not path.is_relative_to(PROJECT_ROOT) or hashlib.sha256(path.read_bytes()).hexdigest() != entry["sha256"]:
                 raise ValueError(f"Changed handoff input: {entry['path']}")
     from trl import GRPOTrainer, SFTTrainer  # noqa: F401 - validate imports, not only package metadata
     if gpu and (not torch.cuda.is_available() or not torch.cuda.is_bf16_supported()):
@@ -231,12 +244,12 @@ def preflight(gpu=False, tools=False, requested_attention=None, online_split=Non
     tok = tokenizer()
     preparation = load_json(report_path("preparation.json"))
     if preparation.get("data_policy_sha256") != hashlib.sha256((ROOT / "data-policy.json").read_bytes()).hexdigest():
-        raise ValueError("Prepared data policy is stale; run prepare.py data before training")
+        raise ValueError("Prepared data policy is stale; run python -m sftgrpo.prepare data before training")
     for name, expected in preparation.get("prepared_files", {}).items():
         if hashlib.sha256(data_path(name).read_bytes()).hexdigest() != expected:
-            raise ValueError(f"Prepared input changed or was interrupted: {name}; run prepare.py data")
+            raise ValueError(f"Prepared input changed or was interrupted: {name}; run python -m sftgrpo.prepare data")
     if not preparation.get("prepared_files"):
-        raise ValueError("Missing prepared input identities; run prepare.py data")
+        raise ValueError("Missing prepared input identities; run python -m sftgrpo.prepare data")
     sft_config, grpo_config = configs(ROOT / "outputs/config-check", cpu=not gpu)
     datasets = sft_dataset(32768)
     if any(len(datasets[name]) != preparation["counts"][f"sft_{name}"] for name in ["train", "dev"]):
@@ -251,7 +264,7 @@ def preflight(gpu=False, tools=False, requested_attention=None, online_split=Non
         if path.is_file() and gpu and tools:
             RepoEnvironment().reset(**row)
     if tools and missing_archives:
-        raise ValueError(f"Missing {len(missing_archives)} canonical archives; run prepare.py snapshots")
+        raise ValueError(f"Missing {len(missing_archives)} canonical archives; run python -m sftgrpo.prepare snapshots")
     result = {"mode": "gpu" if gpu else "cpu", "cuda_available": torch.cuda.is_available(),
               "versions": {p: importlib.metadata.version(p) for p in ["torch", "transformers", "trl", "peft", "datasets", "accelerate"]},
               "sft_rows": {k: len(v) for k, v in datasets.items()}, "online_tasks": len(tasks),
@@ -297,9 +310,10 @@ def run(args):
     import torch
     from datasets import Dataset
     from peft import LoraConfig, PeftModel
-    from runtime import JudgeReward, RepoEnvironment
     from transformers import AutoModelForCausalLM
     from trl import SFTTrainer
+
+    from .runtime import JudgeReward, RepoEnvironment
 
     output = (ROOT / args.output).resolve()
     if args.action == "sft" and args.adapter:
@@ -334,8 +348,8 @@ def run(args):
                 "attention_backend": backend, "judge_model": os.environ.get("REPOMENTOR_PY_SFTGRPO_JUDGE_MODEL") if args.action == "grpo" else None}
     if args.adapter:
         identity["adapter_sha256"] = hashlib.sha256((ROOT / args.adapter / "adapter_model.safetensors").read_bytes()).hexdigest()
-    identity["code_sha256"] = {name: hashlib.sha256((ROOT / name).read_bytes()).hexdigest()
-                               for name in ["core.py", "train.py", "runtime.py", "generation.py", "rewards.py"]}
+    identity["code_sha256"] = {name: hashlib.sha256((SOURCE_ROOT / name).read_bytes()).hexdigest()
+                               for name in ["__init__.py", "core.py", "train.py", "runtime.py", "generation.py", "rewards.py"]}
     if args.action != "sft":
         identity["train_tasks"] = args.train_tasks
         identity["online_data_sha256"] = {name: hashlib.sha256((ROOT / name).read_bytes()).hexdigest()
@@ -374,7 +388,7 @@ def run(args):
                        train_target_tokens=sum(sum(v != -100 for v in row["labels"]) for row in data["train"]),
                        trainable_parameters=sum(p.numel() for p in trainer.model.parameters() if p.requires_grad))
     else:
-        from generation import CachedGRPOTrainer
+        from .generation import CachedGRPOTrainer
         train_rows = read_rows(data_path("rl-train.jsonl"))
         eval_rows = read_rows(data_path(f"{args.split}.jsonl"))
         if args.train_tasks is not None:
@@ -427,7 +441,7 @@ def run(args):
 
 
 def summarize_evaluation(output, expected):
-    from runtime import WEIGHTS
+    from .runtime import WEIGHTS
     rows = read_rows(output / "rollouts.jsonl")
     ids = [row["task_id"] for row in rows]
     if len(ids) != len(set(ids)) or set(ids) != {row["task_id"] for row in expected}:

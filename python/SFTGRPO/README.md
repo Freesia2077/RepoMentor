@@ -1,6 +1,6 @@
 # SFTGRPO：Qwen3.5-2B仓库问答后训练
 
-复用SWE-QA-Pro教师轨迹、三类只读工具和TRL训练循环，支持两种监督范围的LoRA SFT、在线多轮GRPO，以及独立答案采集和复核。设计说明见[完整项目演练](../面试材料/后训练完整项目演练.md)。
+复用SWE-QA-Pro教师轨迹、三类只读工具和TRL训练循环，支持两种监督范围的LoRA SFT、在线多轮GRPO，以及独立答案采集和复核。源码位于独立包[`src/sftgrpo/`](../src/sftgrpo/)，与RAG的`src/repomentor/`分开；本目录保留配置、依赖、测试、数据与训练产物。
 
 ## 配置与数据
 
@@ -39,25 +39,26 @@
 沿用现有环境，不安装另一套本地依赖：
 
 ```powershell
-& 'D:\anaconda\envs\repomentor\python.exe' -s -X utf8 SFTGRPO/prepare.py data
-& 'D:\anaconda\envs\repomentor\python.exe' -s -X utf8 SFTGRPO/train.py preflight
+& 'D:\anaconda\envs\repomentor\python.exe' -s -X utf8 -m sftgrpo.prepare data
+& 'D:\anaconda\envs\repomentor\python.exe' -s -X utf8 -m sftgrpo.train preflight
 & 'D:\anaconda\envs\repomentor\python.exe' -s -X utf8 -m pytest SFTGRPO/tests -q -p no:cacheprovider
-& 'D:\anaconda\envs\repomentor\python.exe' -s -X utf8 -m ruff check --no-cache SFTGRPO
+& 'D:\anaconda\envs\repomentor\python.exe' -s -X utf8 -m ruff check --no-cache src/sftgrpo SFTGRPO/tests
 ```
 
-`data`使用已锁定的本地公开输入；缺少输入时先运行`prepare.py fetch`。CPU预检检查模板、目标、配置与准备身份，并列出缺少的在线归档；离线SFT不要求先下载所有RL仓库。
+`data`使用已锁定的本地公开输入；缺少输入时先运行`python -s -m sftgrpo.prepare fetch`。CPU预检检查模板、目标、配置与准备身份，并列出缺少的在线归档；离线SFT不要求先下载所有RL仓库。
 
 ## 云端训练
 
-在SFTGRPO目录使用云镜像明确选定的Python，安装[固定依赖](requirements.txt)与匹配CUDA/PyTorch的[加速内核](requirements-cuda.txt)。GPU预检检查BF16、FlashAttention或高效SDPA、DeltaNet/conv内核；保留梯度检查点、分块融合LM head及数值检查。
+从Python项目根目录（含`src/`和`SFTGRPO/`）运行；使用云镜像明确选定的Python，安装`SFTGRPO/requirements.txt`与匹配CUDA/PyTorch的`SFTGRPO/requirements-cuda.txt`。本地已安装的Python项目自动暴露`src/`；尚未安装时同样先将`src/`加入`PYTHONPATH`。GPU预检检查BF16、FlashAttention或高效SDPA、DeltaNet/conv内核；保留梯度检查点、分块融合LM head及数值检查。
 
 ```bash
-python -s train.py preflight --gpu
-python -s train.py sft --supervision last_assistant --output outputs/sft-last
-python -s train.py sft --supervision all_assistant --output outputs/sft-all
-python -s prepare.py snapshots
-python -s train.py preflight --gpu --tools
-python -s train.py grpo --adapter outputs/sft-all/adapter --reward-mode grounded --train-tasks 128 --output outputs/grpo-grounded128
+export PYTHONPATH="$PWD/src${PYTHONPATH:+:$PYTHONPATH}"
+python -s -m sftgrpo.train preflight --gpu
+python -s -m sftgrpo.train sft --supervision last_assistant --output outputs/sft-last
+python -s -m sftgrpo.train sft --supervision all_assistant --output outputs/sft-all
+python -s -m sftgrpo.prepare snapshots
+python -s -m sftgrpo.train preflight --gpu --tools
+python -s -m sftgrpo.train grpo --adapter outputs/sft-all/adapter --reward-mode grounded --train-tasks 128 --output outputs/grpo-grounded128
 ```
 
 在线工具需要Linux只读隔离：优先bubblewrap；容器禁用用户namespace时，显式配置并验证chroot、低权限用户和seccomp后备方案。只准备固定repo/commit归档，不安装或执行目标仓库代码。
@@ -69,11 +70,11 @@ GRPO使用独立的`REPOMENTOR_PY_SFTGRPO_JUDGE_API_KEY`、`REPOMENTOR_PY_SFTGRP
 ## 四组答案采集与评价
 
 ```bash
-python -s train.py evaluate --split eval --output outputs/eval-base
-python -s train.py evaluate --adapter outputs/sft-last/adapter --split eval --output outputs/eval-last
-python -s train.py evaluate --adapter outputs/sft-all/adapter --split eval --output outputs/eval-all
-python -s train.py evaluate --adapter outputs/grpo-grounded128/adapter --split eval --output outputs/eval-grpo
-python -s train.py summarize --split eval --output outputs/eval-base
+python -s -m sftgrpo.train evaluate --split eval --output outputs/eval-base
+python -s -m sftgrpo.train evaluate --adapter outputs/sft-last/adapter --split eval --output outputs/eval-last
+python -s -m sftgrpo.train evaluate --adapter outputs/sft-all/adapter --split eval --output outputs/eval-all
+python -s -m sftgrpo.train evaluate --adapter outputs/grpo-grounded128/adapter --split eval --output outputs/eval-grpo
+python -s -m sftgrpo.train summarize --split eval --output outputs/eval-base
 ```
 
 评价只采集答案和工具轨迹，不调用付费judge。按同一参考、源码与五维标准复核后，在各目录提供`reviews.jsonl`并运行summarize。每条复核须包含task_id、answer_sha256、五个1—10整数、reviewer=`codex_session_assistant`及human_approved=false；明确未完成计0，待复核或评分故障保留未知。
@@ -84,10 +85,10 @@ python -s train.py summarize --split eval --output outputs/eval-base
 
 | 文件 | 职责 |
 | --- | --- |
-| core.py / prepare.py | 消息协议、来源、行为标记、两种目标与准备产物 |
-| train.py | TRL配置、SFT/GRPO入口、恢复身份及评价汇总 |
-| runtime.py | 三工具环境、只读隔离、judge调用与费用账本 |
-| rewards.py | 实际可见证据、引用核验、事实门控与有界重复惩罚 |
-| generation.py | 原生TRL工具循环的预算、缓存及持久化批次适配 |
+| [core.py](../src/sftgrpo/core.py) / [prepare.py](../src/sftgrpo/prepare.py) | 消息协议、来源、行为标记、两种目标与准备产物 |
+| [train.py](../src/sftgrpo/train.py) | TRL配置、SFT/GRPO入口、恢复身份及评价汇总 |
+| [runtime.py](../src/sftgrpo/runtime.py) | 三工具环境、只读隔离、judge调用与费用账本 |
+| [rewards.py](../src/sftgrpo/rewards.py) | 实际可见证据、引用核验、事实门控与有界重复惩罚 |
+| [generation.py](../src/sftgrpo/generation.py) | 原生TRL工具循环的预算、缓存及持久化批次适配 |
 
-`prepare.py bundle`按白名单打包可复现源码、准备数据、固定归档和校验清单。模型权重、凭据、展开仓库、Windows依赖及运行数据库保持在本地忽略路径中。
+`python -s -m sftgrpo.prepare bundle`按白名单打包`src/sftgrpo/`、`SFTGRPO/`配置、准备数据、固定归档和校验清单，解包后保持这两个目录并列；不会打包RAG源码。输入和输出参数仍以`SFTGRPO/`为相对根目录，与启动时的工作目录无关。模型权重、凭据、展开仓库、Windows依赖及运行数据库保持在本地忽略路径中。

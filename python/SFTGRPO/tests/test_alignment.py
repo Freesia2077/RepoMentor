@@ -1,14 +1,11 @@
 """Production-plan regressions: target isolation, evidence gating and reward failure safety."""
 import gzip
 import json
-import sys
-from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from core import (  # noqa: E402
+from sftgrpo.core import (  # noqa: E402
     ROOT,
     data_path,
     load_json,
@@ -17,9 +14,9 @@ from core import (  # noqa: E402
     supervision_labels,
     trajectory_audit,
 )
-from rewards import parse_grounding, shape_reward, visible_evidence  # noqa: E402
-from runtime import WEIGHTS, JudgeReward  # noqa: E402
-from train import configs, sft_dataset  # noqa: E402
+from sftgrpo.rewards import parse_grounding, shape_reward, visible_evidence  # noqa: E402
+from sftgrpo.runtime import WEIGHTS, JudgeReward  # noqa: E402
+from sftgrpo.train import configs, sft_dataset  # noqa: E402
 
 
 def policy(**kwargs):
@@ -37,7 +34,7 @@ def supported():
 
 
 def test_sft_conditions_preserve_identical_inputs_and_only_change_targets(tmp_path, monkeypatch):
-    import train
+    from sftgrpo import train
     path = tmp_path / "tokens.gz"
     labels = [-100, 12, 13, -100, 21, 22, -100]
     with gzip.open(path, "wt", encoding="utf-8") as stream:

@@ -85,7 +85,7 @@ class CachedGRPOTrainer(GRPOTrainer):
             return super()._generate_and_score_completions(inputs)
         if self.accelerator.num_processes != 1:
             raise ValueError("Durable rollout batches currently support one training process")
-        from core import digest, load_json, save_json
+        from .core import digest, load_json, save_json
         directory = Path(self.args.output_dir) / "rollout-batch"
         metadata = directory / "ready.json"
         policy = hashlib.sha256()

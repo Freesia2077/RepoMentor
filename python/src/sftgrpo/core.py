@@ -6,7 +6,9 @@ import sys
 from collections import deque
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parent
+SOURCE_ROOT = Path(__file__).resolve().parent
+PROJECT_ROOT = SOURCE_ROOT.parents[1]
+ROOT = PROJECT_ROOT / "SFTGRPO"
 # Optional preparation wheels stay inside this project, leaving the RAG environment intact.
 if (ROOT / ".cache/site-packages").is_dir():
     sys.path.insert(0, str(ROOT / ".cache/site-packages"))

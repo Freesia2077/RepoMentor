@@ -1,27 +1,29 @@
-# Python 脚本入口
+# Python 辅助脚本
 
-当前问答和实验通过 `python.exe -s -m repomentor.cli` 或 `run.ps1` 进入。Agent 循环始终由 SDK Runner 执行；这里的脚本不构成第二套活动引擎。
+问答和实验的正式入口为`python -s -m repomentor.cli`或`run.ps1`：`ask/chat/report`运行助手，`benchmark`准备、执行和复核实验，`questions`管理题库。后训练使用独立的`python -s -m sftgrpo.prepare`与`python -s -m sftgrpo.train`。
 
-| 日常工作 | 活动入口 |
+本目录保留下列辅助工具：
+
+| 文件 | 用途 |
 | --- | --- |
-| 问答、持续追问、报告 | CLI 的 `ask`、`chat`、`report` |
-| 新实验预检、运行、复核 | CLI 的 `benchmark prepare/run/summary/review/verify/finalize` |
-| 查询题库与校验身份 | CLI 的 `questions` |
-| 检查封存原件 | `verify_archives.py`；包含工作流诊断产物的完整性检查 |
-| 本地模型服务 | `ollama_local.ps1`；不随离线检查自动启动 |
-| 环境核查与依赖锁 | `audit_environment.py`、`audit_future_dependencies.py`、`lock_environment.py` |
-| 准备已选神经检索权重 | `prepare_retrieval_models.py`；日常 BM25 不需要 |
+| `ollama_local.ps1`、`install_ollama.ps1` | 管理或安装本地模型服务 |
+| `prepare_qwen9b.py` | 准备RAG的9B模型配置与tokenizer，复用已核验资产 |
+| `prepare_retrieval_models.py` | 准备向量检索与重排权重 |
+| `audit_environment.py`、`lock_environment.py` | 核对环境和记录依赖版本 |
+| `freeze_corpus.py` | 固定语料仓库版本、划分与许可证来源 |
+| `sync_assets.py` | 同步受信的项目提示资产 |
+| `verify_archives.py` | 离线校验封存实验的文件哈希 |
+| `rag_interview.py`、`rag_interview_delivery.py`、`rag_unified.py` | 旧评测的取证与请求账本实现；现有回归测试仍检查其边界行为 |
+| `ts_parity.mjs` | 显式启用的历史TS对照测试入口 |
 
-`p63*`、`p6*`、`run_p*`、`audit_p*`、`qwen9b*`、`rag_interview*`、`rag_expansion.py`、`rag_unified.py` 等保留为历史批次的方法与复核入口。它们对应各自冻结的输入、实现和资源身份，不作为新实验模板。相互导入及既有路径保留，避免搬动脚本破坏历史回放。
+早期`p63*`、`run_p*`、`audit_p*`及一次性诊断、整理脚本已从工作树移除，原实现可通过Git历史查阅。实验数据、保存答案和归档保持原位；新实验使用统一CLI。
 
-10 月 23 日的一次性设计、复核、统计、演示脚本及诊断/schema 回放代码已归入[方法源码包](../experiments/improvement-study/method-source.zip)，不继续维护为活动入口。查看结果使用既有 `inspect-run`、报告文件和统一归档核验，不再维护重复的导出器。
-
-历史生成和整理脚本的结果以 [实验索引](../notes/experiment-index.md) 为准；检查旧结果优先使用归档校验。旧脚本中存在的试验条件不代表当前默认支持，旧协议验证也不代表当前答案正确率。
-
-本机所有 Python 操作使用 `D:\anaconda\envs\repomentor\python.exe -s`，不新建环境。完整离线检查：
+从Python项目根目录运行离线检查：
 
 ```powershell
 .\run.ps1 -m pytest -q -p no:cacheprovider
 .\run.ps1 -m ruff check --no-cache src scripts tests
 .\run.ps1 scripts/verify_archives.py
 ```
+
+模型服务、下载和真实推理需要显式运行相应命令，离线检查不会自动启动这些操作。

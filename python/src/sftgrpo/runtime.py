@@ -14,7 +14,7 @@ from collections import defaultdict
 from pathlib import Path
 from types import SimpleNamespace
 
-from core import ROOT, load_json
+from .core import ROOT, load_json
 
 UTILS = ROOT / ".cache/upstream/train/RL/verl-tool/verl_tool/servers/tools/utils/swe_qa_pro_utils.py"
 REWARD = ROOT / ".cache/upstream/train/RL/verl-tool/verl_tool/workers/reward_manager/swe_qa_pro.py"
@@ -338,7 +338,7 @@ class JudgeReward:
         self.attempts = []
 
         def recorded_create(**kwargs):
-            from rewards import grounded_messages, parse_grounding
+            from .rewards import grounded_messages, parse_grounding
             started = time.monotonic()
             event = {}
             try:
@@ -380,7 +380,7 @@ class JudgeReward:
         self.__name__ = "sweqapro_judge"
 
     def __call__(self, completions, task_id, question, reference, environments=None, **kwargs):
-        from rewards import shape_reward, visible_evidence
+        from .rewards import shape_reward, visible_evidence
         records = []
         groups = defaultdict(list)
         for i, completion in enumerate(completions):

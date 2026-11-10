@@ -7,7 +7,7 @@
 | **Python — active development** | [python/](python/README.md) | Independent CLI/library for repository-learning Q&A and reports; retrieval, bounded tools, context management and evaluation on OpenAI Agents SDK. Local Qwen3.5-9B; MiniMind post-training has not started. |
 | TypeScript — original web application | Root `src/`, `web/`, `package.json` | Preserved in place; existing frontend/backend startup remains available. |
 
-后续开发以 **Python 版**为准。两版并列保留，不需要启动 TS 前后端即可使用 Python。新对话先读[Python使用与文档入口](python/README.md)；参见[当前实现](python/项目文档.md)、[评测与限制](python/notes/experiment-index.md)。以下为原 TS Web 版说明。
+后续开发以 **Python 版**为准。两版并列保留，不需要启动 TS 前后端即可使用 Python。新对话先读[Python使用与文档入口](python/README.md)；参见[当前实现](python/项目文档.md)、[评测与限制](python/experiments/sweqa-50-2026-11-03/README.md)。以下为原 TS Web 版说明。
 
 > Evidence-driven AI analysis for public GitHub repositories — understand the architecture, follow a reading path, and find a practical way to contribute.
 

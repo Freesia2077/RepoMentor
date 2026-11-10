@@ -12,8 +12,10 @@ from collections import Counter
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
-from core import (
+from .core import (
+    PROJECT_ROOT,
     ROOT,
+    SOURCE_ROOT,
     data_path,
     digest,
     identity,
@@ -237,20 +239,22 @@ def snapshots():
 
 def bundle():
     """Build a portable allowlisted handoff, excluding credentials, Windows wheels and partial checkouts."""
-    paths = set(ROOT.glob("*.py")) | set(ROOT.glob("*.json")) | set(ROOT.glob("requirements*.txt")) | {ROOT / "README.md", ROOT / ".gitignore"}
+    paths = set(SOURCE_ROOT.glob("*.py")) | set(ROOT.glob("requirements*.txt"))
+    paths |= {ROOT / name for name in ["run-config.json", "data-policy.json", "sources.lock.json",
+                                       "tool-schema.json", "README.md", ".gitignore"]}
     paths |= {ROOT / r["path"] for r in load_json(ROOT / "sources.lock.json")["files"]}
     paths |= set(report_path("").glob("*.json")) | set((ROOT / "tests").glob("*.py"))
     paths |= set((ROOT / ".cache/archives").glob("*.tar.gz"))
     paths |= set(data_path("").glob("*.jsonl")) | set(data_path("").glob("*.gz")) | {data_path("system.txt"), ROOT / ".cache/training-template.jinja"}
     paths -= {report_path("bundle-manifest.json"), report_path("rent-ready.json")}
-    manifest = [{"path": p.relative_to(ROOT).as_posix(), "sha256": hashlib.sha256(p.read_bytes()).hexdigest(),
+    manifest = [{"path": p.relative_to(PROJECT_ROOT).as_posix(), "sha256": hashlib.sha256(p.read_bytes()).hexdigest(),
                  "bytes": p.stat().st_size} for p in sorted(paths)]
     save_json(report_path("bundle-manifest.json"), manifest)
     target = ROOT / ".cache/rent-ready.tar.gz"
     with tarfile.open(target, "w:gz") as archive:
         for record in manifest:
-            archive.add(ROOT / record["path"], arcname="SFTGRPO/" + record["path"])
-        archive.add(report_path("bundle-manifest.json"), arcname="SFTGRPO/" + report_path("bundle-manifest.json").relative_to(ROOT).as_posix())
+            archive.add(PROJECT_ROOT / record["path"], arcname=record["path"])
+        archive.add(report_path("bundle-manifest.json"), arcname=report_path("bundle-manifest.json").relative_to(PROJECT_ROOT).as_posix())
     result = {"archive": ".cache/rent-ready.tar.gz", "bytes": target.stat().st_size,
               "sha256": hashlib.sha256(target.read_bytes()).hexdigest(), "files": len(manifest)+1,
               "status": "CPU preparation verified; Linux tool isolation and real GPU training still require cloud preflight"}

@@ -5,15 +5,13 @@ import runpy
 import shutil
 import subprocess
 import sys
-from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from core import ROOT, normalize, read_rows  # noqa: E402
-from runtime import UTILS, JudgeReward, RepoEnvironment  # noqa: E402
-from train import configs, sft_dataset, tokenizer  # noqa: E402
+from sftgrpo.core import ROOT, normalize, read_rows  # noqa: E402
+from sftgrpo.runtime import UTILS, JudgeReward, RepoEnvironment  # noqa: E402
+from sftgrpo.train import configs, sft_dataset, tokenizer  # noqa: E402
 
 
 @pytest.fixture(scope="module")
@@ -265,8 +263,9 @@ def test_grpo_reference_adapter_is_frozen_sft_copy(tmp_path):
     model.save_pretrained(tmp_path / "sft")
     policy = PeftModel.from_pretrained(GPT2LMHeadModel(config), tmp_path / "sft", is_trainable=True)
     from datasets import Dataset
-    from generation import CachedGRPOTrainer
-    from train import configs
+
+    from sftgrpo.generation import CachedGRPOTrainer
+    from sftgrpo.train import configs
     _, args = configs(tmp_path / "grpo", cpu=True)
     trainer = CachedGRPOTrainer(model=policy, args=args, processing_class=tokenizer(),
                                 train_dataset=Dataset.from_list([{"prompt": [{"role": "user", "content": "Q"}]}]),
@@ -310,7 +309,7 @@ def test_judge_outage_stops_training_and_preserves_raw_candidate(tmp_path):
 
 
 def test_collection_never_calls_judge_or_invents_zero_score(tmp_path):
-    from train import summarize_evaluation
+    from sftgrpo.train import summarize_evaluation
     def forbidden(**kwargs):
         raise AssertionError("Evaluation must not call a paid API")
     client = SimpleNamespace(chat=SimpleNamespace(completions=SimpleNamespace(create=forbidden)))
@@ -324,7 +323,7 @@ def test_collection_never_calls_judge_or_invents_zero_score(tmp_path):
     summarize_evaluation(tmp_path, [{"task_id": "one"}])
     summary = json.loads((tmp_path / "evaluation-summary.json").read_text())
     assert summary["five_dimension_mean_0_to_100"] is None and summary["review_pending"] == 1
-    from core import digest
+    from sftgrpo.core import digest
     review = {"task_id": "one", "answer_sha256": digest(row["answer"]),
               "scores": {k: 8 for k in ["correctness", "completeness", "relevance", "clarity", "reasoning"]},
               "reviewer": "codex_session_assistant", "human_approved": False}
@@ -340,7 +339,7 @@ def test_collection_never_calls_judge_or_invents_zero_score(tmp_path):
 
 
 def test_budget_persists_failed_reservations_and_stops_before_request(tmp_path):
-    from runtime import JudgeBudget
+    from sftgrpo.runtime import JudgeBudget
     ledger = tmp_path / "budget.json"
     first = JudgeBudget(ledger, limit=1.0)
     ticket = first.reserve([{"role": "user", "content": "test"}])

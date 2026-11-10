@@ -1,14 +1,12 @@
 """Real tiny-model SFT and interrupted-state recovery; CPU only, no downloaded weights."""
 import json
-import sys
 from pathlib import Path
 
 import pytest
-
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from core import save_json  # noqa: E402
 from test_generation import tiny_qwen  # noqa: E402
-from train import StabilityCallback, checkpoint_for_resume, configs, tokenizer  # noqa: E402
+
+from sftgrpo.core import save_json  # noqa: E402
+from sftgrpo.train import StabilityCallback, checkpoint_for_resume, configs, tokenizer  # noqa: E402
 
 
 def test_lora_sft_checkpoint_resume_matches_uninterrupted_training(tmp_path):

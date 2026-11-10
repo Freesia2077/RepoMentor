@@ -1,17 +1,15 @@
 """Real tiny Qwen3.5 cache checks; no downloaded weights, GPU or external calls."""
 import copy
 import json
-import sys
 from collections import Counter, defaultdict
 from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-import core  # noqa: E402,F401 - project-local dependency overlay
-from generation import CachedGRPOTrainer, RolloutCache  # noqa: E402
-from train import configs, tokenizer  # noqa: E402
+from sftgrpo import core  # noqa: E402,F401 - project-local dependency overlay
+from sftgrpo.generation import CachedGRPOTrainer, RolloutCache  # noqa: E402
+from sftgrpo.train import configs, tokenizer  # noqa: E402
 
 
 @pytest.fixture(autouse=True)
@@ -302,7 +300,7 @@ def test_native_loop_reserves_answer_space_before_oversized_observation(tmp_path
     external = tok.decode([i for i, m in zip(ids, mask, strict=True) if not m])
     learned = tok.decode([i for i, m in zip(ids, mask, strict=True) if m])
     assert "OBSERVED_NEEDLE" in external and "UNSEEN_TAIL_CANARY" not in external
-    from rewards import visible_evidence
+    from sftgrpo.rewards import visible_evidence
     delivered = visible_evidence(messages, "", 24000)["text"]
     assert "OBSERVED_NEEDLE" in delivered and "UNSEEN_TAIL_CANARY" not in delivered
     assert "FINAL ANSWER TURN" not in learned and "source padding" not in learned
