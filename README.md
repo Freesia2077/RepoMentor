@@ -1,309 +1,190 @@
 # RepoMentor
 
-## Versions / 版本入口
+[![Python core (offline tests)](https://github.com/Freesia2077/RepoMentor/actions/workflows/python.yml/badge.svg)](https://github.com/Freesia2077/RepoMentor/actions/workflows/python.yml)
 
-| Version | Location | Status |
-| --- | --- | --- |
-| **Python — active development** | [python/](python/README.md) | Independent CLI/library for repository-learning Q&A and reports; retrieval, bounded tools, context management and evaluation on OpenAI Agents SDK. Local Qwen3.5-9B; MiniMind post-training has not started. |
-| TypeScript — original web application | Root `src/`, `web/`, `package.json` | Preserved in place; existing frontend/backend startup remains available. |
+面向开发者学习和接手开源仓库，围绕架构理解、源码阅读、跨文件调用与实现逻辑问答，探索两条互补路线：**用 Agentic RAG 改善取证，用小模型后训练学习工具使用与基于证据作答。**
 
-后续开发以 **Python 版**为准。两版并列保留，不需要启动 TS 前后端即可使用 Python。新对话先读[Python使用与文档入口](python/README.md)；参见[当前实现](python/项目文档.md)、[评测与限制](python/experiments/sweqa-50-2026-11-03/README.md)。以下为原 TS Web 版说明。
+## 项目概览
 
-> Evidence-driven AI analysis for public GitHub repositories — understand the architecture, follow a reading path, and find a practical way to contribute.
+| 项目 | 解决的问题 | 技术主线 | 代码与文档 |
+| --- | --- | --- | --- |
+| **Agentic RAG 仓库学习助手** | 从仓库中定位相关源码，按问题补查，并给出带来源的解释 | Qwen3.5-9B · Tree-sitter · BM25 / FAISS · RRF · Qwen3 重排 · OpenAI Agents SDK · Harness | [源码](python/src/repomentor/) · [使用说明](python/README.md) · [50题评测](python/experiments/sweqa-50-2026-11-03/README.md) |
+| **Qwen3.5-2B 工具后训练** | 让小模型学习多轮搜索、读源码和组织回答的行为 | PyTorch · Transformers · TRL · PEFT / LoRA · SFT · GRPO · Datasets · Accelerate | [独立源码](python/src/sftgrpo/) · [训练说明](python/SFTGRPO/README.md) |
+
+两个项目以 Python 为当前开发主线，源码分别位于 `python/src/repomentor/` 和 `python/src/sftgrpo/`。早期 TypeScript 全栈应用保留在仓库根目录，页面演示见文末。
+
+## 项目一：Agentic RAG 仓库学习助手
+
+输入仓库与具体问题，输出源码解释、引用及后续阅读线索。`ask` / `chat` 支持单轮与连续问答；`report` 按 Explorer → Mentor → Contributor 阶段生成模块概览、架构说明、源码阅读路线与贡献准备建议。
+
+### 核心实现
+
+- **代码检索：** 固定 Git 快照，使用 Tree-sitter 按声明结构切分，保留路径与原始行号；支持 BM25、归一化向量与 FAISS 检索，通过 RRF 融合和 Qwen3-Embedding / Reranker-0.6B 完成混合召回与重排。符号、路径及有限静态依赖辅助定位源码。
+- **按需取证：** 先提供初始检索结果，再由 OpenAI Agents SDK Runner 围绕证据缺口调用六类只读工具，搜索代码/文档、读取原文、查找测试、定位符号和浏览依赖。单次 RAG 与 Agent 共用检索和选源组件。
+- **Agent Harness：** 管理上下文裁剪、工具去重、调用预算、超时和检查点恢复；区分已读取源码与当前模型可见源码，按实际输入核验引用的文件和行号范围。
+- **运行留痕：** 保存问题、源码快照、检索结果、模型实际输入、工具轨迹与原始回答，支持恢复会话和离线查看具体案例。
+
+目标仓库采用只读固定快照。当前默认入口为 CPU 代码增强 BM25 + SDK Agent；混合重排通过 `--retriever hybrid-rerank` 显式启用。检索器、Agent 循环和运行约束各自独立，便于对照与失败归因。
+
+### SWE-QA 评测
+
+固定 **Qwen3.5-9B Q4_K_M、16K 上下文**，在 SWE-QA 的 Flask、Requests、Pytest、Streamlink 四个仓库共 **50题**上完成五组对照，保留 **250份答案与评分**。闭卷组只接收问题和仓库信息；各 RAG 组读取对应固定版本的真实源码。
+
+| 条件 | 五维评分均值 / 100 | 平均生成请求 / 题 |
+| --- | ---: | ---: |
+| 闭卷，无 RAG | 47.64 | 1.0 |
+| 普通 BM25 RAG | 64.46 | 1.0 |
+| 代码增强 BM25 RAG | 63.36 | 1.0 |
+| 混合检索重排 RAG | 70.52 | 1.0 |
+| Agentic RAG | **77.96** | **4.5** |
+
+在该固定子集上，Agentic RAG 相对普通 BM25 提高 **13.50分**，同时增加生成请求；代码增强组低于普通 BM25。评分采用正确性、完整性、相关性、清晰度和推理质量五维模型辅助量表，结论按本样本解释。
+
+[完整报告](python/experiments/sweqa-50-2026-11-03/README.md)包含选题与仓库版本、逐题差值、成本、原始输出和失败分析。重点复查目标声明漏召回、已见源码理解错误、重复取证及参考答案冲突，依据实际输入区分检索问题和回答问题。
+
+## 项目二：Qwen3.5-2B 多轮工具后训练
+
+面向跨文件调用、配置处理和实现逻辑问答，将学习目标从“生成最终答案”扩展到“搜索—读源码—推理—调用工具—回答”的完整助手行为。使用 SWE-QA-Pro 公开教师轨迹，沿用其三类工具协议：`semantic_search`、`view_codebase`、`execute_readonly_command`；在线采样使用 TRL 的多轮工具循环。
+
+### 数据、监督与训练
+
+- **数据处理：** 归一化角色，配对工具调用与已有观察，恢复公开轨迹中嵌入的工具返回；按仓库名隔离来源，排除评测库和 RAG 保留库，保留 32K 内调用闭合、包含最终回答的轨迹。输出重复调用、错误观察、外部催停等行为标记，供数据审核。
+- **监督对照：** 在相同完整输入、样本顺序和更新预算下，比较末条助手消息监督与全助手轨迹监督。全轨迹模式覆盖规划、工具调用与回答；系统、用户、工具观察和 padding 的标签设为 `-100`。
+- **在线 GRPO：** 从全轨迹 SFT 出发，对同一问题采样多条工具轨迹，以终点奖励计算组内相对优势，结合冻结 SFT 参考策略的 KL 项更新。支持原五维质量奖励与证据约束奖励的对照，使用 TRL 的 token 级目标和 DAPO 式词元聚合。
+
+以下为仓库的**默认训练与评测配置**，参数集中在 [run-config.json](python/SFTGRPO/run-config.json) 和 [data-policy.json](python/SFTGRPO/data-policy.json)。
+
+| 配置项 | 设置 |
+| --- | --- |
+| 基座与适配 | Qwen3.5-2B；BF16；LoRA r=16、alpha=32、all-linear |
+| SFT 数据与预算 | 963条训练 / 32条开发轨迹；32K；两种监督条件各 2 epochs；学习率 1e-4 |
+| GRPO 采样与更新 | 128题 × 4候选；1 epoch；学习率 1e-6；KL 系数 0.02 |
+| 工具与生成预算 | 最多 32轮工具交互；后续总预算 30,720 tokens，包含观察与控制；预留回答空间 |
+| 四组评测配置 | 六库30题；原模型、末条消息 SFT、全轨迹 SFT、全轨迹 SFT + GRPO；统一工具、提示与预算 |
+
+### 奖励设计与稳定性
+
+- **约束 Reward Hacking：** 五维终点奖励结合模型实际可见源码与引用核验，检查关键事实是否被证据支持；事实错误或证据不足时限制奖励。质量达标后才对精确重复调用施加有上限的惩罚，保留必要搜索与错误恢复的空间。
+- **处理评分故障：** 默认 grounded 模式下，候选评分或证据审核失败会保存原文并阻止该组更新；分别记录基础质量分、奖励门控原因和重复扣分。
+- **控制训练资源：** 训练使用梯度检查点与 FlashAttention / 高效 SDPA，采样启用原生缓存；检查点保存 adapter、优化器、调度器、RNG 和数据/源码身份，支持在完整更新后停止及恢复。只读工具隔离、超时与费用账本限制在线运行成本。
+
+[训练说明](python/SFTGRPO/README.md)提供数据准备、预检、两种 SFT、GRPO、断点恢复与四组答案采集命令；[奖励实现](python/src/sftgrpo/rewards.py)和[工具环境](python/src/sftgrpo/runtime.py)给出具体规则。模型权重、凭据、展开后的仓库缓存和训练输出保留在本地忽略路径中。
+
+## 使用入口
+
+### RAG
+
+需要 Python 3.12 / 3.13 与 Git。从源码安装并检查环境：
+
+```bash
+git clone https://github.com/Freesia2077/RepoMentor.git
+cd RepoMentor/python
+python -s -m pip install -e ".[dev]"
+python -s -m repomentor.cli doctor
+```
+
+按[配置示例](python/config/model-settings.example.json)设置 Python 独立的模型接口；本地模型服务与检索权重准备见[辅助脚本说明](python/scripts/README.md)。神经检索依赖通过 `.[rag]` 安装。配置完成后固定仓库版本，使用输出的 `snapshot_id` 启动对话：
+
+```bash
+python -s -m repomentor.cli snapshot https://github.com/jd/tenacity.git --revision 32ac68f0941319c0d2f4fb927f96e4ee29bb46c6
+python -s -m repomentor.cli chat --snapshot-id SNAPSHOT_ID
+```
+
+也可直接查看保存的评测答案与源码，整个过程离线运行：
+
+```bash
+python -s -m repomentor.cli inspect-run experiments/sweqa-50-2026-11-03/combined/results.jsonl --case-id sweqa-flask-042--hybrid_rerank
+python -s scripts/verify_archives.py
+python -s -m repomentor.cli questions verify
+```
+
+Windows 本机可使用 `python/run.ps1` 调用指定环境。更多问答、报告与会话命令见[Python 使用说明](python/README.md)。
+
+### 后训练
+
+后训练依赖与 CUDA 内核单独列在 [requirements.txt](python/SFTGRPO/requirements.txt) 和 [requirements-cuda.txt](python/SFTGRPO/requirements-cuda.txt)。按[训练说明](python/SFTGRPO/README.md)安装后，从 `python/` 目录准备数据并执行 CPU 预检：
+
+```bash
+python -s -m sftgrpo.prepare fetch
+python -s -m sftgrpo.prepare data
+python -s -m sftgrpo.train preflight
+```
+
+在线工具隔离与 GPU 训练使用 Linux 环境。正式训练、资源预检、检查点及评测复核流程统一在后训练 README 维护。
+
+## 仓库结构与文档
+
+```text
+RepoMentor/
+├── python/
+│   ├── src/repomentor/   # RAG、SDK Agent、Harness、CLI 与评测
+│   ├── src/sftgrpo/     # 轨迹处理、SFT、GRPO、奖励与工具环境
+│   ├── SFTGRPO/         # 后训练配置、依赖和测试
+│   ├── experiments/     # 评测结果、原始答案与来源链
+│   └── tests/           # Python 核心离线回归
+├── src/                 # 原 TypeScript 后端
+├── web/                 # 原 React 前端
+└── demo/                # 原 Web 版截图
+```
+
+- [Python 当前实现与模块职责](python/项目文档.md)
+- [RAG 50题评测与失败分析](python/experiments/sweqa-50-2026-11-03/README.md)
+- [保留实验与数据来源](python/experiments/README.md)
+- [后训练配置与运行说明](python/SFTGRPO/README.md)
+
+## 原 TypeScript 全栈版本
 
 [![Node.js](https://img.shields.io/badge/Node.js-20.19%2B-green)](https://nodejs.org/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.7-blue)](https://www.typescriptlang.org/)
 
-RepoMentor accepts a public GitHub repository and branch, builds a bounded repository profile, selects real source evidence, and produces a structured learning report in three stages. Its public Analysis Trace shows plans, deterministic repository actions, evidence coverage, and runtime decisions in real time without exposing private model reasoning.
+早期版本以 **React + Vite / Fastify + TypeScript / SQLite** 提供仓库报告页面，通过 SSE 展示任务进度，交付项目概览、模块图、架构、阅读路线与贡献建议。当前 Python 两项目独立运行；以下截图展示原 Web 应用。
 
-## What's new in v0.3.2
+在仓库根目录使用 Node.js 20.19+ 启动：
 
-- **Bounded Agentic Harness** — larger Anthropic-compatible analyses let Explorer and Mentor choose bounded discovery actions through RepoMentor's in-process MCP tools, while the Harness remains the only source reader.
-- **No raw repository permissions** — Agent queries run in isolated temporary directories without `Read`, `Glob`, `Grep`, shell, network, write, or edit tools.
-- **Adaptive provider routing** — complete small repositories and OpenAI-compatible providers retain the deterministic Workflow; unsupported Agent capabilities fall back once and are remembered per provider fingerprint.
-- **Claude Agent SDK as a first-class runtime** — the SDK is pinned, structured results retain usage and cost metadata, and trusted namespaced Skills are published through the local RepoMentor plugin.
-- **Structured output compatibility** — Explorer, Mentor, and Contributor use Draft-07 output schemas with Zod as the final validation boundary, plus text-JSON fallback for compatible endpoints without native support.
-- **Accurate analysis traces** — runtime selection, completed discovery actions, evidence reuse, empty tool results, and phase-specific Agent completion are reported without exposing source contents or hidden reasoning.
-- **Report polish** — Module Map importance labels now use coordinated colors for `core`, `support`, and `utility`.
+```bash
+npm install
+npm start
+```
 
-## Screenshots
+启动后在页面的 **Model Settings** 中配置模型，默认服务地址为 `http://localhost:3000`。源码与前后端脚本保留原位。
 
-### Start an analysis
+<details>
+<summary>查看原 Web 版的六张截图</summary>
+
+**输入开源仓库**
 
 <p align="center">
   <img src="demo/1.png" width="900" alt="RepoMentor repository input page" />
 </p>
 
-### Follow the analysis in real time
+**查看实时分析进度**
 
 <p align="center">
   <img src="demo/2.png" width="900" alt="RepoMentor live repository analysis progress" />
 </p>
 
-### Explore the generated report
+**浏览结构化报告**
 
 <p align="center">
   <img src="demo/3.png" width="900" alt="RepoMentor structured repository analysis report" />
 </p>
 
-### Repository overview and module map
+**项目概览与模块图**
 
 <p align="center">
   <img src="demo/4.png" width="900" alt="RepoMentor repository overview and module map" />
 </p>
 
-### Architecture and recommended reading path
+**架构与源码阅读路线**
 
 <p align="center">
   <img src="demo/5.png" width="900" alt="RepoMentor architecture analysis and reading path" />
 </p>
 
-### Contribution opportunities
+**贡献建议**
 
 <p align="center">
   <img src="demo/6.png" width="900" alt="RepoMentor contribution suggestions grouped by difficulty" />
 </p>
 
-## How it works
-
-RepoMentor separates deterministic repository inspection from model reasoning. The model does not repeatedly scan the repository or treat a partial summary as the project itself.
-
-```mermaid
-flowchart LR
-    A["Public GitHub repository"] --> B["Clone or update local cache"]
-    B --> C["Build repository profile"]
-    C --> S["Activate executable Skill policy"]
-    S --> Q{"Complete bounded coverage available?"}
-    Q -->|Yes| E["Harness builds and executes a complete evidence plan"]
-    Q -->|No, Anthropic-compatible| D["Bounded Explorer Agent uses RepoMentor MCP discovery"]
-    Q -->|No, Workflow fallback| O["Orchestrator plans Explorer evidence"]
-    D --> P["Agent returns one EvidencePlan"]
-    P --> E
-    O --> E
-    E --> F["Explorer maps project structure"]
-    F --> R{"Explorer evidence complete?"}
-    R -->|Yes| H["Reuse the complete evidence set"]
-    R -->|No| G["Bounded Agent or Orchestrator plans Mentor evidence"]
-    G --> H["Harness discovers and reads additional evidence"]
-    H --> I["Mentor explains architecture"]
-    I --> J["Contributor proposes entry points"]
-    J --> K["Interactive web report"]
-    C -. "tool trace" .-> L["Analysis Trace"]
-    D -. "plan trace" .-> L
-    E -. "evidence trace" .-> L
-    G -. "plan trace" .-> L
-    H -. "evidence trace" .-> L
-```
-
-The repository profile includes a bounded file index, hierarchical directory statistics, README and manifest excerpts, engineering configuration, contribution guidance, language statistics, TODO markers, and entry/test candidates. For a small repository whose relevant files fit the active policy, the Harness creates a deterministic complete-coverage plan. Other repositories use a bounded Claude Agent SDK research loop when the provider supports it, with the existing Orchestrator as a capability fallback. OpenAI-compatible providers always use the deterministic Workflow. RepoMentor's provider-neutral Repository Harness validates every tool action and path, applies read budgets, prepares downstream context, and emits a safe operational trace.
-
-The bounded loop is deliberately two-step. The Agent can call only `mcp__repomentor__search_symbols`, `mcp__repomentor__trace_module_dependencies`, and `mcp__repomentor__find_related_tests`; those tools return summaries, paths, and counts—not source. The Agent emits one `EvidencePlan`, then the Harness performs the only source batch read outside the loop. The SDK runs in a fresh temporary `cwd` with `settingSources: []`, no persisted session, and no raw file, shell, network, editing, or delegation tools. A target repository's `CLAUDE.md`, `.claude/skills`, hooks, and agents are therefore evidence only and are never loaded as SDK settings.
-
-| Role | Responsibility |
-|---|---|
-| **Orchestrator** | Plans small, stage-specific sets of source files when deterministic complete coverage is not available; it does not produce the report itself |
-| **Explorer** | Identifies the project type, technology stack, entry points, module boundaries, and repository summary |
-| **Mentor** | Explains architecture and dependencies, extracts code patterns, and builds a recommended reading path |
-| **Contributor** | Uses contribution docs, TODOs, commit history, tests, and focused source evidence to suggest realistic contribution paths |
-
-Explorer, Mentor, and Contributor receive stage-specific contexts rather than one repeated full prompt. Every stage requests provider-native JSON Schema output and then validates it with Zod; compatible endpoints that do not support native structured output retain the text-JSON parser and one tool-free repair pass.
-
-RepoMentor treats the Harness as the runtime surrounding those models—not as an evaluation suite and not as another Agent. It owns shared state, domain-tool execution, path validation, evidence budgets, stage transitions, tool results, and stop conditions. The current domain tools are deliberately coarse-grained:
-
-| Harness tool | Deterministic responsibility |
-|---|---|
-| `get_repository_map` | Build the bounded file index, project metadata, entry candidates, and repository overview |
-| `search_symbols` | Locate a specific symbol or concept inside a bounded source scan and return candidate evidence paths |
-| `trace_module_dependencies` | Resolve repository-internal static dependency edges from known source entry points |
-| `find_related_tests` | Locate representative tests from source filenames and directory relationships |
-| `read_evidence_batch` | Validate an Orchestrator plan and read one bounded, deduplicated batch of repository evidence |
-| `inspect_git_history` | Extract recent themes, frequently touched files, and contributor counts without executing repository code |
-| `prepare_contributor_context` | Combine verified evidence with manifests, guidance, tests, and TODO metadata |
-
-The shared `HarnessState` records goals, analysis questions, plans, tool observations, examined and skipped paths, unresolved evidence, active Skill policy, and global usage. A path-keyed Evidence Ledger separately preserves the best known excerpt and its `available`, `partial`, or `missing` state across stages. The Harness executes selected discovery actions, merges discovered paths with direct requests, reads evidence, resolves or records coverage gaps, and stops. Explorer and Mentor can each consume at most one evidence batch; a complete small-repository evidence set can be reused without a second batch. The complete run stops after two batches, 18 file reads, or 88KB of source evidence. These are runtime invariants enforced in code rather than instructions that the model may ignore. Natural-language stop conditions remain visible planning intent; the Harness does not pretend they are machine-verified.
-
-Evidence content is prepared before the stage budget is distributed. If all selected contents fit, they are retained in full regardless of request order; otherwise every candidate receives a bounded baseline before remaining bytes are assigned by priority. Text files use the default bounded reader, while structured container formats can expose normalized text through small, isolated adapters without changing Harness behavior.
-
-Skills are executable Harness capability packs rather than extra Agents. RepoMentor is a trusted local Claude Agent SDK plugin (`.claude-plugin/plugin.json`): each `skills/*/SKILL.md` explains how to use only the RepoMentor discovery tools, while the adjacent `skill.json` remains the authoritative executable policy for allowed tools, questions, evidence requirements, stop intent, and stage limits. Skills are loaded under the `repomentor:<skill-name>` namespace. The Harness—not the prompt or SDK hook—enforces permissions, path provenance, duplicate fingerprints, action/file limits, and stage transitions.
-
-`MENTOR_SUBAGENTS_ENABLED=true` enables an experimental Mentor coordinator with two programmatic SDK `AgentDefinition`s: `architecture-analyst` and `learning-path-reviewer`. Each receives one read-only MCP view containing only evidence already read by the Harness, cannot delegate recursively, and is called exactly once. A third delegation is rejected by a hook. Any incomplete or invalid delegation falls back to the single Mentor synthesis without reading the repository again. This remains off by default until the benchmark gates are met.
-
-## Features
-
-- **Evidence-driven analysis** — conclusions combine a deterministic repository profile with actual selected source files
-- **Adaptive complete coverage** — small repositories can skip redundant planning and reuse one complete evidence set across Explorer and Mentor
-- **Bounded orchestration** — file selection and batch reads replace uncontrolled tool-call loops
-- **Executable Skills** — project-type capability packs guide planning while the Harness enforces their tool and evidence boundaries
-- **Evidence Ledger** — path-level read status, monotonic evidence quality, and cross-stage gap resolution are maintained by the runtime
-- **Transparent Harness trace** — inspect evidence plans, deterministic repository tools, files examined, coverage budgets, and runtime decisions without exposing chain-of-thought or source contents
-- **Real-time progress** — Server-Sent Events stream stage status and detailed logs
-- **Structured report** — Overview, Architecture, Reading Path, code conventions, setup instructions, and contribution opportunities
-- **Structured coverage boundaries** — missing evidence, test absence, read limits, and deliberate exclusions use stable machine-readable gap types
-- **Shared Harness state** — repository coverage, evidence plans, examined paths, unresolved evidence, and global budgets move across stages without relying on growing chat history
-- **Repository and analysis caching** — local clones are updated in place; completed reports are cached by repository, branch, commit, and pipeline version
-- **Persistent tasks** — SQLite stores task state, completed reports, and compatible analysis experience
-- **Reliability controls** — path sandboxing, repository size limits, stage-specific context budgets, timeouts, retry classification, and schema validation
-- **Local BYOK model settings** — configure Anthropic-compatible or OpenAI-compatible providers from the web interface
-- **Single-process production server** — Fastify serves both the API and the compiled frontend
-
-## Tech stack
-
-| Layer | Technology |
-|---|---|
-| Agent runtime | RepoMentor provider layer · `@anthropic-ai/claude-agent-sdk` |
-| Backend | Node.js · TypeScript · Fastify |
-| Validation | Zod |
-| Git integration | `simple-git` |
-| Storage | `better-sqlite3` |
-| Frontend | React · TypeScript · Vite |
-| Testing | Vitest · Testing Library |
-
-## Getting started
-
-### Prerequisites
-
-- [Node.js](https://nodejs.org/) 20.19 or newer
-- [Git](https://git-scm.com/)
-- An API token for an Anthropic-compatible or OpenAI-compatible model endpoint
-- A public GitHub repository to analyze
-
-Private repositories are not currently supported.
-
-### Installation
-
-```bash
-git clone https://github.com/Freesia2077/RepoMentor.git
-cd RepoMentor
-npm install
-```
-
-Start RepoMentor, open the local web interface, and expand **Model Settings**. Choose a provider protocol, then enter the Base URL, exact model ID, and API key. The key is stored only in the ignored local file `data/model-settings.json` and is never returned by the settings API.
-
-For normal local use, one command is enough after installing dependencies:
-
-```bash
-npm start
-```
-
-If production assets are missing, RepoMentor builds them automatically, starts the local server, and opens the browser. The source checkout also exposes a `repomentor` executable for `npm link` or a future packaged installation. Useful options are:
-
-```bash
-npm start -- --no-open
-npm start -- --port 3100
-npm start -- --rebuild
-```
-
-Two provider protocols are currently available:
-
-| Provider protocol | Runtime | Typical endpoints |
-|---|---|---|
-| `anthropic-compatible` | Claude Agent SDK | DeepSeek Anthropic endpoint, Anthropic-compatible gateways |
-| `openai-compatible` | Chat Completions adapter | OpenAI and compatible `/v1/chat/completions` endpoints |
-
-OpenAI-compatible Base URLs should include the API version prefix when required, for example `https://api.openai.com/v1`.
-
-### Optional environment configuration
-
-The local settings page is recommended, but environment variables remain useful for scripted or reproducible setups:
-
-```env
-LLM_PROVIDER=anthropic-compatible
-LLM_API_KEY=sk-xxx
-LLM_BASE_URL=https://api.deepseek.com/anthropic
-LLM_MODEL=deepseek-v4-flash
-AGENT_RUNTIME_MODE=adaptive
-MENTOR_SUBAGENTS_ENABLED=false
-# AGENT_MAX_BUDGET_USD=0.25
-```
-
-Existing `ANTHROPIC_AUTH_TOKEN`, `ANTHROPIC_BASE_URL`, and `ANTHROPIC_MODEL` configurations remain backward compatible. Saved web settings take precedence over environment values.
-
-Other available settings include:
-
-```env
-PORT=3000
-HOST=127.0.0.1
-CLONE_TIMEOUT_MS=60000
-CLONE_DEPTH=1
-MAX_REPO_SIZE_MB=200
-TASK_TOTAL_TIMEOUT_MS=600000
-INTERACTION_TIMEOUT_MS=15000
-MODEL_SETTINGS_PATH=./data/model-settings.json
-SQLITE_PATH=./data/repomentor.db
-LOG_LEVEL=info
-```
-
-`AGENT_RUNTIME_MODE=adaptive` uses complete-coverage Workflow for eligible small repositories, bounded Agent discovery for other Anthropic-compatible runs, and Workflow for OpenAI-compatible runs. `workflow` is the immediate rollback switch. `agentic` requires an Anthropic-compatible provider and returns `invalid_model_settings` otherwise. `AGENT_MAX_BUDGET_USD` is optional; turn, task-timeout, and Harness budgets remain hard limits when it is omitted.
-
-### Development
-
-Start the backend and Vite development server together:
-
-```bash
-npm run dev
-```
-
-Open [http://localhost:5173](http://localhost:5173). Configure a model once, then enter either a full GitHub URL or the `owner/repository` shorthand and choose a branch.
-
-You can also run each side independently:
-
-```bash
-npm run dev:backend   # http://localhost:3000
-npm run dev:frontend  # http://localhost:5173
-```
-
-### Production
-
-```bash
-npm start
-```
-
-The production server is available at [http://localhost:3000](http://localhost:3000) unless `HOST`, `PORT`, or their equivalent CLI options are changed. `npm run build` remains available when you want to build without starting.
-
-## Testing
-
-```bash
-npm test                  # complete test suite
-npm test --workspace=web  # frontend tests
-npm run build             # frontend and backend production build
-```
-
-## Project structure
-
-```text
-RepoMentor/
-├── agents/
-│   ├── orchestrator/       # stage-specific evidence planning
-│   ├── explorer/           # repository structure analysis
-│   ├── mentor/             # architecture and learning path
-│   └── contributor/        # contribution guidance
-├── skills/                 # SKILL.md strategies + executable skill.json Harness policies
-├── src/
-│   ├── db/                 # SQLite migrations and repositories
-│   ├── lib/                # Git, SSE, sandbox, schemas, repository profile, content adapters
-│   ├── routes/             # Fastify API and event-stream routes
-│   └── services/           # Repository Harness, orchestration, pipeline, and provider integration
-├── web/                    # React dashboard
-├── tests/                  # backend tests
-└── demo/                   # README screenshots
-```
-
-## API overview
-
-| Method | Endpoint | Purpose |
-|---|---|---|
-| `POST` | `/api/analysis` | Create an analysis task from `repoUrl` and optional `branch` |
-| `GET` | `/api/analysis/:id` | Read task status or the completed report |
-| `POST` | `/api/analysis/:id/ask` | Answer an active interaction question in optional interactive flows |
-| `GET` | `/api/analysis/:id/stream` | Subscribe to task events over SSE |
-| `GET` | `/api/settings/model` | Read non-secret local model configuration metadata |
-| `PUT` | `/api/settings/model` | Save the local provider, endpoint, model, and optional API key |
-
-## Contributing
-
-Contributions are welcome. Before opening a pull request:
-
-1. Create a feature branch from `main`.
-2. Run the backend and frontend test suites.
-3. Run the production build.
-4. For substantial changes, open an issue first so the approach can be discussed.
+</details>
