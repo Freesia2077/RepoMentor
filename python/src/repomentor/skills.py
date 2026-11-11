@@ -1,3 +1,4 @@
+# 读取随 Python 包分发的受信提示资产与技能策略，把任务说明与可执行预算连接起来。
 import json
 from importlib.resources import files
 
@@ -8,6 +9,7 @@ def assets_path():
     return files("repomentor").joinpath("assets")
 
 
+# 只从应用自带受信资产加载可执行策略，目标仓库中的说明保持为普通证据。
 def load_skill(project_types, phase):
     root = assets_path().joinpath("plugin", "skills")
     candidates = []

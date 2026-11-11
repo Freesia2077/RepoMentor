@@ -1,5 +1,8 @@
 """Compatibility report stages, budgets and evidence ledger."""
 
+# 兼容报告流程的状态与证据管理层，统一执行阶段顺序、文件预算和证据复用。
+# 按路径维护最佳原文与缺口记录，Explorer、Mentor、Contributor 通过受控状态转换协作。
+
 from __future__ import annotations
 
 import json
@@ -40,6 +43,7 @@ def deduplicate_requests(requests):
     return result
 
 
+# 保留直接请求的优先级，同时为工具发现的新路径留少量名额，避免计划锁死在旧候选。
 def select_requests(direct, discovered, maximum):
     direct = deduplicate_requests(direct)
     direct_paths = {r.path for r in direct}
@@ -50,6 +54,7 @@ def select_requests(direct, discovered, maximum):
     return deduplicate_requests(direct[: max(0, maximum - slots)] + discovered[:slots])
 
 
+# 先准备各文件实际长度；预算不足时先给基础额度，再按优先级分配余量。
 def build_evidence_bundle(reader, plan, phase, existing_paths=(), check=lambda: None):
     seen, existing = set(), set(map(normalize_path, existing_paths))
     candidates, omissions = [], []
@@ -88,6 +93,7 @@ def build_evidence_bundle(reader, plan, phase, existing_paths=(), check=lambda: 
     if sum(targets) <= total:
         allocations = targets
     else:
+        # 先为每个候选保留基础空间，再分配剩余预算，避免前几个文件吃完全部额度。
         allocations = [min(n, 4000) for n in targets]
         remaining = total - sum(allocations)
         order = sorted(
@@ -262,6 +268,7 @@ class ReportHarness:
         self.record_plan(phase, bounded)
         return self.read_batch(phase, bounded)
 
+    # 完成受限读取与总预算校验后，再一起发布状态和证据，避免半完成读取污染账本。
     def read_batch(self, phase, plan):
         with self._lock:
             self._phase_ready(phase)
@@ -337,6 +344,7 @@ class ReportHarness:
     def _entry(self, path):
         return self.ledger.setdefault(path, {"bestEvidence": None, "omission": None, "attempts": []})
 
+    # 同路径优先保留完整原文，其次保留较长片段，并清除已补齐的阶段缺口。
     def _merge(self, file):
         entry = self._entry(file.path)
         entry["attempts"].append(
@@ -373,6 +381,7 @@ class ReportHarness:
             totalBytes=sum(len(f.content.encode()) for f in files),
         )
 
+    # 仅当小仓库的完整覆盖条件满足时生成一次性计划，减少重复规划和二次读取。
     def complete_coverage_plan(self, phase):
         self._phase_ready(phase)
         state = self.stages[phase]
@@ -510,6 +519,7 @@ class ReportHarness:
             files += self.profile[key]
         return {f["path"] for f in files}
 
+    # 结构与来源在输出边界复核，移除超出已读范围的引用并记录检查结果。
     def verify_output(self, stage, output, provided_paths=None):
         value = output.model_dump()
         allowed = {f.path for f in self.evidence().files if stage != "explorer" or f.phase == "explorer"}

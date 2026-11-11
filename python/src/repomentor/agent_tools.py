@@ -1,5 +1,8 @@
 """One read-only tool registry for native calls, SDK MCP and training environments."""
 
+# 统一注册六类只读仓库工具，并在 RepositoryEnvironment 中管理路径、去重、预算和证据状态。
+# 实际读取的源码与当前各 Agent 可见的源码分别记账，引用校验使用后者。
+
 from __future__ import annotations
 
 import copy
@@ -23,6 +26,7 @@ from .source_windows import anchored_window, source_span, uncovered, verify_span
 from .tools import find_tests, trace_dependencies
 
 
+# 工具次数、总源码字节、单次观察和读取长度分别设限，防止一个大返回耗尽整轮预算。
 class AgentLimits(Contract):
     max_tool_calls: int = Field(default=6, ge=0, le=32)
     max_decisions: int = Field(default=8, ge=1, le=32)
@@ -40,15 +44,26 @@ def object_schema(properties, required):
 QUERY = {"type": "string", "minLength": 1, "maxLength": 240, "pattern": r"\S"}
 PATH = {"type": "string", "minLength": 1, "maxLength": 300}
 SEARCH = object_schema(
-    {"query": QUERY, "path": PATH, "path_prefix": PATH,
-     "match": {"type": "string", "enum": ["ranked", "literal"]}}, ["query"]
+    {
+        "query": QUERY,
+        "path": PATH,
+        "path_prefix": PATH,
+        "match": {"type": "string", "enum": ["ranked", "literal"]},
+    },
+    ["query"],
 )
 DEFINITIONS = {
     "navigate_symbol": (
         "Find exact definitions or one-hop callees/callers of an identifier. Returns up to six locations; "
         "unresolved dynamic calls are explicit. No source evidence: read returned lines with read_code.",
-        object_schema({"query": QUERY, "path": PATH,
-                       "relation": {"type": "string", "enum": ["definitions", "callees", "callers"]}}, ["query"]),
+        object_schema(
+            {
+                "query": QUERY,
+                "path": PATH,
+                "relation": {"type": "string", "enum": ["definitions", "callees", "callers"]},
+            },
+            ["query"],
+        ),
     ),
     "search_code": (
         "Search source/tests; returns at most 3 source units, bounded by bytes. "
@@ -91,6 +106,7 @@ DEFINITIONS = {
 }
 
 
+# 从同一工具注册表生成原生调用 schema，使协议描述与环境执行入口保持一致。
 def native_tools():
     return [
         {
@@ -134,6 +150,7 @@ class RepositoryEnvironment:
         self.token, self.clock = token or CancellationToken(), clock
         self.reset({"question": ""})
 
+    # 只接受当前问题初始化轨迹，把参考答案和奖励数据隔离在工具环境之外。
     def reset(self, task):
         if set(task) != {"question"} or not isinstance(task["question"], str):
             raise ValueError("environment input permits question only; no gold/reward fields")
@@ -171,6 +188,7 @@ class RepositoryEnvironment:
     def visible_context(self, actor="main"):
         return self.state.get("visible_context", {}).get(actor, [])
 
+    # 用请求区间减去该 actor 仍可见的源码行，得到准确的续读位置。
     def pending_reads(self, actor="main"):
         """Navigation only: derive remaining requested intervals from currently visible raw lines."""
         pending, seen = [], set()
@@ -192,6 +210,7 @@ class RepositoryEnvironment:
                     return pending
         return pending
 
+    # 共享前核对源码身份并扣减全局证据预算，同时更新接收方的可见范围。
     def share(self, spans, actor, origin):
         verify_spans(self.reader, spans)
         visible = self.state.setdefault("visible_context", {}).setdefault(actor, [])
@@ -209,8 +228,14 @@ class RepositoryEnvironment:
             if span not in self.state["context"]:
                 self.state["context"].append(copy.deepcopy(span))
             self.state["source_bytes"] += size
-            self.state["source_transfers"].append({"actor": actor, "origin": origin, "bytes": size,
-                **{k: span[k] for k in ("path", "start_line", "end_line", "content_sha256")}})
+            self.state["source_transfers"].append(
+                {
+                    "actor": actor,
+                    "origin": origin,
+                    "bytes": size,
+                    **{k: span[k] for k in ("path", "start_line", "end_line", "content_sha256")},
+                }
+            )
             admitted.append(span)
         return admitted
 
@@ -257,14 +282,17 @@ class RepositoryEnvironment:
             ]
         else:
             try:
-                candidates = self.index.search(query, k=self.index.settings.candidate_k, scope=scope)["candidates"]
+                candidates = self.index.search(query, k=self.index.settings.candidate_k, scope=scope)[
+                    "candidates"
+                ]
             finally:
                 if hasattr(self.index, "release_models"):
                     self.index.release_models()
         self.check()
 
-        return candidates[:self.index.settings.candidate_k]
+        return candidates[: self.index.settings.candidate_k]
 
+    # 把命中位置扩展成有边界的声明原文，并按字节和单元预算记录截断及续读信息。
     def _excerpts(self, candidates, query, remaining, *, max_units=3, expand_selected=False):
         spans, hits, units_seen = [], [], set()
         terms = set(tokenize(query))
@@ -276,11 +304,7 @@ class RepositoryEnvironment:
             if not lines:
                 continue
             offset = next(
-                (
-                    i
-                    for i, line in enumerate(lines)
-                    if query.casefold() in line.casefold()
-                ),
+                (i for i, line in enumerate(lines) if query.casefold() in line.casefold()),
                 max(range(len(lines)), key=lambda i: len(terms & set(tokenize(lines[i])))),
             )
             start = item.get("anchor_line", chunk["start_line"] + offset)
@@ -290,9 +314,13 @@ class RepositoryEnvironment:
             # A lexical/leaf-name hit must not shrink its retrieved declaration
             # into a nested callback. Exact symbols and callees retain their anchor.
             targeted = "anchor_line" in item and (
-                item.get("symbol_priority", 5) >= 5 or "static_callee" in item.get("channels", []))
-            bounds = ((chunk["start_line"], chunk["end_line"])
-                      if chunk.get("symbol") and not targeted else (start, start))
+                item.get("symbol_priority", 5) >= 5 or "static_callee" in item.get("channels", [])
+            )
+            bounds = (
+                (chunk["start_line"], chunk["end_line"])
+                if chunk.get("symbol") and not targeted
+                else (start, start)
+            )
             unit = containing_unit(text, chunk["path"], *bounds)
             if unit["symbol"] is None:
                 unit.update(start_line=chunk["start_line"], end_line=chunk["end_line"])
@@ -300,9 +328,17 @@ class RepositoryEnvironment:
             if unit_key in units_seen:
                 continue
             full_lines = text.splitlines()
-            window = anchored_window(full_lines, unit["start_line"], unit["end_line"], start,
-                                     min(600 if expand_selected and chunk["path"].endswith(".d.ts") else 2400,
-                                         remaining, self.limits.max_observation_bytes // 6))
+            window = anchored_window(
+                full_lines,
+                unit["start_line"],
+                unit["end_line"],
+                start,
+                min(
+                    600 if expand_selected and chunk["path"].endswith(".d.ts") else 2400,
+                    remaining,
+                    self.limits.max_observation_bytes // 6,
+                ),
+            )
             if window is None:
                 continue
             units_seen.add(unit_key)
@@ -332,7 +368,10 @@ class RepositoryEnvironment:
             for i in sorted(range(len(hits)), key=lambda j: "class" in hits[j]["unit"].get("kind", "")):
                 hit = hits[i]
                 unit = hit["unit"]
-                if not hit["truncated"] or unit["end_line"]-unit["start_line"]+1 > self.limits.max_read_lines:
+                if (
+                    not hit["truncated"]
+                    or unit["end_line"] - unit["start_line"] + 1 > self.limits.max_read_lines
+                ):
                     continue
                 text, _ = self.reader.read(hit["path"], 500_000)
                 whole = source_span(hit["path"], text.splitlines(), unit["start_line"], unit["end_line"])
@@ -341,17 +380,28 @@ class RepositoryEnvironment:
                     spans[i] = whole
                     remaining -= extra
                     hit.update(uncovered_ranges=[], truncated=False, next_line=None)
-                elif (remaining >= 256 and "class" not in unit.get("kind", "")
-                      and spans[i]["end_line"] < unit["end_line"]):
-                    tail = anchored_window(text.splitlines(), spans[i]["end_line"]+1, unit["end_line"],
-                                           unit["end_line"], min(1200, remaining))
+                elif (
+                    remaining >= 256
+                    and "class" not in unit.get("kind", "")
+                    and spans[i]["end_line"] < unit["end_line"]
+                ):
+                    tail = anchored_window(
+                        text.splitlines(),
+                        spans[i]["end_line"] + 1,
+                        unit["end_line"],
+                        unit["end_line"],
+                        min(1200, remaining),
+                    )
                     if tail is not None:
                         span = source_span(hit["path"], text.splitlines(), *tail)
                         spans.append(span)
                         remaining -= len(span["content"].encode())
                         missing = uncovered(unit["start_line"], unit["end_line"], [spans[i], span])
-                        hit.update(uncovered_ranges=missing, truncated=bool(missing),
-                                   next_line=missing[0]["start_line"] if missing else None)
+                        hit.update(
+                            uncovered_ranges=missing,
+                            truncated=bool(missing),
+                            next_line=missing[0]["start_line"] if missing else None,
+                        )
         return {
             "schema_version": "repomentor.tool.sources.v2",
             "hits": hits,
@@ -367,9 +417,14 @@ class RepositoryEnvironment:
             symbols = getattr(self.index, "symbols", None)
             if symbols is None:
                 from .code_navigation import SymbolIndex
+
                 symbols = SymbolIndex.build(self.reader, {c.path for c in self.index.chunks})
-            result = symbols.lookup(args["query"], path=args.get("path"),
-                                    relation=args.get("relation", "definitions"), excluded=self.excluded_paths)
+            result = symbols.lookup(
+                args["query"],
+                path=args.get("path"),
+                relation=args.get("relation", "definitions"),
+                excluded=self.excluded_paths,
+            )
             return {**result, "paths": list(dict.fromkeys(t["path"] for t in result["targets"])), "spans": []}
         if name in ("search_code", "search_docs"):
             path, prefix = args.get("path"), args.get("path_prefix")
@@ -387,7 +442,8 @@ class RepositoryEnvironment:
             )
             result = self._excerpts(rows, args["query"], remaining)
             result["search_scope"] = SearchScope(
-                kind="code" if name == "search_code" else "docs", path=path,
+                kind="code" if name == "search_code" else "docs",
+                path=path,
                 path_prefix=prefix,
                 exclude_paths=self.excluded_paths,
             ).model_dump()
@@ -396,7 +452,9 @@ class RepositoryEnvironment:
             return result
         path = safe_path(args["path"])
         if path in self.excluded_paths:
-            raise RepositoryError("entry_scope_conflict", "path belongs to another entry; respect the user's selected entry")
+            raise RepositoryError(
+                "entry_scope_conflict", "path belongs to another entry; respect the user's selected entry"
+            )
         if path not in self.reader.paths:
             raise RepositoryError("not_tracked", "path not present in snapshot")
         if name == "read_code":
@@ -411,8 +469,11 @@ class RepositoryEnvironment:
             if args.get("expand") == "symbol" and start <= end:
                 unit = containing_unit(text, path, start, end)
                 # An explicit continuation must not jump back to a previously returned prefix.
-                start = start if any(s["start_line"] <= start and s["end_line"] >= unit["start_line"]
-                                     for s in visible) else unit["start_line"]
+                start = (
+                    start
+                    if any(s["start_line"] <= start and s["end_line"] >= unit["start_line"] for s in visible)
+                    else unit["start_line"]
+                )
                 end = unit["end_line"]
             end = min(end, len(text.splitlines()))
             gaps = uncovered(start, end, visible)
@@ -427,11 +488,16 @@ class RepositoryEnvironment:
                 gaps[0]["end_line"],
                 min(self.limits.max_read_bytes, remaining, self.limits.max_observation_bytes * 2 // 3),
             )
-            return {"spans": [span], "next_line": next_line, "truncated": next_line is not None,
-                    "unit": unit, "requested_end_line": args["end_line"],
-                    "requested_range": {"start_line": start, "end_line": end},
-                    "uncovered_ranges": uncovered(start, end, [*visible, span]),
-                    "schema_version": "repomentor.tool.sources.v3"}
+            return {
+                "spans": [span],
+                "next_line": next_line,
+                "truncated": next_line is not None,
+                "unit": unit,
+                "requested_end_line": args["end_line"],
+                "requested_range": {"start_line": start, "end_line": end},
+                "uncovered_ranges": uncovered(start, end, [*visible, span]),
+                "schema_version": "repomentor.tool.sources.v3",
+            }
         if name == "trace_dependencies":
             paths, metadata = trace_dependencies(self.reader, self.reader.paths, [path])
             paths = [p for p in paths if p not in self.excluded_paths]
@@ -453,6 +519,7 @@ class RepositoryEnvironment:
         )
         return result
 
+    # 所有工具经过同一入口完成参数校验、预算检查、重复识别和观察记账。
     def step(self, action, *, actor="main"):
         self.actor = actor
         call = ToolCall.model_validate(action)
@@ -480,10 +547,18 @@ class RepositoryEnvironment:
             if key in self.state["seen"]:
                 duplicate = self.state["seen"][key]
                 prior_sources = self.state["call_ids"][duplicate].get("source_spans", [])
-                still_visible = bool(prior_sources) and all(not uncovered(s["start_line"], s["end_line"],
-                    [v for v in self.visible_context(actor) if v["path"] == s["path"]]) for s in prior_sources)
+                still_visible = bool(prior_sources) and all(
+                    not uncovered(
+                        s["start_line"],
+                        s["end_line"],
+                        [v for v in self.visible_context(actor) if v["path"] == s["path"]],
+                    )
+                    for s in prior_sources
+                )
                 if not prior_sources or still_visible:
-                    raise HarnessError("duplicate_action", "identical action is already visible; change query/range")
+                    raise HarnessError(
+                        "duplicate_action", "identical action is already visible; change query/range"
+                    )
                 duplicate = None  # Source was compacted out: allow a bounded re-read.
             self.state["seen"][key] = call.call_id
             payload = self._execute(call)
@@ -510,14 +585,29 @@ class RepositoryEnvironment:
                 path = source_spans[0]["path"]
                 earlier = [s for s in self.visible_context(actor) if s["path"] == path]
                 gaps = uncovered(requested["start_line"], requested["end_line"], [*earlier, *source_spans])
-                observation.update(uncovered_ranges=gaps, truncated=bool(gaps),
+                observation.update(
+                    uncovered_ranges=gaps,
+                    truncated=bool(gaps),
                     next_line=gaps[0]["start_line"] if gaps else None,
-                    continuation={"tool": "read_code", "arguments": {"path": path,
-                        "start_line": gaps[0]["start_line"], "end_line": requested["end_line"], "expand": "none"}}
-                    if gaps else None)
+                    continuation={
+                        "tool": "read_code",
+                        "arguments": {
+                            "path": path,
+                            "start_line": gaps[0]["start_line"],
+                            "end_line": requested["end_line"],
+                            "expand": "none",
+                        },
+                    }
+                    if gaps
+                    else None,
+                )
             observation["spans"] = [
-                {**{k: v for k, v in s.items() if k != "content"},
-                 "lines": [f"L{i}: {line}" for i, line in enumerate(s["content"].split("\n"), s["start_line"])]}
+                {
+                    **{k: v for k, v in s.items() if k != "content"},
+                    "lines": [
+                        f"L{i}: {line}" for i, line in enumerate(s["content"].split("\n"), s["start_line"])
+                    ],
+                }
                 for s in source_spans
             ]
             return json.dumps(observation, ensure_ascii=False, separators=(",", ":"))
@@ -538,9 +628,12 @@ class RepositoryEnvironment:
                 target = observation["hits"][0] if observation.get("hits") else observation
                 anchor = target.get("match_line", span["start_line"])
                 trim_start = anchor - span["start_line"] > span["end_line"] - anchor
-                span = {**span, "content": "\n".join(lines[1:] if trim_start else lines[:-1]),
-                        "start_line": span["start_line"] + int(trim_start),
-                        "end_line": span["end_line"] - int(not trim_start)}
+                span = {
+                    **span,
+                    "content": "\n".join(lines[1:] if trim_start else lines[:-1]),
+                    "start_line": span["start_line"] + int(trim_start),
+                    "end_line": span["end_line"] - int(not trim_start),
+                }
                 span["content_sha256"] = hashlib.sha256(span["content"].encode()).hexdigest()
                 source_spans[0] = span
                 target.update(truncated=True, next_line=span["end_line"] + 1)

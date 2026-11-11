@@ -1,5 +1,7 @@
 """The compatibility report pipeline. Directly callable without HTTP or a UI."""
 
+# 调度仓库学习报告的固定阶段，连接 SDK、兼容运行时与结构化结果保存。
+
 import asyncio
 import time
 from uuid import uuid4
@@ -13,6 +15,7 @@ from .runtimes.claude import RuntimeFailure
 from .skills import load_skill
 
 
+# 按报告阶段组织任务和证据，将各阶段状态与最终结构化输出统一持久化。
 async def run_report(
     reader, runtime, *, emit=lambda *args: None, token=None, run_id=None, total_timeout=600, project_types=()
 ):

@@ -1,5 +1,8 @@
 """Immutable Git-object snapshots: never run or check out target repository code."""
 
+# 将仓库冻结为 Git 对象快照，并提供路径、文件大小和编码受限的只读访问。
+# 检索、引用和评审都绑定固定提交，分支之后的更新不会改变已保存的源码。
+
 from __future__ import annotations
 
 import hashlib
@@ -25,6 +28,7 @@ def normalize_path(value: str) -> str:
     return value
 
 
+# 统一为仓库相对路径后拒绝绝对路径、父目录跳转、Git 内部路径和控制字符。
 def safe_path(value: str) -> str:
     value = normalize_path(value)
     if not value or value.startswith("/") or any(c in value for c in (":", "\x00", "\n", "\r")):
@@ -34,6 +38,7 @@ def safe_path(value: str) -> str:
     return value
 
 
+# 禁用交互提示、用户 Git 配置和 hooks；错误事件只保留受控分类，避免泄漏远端文本。
 def git(*args: str, timeout: float = 120) -> bytes:
     env = {k: v for k, v in os.environ.items() if not k.startswith("GIT_")}
     env.update(GIT_TERMINAL_PROMPT="0", GIT_CONFIG_NOSYSTEM="1", GIT_CONFIG_GLOBAL=os.devnull)
@@ -61,6 +66,7 @@ class SnapshotStore:
         self.root = Path(root).resolve()
         self.root.mkdir(parents=True, exist_ok=True)
 
+    # 将 HEAD 先解析成固定提交，再从 Git 对象构建清单，后续读取不依赖脏工作树。
     def import_repository(self, source: str, revision: str = "HEAD") -> "SnapshotReader":
         if revision != "HEAD" and not re.fullmatch(r"[0-9a-fA-F]{40}", revision):
             raise RepositoryError(
@@ -160,6 +166,7 @@ class SnapshotReader:
     def paths(self):
         return list(self.entries)
 
+    # 只读取快照清单允许的 Git 对象，路径与对象类型共同约束源码访问。
     def raw(self, path: str) -> bytes:
         path = safe_path(path)
         entry = self.entries.get(path)
@@ -181,6 +188,7 @@ class SnapshotReader:
             return data
         return self._cache[path]
 
+    # 按字节上限解码原文并显式返回截断状态，调用方据此决定能否完整引用。
     def read(self, path: str, limit: int = 24_000) -> tuple[str, bool]:
         data = self.raw(path)
         if path.endswith(".ipynb"):

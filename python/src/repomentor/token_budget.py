@@ -1,5 +1,8 @@
 """Pinned, text-only Qwen 3.5 / Ollama 0.34.3 prompt accounting (thinking disabled)."""
 
+# 根据固定 tokenizer 与服务模板估算完整请求预算，同时预留输出和模板空间。
+# 工具路径使用带余量的估计，响应时继续核对服务端实际 prompt 用量。
+
 import hashlib
 from functools import lru_cache
 from pathlib import Path
@@ -7,8 +10,8 @@ from pathlib import Path
 from .paths import data_root
 
 
+# 先确定数据目录再按路径和哈希缓存，防止不同安装目录误用同一 tokenizer 对象。
 def load_tokenizer(sha256: str):
-    # Resolve the data root before caching: separate installations must not share objects.
     path = data_root() / "tokenizers/qwen35-9b/tokenizer.json"
     return _load_tokenizer(path, sha256)
 
@@ -37,6 +40,7 @@ def render_text_messages(messages):
     return "".join(parts) + "<|im_start|>assistant\n<think>\n\n</think>\n\n"
 
 
+# 总预算等于输入估计、最大输出和模板预留；工具路径另留包装余量并核验服务端用量。
 def input_budget(settings, messages, tools=None, response_schema=None):
     import json
 
@@ -53,9 +57,8 @@ def input_budget(settings, messages, tools=None, response_schema=None):
         ):
             raise ValueError("tool budget is calibrated only for pinned Ollama/Qwen with thinking off")
         tokenizer = load_tokenizer(settings.tokenizer_sha256)
-        # Tokenize the complete wire payload, then reserve the native renderer's tool preamble,
-        # XML wrappers and per-message framing. This is a padded estimate, NOT exact accounting.
-        # Every real response checks server prompt usage against this allowance; mismatch fails closed.
+        # 对完整请求 JSON 分词，再为服务端工具前言、XML 和消息包装预留余量。
+        # 该值用于保守准入；响应后还需核对服务端实际用量，超出预留就显式报错。
         wire = json.dumps([messages, tools], ensure_ascii=False)
         prompt_tokens = len(tokenizer.encode(wire, add_special_tokens=False).ids) + 768 + 64 * len(messages)
         mode = "qwen35_ollama_tools_padded_v1"
@@ -69,7 +72,7 @@ def input_budget(settings, messages, tools=None, response_schema=None):
         tokenizer = load_tokenizer(settings.tokenizer_sha256)
         prompt_tokens = len(tokenizer.encode(render_text_messages(messages), add_special_tokens=False).ids)
         mode = "qwen35_ollama_text_v1"
-    # JSON schema constrains decoding in Ollama and is not inserted into its text prompt.
+    # Ollama 用 JSON schema 约束解码，此路径只计算实际文本提示的 token。
     total = prompt_tokens + settings.max_tokens + settings.template_reserve
     return {
         "mode": mode,

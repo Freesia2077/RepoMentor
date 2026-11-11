@@ -1,5 +1,7 @@
 """One serializable retrieval policy for CLI, reports, and experiment runners."""
 
+# 集中定义检索组件与预算参数，确保 CLI、会话和实验使用同一套合法配置。
+
 from typing import Literal
 
 from pydantic import Field, model_validator
@@ -7,6 +9,7 @@ from pydantic import Field, model_validator
 from .contracts import Contract
 
 
+# 候选数量、最终单元数量和切块预算集中校验，防止组合配置出现互相矛盾的上限。
 class RetrievalPolicy(Contract):
     chunker: Literal["line", "syntax"] = "syntax"
     retriever: Literal["bm25", "vector", "hybrid", "hybrid-rerank"] = "bm25"

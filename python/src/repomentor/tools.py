@@ -1,5 +1,7 @@
 """The three bounded discovery tools shared by the SDK and deterministic report path."""
 
+# 实现受限符号搜索、静态依赖和关联测试定位，返回可供后续读取的候选路径。
+
 import ast
 import posixpath
 import re
@@ -33,6 +35,7 @@ def search_symbols(reader: SnapshotReader, index: list[str], query: str):
     return list(dict.fromkeys(m["path"] for m in matches)), {"query": query, "matches": len(matches)}
 
 
+# 解析仓库内的有限静态导入，外部包和动态目标以未解析信息返回。
 def trace_dependencies(reader: SnapshotReader, index: list[str], seeds: list[str]):
     tracked = set(index)
     edges = []
@@ -105,6 +108,7 @@ def trace_dependencies(reader: SnapshotReader, index: list[str], seeds: list[str
     return list(dict.fromkeys(e["to"] for e in edges)), {"edges": len(edges), "seedFiles": len(seeds)}
 
 
+# 按路径关系和符号提示寻找测试候选，是否有断言仍需后续读取原文核对。
 def find_tests(index: list[str], sources: list[str]):
     scored = []
     for test in filter(is_test, index):

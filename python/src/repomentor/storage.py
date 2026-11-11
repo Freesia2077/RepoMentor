@@ -1,5 +1,7 @@
 """Independent SQLite run ledger plus append-only JSONL events; no web objects."""
 
+# 使用 SQLite 保存报告任务、事件与结果，支持运行状态查询和已完成结果导出。
+
 import json
 import re
 import sqlite3
@@ -32,6 +34,7 @@ class RunStore:
                 "SELECT COALESCE(MAX(sequence), 0) FROM events WHERE run_id=?", (run_id,)
             ).fetchone()[0]
 
+    # 逐条持久化运行事件，调用方可在任务进行中查询已提交的状态与日志。
     def emit(self, stage, kind, data):
         with self._lock:
             self.sequence += 1

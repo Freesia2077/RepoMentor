@@ -1,14 +1,22 @@
 """Exact source windows: keep the matched line and report every omitted interval."""
 
+# 统一处理原始行号、连续窗口、未读区间和引用校验，保证检索与工具展示同一份源码。
+
 import hashlib
 
 
 def source_span(path, lines, start, end):
-    content = "\n".join(lines[start - 1:end])
-    return {"path": path, "start_line": start, "end_line": end, "content": content,
-            "content_sha256": hashlib.sha256(content.encode()).hexdigest()}
+    content = "\n".join(lines[start - 1 : end])
+    return {
+        "path": path,
+        "start_line": start,
+        "end_line": end,
+        "content": content,
+        "content_sha256": hashlib.sha256(content.encode()).hexdigest(),
+    }
 
 
+# 对请求区间做逐段差集，得到真正未读的行号范围，支持去重与精确续读。
 def uncovered(start, end, spans):
     cursor, result = start, []
     for span in sorted(spans, key=lambda s: s["start_line"]):
@@ -22,6 +30,7 @@ def uncovered(start, end, spans):
     return result
 
 
+# 围绕命中行向两侧扩展，字节和行数上限同时生效，保证返回窗口仍含命中。
 def anchored_window(lines, start, end, anchor, maximum):
     """Grow around the hit, respecting byte and line bounds. Never truncate away the hit."""
     if len(lines[anchor - 1].encode()) > maximum:
@@ -84,6 +93,7 @@ def citation_validity(answer, context):
     return bool(answer["citations"] or answer["insufficient_evidence"])
 
 
+# 从固定快照重新读取并核对行段和内容哈希，防止缓存或传入上下文被替换。
 def verify_spans(reader, context):
     for span in context:
         content, truncated = reader.read(span["path"], 500_000)

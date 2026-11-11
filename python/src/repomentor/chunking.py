@@ -1,5 +1,8 @@
 """Language/heading boundaries with exact source lines and a pinned embedding-token limit."""
 
+# 把不可变源码切成保留原始行号的结构块，供 BM25、向量检索和引用共同使用。
+# 优先保留完整声明；超过 token 上限时沿子声明或语句边界细分，并记录无法容纳的源码行。
+
 import hashlib
 import importlib.metadata
 import re
@@ -25,6 +28,7 @@ class ChunkSettings(Contract):
     max_files: int = 2000
 
 
+# 只读取语法树提取声明范围；装饰器与嵌套声明仍映射回原文件行号。
 def syntax_units(text, suffix):
     """Return nested declaration ranges; no execution of the target repository."""
     from tree_sitter import Language, Parser
@@ -44,8 +48,7 @@ def syntax_units(text, suffix):
     source = text.encode()
     parser = Parser(Language(language))
     tree = parser.parse(source)
-    # Derive lines from stable byte offsets. Point access in py-tree-sitter 0.26
-    # can corrupt native memory on some grammars; preserve exact source offsets.
+    # 预先记录换行的字节位置，用二分查找恢复 1 起始行号，避开部分 grammar 的 point 访问问题。
     line_starts = [0] + [i + 1 for i, byte in enumerate(source) if byte == 10]
     if tree.root_node.has_error:
         return [], "parse_error_text_fallback"
@@ -92,6 +95,7 @@ def syntax_units(text, suffix):
     return sorted(set(units), key=lambda u: (u[0], -u[1])), "tree_sitter"
 
 
+# 按标题层级划分文档，代码围栏里的 # 文本保持为正文，避免误识别成章节。
 def markdown_units(text):
     lines = text.splitlines()
     headings, stack, fence = [], [], None
@@ -115,6 +119,7 @@ def markdown_units(text):
     ]
 
 
+# 小声明整体保留，大声明优先沿子声明拆分；无法容纳的超长行单独记录 omission。
 def structural_chunks(snapshot_id, path, text, tokenizer, settings=None):
     settings = settings or ChunkSettings()
     lines = text.splitlines()
@@ -157,7 +162,7 @@ def structural_chunks(snapshot_id, path, text, tokenizer, settings=None):
         }
 
     def split(start, end, symbol, kind):
-        # Prefer blank/statement boundaries above the target minimum; retain every nonblank source line.
+        # 达到最小块长后优先在空行或语句末尾切分；单行超限时记录省略原因。
         while start <= end:
             stop, preferred = start - 1, None
             for current in range(start, end + 1):
@@ -198,6 +203,7 @@ def structural_chunks(snapshot_id, path, text, tokenizer, settings=None):
     return output, omitted, metadata
 
 
+# 快照、解析器、tokenizer、参数与切分实现共同决定索引身份，命中缓存时核验内容。
 def build_structural_index(
     reader, cache_dir, tokenizer, tokenizer_identity, *, chunks=None, retrieval=None, token=None
 ):

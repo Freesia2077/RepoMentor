@@ -1,5 +1,7 @@
 """Retrieval/format/abstention evaluation, explicitly separate from semantic correctness."""
 
+# 核算候选召回、源码覆盖、引用范围与生成状态，保留各层指标的独立含义。
+
 import json
 import statistics
 from collections import Counter, defaultdict
@@ -10,6 +12,7 @@ from .records import atomic_write
 from .retrieval import BM25Index, RetrievalSettings
 
 
+# 按参考行号与交付行号的交集计算覆盖，重叠片段先合并，避免重复计数。
 def coverage(gold, spans):
     if not gold:
         return None
@@ -24,13 +27,17 @@ def coverage(gold, spans):
     return sum(hits) / len(hits)
 
 
+# 补充检查参考中的非空行是否齐全，把格式空行与真实源码缺失分开解释。
 def nonblank_reference_complete(references, spans):
     """Complement strict range coverage: omitted blank lines are not missing source facts."""
     if not references:
         return None
-    return all(any(s["path"] == ref["path"] and s["start_line"] <= number <= s["end_line"] for s in spans)
-               for ref in references
-               for number, line in enumerate(ref["content"].split("\n"), ref["start_line"]) if line.strip())
+    return all(
+        any(s["path"] == ref["path"] and s["start_line"] <= number <= s["end_line"] for s in spans)
+        for ref in references
+        for number, line in enumerate(ref["content"].split("\n"), ref["start_line"])
+        if line.strip()
+    )
 
 
 def retrieval_metrics(gold, result):
@@ -104,6 +111,7 @@ def summarize(rows):
     }
 
 
+# 复用固定检索和生成装配，逐题保存召回、上下文和原始生成结果。
 async def run_rag_evaluation(
     tasks,
     runtime,

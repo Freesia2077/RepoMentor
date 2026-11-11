@@ -1,5 +1,8 @@
 """FAISS cosine search, reciprocal-rank fusion, and optional learned reranking."""
 
+# 组合词项召回、FAISS 向量召回、RRF 排名融合与可选神经重排。
+# 缓存绑定块顺序和模型身份，路径范围在召回前生效，保证受限搜索仍有完整候选空间。
+
 import hashlib
 import json
 import time
@@ -11,6 +14,7 @@ from .retrieval_scope import SearchScope
 from .runtimes.chat import fingerprint
 
 
+# 按 sum(1 / (k + rank)) 融合各路排名，避免直接相加尺度不同的 BM25 与向量分数。
 def reciprocal_rank_fusion(rankings, *, constant=60):
     values = {}
     for source, ranking in rankings.items():
@@ -51,6 +55,7 @@ class HybridIndex:
         if self.neural:
             self.neural.close()
 
+    # 向量缓存同时核对模型身份、块顺序和文件哈希；L2 归一化后用内积表达余弦相似度。
     def build_vectors(self):
         import faiss
         import numpy as np
@@ -95,10 +100,12 @@ class HybridIndex:
             )
         if matrix.shape != (len(ids), 1024) or not np.isfinite(matrix).all():
             raise ValueError("vector matrix shape or values invalid")
+        # embedding 已归一化，精确内积检索的排序等价于余弦相似度排序。
         self.vector_index = faiss.IndexFlatIP(1024)
         self.vector_matrix = np.ascontiguousarray(matrix, dtype="float32")
         self.vector_index.add(self.vector_matrix)
 
+    # 先限定可检索集合，再做双路召回、RRF 与可选重排，防止全局 top-k 后过滤漏掉范围内命中。
     def search(self, question, *, k=None, scope=None):
         started = time.perf_counter()
         scope = scope or SearchScope()
@@ -153,6 +160,7 @@ class HybridIndex:
         )
         if self.strategy == "hybrid-rerank" and candidates:
             by_id = {c.chunk_id: c for c in self.chunks}
+            # 重排只处理融合后的有限候选；保留 fusion_score 便于追查重排前后的顺序变化。
             scores = self.neural.rerank(
                 question, [document_text(by_id[r["chunk"]["chunk_id"]]) for r in candidates]
             )

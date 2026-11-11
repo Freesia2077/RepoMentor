@@ -1,5 +1,7 @@
 """Bounded static declaration navigation; locations are not observed source evidence."""
 
+# 从源码声明与简单工厂绑定提取导航位置，帮助追问解析和精确符号查找。
+
 import hashlib
 import re
 from bisect import bisect_right
@@ -9,13 +11,17 @@ from .chunking import syntax_units
 from .repository import is_source, is_test
 
 
+# 提取命名声明和简单工厂绑定，仅返回静态位置供后续精确读取。
 def declarations(text, path):
     """Named declarations plus simple JS factory bindings; no evaluation or call-graph claims."""
     units, parser = syntax_units(text, PurePosixPath(path).suffix)
     if parser != "tree_sitter":
         return []
-    result = [{"symbol": symbol, "start_line": start, "end_line": end, "kind": kind}
-              for start, end, symbol, kind in units if kind != "call_expression"]
+    result = [
+        {"symbol": symbol, "start_line": start, "end_line": end, "kind": kind}
+        for start, end, symbol, kind in units
+        if kind != "call_expression"
+    ]
     if PurePosixPath(path).suffix in (".js", ".mjs", ".cjs", ".ts", ".tsx", ".jsx"):
         from tree_sitter import Language, Parser
 
@@ -41,11 +47,15 @@ def declarations(text, path):
                     continue
                 callee = value.child_by_field_name("function")
                 if callee and callee.type == "identifier":
-                    result.append({"symbol": source[name.start_byte:name.end_byte].decode(),
-                        "start_line": bisect_right(line_starts, node.start_byte),
-                        "end_line": bisect_right(line_starts, node.end_byte - 1),
-                        "kind": "factory_binding_candidate",
-                        "local_factory": source[callee.start_byte:callee.end_byte].decode()})
+                    result.append(
+                        {
+                            "symbol": source[name.start_byte : name.end_byte].decode(),
+                            "start_line": bisect_right(line_starts, node.start_byte),
+                            "end_line": bisect_right(line_starts, node.end_byte - 1),
+                            "kind": "factory_binding_candidate",
+                            "local_factory": source[callee.start_byte : callee.end_byte].decode(),
+                        }
+                    )
     return result
 
 
@@ -57,8 +67,10 @@ def symbol_navigation(reader, question, focus, previous_symbol=None, *, max_file
     preferred = focus.get("entry_paths", [])
     excluded = focus.get("excluded_paths", [])
     explicit_paths = [p for p in reader.paths if p in question]
-    paths = sorted((p for p in reader.paths if is_source(p) and not is_test(p) and p not in excluded),
-                   key=lambda p: (p not in explicit_paths, p not in preferred, p))
+    paths = sorted(
+        (p for p in reader.paths if is_source(p) and not is_test(p) and p not in excluded),
+        key=lambda p: (p not in explicit_paths, p not in preferred, p),
+    )
     matches, used, scanned = [], 0, 0
     for path in paths[:max_files]:
         if used >= max_bytes:
@@ -76,19 +88,33 @@ def symbol_navigation(reader, question, focus, previous_symbol=None, *, max_file
             match = {**row, "path": path, "file_sha256": digest}
             if row.get("local_factory"):
                 match["factory_candidates"] = [
-                    {"path": path, **r} for r in rows if r["symbol"] == row["local_factory"]
+                    {"path": path, **r}
+                    for r in rows
+                    if r["symbol"] == row["local_factory"]
                     and r["kind"] in ("function_declaration", "variable_declarator")
                 ][:2]
             matches.append(match)
     # Exact paths and entry roots win; retain ambiguity instead of asserting a unique runtime binding.
-    matches.sort(key=lambda r: (r["path"] not in explicit_paths, r["path"] not in preferred,
-                               r["symbol"] not in identifiers, r["path"], r["start_line"]))
+    matches.sort(
+        key=lambda r: (
+            r["path"] not in explicit_paths,
+            r["path"] not in preferred,
+            r["symbol"] not in identifiers,
+            r["path"],
+            r["start_line"],
+        )
+    )
     selected = matches[:6]
     symbols = {r["symbol"] for r in selected}
-    return {"policy": "static-symbol-navigation-v1", "targets": selected,
-            "current_symbol": next(iter(symbols)) if len(symbols) == 1 else None,
-            "scanned_files": scanned, "scanned_bytes": used,
-            "omitted_matches": max(0, len(matches) - len(selected)),
-            "search_incomplete": scanned < len(paths), "source_facts": False,
-            "scope": "Static locations only. Read declaration and factory candidates with read_code before claims. "
-                     "Simple factory candidates are not a resolved runtime call graph."}
+    return {
+        "policy": "static-symbol-navigation-v1",
+        "targets": selected,
+        "current_symbol": next(iter(symbols)) if len(symbols) == 1 else None,
+        "scanned_files": scanned,
+        "scanned_bytes": used,
+        "omitted_matches": max(0, len(matches) - len(selected)),
+        "search_incomplete": scanned < len(paths),
+        "source_facts": False,
+        "scope": "Static locations only. Read declaration and factory candidates with read_code before claims. "
+        "Simple factory candidates are not a resolved runtime call graph.",
+    }

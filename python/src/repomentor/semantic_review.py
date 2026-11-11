@@ -1,5 +1,7 @@
 """Validated, source-linked reviewer judgments; no automated semantic scoring or LLM calls."""
 
+# 定义基于源码的评审量表和证据契约，分别判断事实、完整性、引用支持与拒答适当性。
+
 import hashlib
 import json
 from collections import Counter, defaultdict
@@ -62,6 +64,7 @@ def candidate_digest(value):
     return hashlib.sha256(json.dumps(value, ensure_ascii=False, sort_keys=True).encode()).hexdigest()
 
 
+# 把关键事实有据与任务完整解决分成两档，完整性、拒答和引用支持继续参与判断。
 def quality_tiers(judgment, workflow_status):
     """Useful grounded facts versus complete, precisely cited task resolution."""
     citation_supported = judgment["citation_support"] in ("supported", "not_applicable")
@@ -80,15 +83,25 @@ def quality_tiers(judgment, workflow_status):
         and judgment["consistency"] == "consistent"
         and judgment["abstention"] in ("appropriate", "not_applicable")
     )
-    return {"core_supported": core,
-            "fully_resolved": core and citation_supported and judgment["completeness"] == "adequate"}
+    return {
+        "core_supported": core,
+        "fully_resolved": core and citation_supported and judgment["completeness"] == "adequate",
+    }
 
 
+# 先绑定候选身份，再核验评审所引原文与状态组合，避免评分脱离具体答案。
 def validate_judgment(value, candidate, reader):
     judgment = Judgment.model_validate(value).model_dump()
     if judgment["candidate_id"] != candidate["candidate_id"]:
         raise ValueError("candidate ID mismatch")
-    for key in ("correctness", "citation_support", "completeness", "abstention", "entry_scope", "consistency"):
+    for key in (
+        "correctness",
+        "citation_support",
+        "completeness",
+        "abstention",
+        "entry_scope",
+        "consistency",
+    ):
         if judgment[key] not in RUBRIC[key]:
             raise ValueError(f"invalid {key}")
     verified = []
@@ -105,25 +118,58 @@ def validate_judgment(value, candidate, reader):
             start, end = ref["start_line"], ref["end_line"]
             if truncated or not 1 <= start <= end <= len(content.splitlines()):
                 raise ValueError("invalid review source range")
-            excerpt = "\n".join(content.splitlines()[start - 1:end])
-            sources.append({**ref, "content": excerpt, "content_sha256": hashlib.sha256(excerpt.encode()).hexdigest(),
-                            "visible_to_generator": visible(candidate["observed_context"], ref["path"], start, end)})
+            excerpt = "\n".join(content.splitlines()[start - 1 : end])
+            sources.append(
+                {
+                    **ref,
+                    "content": excerpt,
+                    "content_sha256": hashlib.sha256(excerpt.encode()).hexdigest(),
+                    "visible_to_generator": visible(candidate["observed_context"], ref["path"], start, end),
+                }
+            )
         verified.append({**claim, "verified_evidence": sources})
-    if judgment["correctness"] == "correct" and any(c["status"] in ("contradicted", "unsupported") for c in verified):
+    if judgment["correctness"] == "correct" and any(
+        c["status"] in ("contradicted", "unsupported") for c in verified
+    ):
         raise ValueError("correct verdict conflicts with material claim judgments")
     if candidate["answer"] is None and judgment["correctness"] != "unverifiable":
         raise ValueError("missing answer cannot be scored as correct or incorrect")
-    return {**judgment, "claims": verified, "candidate_sha256": candidate_digest(candidate),
-            "reviewer": "Codex (current session)", "review_type": "model_assisted_nonblind_development_review",
-            "human_approved": False, "training_eligible": False}
+    return {
+        **judgment,
+        "claims": verified,
+        "candidate_sha256": candidate_digest(candidate),
+        "reviewer": "Codex (current session)",
+        "review_type": "model_assisted_nonblind_development_review",
+        "human_approved": False,
+        "training_eligible": False,
+    }
 
 
 def summarize_reviews(judgments, identities):
     groups = defaultdict(list)
     for row in judgments:
         groups[identities[row["candidate_id"]]["cohort"]].append(row)
-    return {"cohorts": {name: {"unique_candidates": len(rows), **{
-        key: dict(Counter(r[key] for r in rows)) for key in
-        ("correctness", "citation_support", "completeness", "abstention", "entry_scope", "consistency")}}
-        for name, rows in groups.items()}, "reviewer": "Codex", "blind": False, "human_approved": False,
-        "overall_accuracy": "not_estimated_selected_development_cases", "training_eligible": False}
+    return {
+        "cohorts": {
+            name: {
+                "unique_candidates": len(rows),
+                **{
+                    key: dict(Counter(r[key] for r in rows))
+                    for key in (
+                        "correctness",
+                        "citation_support",
+                        "completeness",
+                        "abstention",
+                        "entry_scope",
+                        "consistency",
+                    )
+                },
+            }
+            for name, rows in groups.items()
+        },
+        "reviewer": "Codex",
+        "blind": False,
+        "human_approved": False,
+        "overall_accuracy": "not_estimated_selected_development_cases",
+        "training_eligible": False,
+    }

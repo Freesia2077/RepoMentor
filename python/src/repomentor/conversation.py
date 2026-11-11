@@ -1,5 +1,8 @@
 """Persistent sequential conversations; request IDs make completed turns replayable."""
 
+# 持久化会话和未完成轮次，固定模型、引擎、快照与实现身份，支持显式恢复。
+# 已成功提交的轮次组成历史；失败轮次保留 pending 状态和原始尝试记录。
+
 import json
 import re
 from pathlib import Path
@@ -32,6 +35,7 @@ class ConversationStore:
             raise ValueError("invalid session ID")
         return self.root / (session_id + ".json")
 
+    # 建立会话时冻结模型、引擎和快照配置，后续追问沿用同一来源身份。
     def create(
         self,
         snapshot_id,
@@ -59,8 +63,14 @@ class ConversationStore:
             "current_symbol": None,
             "turns": [],
             "pending": None,
-            "task_state": {"goal": goal, "entry": None, "current_symbol": None,
-                           "unresolved_questions": [], "source_refs": [], "source_facts": False},
+            "task_state": {
+                "goal": goal,
+                "entry": None,
+                "current_symbol": None,
+                "unresolved_questions": [],
+                "source_refs": [],
+                "source_facts": False,
+            },
         }
         self.save(state)
         return state
@@ -71,6 +81,7 @@ class ConversationStore:
     def save(self, state):
         atomic_write(self.path(state["session_id"]), json.dumps(state, ensure_ascii=False, indent=2))
 
+    # 发送前保存 pending 与 request_id，成功后才提交历史；恢复时定位原未完成轮次。
     async def turn(self, session_id, engine, question=None, *, request_id=None, token=None, resume=False):
         state = self.load(session_id)
         if state["snapshot_id"] != engine.reader.snapshot.snapshot_id:
@@ -157,9 +168,11 @@ class ConversationStore:
                 options["task_context"] = navigation
                 if state["turns"] and re.search(FOLLOWUP + r"|切换|换到|switch", question, re.I):
                     previous_result = state["turns"][-1]["result"]
-                    options["shared_context"] = {"snapshot_id": state["snapshot_id"],
+                    options["shared_context"] = {
+                        "snapshot_id": state["snapshot_id"],
                         "spans": previous_result.get("final_context", previous_result.get("context", [])),
-                        "preferred_ranges": previous_result.get("answer", {}).get("citations", [])}
+                        "preferred_ranges": previous_result.get("answer", {}).get("citations", []),
+                    }
             result = await engine.answer(
                 question,
                 history=history,
@@ -185,11 +198,14 @@ class ConversationStore:
                 resolved_symbol = result.get("symbol_navigation", {}).get("current_symbol")
                 state["current_symbol"] = resolved_symbol
                 state["task_state"] = {
-                    "goal": state["goal"], "entry": result.get("entry_focus", {}).get("label"),
+                    "goal": state["goal"],
+                    "entry": result.get("entry_focus", {}).get("label"),
                     "current_symbol": state["current_symbol"],
                     "unresolved_questions": [question] if result["answer"]["insufficient_evidence"] else [],
-                    "source_refs": [{k: s[k] for k in ("path", "start_line", "end_line", "content_sha256")}
-                                    for s in result.get("final_context", [])[:8]],
+                    "source_refs": [
+                        {k: s[k] for k in ("path", "start_line", "end_line", "content_sha256")}
+                        for s in result.get("final_context", [])[:8]
+                    ],
                     "source_facts": False,
                 }
             state["pending"] = None

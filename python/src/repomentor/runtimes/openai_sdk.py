@@ -1,5 +1,8 @@
 """Official Chat Completions transport with local accounting, not an agent loop."""
 
+# 适配 OpenAI Agents SDK 的模型边界，记录完整请求、响应和输入预算。
+# Agent 迭代与工具调度交给 SDK Runner，本模块负责协议与观测。
+
 from __future__ import annotations
 
 import copy
@@ -18,19 +21,28 @@ from ..token_budget import input_budget, load_tokenizer
 from .chat import ChatCompletionsRuntime, fingerprint
 
 
+# 工具历史即使出现在最终无工具轮也计入输入，避免仅按当前工具列表低估上下文。
 def sdk_input_budget(settings, body):
     """Account for complete SDK tool history even when the final turn disables all tools."""
     if not settings.tokenizer_sha256:
         return input_budget(settings, body["messages"], body.get("tools"), body.get("response_format"))
     if (settings.backend, settings.server_version, settings.reasoning_effort) != ("ollama", "0.34.3", "none"):
         raise ValueError("SDK tokenizer calibration requires pinned Ollama/Qwen with thinking off")
-    wire = json.dumps([body["messages"], body.get("tools", []), body.get("response_format")], ensure_ascii=False)
+    wire = json.dumps(
+        [body["messages"], body.get("tools", []), body.get("response_format")], ensure_ascii=False
+    )
     count = len(load_tokenizer(settings.tokenizer_sha256).encode(wire, add_special_tokens=False).ids)
     count += 768 + 64 * len(body["messages"])
     total = count + settings.max_tokens + settings.template_reserve
-    return {"mode": "qwen35_ollama_sdk_padded_v2", "input_tokens": count,
-            "output_allowance": settings.max_tokens, "reserve": settings.template_reserve,
-            "total": total, "context_window": settings.context_window, "fits": total <= settings.context_window}
+    return {
+        "mode": "qwen35_ollama_sdk_padded_v2",
+        "input_tokens": count,
+        "output_allowance": settings.max_tokens,
+        "reserve": settings.template_reserve,
+        "total": total,
+        "context_window": settings.context_window,
+        "fits": total <= settings.context_window,
+    }
 
 
 class ObservedModel(Model):
@@ -40,15 +52,19 @@ class ObservedModel(Model):
         self.delegate, self.runtime = delegate, runtime
         self.before_model, self.persist = before_model, persist
 
+    # 围绕 SDK 单次模型调用记录输入、输出和预算，迭代与派发继续由 Runner 控制。
     async def get_response(self, **kwargs):
-        # A typed agent can still use tools. A schema alone must not disable its tool loop.
-        phase = "finalize" if kwargs.get("output_schema") is not None and not kwargs.get("tools") else "research"
+        # 带结构化输出 schema 的 Agent 仍可使用工具，工具状态由循环的实际边界决定。
+        phase = (
+            "finalize" if kwargs.get("output_schema") is not None and not kwargs.get("tools") else "research"
+        )
         finalizing = self.before_model(copy.deepcopy(kwargs["input"]), phase)
         entry = {
             "actor": ACTOR.get(),
             "input": copy.deepcopy(kwargs["input"]),
             "system_instructions": kwargs["system_instructions"],
-            "status": "pending", "request_sent": False,
+            "status": "pending",
+            "request_sent": False,
         }
         self.runtime.calls.append(entry)
         self.runtime.active = entry
@@ -58,20 +74,26 @@ class ObservedModel(Model):
             if self.runtime.scripted_model is not None:
                 entry["request_sent"] = True  # Offline model invocation; explicitly tagged below.
                 entry["transport"] = "scripted"
-            # Disable tools only at the actual boundary, not on every typed response.
+            # 仅在结束边界关闭工具，前面的结构化输出轮继续允许正常取证。
             entry["phase"] = phase
             if finalizing or phase == "finalize":
                 kwargs = {**kwargs, "model_settings": replace(kwargs["model_settings"], tool_choice="none")}
                 entry["finalizing"] = True
             response = await self.delegate.get_response(**kwargs)
             entry.update(
-                status="success", output=[v.model_dump(mode="json") for v in response.output],
-                sdk_usage={name: getattr(response.usage, name) for name in (
-                    "requests", "input_tokens", "output_tokens", "total_tokens"
-                )},
+                status="success",
+                output=[v.model_dump(mode="json") for v in response.output],
+                sdk_usage={
+                    name: getattr(response.usage, name)
+                    for name in ("requests", "input_tokens", "output_tokens", "total_tokens")
+                },
             )
-            if (finalizing or phase == "finalize") and any(v.type == "function_call" for v in response.output):
-                raise HarnessError("tool_choice_ignored", "provider emitted repository tools during final-answer turn")
+            if (finalizing or phase == "finalize") and any(
+                v.type == "function_call" for v in response.output
+            ):
+                raise HarnessError(
+                    "tool_choice_ignored", "provider emitted repository tools during final-answer turn"
+                )
             self.runtime.model_completed()
             return response
         except BaseException as exc:
@@ -88,7 +110,7 @@ class ObservedModel(Model):
 
 class OpenAISdkRuntime:
     def __init__(self, settings, *, transport=None, scripted_model=None, verifier=None, before_dispatch=None):
-        # This backend uses the SDK's non-streaming model path. Give it an honest new config ID.
+        # 当前后端走 SDK 非流式模型路径，将该差异纳入配置身份。
         self.settings = settings.model_copy(update={"stream": False})
         self.transport, self.scripted_model, self.verifier = transport, scripted_model, verifier
         self.calls, self.active, self.client = [], None, None
@@ -97,9 +119,11 @@ class OpenAISdkRuntime:
     @property
     def model_settings(self):
         return ModelSettings(
-            temperature=self.settings.temperature, top_p=self.settings.top_p,
+            temperature=self.settings.temperature,
+            top_p=self.settings.top_p,
             presence_penalty=self.settings.presence_penalty,
-            max_tokens=min(1536, self.settings.max_tokens), parallel_tool_calls=False,
+            max_tokens=min(1536, self.settings.max_tokens),
+            parallel_tool_calls=False,
             extra_body={"seed": self.settings.seed, "reasoning_effort": self.settings.reasoning_effort},
             retry=ModelRetrySettings(max_retries=0),
         )
@@ -116,7 +140,7 @@ class OpenAISdkRuntime:
         return await ChatCompletionsRuntime(self.settings).verify_backend()
 
     async def open(self, before_model, persist, token, model_completed=lambda: None):
-        # Disable the default remote exporter as well as per-run tracing.
+        # 同时关闭默认远程导出器与单轮 tracing，运行记录只在本地保存。
         set_tracing_disabled(True)
         self.calls = []
         self.persist, self.token = persist, token
@@ -125,17 +149,22 @@ class OpenAISdkRuntime:
             delegate = self.scripted_model
         else:
             http_client = httpx2.AsyncClient(
-                transport=self.transport, trust_env=False, follow_redirects=False,
+                transport=self.transport,
+                trust_env=False,
+                follow_redirects=False,
                 timeout=self.settings.timeout_seconds,
                 event_hooks={"request": [self._request], "response": [self._response]},
             )
             self.client = AsyncOpenAI(
                 base_url=self.settings.baseUrl,
                 api_key=self.settings.apiKey.get_secret_value() if self.settings.apiKey else "local-only",
-                max_retries=0, timeout=self.settings.timeout_seconds, http_client=http_client,
+                max_retries=0,
+                timeout=self.settings.timeout_seconds,
+                http_client=http_client,
             )
             delegate = OpenAIChatCompletionsModel(
-                model=self.settings.model, openai_client=self.client,
+                model=self.settings.model,
+                openai_client=self.client,
                 should_replay_reasoning_content=False,
             )
         return ObservedModel(delegate, self, before_model, persist)
@@ -145,10 +174,11 @@ class OpenAISdkRuntime:
             await self.client.close()
             self.client = None
 
+    # 发送钩子校验真实请求并登记身份，使保存的 wire 记录可与费用账本逐项对齐。
     async def _request(self, request):
         self.token.check()
         body = json.loads(request.content)
-        # Only bodies are recorded; headers and credentials never enter the run ledger.
+        # 只保存请求体，请求头与凭据留在传输层。
         allowance = body.get("max_completion_tokens", body.get("max_tokens", self.settings.max_tokens))
         budget = sdk_input_budget(self.settings.model_copy(update={"max_tokens": allowance}), body)
         self.active.update(request=body, request_hash=fingerprint(body), input_budget=budget)

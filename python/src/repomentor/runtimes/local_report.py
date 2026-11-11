@@ -1,5 +1,7 @@
 """Bounded local report adapter: deterministic selection, shared RAG generation, old output contracts."""
 
+# 将报告的各阶段提示和已有原文装配到本地模型接口，保持报告检索策略显式可见。
+
 import json
 import re
 
@@ -99,6 +101,7 @@ class LocalReportRuntime:
             stopConditions=["Selected bounded source excerpts are available"],
         )
 
+    # 将对应阶段的原文和约束送入本地模型接口，保留该阶段的原始完成记录。
     async def synthesize(self, stage, model, payload, harness, skill_text=""):
         available = {f.path: f.content for f in harness.evidence().files}
         profile = harness.profile

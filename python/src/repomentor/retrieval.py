@@ -1,5 +1,8 @@
 """Versioned line chunks and deterministic BM25 over immutable Git snapshots."""
 
+# 提供独立于神经模型的分词、行块与 BM25 基线；索引缓存绑定不可变仓库身份。
+# 路径词与源码词共同进入倒排表，中文检索词可通过规则扩展匹配英文代码词项。
+
 from __future__ import annotations
 
 import hashlib
@@ -55,6 +58,7 @@ class RetrievalSettings(Contract):
         return self
 
 
+# 同时保留完整标识符和驼峰/下划线子词；中文连续文本用相邻双字片段匹配。
 def tokenize(text):
     identifiers = re.findall(r"[A-Za-z_][A-Za-z_0-9./-]*|\d+|[\u4e00-\u9fff]+", text)
     result = []
@@ -129,6 +133,7 @@ def chunk_file(snapshot_id, path, text, settings):
 
 
 class BM25Index:
+    # 路径词计入两次以加强文件定位，再为每个词保存块内词频与块长度。
     def __init__(self, record, settings):
         self.record, self.settings = record, settings
         self.chunks = [CodeChunk.model_validate(row) for row in record["chunks"]]
@@ -200,6 +205,7 @@ class BM25Index:
         atomic_write(path, json.dumps(record, ensure_ascii=False))
         return cls(record, settings)
 
+    # IDF 提升稀有词权重；k1 控制词频饱和，b 按块长度归一化，范围过滤先于打分。
     def search(self, question, *, k=None, scope=None):
         scope = scope or SearchScope()
         eligible = {i for i, chunk in enumerate(self.chunks) if scope.matches(chunk.path)}
@@ -208,6 +214,7 @@ class BM25Index:
         n = len(self.chunks)
         for term in set(tokenize(query)):
             posting = self.postings.get(term, {})
+            # 稀有词的区分度更高；此处 df 取整个倒排表频次，scope 只限制参与排序的块。
             idf = math.log(1 + (n - len(posting) + 0.5) / (len(posting) + 0.5))
             for i, tf in posting.items():
                 if i not in eligible:

@@ -1,5 +1,8 @@
 """Pinned local inference and per-input caches for Qwen embedding and yes/no reranking."""
 
+# 加载已核验的本地 embedding / reranker 权重，提供带身份缓存的批量推理。
+# 一次仅保留一个活动模型，以便在单卡上与生成器分时使用显存。
+
 import gc
 import hashlib
 import importlib.metadata
@@ -106,6 +109,7 @@ class NeuralRetrieval:
         if torch.cuda.is_available():
             torch.cuda.empty_cache()
 
+    # 切换 embedding 与 reranker 时先释放旧模型，权重只从已核验的本地路径加载。
     def _load(self, role):
         import torch
         from transformers import AutoModel, AutoModelForCausalLM
@@ -146,6 +150,7 @@ class NeuralRetrieval:
         key = fingerprint({"identity": self.identity(role), "input": payload})
         return self.cache_dir / role / (key + ".json"), key
 
+    # 用查询指令编码问题，取最后一个有效位置的表示并做 L2 归一化，超限输入要求重新切块。
     def embed(self, texts, *, query=False):
         import numpy as np
         import torch
@@ -177,6 +182,7 @@ class NeuralRetrieval:
             begun = time.perf_counter()
             with torch.inference_mode():
                 states = model(**encoded, use_cache=False).last_hidden_state[:, -1].float()
+                # 归一化使不同文本向量处于同一尺度，后续 FAISS 可直接使用内积。
                 vectors = torch.nn.functional.normalize(states, p=2, dim=1).cpu().numpy()
             elapsed = time.perf_counter() - begun
             for row, vector in zip(batch, vectors, strict=True):
@@ -203,6 +209,7 @@ class NeuralRetrieval:
             raise ValueError("invalid normalized embedding")
         return matrix
 
+    # 对问题和候选原文联合编码，取 yes/no 两个词的归一化概率作为相关性分数。
     def rerank(self, query, documents):
         import torch
 
@@ -235,6 +242,7 @@ class NeuralRetrieval:
                 values = logits[
                     :, [tokenizer.convert_tokens_to_ids("no"), tokenizer.convert_tokens_to_ids("yes")]
                 ]
+                # 只在 no / yes 两个候选词之间归一化，取 yes 的概率作为成对相关性。
                 scores = torch.softmax(values, dim=1)[:, 1].cpu().tolist()
             if not all(0 <= score <= 1 for score in scores):
                 raise ValueError("invalid reranker probability")

@@ -1,5 +1,8 @@
 """Fixed source-selection baselines; no agent loop, gold input, or target-code execution."""
 
+# 为固定检索对照提供选源适配器，沿用现有 RagEngine 的预算、缓存与恢复。
+# 各条件通过明确的证据选择策略区分，评测参考答案留在生成输入之外。
+
 from __future__ import annotations
 
 import copy
@@ -36,6 +39,7 @@ def lexical_locations(reader, paths, question, excluded=()):
     return sorted(rows, key=lambda r: (-r["score"], r["path"], r["line"]))
 
 
+# 仅依据问题和仓库原文选择证据，各基线沿用相同源码格式及范围约束。
 def select_sources(reader, index, question, condition, *, source_bytes=SOURCE_BYTES, max_units=3):
     if condition not in CONDITIONS:
         raise ValueError("unknown interview baseline")
@@ -57,17 +61,28 @@ def select_sources(reader, index, question, condition, *, source_bytes=SOURCE_BY
         path = locations[0]["path"]
         text, truncated = reader.read(path, 500_000)
         if truncated:
-            return {"sources": [], "retrieval": {"candidates": []}, "hits": locations[:1],
-                    "infeasible": "whole_file_reader_limit"}
+            return {
+                "sources": [],
+                "retrieval": {"candidates": []},
+                "hits": locations[:1],
+                "infeasible": "whole_file_reader_limit",
+            }
         spans = [source_span(path, text.splitlines(), 1, len(text.splitlines()))]
     else:
         spans, remaining = [], source_bytes
         for hit in locations:
-            if any(s["path"] == hit["path"] and s["start_line"] <= hit["line"] <= s["end_line"] for s in spans):
+            if any(
+                s["path"] == hit["path"] and s["start_line"] <= hit["line"] <= s["end_line"] for s in spans
+            ):
                 continue
             lines = reader.read(hit["path"], 500_000)[0].splitlines()
-            window = anchored_window(lines, max(1, hit["line"] - 20), min(len(lines), hit["line"] + 20),
-                                     hit["line"], min(1600, remaining))
+            window = anchored_window(
+                lines,
+                max(1, hit["line"] - 20),
+                min(len(lines), hit["line"] + 20),
+                hit["line"],
+                min(1600, remaining),
+            )
             if window:
                 span = source_span(hit["path"], lines, *window)
                 spans.append(span)
@@ -85,14 +100,25 @@ def prepare_input(settings, question, selection, condition):
         messages = messages_for(question, [], selection["sources"])
         budget = input_budget(settings, messages, response_schema=ANSWER_SCHEMA)
         # A full-file baseline is never silently shortened into another retrieval baseline.
-        return {"feasible": budget["fits"], "reason": None if budget["fits"] else "whole_file_context_limit",
-                "context": selection["sources"], "input_messages": messages, "omissions": [], "budget": budget}
+        return {
+            "feasible": budget["fits"],
+            "reason": None if budget["fits"] else "whole_file_context_limit",
+            "context": selection["sources"],
+            "input_messages": messages,
+            "omissions": [],
+            "budget": budget,
+        }
     assembled = assemble_context(settings, question, [], selection["sources"], top_k=None)
     budget = input_budget(settings, assembled["input_messages"], response_schema=ANSWER_SCHEMA)
-    return {**assembled, "feasible": budget["fits"], "reason": None if budget["fits"] else "context_limit",
-            "budget": budget}
+    return {
+        **assembled,
+        "feasible": budget["fits"],
+        "reason": None if budget["fits"] else "context_limit",
+        "budget": budget,
+    }
 
 
+# 把冻结证据适配成已有检索接口，保留 RagEngine 的统一输入、缓存和恢复流程。
 class FrozenSourcesIndex:
     """Adapter for the existing fixed RagEngine, including its cache/recovery semantics."""
 

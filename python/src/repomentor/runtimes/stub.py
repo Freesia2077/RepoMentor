@@ -1,8 +1,11 @@
 """Deterministic fixture runtime. Its results are never reported as model quality."""
 
+# 为离线测试提供确定性计划与报告输出，使协议和状态测试无需模型服务。
+
 from ..contracts import EvidencePlan
 
 
+# 用确定性结果覆盖计划、证据与输出契约，供不接触网络和模型的单元测试使用。
 class StubRuntime:
     name = "stub-no-model"
     versions = {"stub": "1"}

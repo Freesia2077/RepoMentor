@@ -1,5 +1,8 @@
 """Bounded navigation memory: user intentions only, never a substitute for retrieved source."""
 
+# 从历史用户问题构建导航摘要和追问检索词，帮助解析“这个函数”等省略表达。
+# 历史助手结论继续作为会话内容保存，当前源码事实仍由重新核验的原文提供。
+
 import re
 
 
@@ -35,6 +38,7 @@ def first_symbol(questions):
     return None
 
 
+# 只在规则允许且追问对象可确定时补齐检索词，保留原始用户问题供最终作答。
 def resolve_query(question, previous, current_symbol, memory=None, *, enabled=True):
     from .conversation import followup_query
 

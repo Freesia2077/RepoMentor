@@ -1,5 +1,7 @@
 """Bounded source-unit expansion and query-relevant packing; no generated summaries."""
 
+# 从已观察源码中选择完整声明或可容纳的连续片段，为上下文压缩和最终整理共用。
+
 import hashlib
 import re
 from pathlib import PurePosixPath
@@ -17,6 +19,7 @@ def containing_unit(text, path, start, end):
     return {"start_line": first, "end_line": last, "symbol": symbol, "kind": kind, "parser": parser}
 
 
+# 优先尝试完整片段；装不下时只拆分已读原文，连续行号与省略原因一起保留。
 def pack_observed_context(context, question, fits):
     """Prefer whole spans; under pressure partition observed lines, never invent missing source."""
     terms = set(tokenize(question))
@@ -37,10 +40,16 @@ def pack_observed_context(context, question, fits):
                 partitioned.append(span)
                 continue
             for offset in range(0, len(lines), 40):
-                content = "\n".join(lines[offset:offset + 40])
-                partitioned.append({**span, "content": content, "start_line": span["start_line"] + offset,
-                    "end_line": span["start_line"] + offset + len(lines[offset:offset + 40]) - 1,
-                    "content_sha256": hashlib.sha256(content.encode()).hexdigest()})
+                content = "\n".join(lines[offset : offset + 40])
+                partitioned.append(
+                    {
+                        **span,
+                        "content": content,
+                        "start_line": span["start_line"] + offset,
+                        "end_line": span["start_line"] + offset + len(lines[offset : offset + 40]) - 1,
+                        "content_sha256": hashlib.sha256(content.encode()).hexdigest(),
+                    }
+                )
         context = partitioned
     ranked = sorted(enumerate(context), key=lambda pair: (-relevance(pair[1]), pair[0]))
     chosen, omitted = [], []

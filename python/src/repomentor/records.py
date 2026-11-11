@@ -1,10 +1,13 @@
 """Atomic persistence shared by runtime and offline evaluation."""
 
+# 统一写入运行记录；先写临时文件再原子替换，减少中断留下半份 JSON 的风险。
+
 import json
 from pathlib import Path
 from uuid import uuid4
 
 
+# 临时文件写完后原子替换目标，读者只会看到写入前或写入后的完整记录。
 def atomic_write(path: Path, content: str):
     import time
 

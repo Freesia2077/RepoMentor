@@ -1,5 +1,8 @@
 """A bounded Chat Completions transport. Tool calls are returned, never executed here."""
 
+# 封装 OpenAI 兼容 Chat Completions 的请求、输入预算、协议校验与结果分类。
+# 公开模型配置、实际请求身份和原始输出一起保存，便于成本核对与失败复查。
+
 from __future__ import annotations
 
 import asyncio
@@ -61,6 +64,7 @@ class ChatSettings(Contract):
             raise ValueError("output allowance exceeds context")
         return self
 
+    # 仅输出可公开的模型运行参数，配置指纹与运行记录都使用脱敏后的配置。
     def public(self):
         value = self.model_dump(mode="json", exclude={"apiKey"})
         for optional in ("tokenizer_sha256", "presence_penalty"):
@@ -103,6 +107,7 @@ class ChatCompletionsRuntime:
         self.transport = transport
         self.before_dispatch = before_dispatch
 
+    # 把消息、schema 和工具参数转换为兼容端点请求，保持真实发送体可审计。
     def request_body(self, messages, tools=None, response_schema=None):
         body = {
             "model": self.settings.model,
@@ -176,6 +181,7 @@ class ChatCompletionsRuntime:
                 "quantization": show["details"]["quantization_level"],
             }
 
+    # 在请求边界核对预算并保存原始响应，再将协议错误和截断等情况归类。
     async def complete(
         self,
         messages: list[dict[str, Any]],

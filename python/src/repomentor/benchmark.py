@@ -1,5 +1,8 @@
 """Configurable comparison of the existing retrievers, RagEngine and SDK engine."""
 
+# 冻结同题对照的配置、输入和调用上限，复用已有单次 RAG 与 SDK Agent 执行实验。
+# 生成、评分、来源核验分开保存；任何实现身份变化都应显式建立新实验版本。
+
 import hashlib
 import json
 import random
@@ -66,9 +69,14 @@ def count_requests(path):
 
 
 def implementation():
-    return {"rag": rag_version(), "sdk": sdk_version(),
-            "baselines": hashlib.sha256(Path(__file__).with_name("interview_baselines.py").read_bytes().replace(b"\r\n", b"\n")).hexdigest(),
-            "benchmark": hashlib.sha256(Path(__file__).read_bytes().replace(b"\r\n", b"\n")).hexdigest()}
+    return {
+        "rag": rag_version(),
+        "sdk": sdk_version(),
+        "baselines": hashlib.sha256(
+            Path(__file__).with_name("interview_baselines.py").read_bytes().replace(b"\r\n", b"\n")
+        ).hexdigest(),
+        "benchmark": hashlib.sha256(Path(__file__).read_bytes().replace(b"\r\n", b"\n")).hexdigest(),
+    }
 
 
 def reader_for(task, excluded=()):
@@ -76,15 +84,21 @@ def reader_for(task, excluded=()):
     if reader.snapshot.commit_sha != task["commit_sha"]:
         raise ValueError("question commit differs from immutable snapshot")
     if excluded:
-        reader = SimpleNamespace(read=reader.read, paths=[p for p in reader.paths if p not in excluded],
-            snapshot=reader.snapshot.model_copy(update={"manifest": [m for m in reader.snapshot.manifest if m.path not in excluded]}))
+        reader = SimpleNamespace(
+            read=reader.read,
+            paths=[p for p in reader.paths if p not in excluded],
+            snapshot=reader.snapshot.model_copy(
+                update={"manifest": [m for m in reader.snapshot.manifest if m.path not in excluded]}
+            ),
+        )
     return reader
 
 
 def policy_for(condition, device, **knobs):
     _, _, retriever, code_aware = CONDITIONS[condition]
-    return RetrievalPolicy(retriever=retriever, code_aware=code_aware,
-                           device="cpu" if retriever == "bm25" else device, **knobs).model_dump()
+    return RetrievalPolicy(
+        retriever=retriever, code_aware=code_aware, device="cpu" if retriever == "bm25" else device, **knobs
+    ).model_dump()
 
 
 def private_path(output):
@@ -92,47 +106,93 @@ def private_path(output):
 
 
 def prior_ledgers(private):
-    paths = [runtime_dir() / name / "dispatches.sqlite" for name in (
-        "p63", "rag-interview", "rag-expansion", "rag-unified", "rag-recovery-probe", "rag-recovery-smoke")]
+    paths = [
+        runtime_dir() / name / "dispatches.sqlite"
+        for name in (
+            "p63",
+            "rag-interview",
+            "rag-expansion",
+            "rag-unified",
+            "rag-recovery-probe",
+            "rag-recovery-smoke",
+        )
+    ]
     paths += sorted((runtime_dir() / "benchmarks").glob("*/dispatches.sqlite"))
-    return {str(p.relative_to(runtime_dir())): count_requests(p) for p in paths if p.exists() and p.parent != private}
+    return {
+        str(p.relative_to(runtime_dir())): count_requests(p)
+        for p in paths
+        if p.exists() and p.parent != private
+    }
 
 
+# 先冻结同题各条件及其调用上限，oracle 诊断只从允许的开发题中选择。
 def case_plan(tasks, conditions, oracle_count, max_decisions):
-    if not conditions or len(set(conditions)) != len(conditions) or any(c not in CONDITIONS or c == "oracle" for c in conditions):
+    if (
+        not conditions
+        or len(set(conditions)) != len(conditions)
+        or any(c not in CONDITIONS or c == "oracle" for c in conditions)
+    ):
         raise ValueError("choose distinct supported main conditions; oracle is a separate diagnostic")
     if not 2 <= max_decisions <= 8:
         raise ValueError("SDK decision cap must be between 2 and 8")
-    cases = [{"case_id": t["task_id"] + "--" + c, "task_id": t["task_id"], "condition": c,
-              "kind": "main", "max_requests": max_decisions if CONDITIONS[c][0] == "sdk" else 1}
-             for t in tasks for c in conditions]
+    cases = [
+        {
+            "case_id": t["task_id"] + "--" + c,
+            "task_id": t["task_id"],
+            "condition": c,
+            "kind": "main",
+            "max_requests": max_decisions if CONDITIONS[c][0] == "sdk" else 1,
+        }
+        for t in tasks
+        for c in conditions
+    ]
     diagnostic = [t for t in tasks if "development" in t["cohort"] and t.get("answerable")]
     diagnostic.sort(key=lambda t: t["task_id"])
     if not 0 <= oracle_count <= len(diagnostic):
         raise ValueError("oracle count exceeds answerable development questions")
-    cases += [{"case_id": t["task_id"] + "--oracle", "task_id": t["task_id"], "condition": "oracle",
-               "kind": "source-sufficient-diagnostic", "max_requests": 1} for t in diagnostic[:oracle_count]]
+    cases += [
+        {
+            "case_id": t["task_id"] + "--oracle",
+            "task_id": t["task_id"],
+            "condition": "oracle",
+            "kind": "source-sufficient-diagnostic",
+            "max_requests": 1,
+        }
+        for t in diagnostic[:oracle_count]
+    ]
     random.Random(20261021).shuffle(cases)
     return cases
 
 
+# 缓存键同时包含提交、检索策略和排除路径，避免跨入口复用索引或漏验提交。
 def index_for(task, policy, output, excluded, cache):
     key = (task["snapshot_id"], task["commit_sha"], fingerprint(policy), tuple(sorted(set(excluded))))
     if key not in cache:
         reader = reader_for(task, excluded)
-        cache[key] = (reader, build_index(reader, storage=private_path(output),
-            profile=load_chat_settings(), **policy))
+        cache[key] = (
+            reader,
+            build_index(reader, storage=private_path(output), profile=load_chat_settings(), **policy),
+        )
     return cache[key]
 
 
 def fixed_index(reader, index, question, mode):
     if mode != "grep_read":
         return index
-    selection = select_sources(reader, index, question, "grep_read",
-                               source_bytes=index.settings.initial_source_bytes, max_units=index.settings.top_k)
-    return FrozenSourcesIndex(fingerprint(["grep_read", index.index_id, selection, implementation()["baselines"]]), selection)
+    selection = select_sources(
+        reader,
+        index,
+        question,
+        "grep_read",
+        source_bytes=index.settings.initial_source_bytes,
+        max_units=index.settings.top_k,
+    )
+    return FrozenSourcesIndex(
+        fingerprint(["grep_read", index.index_id, selection, implementation()["baselines"]]), selection
+    )
 
 
+# 生成前装配并冻结所有条件的实际输入，参考答案单独留在 evaluation_only 中。
 def prepare_declared(args):
     """Freeze a bounded follow-up plan; all execution still uses the shared engines."""
     output = Path(args.output)
@@ -146,7 +206,9 @@ def prepare_declared(args):
     regression_ids = plan.get("regression_task_ids", plan.get("development_task_ids", []))
     tasks = [known[tid] for tid in regression_ids]
     tasks += plan["new_tasks"]
-    if len({t["task_id"] for t in tasks}) != len(tasks) or any(str(t.get("split", "")).startswith(("test", "train")) for t in tasks):
+    if len({t["task_id"] for t in tasks}) != len(tasks) or any(
+        str(t.get("split", "")).startswith(("test", "train")) for t in tasks
+    ):
         raise ValueError("use distinct public evaluation questions; training/final test stay isolated")
     task_map = {t["task_id"]: t for t in tasks}
     cases = [dict(c) for c in plan["cases"]]
@@ -168,7 +230,9 @@ def prepare_declared(args):
             text, truncated = reader.read(ref["path"], 500_000)
             if truncated or not 1 <= ref["start_line"] <= ref["end_line"] <= len(text.splitlines()):
                 raise ValueError("new reference outside source")
-            refs.append({**ref, "content": "\n".join(text.splitlines()[ref["start_line"]-1:ref["end_line"]])})
+            refs.append(
+                {**ref, "content": "\n".join(text.splitlines()[ref["start_line"] - 1 : ref["end_line"]])}
+            )
         references[task["task_id"]] = {**plan["new_references"][task["task_id"]], "sources": refs}
     policy = RetrievalPolicy(**plan.get("retrieval_policy", {})).model_dump()
     knobs = {k: v for k, v in policy.items() if k not in ("retriever", "code_aware", "device")}
@@ -181,36 +245,88 @@ def prepare_declared(args):
         for case in task_cases:
             cid, cond = case["case_id"], case["condition"]
             _, mode, _, _ = CONDITIONS[cond]
-            reader, index = index_for(task, policies[cond], output, original["excluded_paths"].get(task["repository"], []), cache)
-            selected = fixed_index(reader, index, task["input"].get("query") or task["input"]["question"], mode)
-            value = RagEngine(reader, selected, SimpleNamespace(settings=load_chat_settings()), private_path(output) / "cache").prepare(
-                task["input"]["question"], **request, mode="bm25" if mode == "grep_read" else mode,
+            reader, index = index_for(
+                task, policies[cond], output, original["excluded_paths"].get(task["repository"], []), cache
+            )
+            selected = fixed_index(
+                reader, index, task["input"].get("query") or task["input"]["question"], mode
+            )
+            value = RagEngine(
+                reader,
+                selected,
+                SimpleNamespace(settings=load_chat_settings()),
+                private_path(output) / "cache",
+            ).prepare(
+                task["input"]["question"],
+                **request,
+                mode="bm25" if mode == "grep_read" else mode,
                 instruction=CLOSED_BOOK_SYSTEM if cond == "closed_book" else None,
-                oracle_context=references[tid]["sources"] if mode == "oracle" else ())
+                oracle_context=references[tid]["sources"] if mode == "oracle" else (),
+            )
             if not value["budget"]["fits"]:
                 raise ValueError("declared input exceeds model window")
             inputs[cid] = value
-            matrix.append({"task_id": tid, "variant": cond, "index_id": index.index_id,
-                "reference_coverage": coverage(references[tid]["sources"], value["context"]),
-                "source_ranges": value["context"], "budget": value["budget"]})
+            matrix.append(
+                {
+                    "task_id": tid,
+                    "variant": cond,
+                    "index_id": index.index_id,
+                    "reference_coverage": coverage(references[tid]["sources"], value["context"]),
+                    "source_ranges": value["context"],
+                    "budget": value["budget"],
+                }
+            )
     prior = prior_ledgers(private_path(output))
     cap = sum(c["max_requests"] for c in cases)
     if sum(prior.values()) + cap > plan["combined_authorized_limit"]:
         raise ValueError("declared follow-up exceeds the remaining owner-authorized allowance")
     random.Random(20261022).shuffle(cases)
-    write_json(output / "dataset.json", {"schema": "repomentor.benchmark.v1", "declared_plan": plan,
-        "protocol": {"implementation": implementation(), "settings": load_chat_settings().public(),
-            "source": plan["source"], "source_sha256": hashlib.sha256(source_path.read_bytes()).hexdigest(),
-            "prior_ledgers": prior, "prior_requests": sum(prior.values()), "max_new_requests": cap,
-            "combined_limit": sum(prior.values()) + cap, "evaluation_date": plan["evaluation_date"],
-            "combined_authorized_limit": plan["combined_authorized_limit"],
-            "scope": plan["scope"], "limits": AgentLimits(**plan.get("limits", {"max_decisions": 4, "timeout_seconds": 360})).model_dump(),
-            "retry": "No automatic retry; every sent or ambiguous dispatch counts.", "training_eligible": False},
-        "tasks": tasks, "cases": cases, "evaluation_only": references,
-        "policies": policies, "prepared_inputs": inputs,
-        "excluded_paths": original["excluded_paths"], "retrieval_variants": policies, "retrieval_checks": matrix})
-    print(json.dumps({"questions": len(tasks), "planned_answers": len(cases), "max_new_requests": cap,
-                      "prior_requests": sum(prior.values()), "combined_limit": sum(prior.values())+cap, "generator_requests": 0}), flush=True)
+    write_json(
+        output / "dataset.json",
+        {
+            "schema": "repomentor.benchmark.v1",
+            "declared_plan": plan,
+            "protocol": {
+                "implementation": implementation(),
+                "settings": load_chat_settings().public(),
+                "source": plan["source"],
+                "source_sha256": hashlib.sha256(source_path.read_bytes()).hexdigest(),
+                "prior_ledgers": prior,
+                "prior_requests": sum(prior.values()),
+                "max_new_requests": cap,
+                "combined_limit": sum(prior.values()) + cap,
+                "evaluation_date": plan["evaluation_date"],
+                "combined_authorized_limit": plan["combined_authorized_limit"],
+                "scope": plan["scope"],
+                "limits": AgentLimits(
+                    **plan.get("limits", {"max_decisions": 4, "timeout_seconds": 360})
+                ).model_dump(),
+                "retry": "No automatic retry; every sent or ambiguous dispatch counts.",
+                "training_eligible": False,
+            },
+            "tasks": tasks,
+            "cases": cases,
+            "evaluation_only": references,
+            "policies": policies,
+            "prepared_inputs": inputs,
+            "excluded_paths": original["excluded_paths"],
+            "retrieval_variants": policies,
+            "retrieval_checks": matrix,
+        },
+    )
+    print(
+        json.dumps(
+            {
+                "questions": len(tasks),
+                "planned_answers": len(cases),
+                "max_new_requests": cap,
+                "prior_requests": sum(prior.values()),
+                "combined_limit": sum(prior.values()) + cap,
+                "generator_requests": 0,
+            }
+        ),
+        flush=True,
+    )
 
 
 def prepare(args):
@@ -229,10 +345,17 @@ def prepare(args):
     cases = case_plan(tasks, args.conditions, args.oracle_count, args.agent_max_decisions)
     knobs = {k: getattr(args, k) for k in ("top_k", "candidate_k", "chunk_size", "source_bytes")}
     policies = {c: policy_for(c, args.retrieval_device, **knobs) for c in {*args.conditions, "oracle"}}
-    variants = {c: policy_for(c, args.retrieval_device, **knobs) for c in
-                ("bm25", "bm25_code", "vector", "hybrid", "hybrid_plain_rerank", "hybrid_rerank")}
+    variants = {
+        c: policy_for(c, args.retrieval_device, **knobs)
+        for c in ("bm25", "bm25_code", "vector", "hybrid", "hybrid_plain_rerank", "hybrid_rerank")
+    }
     variants["line_bm25"] = {**variants["bm25"], "chunker": "line"}
-    variants.update({f"bm25_top{n}": {**variants["bm25"], "top_k": n, "candidate_k": max(n, args.candidate_k)} for n in (3, 10)})
+    variants.update(
+        {
+            f"bm25_top{n}": {**variants["bm25"], "top_k": n, "candidate_k": max(n, args.candidate_k)}
+            for n in (3, 10)
+        }
+    )
     cache, matrix, inputs = {}, [], {}
     for task in tasks:
         tid = task["task_id"]
@@ -240,11 +363,23 @@ def prepare(args):
         variant_inputs = {}
         for name, policy in variants.items():
             reader, index = index_for(task, policy, output, excluded, cache)
-            prepared = RagEngine(reader, index, SimpleNamespace(settings=model), private_path(output) / "cache").prepare(task["input"]["question"])
+            prepared = RagEngine(
+                reader, index, SimpleNamespace(settings=model), private_path(output) / "cache"
+            ).prepare(task["input"]["question"])
             variant_inputs[fingerprint(policy)] = prepared
-            matrix.append({"task_id": tid, "variant": name, "index_id": index.index_id,
-                "reference_coverage": coverage(references[tid]["sources"], prepared["context"]), "budget": prepared["budget"],
-                "source_ranges": [{k: s[k] for k in ("path", "start_line", "end_line", "content_sha256")} for s in prepared["context"]]})
+            matrix.append(
+                {
+                    "task_id": tid,
+                    "variant": name,
+                    "index_id": index.index_id,
+                    "reference_coverage": coverage(references[tid]["sources"], prepared["context"]),
+                    "budget": prepared["budget"],
+                    "source_ranges": [
+                        {k: s[k] for k in ("path", "start_line", "end_line", "content_sha256")}
+                        for s in prepared["context"]
+                    ],
+                }
+            )
         for case in (c for c in cases if c["task_id"] == tid):
             condition = case["condition"]
             _, mode, _, _ = CONDITIONS[condition]
@@ -254,39 +389,82 @@ def prepare(args):
             else:
                 reader, index = index_for(task, policy, output, excluded, cache)
                 selected = fixed_index(reader, index, task["input"]["question"], mode)
-                prepared = RagEngine(reader, selected, SimpleNamespace(settings=model), private_path(output) / "cache").prepare(
-                    task["input"]["question"], mode="bm25" if mode == "grep_read" else mode,
+                prepared = RagEngine(
+                    reader, selected, SimpleNamespace(settings=model), private_path(output) / "cache"
+                ).prepare(
+                    task["input"]["question"],
+                    mode="bm25" if mode == "grep_read" else mode,
                     instruction=CLOSED_BOOK_SYSTEM if condition == "closed_book" else None,
-                    oracle_context=references[tid]["sources"] if mode == "oracle" else [])
+                    oracle_context=references[tid]["sources"] if mode == "oracle" else [],
+                )
             if not prepared["budget"]["fits"]:
                 raise ValueError("prepared fixed answer exceeds input/output budget")
             inputs[case["case_id"]] = prepared
         print(json.dumps({"prepared_question": tid, "repository": task["repository"]}), flush=True)
     prior = prior_ledgers(private_path(output))
     cap = sum(c["max_requests"] for c in cases)
-    write_json(output / "dataset.json", {"schema": "repomentor.benchmark.v1", "protocol": {
-        "implementation": implementation(), "settings": model.public(), "prior_ledgers": prior,
-        "prior_requests": sum(prior.values()), "max_new_requests": cap, "combined_limit": sum(prior.values()) + cap,
-        "authorization": "Run requires the owner's explicit new allowance; preparing inputs authorizes no generation.",
-        "source_sha256": hashlib.sha256(source_path.read_bytes()).hexdigest(),
-        "source": str(source_path.relative_to(python_home())), "main_conditions": args.conditions,
-        "limits": AgentLimits(max_decisions=args.agent_max_decisions, max_tool_calls=6, timeout_seconds=360).model_dump(),
-        "scope": "Selected existing evaluation questions; repeated development diagnostic, not unseen confirmation.",
-        "retry": "No automatic retry of failed or ambiguous dispatches.", "training_eligible": False,
-        "neural_generation_note": "Retrieval embeddings/reranking are local; request cap counts generator dispatches only."},
-        "tasks": tasks, "evaluation_only": references, "excluded_paths": original["excluded_paths"], "cases": cases,
-        "policies": policies, "retrieval_variants": variants, "retrieval_checks": matrix, "prepared_inputs": inputs})
-    print(json.dumps({"questions": len(tasks), "planned_answers": len(cases), "max_new_requests": cap,
-        "prior_requests": sum(prior.values()), "combined_limit": sum(prior.values()) + cap,
-        "retrieval_checks": len(matrix), "generator_requests": 0}), flush=True)
+    write_json(
+        output / "dataset.json",
+        {
+            "schema": "repomentor.benchmark.v1",
+            "protocol": {
+                "implementation": implementation(),
+                "settings": model.public(),
+                "prior_ledgers": prior,
+                "prior_requests": sum(prior.values()),
+                "max_new_requests": cap,
+                "combined_limit": sum(prior.values()) + cap,
+                "authorization": "Run requires the owner's explicit new allowance; preparing inputs authorizes no generation.",
+                "source_sha256": hashlib.sha256(source_path.read_bytes()).hexdigest(),
+                "source": str(source_path.relative_to(python_home())),
+                "main_conditions": args.conditions,
+                "limits": AgentLimits(
+                    max_decisions=args.agent_max_decisions, max_tool_calls=6, timeout_seconds=360
+                ).model_dump(),
+                "scope": "Selected existing evaluation questions; repeated development diagnostic, not unseen confirmation.",
+                "retry": "No automatic retry of failed or ambiguous dispatches.",
+                "training_eligible": False,
+                "neural_generation_note": "Retrieval embeddings/reranking are local; request cap counts generator dispatches only.",
+            },
+            "tasks": tasks,
+            "evaluation_only": references,
+            "excluded_paths": original["excluded_paths"],
+            "cases": cases,
+            "policies": policies,
+            "retrieval_variants": variants,
+            "retrieval_checks": matrix,
+            "prepared_inputs": inputs,
+        },
+    )
+    print(
+        json.dumps(
+            {
+                "questions": len(tasks),
+                "planned_answers": len(cases),
+                "max_new_requests": cap,
+                "prior_requests": sum(prior.values()),
+                "combined_limit": sum(prior.values()) + cap,
+                "retrieval_checks": len(matrix),
+                "generator_requests": 0,
+            }
+        ),
+        flush=True,
+    )
 
 
+# 核对当前实现与冻结协议的身份；源码字节变化应由新版本或原始方法包解释。
 def checked_data(output):
     data = load(Path(output) / "dataset.json")
     protocol = data["protocol"]
-    if protocol["implementation"] != implementation() or protocol["settings"] != load_chat_settings().public():
+    if (
+        protocol["implementation"] != implementation()
+        or protocol["settings"] != load_chat_settings().public()
+    ):
         raise ValueError("benchmark implementation or generator configuration changed")
-    if hashlib.sha256((python_home() / protocol["source"]).read_bytes()).hexdigest() != protocol["source_sha256"]:
+    if (
+        hashlib.sha256((python_home() / protocol["source"]).read_bytes()).hexdigest()
+        != protocol["source_sha256"]
+    ):
         raise ValueError("source task package changed")
     for name, count in protocol["prior_ledgers"].items():
         if count_requests(runtime_dir() / name) != count:
@@ -296,21 +474,32 @@ def checked_data(output):
 
 def records(output):
     path = Path(output) / "results.jsonl"
-    rows = [json.loads(s) for s in path.read_text(encoding="utf-8").splitlines() if s.strip()] if path.exists() else []
+    rows = (
+        [json.loads(s) for s in path.read_text(encoding="utf-8").splitlines() if s.strip()]
+        if path.exists()
+        else []
+    )
     if len({r["case_id"] for r in rows}) != len(rows):
         raise ValueError("duplicate benchmark result IDs")
     return rows
 
 
+# 先预留请求账本再调用已有引擎，保留每次实际尝试，不按事后分数选择答案。
 async def run(args):
     output = Path(args.output)
     data = checked_data(output)
     protocol = data["protocol"]
     if args.authorized_new_requests != protocol["max_new_requests"]:
-        raise ValueError("provide the explicitly owner-authorized request allowance matching this frozen plan")
+        raise ValueError(
+            "provide the explicitly owner-authorized request allowance matching this frozen plan"
+        )
     private = private_path(output)
-    ledger = RequestLedger(private / "dispatches.sqlite", limit=protocol["max_new_requests"],
-                           experiment=fingerprint(data), context_windows=(protocol["settings"]["context_window"],))
+    ledger = RequestLedger(
+        private / "dispatches.sqlite",
+        limit=protocol["max_new_requests"],
+        experiment=fingerprint(data),
+        context_windows=(protocol["settings"]["context_window"],),
+    )
     done = {r["case_id"] for r in records(output)}
     if {r["case"] for r in ledger.rows()} - done:
         raise ValueError("ambiguous reserved dispatch without a completed record; no automatic retry")
@@ -323,20 +512,35 @@ async def run(args):
         started = time.monotonic()
         model = load_chat_settings()
         engine_name, mode, _, _ = CONDITIONS[condition]
-        reader, index = index_for(task, data["policies"][condition], output,
-            data["excluded_paths"].get(task["repository"], []), cache)
+        reader, index = index_for(
+            task,
+            data["policies"][condition],
+            output,
+            data["excluded_paths"].get(task["repository"], []),
+            cache,
+        )
 
         def before(body, budget):
             if sum(r["case"] == cid for r in ledger.rows()) >= case["max_requests"]:
                 raise ValueError("case generation cap reached")
             ledger.reserve(runtime.settings, cid, body, budget)
 
-        runtime = OpenAISdkRuntime(model, before_dispatch=before) if engine_name == "sdk" else ChatCompletionsRuntime(model, before_dispatch=before)
+        runtime = (
+            OpenAISdkRuntime(model, before_dispatch=before)
+            if engine_name == "sdk"
+            else ChatCompletionsRuntime(model, before_dispatch=before)
+        )
         request = {k: task["input"][k] for k in ("history", "query") if k in task["input"]}
         if engine_name == "sdk":
             limits = AgentLimits(**{**protocol["limits"], "max_decisions": case["max_requests"]})
-            engine = SdkAgentEngine(reader, index, runtime, private / "sdk-cache" / fingerprint(cid), limits,
-                                   tools_enabled=condition != "agentic_no_tools")
+            engine = SdkAgentEngine(
+                reader,
+                index,
+                runtime,
+                private / "sdk-cache" / fingerprint(cid),
+                limits,
+                tools_enabled=condition != "agentic_no_tools",
+            )
             result = await engine.answer(task["input"]["question"], **request)
             expected = data["prepared_inputs"][cid]["context"]
             if result["shared_input_context"] != expected:
@@ -344,17 +548,33 @@ async def run(args):
         else:
             selected = fixed_index(reader, index, request.get("query") or task["input"]["question"], mode)
             engine = RagEngine(reader, selected, runtime, private / "rag-cache" / fingerprint(cid))
-            result = await engine.answer(task["input"]["question"], **request, mode="bm25" if mode == "grep_read" else mode,
+            result = await engine.answer(
+                task["input"]["question"],
+                **request,
+                mode="bm25" if mode == "grep_read" else mode,
                 instruction=CLOSED_BOOK_SYSTEM if condition == "closed_book" else None,
-                oracle_context=data["evaluation_only"][task["task_id"]]["sources"] if mode == "oracle" else ())
+                oracle_context=data["evaluation_only"][task["task_id"]]["sources"]
+                if mode == "oracle"
+                else (),
+            )
             if result["input_messages"] != data["prepared_inputs"][cid]["input_messages"]:
                 raise ValueError("fixed RAG input changed after preparation")
         result["evaluation_elapsed_seconds"] = round(time.monotonic() - started, 6)
         row = {**case, "cohort": task["cohort"], "repository": task["repository"], "result": result}
         with (output / "results.jsonl").open("a", encoding="utf-8", newline="\n") as stream:
             stream.write(json.dumps(row, ensure_ascii=False) + "\n")
-        print(json.dumps({"completed": len(records(output)), "case": cid, "status": result["completion"]["status"],
-            "case_requests": result["new_model_requests"], "reserved": len(ledger.rows())}), flush=True)
+        print(
+            json.dumps(
+                {
+                    "completed": len(records(output)),
+                    "case": cid,
+                    "status": result["completion"]["status"],
+                    "case_requests": result["new_model_requests"],
+                    "reserved": len(ledger.rows()),
+                }
+            ),
+            flush=True,
+        )
 
 
 def summarize(output, supplied=None):
@@ -364,18 +584,39 @@ def summarize(output, supplied=None):
     pending = {**previous.get("reviews", {}), **(supplied or {})}
     tasks = {t["task_id"]: t for t in data["tasks"]}
     reviews, groups = {}, defaultdict(Counter)
-    fields = ("candidate_id", "correctness", "citation_support", "completeness", "abstention", "entry_scope", "consistency", "claims", "notes")
+    fields = (
+        "candidate_id",
+        "correctness",
+        "citation_support",
+        "completeness",
+        "abstention",
+        "entry_scope",
+        "consistency",
+        "claims",
+        "notes",
+    )
     for row in records(output):
         cid, result, task = row["case_id"], row["result"], tasks[row["task_id"]]
         if cid in pending:
             value = {k: pending[cid][k] for k in fields}
-            value["claims"] = [{k: c[k] for k in ("claim", "status", "rationale", "evidence")} for c in value["claims"]]
-            candidate = {"candidate_id": cid, "answer": result["answer"],
-                         "observed_context": result.get("final_context", result["context"])}
+            value["claims"] = [
+                {k: c[k] for k in ("claim", "status", "rationale", "evidence")} for c in value["claims"]
+            ]
+            candidate = {
+                "candidate_id": cid,
+                "answer": result["answer"],
+                "observed_context": result.get("final_context", result["context"]),
+            }
             reviews[cid] = validate_judgment(value, candidate, reader_for(task))
             reviews[cid]["result_sha256"] = fingerprint(row)
-        for prefix in dict.fromkeys(("all", task["cohort"], row.get("kind", "main"),
-                                    "answerable" if task["answerable"] else "unanswerable")):
+        for prefix in dict.fromkeys(
+            (
+                "all",
+                task["cohort"],
+                row.get("kind", "main"),
+                "answerable" if task["answerable"] else "unanswerable",
+            )
+        ):
             g = groups[prefix + "/" + row["condition"]]
             g["records"] += 1
             g[result["completion"]["status"]] += 1
@@ -393,7 +634,9 @@ def summarize(output, supplied=None):
                 final = result.get("final_context", result["context"])
                 g["initial_reference_complete"] += coverage(expected, initial) == 1
                 g["final_reference_complete"] += coverage(expected, final) == 1
-                g["initial_nonblank_reference_complete"] += nonblank_reference_complete(expected, initial) is True
+                g["initial_nonblank_reference_complete"] += (
+                    nonblank_reference_complete(expected, initial) is True
+                )
                 g["final_nonblank_reference_complete"] += nonblank_reference_complete(expected, final) is True
             calls = result.get("decisions", [result["completion"]])
             for call in calls:
@@ -408,37 +651,81 @@ def summarize(output, supplied=None):
                 g["reviewed"] += 1
                 g["factually_correct"] += reviews[cid]["correctness"] == "correct"
                 if row["condition"] != "closed_book":
-                    g.update({k: int(v) for k, v in quality_tiers(reviews[cid], result["completion"]["status"]).items()})
+                    g.update(
+                        {
+                            k: int(v)
+                            for k, v in quality_tiers(reviews[cid], result["completion"]["status"]).items()
+                        }
+                    )
     retrieval = {}
     for name in data["retrieval_variants"]:
-        checks = [r for r in data["retrieval_checks"] if r["variant"] == name and r["reference_coverage"] is not None]
-        retrieval[name] = {"answerable": len(checks), "reference_complete": sum(r["reference_coverage"] == 1 for r in checks),
-            "nonblank_reference_complete": sum(nonblank_reference_complete(
-                data["evaluation_only"][r["task_id"]]["sources"], r["source_ranges"]) is True for r in checks)}
+        checks = [
+            r
+            for r in data["retrieval_checks"]
+            if r["variant"] == name and r["reference_coverage"] is not None
+        ]
+        retrieval[name] = {
+            "answerable": len(checks),
+            "reference_complete": sum(r["reference_coverage"] == 1 for r in checks),
+            "nonblank_reference_complete": sum(
+                nonblank_reference_complete(
+                    data["evaluation_only"][r["task_id"]]["sources"], r["source_ranges"]
+                )
+                is True
+                for r in checks
+            ),
+        }
     count = count_requests(private_path(output) / "dispatches.sqlite")
-    value = {"questions": len(tasks), "planned_answers": len(data["cases"]), "records": len(records(output)),
-        "reviews": reviews, "groups": {k: dict(v) for k, v in groups.items()}, "retrieval": retrieval,
-        "new_requests": count, "combined_requests": data["protocol"]["prior_requests"] + count,
-        "paid_requests": 0, "human_approved": False, "training_eligible": False,
+    value = {
+        "questions": len(tasks),
+        "planned_answers": len(data["cases"]),
+        "records": len(records(output)),
+        "reviews": reviews,
+        "groups": {k: dict(v) for k, v in groups.items()},
+        "retrieval": retrieval,
+        "new_requests": count,
+        "combined_requests": data["protocol"]["prior_requests"] + count,
+        "paid_requests": 0,
+        "human_approved": False,
+        "training_eligible": False,
         "reporting_implementation": implementation()["benchmark"],
         "usage_observation_note": "Token/time sums include observed values only. Missing usage and elapsed time remain unknown in raw records; reservations still count every sent or ambiguous request.",
-        "checks": previous.get("checks", {}), "scope": data["protocol"]["scope"]}
+        "checks": previous.get("checks", {}),
+        "scope": data["protocol"]["scope"],
+    }
     if (Path(output) / "completed-files.json").exists():
         if value != previous:
             raise ValueError("sealed benchmark summary cannot change")
     else:
         write_json(path, value)
-    print(json.dumps({k: value[k] for k in ("questions", "planned_answers", "records", "groups", "retrieval", "new_requests")}), flush=True)
+    print(
+        json.dumps(
+            {
+                k: value[k]
+                for k in ("questions", "planned_answers", "records", "groups", "retrieval", "new_requests")
+            }
+        ),
+        flush=True,
+    )
 
 
+# 离线逐项核对实际源码、请求哈希和账本，区分发送成本、流程成功与答案评分。
 def verify(output):
     data = checked_data(output)
     rows = records(output)
     tasks = {t["task_id"]: t for t in data["tasks"]}
     cases = {c["case_id"]: c for c in data["cases"]}
     path = private_path(output) / "dispatches.sqlite"
-    with sqlite3.connect(path.resolve().as_uri() + "?mode=ro", uri=True) if path.exists() else sqlite3.connect(":memory:") as db:
-        dispatches = [json.loads(r[0]) for r in db.execute("SELECT payload FROM dispatches ORDER BY ordinal")] if path.exists() else []
+    with (
+        sqlite3.connect(path.resolve().as_uri() + "?mode=ro", uri=True)
+        if path.exists()
+        else sqlite3.connect(":memory:") as db
+    ):
+        dispatches = (
+            [json.loads(r[0]) for r in db.execute("SELECT payload FROM dispatches ORDER BY ordinal")]
+            if path.exists()
+            else []
+        )
     for task in data["tasks"]:
         reader = reader_for(task)
         for case in (c for c in data["cases"] if c["task_id"] == task["task_id"]):
@@ -477,13 +764,20 @@ def verify(output):
             hashes = [fingerprint(d["request"]) for d in sent]
             if len(sent) != len(requests) or any(d["request_hash"] != h for d, h in zip(sent, hashes)):
                 raise ValueError("SDK wire request identity mismatch")
-            if row["condition"] == "agentic_no_tools" and (result.get("tool_calls") or any(
-                t.get("function", {}).get("name") != "submit_answer"
-                for d in sent for t in d["request"].get("tools", []))):
+            if row["condition"] == "agentic_no_tools" and (
+                result.get("tool_calls")
+                or any(
+                    t.get("function", {}).get("name") != "submit_answer"
+                    for d in sent
+                    for t in d["request"].get("tools", [])
+                )
+            ):
                 raise ValueError("tool-disabled control exposed repository tools")
         else:
-            body = ChatCompletionsRuntime(load_chat_settings()).request_body(result["input_messages"],
-                response_schema=ANSWER_SCHEMA if result.get("constrain_output", True) else None)
+            body = ChatCompletionsRuntime(load_chat_settings()).request_body(
+                result["input_messages"],
+                response_schema=ANSWER_SCHEMA if result.get("constrain_output", True) else None,
+            )
             hashes = [fingerprint(body)] if result["completion"]["request_sent"] else []
             if hashes and result["completion"]["request_hash"] != hashes[0]:
                 raise ValueError("fixed wire request identity mismatch")
@@ -502,6 +796,7 @@ async def command(args):
         await run(args)
     elif args.action in ("summary", "review"):
         import sys
+
         summarize(args.output, json.load(sys.stdin) if args.action == "review" else None)
     elif args.action == "verify":
         import httpx
@@ -510,7 +805,12 @@ async def command(args):
         def blocked(*a, **kw):
             raise AssertionError("offline benchmark verification attempted HTTP")
 
-        with patch.object(httpx.Client, "send", blocked), patch.object(httpx.AsyncClient, "send", blocked), patch.object(httpx2.Client, "send", blocked), patch.object(httpx2.AsyncClient, "send", blocked):
+        with (
+            patch.object(httpx.Client, "send", blocked),
+            patch.object(httpx.AsyncClient, "send", blocked),
+            patch.object(httpx2.Client, "send", blocked),
+            patch.object(httpx2.AsyncClient, "send", blocked),
+        ):
             verify(args.output)
     elif args.action == "finalize":
         verify(args.output)
@@ -519,7 +819,10 @@ async def command(args):
         if summary["records"] != summary["planned_answers"] or len(summary["reviews"]) != summary["records"]:
             raise ValueError("all planned answers and explicit source reviews required")
         manifest = Path(args.output) / "completed-files.json"
-        hashes = {n: hashlib.sha256((Path(args.output) / n).read_bytes()).hexdigest() for n in ("dataset.json", "results.jsonl", "summary.json")}
+        hashes = {
+            n: hashlib.sha256((Path(args.output) / n).read_bytes()).hexdigest()
+            for n in ("dataset.json", "results.jsonl", "summary.json")
+        }
         if manifest.exists() and load(manifest)["sha256"] != hashes:
             raise ValueError("sealed benchmark bytes changed")
         write_json(manifest, {"sha256": hashes, "training_eligible": False})

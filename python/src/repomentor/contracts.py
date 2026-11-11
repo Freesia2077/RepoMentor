@@ -1,5 +1,8 @@
 """Versioned wire contracts. Report field names intentionally match the TS edition."""
 
+# 用 Pydantic 定义跨模块的数据契约：快照、源码块、工具观察、阶段状态和结构化报告。
+# 公共字段在边界校验，额外字段与赋值错误会显式暴露，减少隐式协议漂移。
+
 from __future__ import annotations
 
 from typing import Annotated, Any, Literal
@@ -12,6 +15,7 @@ StageName = Literal["explorer", "mentor", "contributor"]
 ToolName = Literal["search_symbols", "trace_module_dependencies", "find_related_tests"]
 
 
+# 所有协议默认拒绝未知字段，并在赋值时校验，尽早暴露字段拼写和类型错误。
 class Contract(BaseModel):
     model_config = ConfigDict(extra="forbid", validate_assignment=True)
 
@@ -23,9 +27,16 @@ class Citation(Contract):
 
 
 class RepositoryAnswer(Contract):
-    answer: str = Field(min_length=1, description="用中文完整回答题目各要点：直接结论、必要机制和条件、题干纠偏或具体信息缺口。主要事实要由引用支持。")
-    citations: list[Citation] = Field(description="仅列实际可见且支持正文的源码行段；逻辑性拒答无需虚构引文。")
-    insufficient_evidence: bool = Field(description="无法回答必要子问、缺必要源码或私有运行数据时为true；正文拒答时不得填false。")
+    answer: str = Field(
+        min_length=1,
+        description="用中文完整回答题目各要点：直接结论、必要机制和条件、题干纠偏或具体信息缺口。主要事实要由引用支持。",
+    )
+    citations: list[Citation] = Field(
+        description="仅列实际可见且支持正文的源码行段；逻辑性拒答无需虚构引文。"
+    )
+    insufficient_evidence: bool = Field(
+        description="无法回答必要子问、缺必要源码或私有运行数据时为true；正文拒答时不得填false。"
+    )
 
 
 ANSWER_SCHEMA = RepositoryAnswer.model_json_schema()
@@ -46,6 +57,7 @@ class RepositorySnapshot(Contract):
     manifest: list[ManifestEntry]
 
 
+# 同一个块携带快照、原始行号、内容及哈希，向量召回与引用都以此身份对齐。
 class CodeChunk(Contract):
     snapshot_id: str
     chunk_id: str
@@ -136,6 +148,7 @@ class Omission(Contract):
     ]
 
 
+# 把已读文件和未能交付的路径一起返回，使证据缺口能够进入后续决策。
 class EvidenceBundle(Contract):
     files: list[EvidenceFile] = Field(default_factory=list)
     skippedPaths: list[str] = Field(default_factory=list)
@@ -143,6 +156,7 @@ class EvidenceBundle(Contract):
     totalBytes: int = 0
 
 
+# 报告阶段共享总预算，跨阶段复用证据时继续遵循同一计数口径。
 class Budget(Contract):
     maxEvidenceBatches: int = 2
     maxFilesRead: int = 18

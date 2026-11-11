@@ -1,5 +1,7 @@
 """Explicit repository scopes applied before retrieval truncation."""
 
+# 把文件、目录、排除路径和文件类型条件封装成统一范围谓词，在召回前筛选候选。
+
 from typing import Literal
 
 from pydantic import Field, field_validator
@@ -21,6 +23,7 @@ class SearchScope(Contract):
             return None
         return safe_path(value.rstrip("/") if info.field_name == "path_prefix" else value)
 
+    # 把路径和文件角色条件合并成同一判断，词项与向量两路检索复用这个范围。
     def matches(self, path):
         if path in self.exclude_paths:
             return False

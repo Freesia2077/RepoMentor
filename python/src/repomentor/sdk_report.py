@@ -1,5 +1,8 @@
 """Three SDK agents in a deterministic report workflow, sharing the QA tools and ledger."""
 
+# 用固定的报告阶段组织多个 SDK Agent，各阶段内部仍由 Runner 执行工具循环。
+# 前序摘要帮助导航，跨阶段可复用的事实来源通过原始源码再次核验。
+
 from __future__ import annotations
 
 import asyncio
@@ -18,11 +21,17 @@ from .source_windows import source_span
 STAGES = (("explorer", ExplorerOutput), ("mentor", MentorOutput), ("contributor", ContributorOutput))
 
 
+# 从入口、配置、文档和测试候选挑选原始片段，作为各报告阶段的共同取证起点。
 def report_sources(reader, profile, max_bytes):
     """Bounded original entry/config/docs/test excerpts, not generated summaries."""
-    entries = sorted((p for p in profile["entryCandidates"] if not is_test(p)
-                      and not p.endswith(".d.ts") and not p.startswith("examples/")),
-                     key=lambda p: (p.startswith("."), p.count("/"), p))
+    entries = sorted(
+        (
+            p
+            for p in profile["entryCandidates"]
+            if not is_test(p) and not p.endswith(".d.ts") and not p.startswith("examples/")
+        ),
+        key=lambda p: (p.startswith("."), p.count("/"), p),
+    )
     paths = entries[:1] + [m["path"] for m in profile["manifests"][:2]]
     paths += [profile["readme"]["path"]] if profile["readme"] else []
     paths += profile["testCandidates"][:1]
@@ -52,6 +61,7 @@ class SdkReport:
         self.records = []
         self.share_sources = share_sources
 
+    # 阶段次序由代码固定，每阶段研究循环由 Runner 管理，摘要与可复用原文分别传递。
     async def run(self, *, emit=lambda *args: None, token=None, run_id=None, total_timeout=600):
         started = time.monotonic()
         token = token or CancellationToken()
@@ -72,8 +82,7 @@ class SdkReport:
                 for stage, output_type in STAGES:
                     token.check()
                     instruction = (
-                        RESEARCH_SYSTEM
-                        + f"当前角色是 {stage}，为仓库学习报告完成本阶段。"
+                        RESEARCH_SYSTEM + f"当前角色是 {stage}，为仓库学习报告完成本阶段。"
                         "前序角色摘要只提供导航；verified_source 为已重新核验的原始源码，可复用，缺口再用工具补查。"
                         "最多 3 条 evidenceClaims、3 个模块、3 步阅读路径、2 个贡献建议。"
                         "建议必须标为建议，不得冒充真实 issue；未验证的安装/测试命令置 null。"
@@ -88,38 +97,56 @@ class SdkReport:
                         self.reader, self.index, self.runtime, self.cache_dir, self.limits
                     )
                     row = await engine.answer(
-                        QUESTIONS[stage], token=token, refresh=self.refresh, output_type=output_type,
-                        instruction=instruction, agent_name="RepoMentor-" + stage,
+                        QUESTIONS[stage],
+                        token=token,
+                        refresh=self.refresh,
+                        output_type=output_type,
+                        instruction=instruction,
+                        agent_name="RepoMentor-" + stage,
                         task_context={"repository_metadata": metadata, "prior_roles": summaries},
-                        shared_context={"snapshot_id": self.reader.snapshot.snapshot_id,
-                                        "spans": merged_context([*anchors, *(shared if self.share_sources else [])])},
+                        shared_context={
+                            "snapshot_id": self.reader.snapshot.snapshot_id,
+                            "spans": merged_context([*anchors, *(shared if self.share_sources else [])]),
+                        },
                         shared_source_bytes=seed_budget,
                     )
                     self.records.append({"stage": stage, **row})
                     if row["completion"]["status"] != "success":
-                        raise HarnessError(row["stop_reason"], "SDK report stage failed; raw output preserved")
+                        raise HarnessError(
+                            row["stop_reason"], "SDK report stage failed; raw output preserved"
+                        )
                     output = output_type.model_validate(row["answer"])
                     from .report_constraints import constrain_report
-                    constrained, changes = constrain_report(self.reader, output.model_dump(mode="json"), row["final_context"])
+
+                    constrained, changes = constrain_report(
+                        self.reader, output.model_dump(mode="json"), row["final_context"]
+                    )
                     output = output_type.model_validate(constrained)
                     self.records[-1]["publication_adjustments"] = changes
                     from .report_validation import inspect_report_locations
+
                     self.records[-1]["publication_locations"] = inspect_report_locations(
                         self.reader, constrained, row["final_context"]
                     )
                     shared.extend(s for s in row["final_context"] if s not in shared)
                     # Deterministic coverage records where the model actually obtained source.
-                    output.evidenceCoverage.examinedFiles = sorted({s["path"] for s in row["final_context"]})[:24]
+                    output.evidenceCoverage.examinedFiles = sorted({s["path"] for s in row["final_context"]})[
+                        :24
+                    ]
                     if stage == "explorer":
                         output.fileCount = profile["fileCount"]
                     outputs[stage] = output.model_dump(mode="json")
                     summaries[stage] = {
-                        "overview": (outputs[stage].get("projectSummary")
-                                     or outputs[stage].get("architectureOverview", ""))[:800],
+                        "overview": (
+                            outputs[stage].get("projectSummary")
+                            or outputs[stage].get("architectureOverview", "")
+                        )[:800],
                         "claims": outputs[stage]["evidenceClaims"][:3],
                         "read_paths": output.evidenceCoverage.examinedFiles[:8],
                     }
-                    emit(stage, "completed", {"stage": stage, "new_model_requests": row["new_model_requests"]})
+                    emit(
+                        stage, "completed", {"stage": stage, "new_model_requests": row["new_model_requests"]}
+                    )
         except asyncio.CancelledError:
             token.cancel()
             status, reason = "cancelled", "cancelled"
@@ -132,21 +159,50 @@ class SdkReport:
         except Exception as exc:
             status, reason = "failed", type(exc).__name__
         if status != "success":
-            error = {"code": reason, "message": "SDK report stopped; inspect sdk-stages.json and attempt ledger"}
+            error = {
+                "code": reason,
+                "message": "SDK report stopped; inspect sdk-stages.json and attempt ledger",
+            }
         version = sdk_version()
         result = RunResult(
-            run_id=run_id or uuid4().hex, snapshot_id=self.reader.snapshot.snapshot_id,
-            runtime="openai-agents-sdk-report", status=status, stop_reason=reason, outputs=outputs,
-            usage=[{k: r[k] for k in ("stage", "attempt_id", "new_model_requests", "cache_hit",
-                                     "total_model_requests", "elapsed_seconds")} for r in self.records],
-            elapsed_seconds=round(time.monotonic() - started, 3), error=error,
-            versions={"openai_agents": version["openai_agents"], "openai": version["openai"],
-                      "sdk_implementation": version["implementation"], "model": self.runtime.settings.model,
-                      "config_id": self.runtime.settings.config_id, "index_id": self.index.index_id},
-            harness={"workflow": "sequential-sdk-agents", "limits_per_stage": self.limits.model_dump(),
-                     "source_sharing": self.share_sources,
-                     "max_model_attempts": 3 * self.limits.max_decisions,
-                     "tools": "shared RepositoryEnvironment", "semantic_correctness": "not_scored"},
+            run_id=run_id or uuid4().hex,
+            snapshot_id=self.reader.snapshot.snapshot_id,
+            runtime="openai-agents-sdk-report",
+            status=status,
+            stop_reason=reason,
+            outputs=outputs,
+            usage=[
+                {
+                    k: r[k]
+                    for k in (
+                        "stage",
+                        "attempt_id",
+                        "new_model_requests",
+                        "cache_hit",
+                        "total_model_requests",
+                        "elapsed_seconds",
+                    )
+                }
+                for r in self.records
+            ],
+            elapsed_seconds=round(time.monotonic() - started, 3),
+            error=error,
+            versions={
+                "openai_agents": version["openai_agents"],
+                "openai": version["openai"],
+                "sdk_implementation": version["implementation"],
+                "model": self.runtime.settings.model,
+                "config_id": self.runtime.settings.config_id,
+                "index_id": self.index.index_id,
+            },
+            harness={
+                "workflow": "sequential-sdk-agents",
+                "limits_per_stage": self.limits.model_dump(),
+                "source_sharing": self.share_sources,
+                "max_model_attempts": 3 * self.limits.max_decisions,
+                "tools": "shared RepositoryEnvironment",
+                "semantic_correctness": "not_scored",
+            },
         )
         emit("report", "finished", {"status": status, "reason": reason})
         return result

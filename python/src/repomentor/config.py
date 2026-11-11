@@ -1,3 +1,5 @@
+# 独立读取 Python 模型配置，并统一校验端点、模型和凭据所属来源。
+# 公开配置会去掉密钥；配置错误信息也避免回显可能含凭据的原始输入。
 from __future__ import annotations
 
 import json
@@ -35,6 +37,8 @@ class ModelSettings(Contract):
         }
 
 
+# 整组配置按显式文件、指定文件环境变量、模型环境变量、默认文件的顺序选取。
+# 同次加载只使用一个来源，避免把某服务的密钥拼到另一服务的地址。
 def load_model_settings(path: Path | None = None, *, _model=ModelSettings):
     """Whole-source precedence: explicit file > PY_SETTINGS > PY model env > default file.
 

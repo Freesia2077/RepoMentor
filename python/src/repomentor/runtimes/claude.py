@@ -1,3 +1,4 @@
+# 把兼容报告任务接入 Claude Agent SDK，转换结构化 schema 并约束 SDK 工作目录与工具。
 from __future__ import annotations
 
 import asyncio
@@ -104,6 +105,7 @@ class ClaudeSdkRuntime:
             "model": self.settings.model,
         }
 
+    # 限制 SDK 工作目录、工具与设置来源，使被分析仓库的配置只作为数据读取。
     def make_options(self, cwd, phase, model, system, harness, discovery):
         allowed = {"StructuredOutput"}
         definitions = []
@@ -281,6 +283,7 @@ class ClaudeSdkRuntime:
                 )
             return terminal.structured_output
 
+    # 按声明的 schema 验证模型输出，把结构化失败与成功内容分开返回。
     async def structured(self, phase, model, system, payload, harness, discovery=False):
         value = await self._once(phase, model, system, payload, harness, discovery)
         try:
